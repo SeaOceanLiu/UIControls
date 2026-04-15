@@ -1,0 +1,485 @@
+﻿#include "ControlBase.h"
+ControlImpl::ControlImpl(Control *parent, float xScale, float yScale):
+    // m_weakThis(this),
+    // m_sharedThis(nullptr),
+    m_isTransparent(false),
+    m_isBorderVisible(false),
+    m_state(ControlState::Normal),
+    m_id(INT_MAX),
+    m_parent(parent),
+    m_enable(true),
+    m_visible(true),
+    m_xScale(xScale),
+    m_yScale(yScale),
+    m_xxScale(parent==nullptr?xScale:xScale*parent->getScaleXX()),
+    m_yyScale(parent==nullptr?yScale:yScale*parent->getScaleYY()),
+
+    m_bgColor(StateColor()),
+    m_borderColor(StateColor(StateColor::Type::Border)),
+    m_textColor(StateColor(StateColor::Type::Text)),
+    m_textShadowColor(StateColor(StateColor::Type::TextShadow)),
+
+    m_surface(nullptr),
+    m_renderer(nullptr),
+    m_texture(nullptr),
+    m_rect({0, 0, 0, 0}),
+    m_mouseInside(false)
+{
+    m_eventQueueInstance = EventQueue::getInstance();
+    if (m_parent != nullptr){
+        inheritRenderer();
+    }
+}
+
+ControlImpl::ControlImpl(const ControlImpl &other):
+    m_isTransparent(other.m_isTransparent),
+    m_isBorderVisible(other.m_isBorderVisible),
+    m_state(other.m_state),
+    m_id(other.m_id),
+    m_parent(other.m_parent),
+    m_enable(other.m_enable),
+    m_visible(other.m_visible),
+    m_xScale(other.m_xScale),
+    m_yScale(other.m_yScale),
+    m_xxScale(other.m_xxScale),
+    m_yyScale(other.m_yyScale),
+
+    m_bgColor(other.m_bgColor),
+    m_borderColor(other.m_borderColor),
+    m_textColor(other.m_textColor),
+
+    m_renderer(other.m_renderer),
+    m_surface(other.m_surface),
+    m_texture(other.m_texture),
+    m_rect(other.m_rect),
+    m_mouseInside(other.m_mouseInside)
+{
+    m_eventQueueInstance = other.m_eventQueueInstance;
+
+    for(const auto& child : other.m_children){
+        // shared_ptr<ControlImpl> newChild = make_shared<ControlImpl>(&child); // 这里需要深拷贝
+        // addControl(newChild);
+    }
+
+}
+ControlImpl& ControlImpl::operator=(const ControlImpl &other){
+    if (this == &other) return *this;
+    m_isTransparent = other.m_isTransparent;
+    m_isBorderVisible = other.m_isBorderVisible;
+    m_state = other.m_state;
+    m_id = other.m_id;
+    m_parent = other.m_parent;
+    m_enable = other.m_enable;
+    m_visible = other.m_visible;
+    m_xScale = other.m_xScale;
+    m_yScale = other.m_yScale;
+    m_xxScale = other.m_xxScale;
+    m_yyScale = other.m_yyScale;
+    m_renderer = other.m_renderer;
+    m_surface = other.m_surface;
+    m_texture = other.m_texture;
+    m_rect = other.m_rect;
+    m_mouseInside = other.m_mouseInside;
+    m_eventQueueInstance = other.m_eventQueueInstance;
+
+    for(const auto& child : other.m_children){
+        // shared_ptr<ControlImpl>  newChild = make_shared<ControlImpl>(child); // 这里需要深拷贝
+        // addControl(newChild);
+    }
+
+    return *this;
+}
+
+void ControlImpl::update(void){
+    if(!getEnable()) return;
+
+    // 检测鼠标进入/退出状态
+    if (getVisible() && getEnable()) {
+        // 获取当前鼠标位置（需要从SDL获取）
+        float mouseX, mouseY;
+        SDL_GetMouseState(&mouseX, &mouseY);
+
+        SRect drawRect = getDrawRect();
+        bool isInside = drawRect.contains(mouseX, mouseY);
+
+        // 检测鼠标进入/退出状态变化
+        if (isInside && !m_mouseInside) {
+            // 鼠标进入控件区域
+            m_mouseInside = true;
+            // 转换为控件内坐标系
+            float localX = mouseX - drawRect.left;
+            float localY = mouseY - drawRect.top;
+            onMouseEnter(localX, localY);
+        } else if (!isInside && m_mouseInside) {
+            // 鼠标退出控件区域
+            m_mouseInside = false;
+            // 转换为控件内坐标系
+            float localX = mouseX - drawRect.left;
+            float localY = mouseY - drawRect.top;
+            onMouseLeave(localX, localY);
+        }
+    }
+
+    for (auto& child : m_children){
+        child->update();
+    }
+}
+
+void ControlImpl::draw(void){
+    if (!getVisible()) return;
+
+    inheritRenderer();
+
+    // draw the control
+    // ...
+    // draw the children
+    for (auto& child : m_children){
+        child->draw();
+    }
+}
+
+void ControlImpl::drawBackground(const SRect *pDrawRect){
+    SRect drawRect;
+
+    if(!getTransparent()) {
+        if (pDrawRect == nullptr){
+            drawRect = getDrawRect();
+        } else {
+            drawRect = *pDrawRect;
+        }
+
+        // 背景色
+        SDL_Color bgColor;
+        switch (m_state){
+            case ControlState::Disabled:
+                bgColor = m_bgColor.getDisabled();
+            case ControlState::Hover:
+                bgColor = m_bgColor.getHover();
+                break;
+            case ControlState::Pressed:
+                bgColor = m_bgColor.getPressed();
+                break;
+            case ControlState::Normal:
+            default:
+                bgColor = m_bgColor.getNormal();
+                break;
+        }
+        if(!SDL_SetRenderDrawColor(getRenderer(), bgColor.r, bgColor.g, bgColor.b, bgColor.a)){
+            SDL_Log("MenuBase failed to set grid render color: %s", SDL_GetError());
+        }
+        if (!SDL_RenderFillRect(getRenderer(), drawRect.toSDLFRect())){
+            SDL_Log("MenuBase failed to fill render rect: %s", SDL_GetError());
+        }
+    }
+}
+
+void ControlImpl::drawBorder(const SRect *pDrawRect){
+    SRect drawRect;
+
+    if(getBorderVisible()) {
+        if (pDrawRect == nullptr){
+            drawRect = getDrawRect();
+        } else {
+            drawRect = *pDrawRect;
+        }
+
+        SDL_Color borderColor;
+        switch (m_state){
+            case ControlState::Disabled:
+                borderColor = m_borderColor.getDisabled();
+                break;
+            case ControlState::Hover:
+                borderColor = m_borderColor.getHover();
+                break;
+            case ControlState::Pressed:
+                borderColor = m_borderColor.getPressed();
+                break;
+            case ControlState::Normal:
+            default:
+                borderColor = m_borderColor.getNormal();
+                break;
+        }
+        if(!SDL_SetRenderDrawColor(getRenderer(), borderColor.r, borderColor.g, borderColor.b, borderColor.a)){
+            SDL_Log("MenuBase failed to set border color: %s", SDL_GetError());
+        }
+        if(!SDL_RenderRect(getRenderer(), drawRect.toSDLFRect())){
+            SDL_Log("MenuBase failed to draw border: %s", SDL_GetError());
+        }
+    }
+}
+
+void ControlImpl::resized(SRect newRect){
+    m_rect.width = newRect.width;
+    m_rect.height = newRect.height;
+}
+void ControlImpl::moved(SRect newRect){
+    m_rect.left = newRect.left;
+    m_rect.top = newRect.top;
+}
+//事件处理，返回值表示是否处理了该事件，true表示处理了，false表示未处理
+bool ControlImpl::handleEvent(shared_ptr<Event> event){
+    // 检查当前控件是否可见且启用
+    if (getVisible() && getEnable()){
+        // 逆向遍历当前控件的所有子控件，保证后添加的控件先处理事件，因为后添加的控件在屏幕上位于上层
+        for (auto it = m_children.rbegin(); it != m_children.rend(); ++it){
+            // 调用子控件的handleEvent函数处理事件
+            if ((*it)->handleEvent(event)){
+                // 如果子控件处理了事件，则返回true
+                return true;
+            }
+        }
+
+    }
+    // 如果当前控件及其子控件均未处理事件，则返回false
+    return false;
+}
+
+bool ControlImpl::beforeEventHandlingWatcher(shared_ptr<Event> event){
+    return false;
+}
+
+bool ControlImpl::afterEventHandlingWatcher(shared_ptr<Event> event){
+    return false;
+}
+
+void ControlImpl::addControl(shared_ptr<Control> child){
+    if (child == nullptr) return;
+
+    // 如果控件已经存在，则直接返回
+    if (std::find(m_children.begin(), m_children.end(), child) != m_children.end()){
+        return;
+    }
+    m_children.push_back(child);
+
+    child->setParent(this);
+    child->setRenderer(getRenderer());
+    child->setScaleX(m_xScale);
+    child->setScaleY(m_yScale);
+}
+
+void ControlImpl::removeControl(shared_ptr<Control> child){
+    m_children.erase(std::remove(m_children.begin(), m_children.end(), child), m_children.end());
+}
+// 只调用setParent的话，是不会添加到父控件的children中的，用于自行控制绘制逻辑和事件处理逻辑
+// 如果要自动绘制和处理事件，需要调用addControl
+void ControlImpl::setParent(Control *parent){
+    m_parent = parent;
+}
+
+Control* ControlImpl::getParent(void){
+    return m_parent;
+}
+
+float ControlImpl::getScaleXX(void){
+    return m_xxScale;
+}
+float ControlImpl::getScaleYY(void){
+    return m_yyScale;
+}
+void ControlImpl::setScaleX(float xScale){
+    m_xScale = xScale;
+    for (auto& child : m_children){
+        child->setScaleX(xScale);
+    }
+}
+void ControlImpl::setScaleY(float yScale){
+    m_yScale = yScale;
+    for (auto& child : m_children){
+        child->setScaleY(yScale);
+    }
+}
+
+void ControlImpl::setRect(SRect rect){
+    m_rect = rect;
+}
+
+SRect ControlImpl::getRect(void){
+    return m_rect;
+}
+
+void ControlImpl::show(void){
+    m_visible = true;
+}
+
+void ControlImpl::hide(void){
+    m_visible = false;
+}
+
+void ControlImpl::setVisible(bool visible) {
+    m_visible = visible;
+}
+
+bool ControlImpl::getVisible(void){
+    return m_visible;
+}
+
+void ControlImpl::setEnable(bool enable){
+    m_enable = enable;
+    setState(enable ? ControlState::Normal : ControlState::Disabled);
+}
+bool ControlImpl::getEnable(void){
+    return m_enable;
+}
+
+SDL_Renderer* ControlImpl::getRenderer(void){
+    if (m_renderer != nullptr){
+        return m_renderer;
+    }
+    if (m_parent != nullptr){
+        m_renderer = m_parent->getRenderer();
+    } else {
+        m_renderer = GET_RENDERER;
+        if (m_renderer == nullptr) {
+            SDL_Log("No renderer found!");
+            return nullptr;
+        }
+    }
+    return m_renderer;
+}
+shared_ptr<Control> ControlImpl::getThis(void){
+    return shared_from_this();
+}
+void ControlImpl::setRenderer(SDL_Renderer* renderer){
+    if (m_renderer == renderer) return;
+
+    m_renderer = renderer;
+    for (auto& child : m_children){
+        child->setRenderer(renderer);
+    }
+}
+
+SRect ControlImpl::getDrawRect(void){
+    Control *parent = getParent();
+    SRect parentDrawRect;
+    if (parent != nullptr){
+        parentDrawRect = parent->getDrawRect();
+        return {m_rect.left + parentDrawRect.left,
+            m_rect.top + parentDrawRect.top,
+            m_rect.width * getScaleXX(),
+            m_rect.height * getScaleYY()};
+    }
+    return {m_rect.left, m_rect.top, m_rect.width * m_xxScale, m_rect.height * m_yyScale};
+}
+
+SRect ControlImpl::mapToDrawRect(SRect rect){
+    SRect drawRect = getDrawRect();
+    return {rect.left * m_xxScale + drawRect.left, rect.top * m_yyScale + drawRect.top, rect.width * m_xxScale, rect.height * m_yyScale};
+}
+bool ControlImpl::isContainsPoint(float x, float y){
+    SRect drawRect = getDrawRect();
+    return drawRect.contains(x, y);
+}
+
+void ControlImpl::onMouseEnter(float x, float y){
+    // 默认不做任何处理，子类可重写此方法
+}
+
+void ControlImpl::onMouseLeave(float x, float y){
+    // 默认不做任何处理，子类可重写此方法
+}
+
+void ControlImpl::setTransparent(bool isTransparent){
+    m_isTransparent = isTransparent;
+}
+
+void ControlImpl::setState(ControlState state){
+    m_state = state;
+}
+
+void ControlImpl::setBackgroundStateColor(StateColor stateColor){
+    m_bgColor = stateColor;
+}
+void ControlImpl::setBorderStateColor(StateColor stateColor){
+    m_borderColor = stateColor;
+    setBorderVisible(true);
+}
+void ControlImpl::setTextStateColor(StateColor stateColor){
+    m_textColor = stateColor;
+}
+void ControlImpl::setTextShadowStateColor(StateColor stateColor){
+    m_textShadowColor = stateColor;
+}
+StateColor ControlImpl::getBackgroundStateColor(void){
+    return m_bgColor;
+}
+StateColor ControlImpl::getBorderStateColor(void){
+    return m_borderColor;
+}
+StateColor ControlImpl::getTextStateColor(void){
+    return m_textColor;
+}
+StateColor ControlImpl::getTextShadowStateColor(void){
+    return m_textShadowColor;
+}
+
+void ControlImpl::setNormalStateBGColor(SDL_Color color){
+    m_bgColor.setNormal(color);
+}
+void ControlImpl::setHoverStateBGColor(SDL_Color color){
+    m_bgColor.setHover(color);
+}
+void ControlImpl::setPressedStateBGColor(SDL_Color color){
+    m_bgColor.setPressed(color);
+}
+void ControlImpl::setDisabledStateBGColor(SDL_Color color){
+    m_bgColor.setDisabled(color);
+}
+void ControlImpl::setNormalStateBDColor(SDL_Color color){
+    m_borderColor.setNormal(color);
+}
+void ControlImpl::setHoverStateBDColor(SDL_Color color){
+    m_borderColor.setHover(color);
+}
+void ControlImpl::setPressedStateBDColor(SDL_Color color){
+    m_borderColor.setPressed(color);
+}
+void ControlImpl::setDisabledStateBDColor(SDL_Color color){
+    m_borderColor.setDisabled(color);
+}
+void ControlImpl::setTextNormalStateColor(SDL_Color color){
+    m_textColor.setNormal(color);
+}
+void ControlImpl::setTextHoverStateColor(SDL_Color color){
+    m_textColor.setHover(color);
+}
+void ControlImpl::setTextPressedStateColor(SDL_Color color){
+    m_textColor.setPressed(color);
+}
+void ControlImpl::setTextDisabledStateColor(SDL_Color color){
+    m_textColor.setDisabled(color);
+}
+void ControlImpl::setTextShadowNormalStateColor(SDL_Color color){
+    m_textShadowColor.setNormal(color);
+}
+void ControlImpl::setTextShadowHoverStateColor(SDL_Color color){
+    m_textShadowColor.setHover(color);
+}
+void ControlImpl::setTextShadowPressedStateColor(SDL_Color color){
+    m_textShadowColor.setPressed(color);
+}
+void ControlImpl::setTextShadowDisabledStateColor(SDL_Color color){
+    m_textShadowColor.setDisabled(color);
+}
+
+void ControlImpl::setBorderVisible(bool isVisible){
+    m_isBorderVisible = isVisible;
+}
+bool ControlImpl::getBorderVisible(void){
+    return m_isBorderVisible;
+}
+
+void ControlImpl::triggerEvent(shared_ptr<Event> event){
+    m_eventQueueInstance->pushEventIntoQueue(event);
+}
+
+void ControlImpl::inheritRenderer(void) {
+    if (m_renderer == nullptr){
+        // if (m_parent == nullptr) {
+        //     SDL_Log("ControlImpl::draw() Error: m_renderer is nullptr and can't get it from m_parent for is's nullptr too!");
+        //     // throw("ControlImpl::draw() Error: m_renderer is nullptr and can't get it from m_parent for is's nullptr too!");
+        //     return;
+        // }
+        // m_renderer = m_parent->getRenderer();
+        m_renderer = GET_RENDERER;
+    }
+}

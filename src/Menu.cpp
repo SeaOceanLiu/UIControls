@@ -1,0 +1,703 @@
+﻿#include "Menu.h"
+
+MenuBase::MenuBase(Control *parent,
+                    MenuItemType type,
+                    MenuDirection direction,
+                    float xScale,
+                    float yScale):
+    ControlImpl(parent, xScale, yScale),
+    m_parentMenu(nullptr),
+    m_type(type),
+    m_classLevel(MenuClassLevel::MenuItem),
+    m_direction(direction),
+    // m_alignedWidth(0),
+    // m_alignedHeight(0),
+    m_isExpanded(false),
+    m_subMenuState(SubMenuState::Collapsed),
+    m_expandedItem(nullptr),
+
+    m_caption(nullptr),
+    m_subMenuArrow(nullptr),
+    m_captionText(""),
+    m_captionSize(ConstDef::MENU_TEXT_SIZE),
+    m_captionAlignment(AlignmentMode::AM_MID_LEFT),
+    m_captionMargin(ConstDef::MENU_CAPTION_MARGIN),
+    m_enableTextShadow(false),
+    m_menuContainer(nullptr),
+    m_onClick(nullptr)
+{
+    SDL_Log("MenuBase::MenuBase entered. direction = %d", m_direction);
+    // 初始化菜单相关属性
+    setRect(SRect(0, 0, 0, 0)); // 默认大小，后续可以调整
+    // setBackgroundStateColor(StateColor(StateColor::Type::Background)
+    //                             .setNormal({255, 255, 0, 255})
+    //                             .setPressed({255, 255, 255, 255})
+    // );
+}
+
+void MenuBase::draw(void)
+{
+    if (getVisible() == false) return;
+
+    // 绘制菜单
+    const SRect drawRect = getDrawRect();
+
+    // 先绘制当前控件的外观
+    drawBackground(&drawRect);
+
+    // 绘制菜单标题
+    if (m_caption != nullptr){
+        m_caption->draw();
+    }
+
+    // 绘制子菜单箭头
+    if (m_subMenuArrow != nullptr){
+        m_subMenuArrow->draw();
+    }
+
+    // 最后绘制边框
+    drawBorder(&drawRect);
+
+}
+void MenuBase::drawContainer(void)
+{
+    if (getVisible() == false) return;
+
+    // 如果本级菜单被展开，那就绘制本级菜单项
+    if (getExpanded() && m_menuContainer != nullptr) {
+        m_menuContainer->draw();
+    }
+}
+
+bool MenuBase::handleEvent(shared_ptr<Event> event){
+    if (!getEnable() || !getVisible()) return false;
+
+    // 如果有子菜单，则让子菜单先处理事件
+    if (m_menuContainer != nullptr){
+        if (m_menuContainer->handleEvent(event)) return true;
+    }
+
+    if (EventQueue::isPositionEvent(event->m_eventName)){
+        if (!event->m_eventParam.has_value()) return false;
+        try {
+            shared_ptr<SPoint> pos = std::any_cast<shared_ptr<SPoint>>(event->m_eventParam);
+            if (!pos) return false;
+            SRect drawRect = getDrawRect();
+            if (drawRect.contains(pos->x, pos->y)){
+                shared_ptr<MenuBase> subMenu = nullptr;
+                switch(event->m_eventName){
+                    case EventName::FINGER_DOWN:
+                    case EventName::FINGER_MOTION:
+                        if (getType() == MenuItemType::Normal && m_onClick != nullptr){
+                            m_onClick(dynamic_pointer_cast<MenuBase>(this->getThis()));
+                        }
+                        setState(getExpanded() ? ControlState::Pressed : ControlState::Normal);
+                        return true;
+                    case EventName::MOUSE_LBUTTON_DOWN:
+                        switch(m_type){
+                            case MenuItemType::SubMenu:
+                                setExpended(!getExpanded());
+                                if (getExpanded() && getParentMenu() != nullptr) {
+                                    getParentMenu()->setExpendedSubMenuItem(dynamic_pointer_cast<MenuBase>(getThis()));
+                                }
+                                break;
+                            case MenuItemType::Normal:
+                                setExpended(false);
+
+                                if (m_onClick != nullptr){
+                                    SDL_Log("MenuBase::handleEvent m_onClick = 0x%0X, m_state = %d", m_onClick, m_state);
+                                    closeMenuIntheChain();
+                                    m_onClick(dynamic_pointer_cast<MenuBase>(this->getThis()));
+                                }
+                                break;
+                            case MenuItemType::Separator:
+                            default:
+                                break;
+                        }
+                        return true;
+                    case EventName::MOUSE_LBUTTON_UP:
+                    case EventName::FINGER_UP:
+                        return true;
+                    case EventName::MOUSE_MOVING:
+                        setMenuChainState(ControlState::Hover);
+                        if (getType() == MenuItemType::SubMenu && getMenuClassLevel() == MenuClassLevel::MenuItem){
+                            setExpended(true);
+                        }
+                        if (getParentMenu() != nullptr && getParentMenu()->getExpendedSubMenuItem() != nullptr){
+                            SDL_Log("MenuBase::handleEvent: expend <%s>'s sub menu", getCaption().c_str());
+                            getParentMenu()->setExpendedSubMenuItem(dynamic_pointer_cast<MenuBase>(getThis()));
+                        }
+                        return true;
+                    case EventName::MOUSE_WHEEL:
+                        return false;
+                    default:
+                        break;
+                }
+                return true;
+            } else {
+                setState(ControlState::Normal);
+            }
+        } catch (...) {
+            return false;
+        }
+    }
+    if (ControlImpl::handleEvent(event)) return true;
+    return false;
+}
+bool MenuBase::isContainsPoint(float x, float y)
+{
+    if (getEnable() == false || getVisible() == false) return false;
+
+    // 先判断自己是否包含该点
+    if (ControlImpl::isContainsPoint(x, y)) {
+        return true;
+    }
+    // 再判断菜单容器是否包含该点
+    if (m_menuContainer != nullptr) {
+        return m_menuContainer->isContainsPoint(x, y);
+    }
+    // // 最后断子菜单面板是否包含该点
+    // if (m_expandedItem != nullptr) {
+    //     return m_expandedItem->isContainsPoint(x, y);
+    // }
+    return false;
+}
+
+void MenuBase::setParent(Control *parent){
+    ControlImpl::setParent(parent);
+    SRect parentRect = getParent()->getRect();
+    parentRect.left = 0 - ConstDef::MENU_ITEM_MARGIN.left;  // 子菜单做了偏移处理，为了对齐边线，这里需要调整回来
+    parentRect.top = 0 - ConstDef::MENU_ITEM_MARGIN.top;    // 子菜单做了偏移处理，为了对齐边线，这里需要调整回来
+
+    // auto menuParent = dynamic_cast<MenuBase*>(parent);
+    // if (menuParent) {
+        SDL_Log("MenuBase(%s)::setParent: do nothing !!!! (%f, %f)", getCaption().c_str(), parentRect.left, parentRect.top);
+
+        // if (getDirection() == MenuDirection::Horizontal){
+        //     parentRect.height = ConstDef::MENU_TEXT_SIZE + ConstDef::MENU_ITEM_MARGIN.top + ConstDef::MENU_ITEM_MARGIN.bottom;
+        // } else {
+        //     parentRect.width = ConstDef::MENU_TEXT_SIZE + ConstDef::MENU_ITEM_MARGIN.left + ConstDef::MENU_ITEM_MARGIN.right;
+        // }
+        // SDL_Log("MenuBase(%s)::setParent: no menuContainer, set rect(%f, %f, %f, %f)", getCaption().c_str(),
+        //     parentRect.left, parentRect.top, parentRect.width, parentRect.height);
+        // setRect(parentRect); // 重新设置矩形区域，以便调整菜单项位置
+    // } else {
+    //     SDL_Log("MenuBase(%s)::setParent:: Parent is NOT a MenuBase type (should be MenuContainer).", getCaption().c_str());
+
+    // }
+}
+void MenuBase::setRect(SRect rect)
+{
+    ControlImpl::setRect(rect);
+
+    if (m_caption != nullptr){
+        SDL_Log("MenuBase(%s)::call m_caption->setRect: rect(0, 0, %f, %f)", getCaption().c_str(), m_rect.width, m_rect.height);
+        m_caption->setRect({0, 0, m_rect.width, m_rect.height});
+    }
+    if (m_subMenuArrow != nullptr){
+        SDL_Log("MenuBase(%s)::call m_subMenuArrow->setRect: rect(%f, %f, %f, %f)", getCaption().c_str(),
+            m_subMenuArrow->getRect().left, m_subMenuArrow->getRect().top, m_subMenuArrow->getRect().width, m_subMenuArrow->getRect().height);
+        m_subMenuArrow->setLeft(getRect().width - m_subMenuArrow->getRect().width - ConstDef::MENU_ITEM_MARGIN.right);
+        SDL_Log("MenuBase(%s)::call m_subMenuArrow->setRect: rect(%f, %f, %f, %f)", getCaption().c_str(),
+            m_subMenuArrow->getRect().left, m_subMenuArrow->getRect().top, m_subMenuArrow->getRect().width, m_subMenuArrow->getRect().height);
+    }
+}
+void MenuBase::addItem(shared_ptr<MenuBase> item)
+{
+    SDL_Log("MenuBase(%s)::addItem(%s) entered.", getCaption().c_str(), item->getCaption().c_str());
+    if (!item) {
+        SDL_Log("MenuBase(%s)::addItem(%s) item is nullptr", getCaption().c_str(), item->getCaption().c_str());
+        throw std::runtime_error("MenuBase::addItem item is nullptr");
+    }
+
+    if (m_menuContainer == nullptr) {
+        // 保护一下
+        SDL_Log("MenuBase(%s)::addItem(%s): m_menuContainer is nullptr, creating new MenuContainer.", getCaption().c_str(), item->getCaption().c_str());
+        m_menuContainer = make_shared<MenuContainer>(this);
+    }
+    item->setParent(dynamic_cast<Control*>(this));
+    item->setParentMenu(dynamic_pointer_cast<MenuBase>(this->getThis()));
+    m_menuContainer->addItem(item);
+}
+void MenuBase::removeItem(shared_ptr<MenuBase> item){
+    SDL_Log("MenuBase(%s)::removeItem(%s) entered.", getCaption().c_str(), item->getCaption().c_str());
+    if (!item) {
+        SDL_Log("MenuBase(%s)::removeItem item is nullptr", getCaption().c_str());
+        throw std::runtime_error("MenuBase::removeItem item is nullptr");
+    }
+
+    if (m_menuContainer == nullptr) return;
+
+    m_menuContainer->removeItem(item);
+    if (m_menuContainer->isEmpty()) {
+        m_menuContainer = nullptr;
+    }
+}
+
+void MenuBase::onMouseEnter(float x, float y)
+{
+    setState(ControlState::Hover);
+}
+
+void MenuBase::onMouseLeave(float x, float y)
+{
+    setState(ControlState::Normal);
+}
+void MenuBase::setTextStateColor(StateColor stateColor){
+    ControlImpl::setTextStateColor(stateColor);
+    if (m_caption != nullptr){
+        m_caption->setTextStateColor(m_textColor);
+    }
+}
+void MenuBase::setTextShadowStateColor(StateColor stateColor){
+    ControlImpl::setTextShadowStateColor(stateColor);
+    m_textShadowColor = stateColor;
+    if (m_caption != nullptr){
+        m_caption->setTextShadowStateColor(m_textShadowColor);
+    }
+}
+
+void MenuBase::setTextShadowEnable(bool enable){
+    m_enableTextShadow = enable;
+    if (m_caption != nullptr){
+        m_caption->setShadow(enable);
+    }
+}
+
+void MenuBase::setCaption(string caption){
+    m_captionText = caption;
+
+    if (m_caption != nullptr){
+        m_caption.reset();
+        m_caption = nullptr;
+    }
+    if (m_captionText.length() > 0) {
+        m_caption = LabelBuilder(this, {0, 0, m_rect.width, m_rect.height})
+                            .setFont(FontName::HarmonyOS_Sans_SC_Regular)
+                            .setAlignmentMode(m_captionAlignment)
+                            .setMargin(m_captionMargin)
+                            .setFontSize((int)m_captionSize)
+                            .setCaption(m_captionText)
+                            .setTextStateColor(m_textColor)
+                            .setTextShadowStateColor(m_textShadowColor)
+                            .setShadow(m_enableTextShadow)
+                            .build();
+        
+        setRect({getRect().left, getRect().top,
+            ConstDef::MENU_ITEM_MARGIN.left +
+                m_caption->getRect().width + ConstDef::MENU_ITEM_MARGIN.right,
+            ConstDef::MENU_ITEM_MARGIN.top +
+                m_caption->getRect().height + ConstDef::MENU_ITEM_MARGIN.bottom});
+    }
+    createSubMenuArrowLabel();
+}
+string MenuBase::getCaption(void) const{
+    return m_captionText;
+}
+void MenuBase::createSubMenuArrowLabel(void){
+    if (getType() == MenuItemType::SubMenu && m_caption != nullptr){
+        // 创建子菜单箭头
+        if (m_subMenuArrow != nullptr){
+            m_subMenuArrow.reset();
+            m_subMenuArrow = nullptr;
+        }
+        m_subMenuArrow = LabelBuilder(this, {0, 0, 0, m_rect.height})    // 宽度设置为0，Label会根据内容自适应宽度
+                                .setFont(FontName::simsun)  // 使用系统宋字可以用直角的右尖括号作为箭头显示
+                                .setAlignmentMode(AlignmentMode::AM_CENTER)
+                                .setMargin(m_captionMargin)
+                                .setFontSize((int)m_captionSize)
+                                .setCaption(">") // 使用一个简单的箭头符号表示子菜单
+                                .setTextStateColor(m_textColor)
+                                .setTextShadowStateColor(m_textShadowColor)
+                                .setShadow(m_enableTextShadow)
+                                .build();
+        // 调整菜单项宽度以容纳箭头
+        setWidth(getRect().width + m_subMenuArrow->getRect().width);
+    }
+}
+void MenuBase::destroySubMenuArrowLabel(void){
+    if (m_subMenuArrow != nullptr){
+        // 调整菜单项宽度以去除箭头
+        setRect({getRect().left, getRect().top,
+            getRect().width - m_subMenuArrow->getRect().width,
+            getRect().height});
+        // setWidth(getRect().width - m_subMenuArrow->getRect().width);
+
+        m_subMenuArrow.reset();
+        m_subMenuArrow = nullptr;
+    }
+}
+void MenuBase::setCaptionSize(float size){
+    m_captionSize = size;
+    if (m_caption != nullptr){
+        m_caption->setFontSize((int)m_captionSize);
+    }
+}
+uint32_t MenuBase::getCaptionSize(float size) const{
+    return static_cast<uint32_t>(m_captionSize);
+}
+
+void MenuBase::setCaptionAlignment(AlignmentMode mode){
+    m_captionAlignment = mode;
+    if (m_caption != nullptr){
+        m_caption->setAlignmentMode(mode);
+    }
+}
+AlignmentMode MenuBase::getCaptionAlignment(void) const{
+    return m_captionAlignment;
+}
+void MenuBase::setCaptionMargin(Margin margin){
+    m_captionMargin = margin;
+    if (m_caption != nullptr){
+        m_caption->setMargin(margin);
+    }
+}
+Margin MenuBase::getCaptionMargin(void) const{
+    return m_captionMargin;
+}
+SRect MenuBase::getCaptionRect(void) const{
+    return m_caption != nullptr ? m_caption->getRect() : SRect(0, 0, 0, 0);
+}
+
+void MenuBase::setMenuChainState(ControlState state){
+    if (getEnable() == false) return;
+
+    if (getType() != MenuItemType::Separator && getState() != ControlState::Pressed) setState(state);
+
+    shared_ptr<MenuBase>parentMenu = getParentMenu();
+    if (parentMenu == nullptr) return;
+    parentMenu->setMenuChainState(state); // 递归设置父控件状态
+}
+void MenuBase::closeMenuIntheChain(void){
+    if (getEnable() == false) return;
+    setState(ControlState::Normal);
+    if (getParent() == nullptr) return;
+
+    SDL_Log("MenuBase(%s)::closeMenuIntheChain", getCaption().c_str());
+    if (getParentMenu() != nullptr) // 判断parentMenu不为空是为了保障MainMenu始终显示
+    {
+        setExpended(false); // 关闭当前菜单Container
+    }
+
+    if(getExpendedSubMenuItem() != nullptr){
+        getExpendedSubMenuItem()->setExpended(false);   // 关闭子菜单
+        setExpendedSubMenuItem(nullptr);
+    }
+
+    shared_ptr<MenuBase>parentMenu = getParentMenu();
+    if (parentMenu == nullptr /*|| parentMenu->getParentMenu() == nullptr*/) return; // 这里保证MainMenu是常驻的，所以不需要关闭MainMenu
+    parentMenu->closeMenuIntheChain(); // 递归关闭父菜单
+}
+shared_ptr<MenuBase> MenuBase::getSubMenuAtPoint(float x, float y) {
+    if (isContainsPoint(x, y)) return dynamic_pointer_cast<MenuBase>(getThis());
+
+    if (m_menuContainer == nullptr) return nullptr;
+    if (m_expandedItem != nullptr && m_expandedItem->isContainsPoint(x, y)) {
+        return m_expandedItem;
+    } else {
+        return m_menuContainer->getSubMenuAtPoint(x, y);
+    }
+
+    return nullptr;
+}
+
+MenuContainer::MenuContainer(MenuBase *parent, float xScale, float yScale):
+    ControlImpl(parent, xScale, yScale),
+    m_alignedWidth(0),
+    m_alignedHeight(0)
+{
+    setBorderVisible(true); // 默认显示边框
+    setVisible(false); // 默认隐藏
+}
+
+void MenuContainer::draw(void){
+    if (getVisible() == false) return;
+
+    SRect drawRect = getDrawRect();
+    // 先绘制当前控件的外观
+
+    // 绘制菜单容器背景
+    drawBackground(&drawRect);
+
+    // 所有下级菜单项标题
+    for (auto& item : m_items){
+        item->draw();
+    }
+    drawBorder(&drawRect);
+
+    // 绘制子菜单
+    for (auto& item : m_items){
+        item->drawContainer();
+    }
+}
+
+bool MenuContainer::handleEvent(shared_ptr<Event> event){
+    if (!getEnable() || !getVisible()) return false;
+
+    // 传递给各子菜单项优先处理事件
+    for (auto& item : m_items){
+        if (item->handleEvent(event)) return true;
+    }
+
+    // 下面处理鼠标在Container中移动的逻辑，使得鼠标在两个菜单项之间的空隙间时，仍能正确显示各级菜单的Hover状态
+    if (EventQueue::isPositionEvent(event->m_eventName)){
+        if (!event->m_eventParam.has_value()) return false;
+        try {
+            shared_ptr<SPoint> pos = std::any_cast<shared_ptr<SPoint>>(event->m_eventParam);
+            if (!pos) return false;
+            SRect drawRect = getDrawRect();
+            if (drawRect.contains(pos->x, pos->y)){
+                shared_ptr<MenuBase> subMenu = nullptr;
+                switch(event->m_eventName){
+                    case EventName::MOUSE_MOVING:
+                        dynamic_cast<MenuBase *>(getParent())->setMenuChainState(ControlState::Hover);
+                        return true;
+                    case EventName::MOUSE_WHEEL:
+                        return false;
+                    default:
+                        break;
+                }
+                return true;
+            }
+        } catch (...) {
+            return false;
+        }
+    }
+    return false;
+}
+bool MenuContainer::isContainsPoint(float x, float y){
+    if (getEnable() == false || getVisible() == false) return false;
+
+    // 先判断自己是否包含该点
+    if (ControlImpl::isContainsPoint(x, y)) {
+        return true;
+    }
+    // 再判断子菜单是否包含该点
+    for (auto& item : m_items) {
+        if (item->isContainsPoint(x, y)) {
+            return true;
+        }
+    }
+    return false;
+}
+void MenuContainer::addItem(shared_ptr<MenuBase> item, bool intoMenuList){
+    SDL_Log("MenuContainer(%s)::addItem(%s) entered.", getMountMenuCaption().c_str(), item->getCaption().c_str());
+    item->setParent(this);
+
+    float targetWidth = 0;
+    float targetHeight = 0;
+
+    if (item->getType() == MenuItemType::Separator) {
+        // 分隔符菜单项，按分隔符默认大小设置默认大小
+        item->setDirection(getDirection()); // 分隔符菜单项方向自动与菜单容器一致
+        SDL_Log("MenuContainer(%s)::addItem(%s): item is separator, set item direction = %d, by parent direction = %d",
+            getMountMenuCaption().c_str(), item->getCaption().c_str(), item->getDirection(), getDirection());
+        if (getDirection() == MenuDirection::Horizontal){
+            item->setRect(SRect(ConstDef::MENU_ITEM_MARGIN.left + m_items.back()->getRect().right(),
+                ConstDef::MENU_ITEM_MARGIN.top,
+                ConstDef::MENU_SEPARATOR_WIDTH,
+                getRect().height - ConstDef::MENU_ITEM_MARGIN.top - ConstDef::MENU_ITEM_MARGIN.bottom));
+
+            // 调整菜单容器大小以适应分隔符
+            setRect(SRect(getRect().left,
+                            getRect().top,
+                            item->getRect().right() + ConstDef::MENU_ITEM_MARGIN.right,
+                            ConstDef::MENU_ITEM_MARGIN.top + m_alignedHeight + ConstDef::MENU_ITEM_MARGIN.bottom));
+            SDL_Log("MenuContainer(%s)::addItem(%s): reset container rect: %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(),
+                    getRect().left,
+                    getRect().top,
+                    getRect().width,
+                    getRect().height);
+        } else {    // MenuDirection::Vertical
+            item->setRect(SRect(ConstDef::MENU_ITEM_MARGIN.left,
+                ConstDef::MENU_ITEM_MARGIN.top + m_items.back()->getRect().bottom(),
+                getRect().width - ConstDef::MENU_ITEM_MARGIN.left - ConstDef::MENU_ITEM_MARGIN.right,
+                ConstDef::MENU_SEPARATOR_HEIGHT));
+
+            // 调整菜单容器大小以适应分隔符
+            setRect(SRect(getRect().left,
+                            getRect().top,
+                            m_alignedWidth + ConstDef::MENU_ITEM_MARGIN.left + ConstDef::MENU_ITEM_MARGIN.right,
+                            item->getRect().bottom() + ConstDef::MENU_ITEM_MARGIN.bottom));
+            SDL_Log("MenuContainer(%s)::addItem(%s): reset container rect: %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(),
+                    getRect().left,
+                    getRect().top,
+                    getRect().width,
+                    getRect().height);
+        }
+        if (intoMenuList) {
+            m_items.push_back(item);
+        }
+        return; // 分隔符菜单项不需要再调整菜单容器中其它菜单的大小
+    } else {
+        SDL_Log("MenuContainer(%s)::addItem(%s): alignedWidth=%f, alignedHeight=%f", getMountMenuCaption().c_str(), item->getCaption().c_str(), m_alignedWidth, m_alignedHeight);
+        // 非分隔符菜单项，按菜单文字设置默认大小
+        item->setRect(SRect(ConstDef::MENU_ITEM_MARGIN.left,
+                            ConstDef::MENU_ITEM_MARGIN.top,
+                            item->getCaptionRect().width,
+                            item->getCaptionRect().height));
+        SDL_Log("MenuContainer(%s)::addItem(%s): caption size: %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(), item->getCaptionRect().width, item->getCaptionRect().height);
+
+        targetWidth = max(m_alignedWidth, item->getRect().width);
+        targetHeight = max(m_alignedHeight, item->getRect().height);
+
+        SDL_Log("MenuContainer(%s)::addItem(%s): calculated target size: %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(), targetWidth, targetHeight);
+        SDL_Log("MenuContainer(%s)::addItem(%s): item rect = %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(), item->getRect().left,
+                item->getRect().top,
+                item->getRect().width,
+                item->getRect().height);
+    }
+
+
+    SDL_Log("MenuContainer(%s)::addItem(%s) %d: targetWidth=%f, targetHeight=%f",
+        getMountMenuCaption().c_str(), item->getCaption().c_str(), intoMenuList, targetWidth, targetHeight);
+
+    // 将新菜单项添加到菜单项列表中
+    if (intoMenuList) {
+        m_items.push_back(item);
+    }
+
+    SDL_Log("MenuContainer(%s)::addItem(%s) total items = %d", getMountMenuCaption().c_str(), item->getCaption().c_str(), m_items.size());
+
+    // 计算菜单项的位置
+    if (getDirection() == MenuDirection::Vertical) {
+        SDL_Log("MenuContainer(%s)::addItem(%s): direction is vertical.", getMountMenuCaption().c_str(), item->getCaption().c_str());
+        // 当新菜单项宽高度大于已有菜单项宽高度时，调整已有菜单项宽高度，使之保持一致
+        if (targetWidth != m_alignedWidth || targetHeight != m_alignedHeight) {
+            float targetLeft = ConstDef::MENU_ITEM_MARGIN.left;
+            float targetTop = ConstDef::MENU_ITEM_MARGIN.top;
+
+            for (size_t i = 0; i < m_items.size(); ++i) {
+                auto& existingItem = m_items[i];
+                if (existingItem->getType() != MenuItemType::Separator) {
+                    existingItem->setRect(SRect(targetLeft,
+                                                targetTop,
+                                                targetWidth,
+                                                targetHeight));
+                    targetTop += targetHeight + ConstDef::MENU_ITEM_MARGIN.bottom + ConstDef::MENU_ITEM_MARGIN.top;
+                    SDL_Log("MenuContainer(%s)::addItem(%s): adjust item[%d] rect: %f, %f, %f, %f",getMountMenuCaption().c_str(), item->getCaption().c_str(), i,
+                            existingItem->getRect().left,
+                            existingItem->getRect().top,
+                            existingItem->getRect().width,
+                            existingItem->getRect().height);
+                } else { // Separator
+                    existingItem->setRect(SRect(targetLeft,
+                                                targetTop,
+                                                targetWidth,
+                                                ConstDef::MENU_SEPARATOR_HEIGHT));
+                    targetTop += ConstDef::MENU_SEPARATOR_HEIGHT + ConstDef::MENU_ITEM_MARGIN.bottom + ConstDef::MENU_ITEM_MARGIN.top;
+                }
+            }
+        } else {
+            // 宽高度无变化时，直接在最后添加菜单项
+            m_items.back()->setRect(SRect(ConstDef::MENU_ITEM_MARGIN.left,
+                                            m_items[m_items.size() - 2]->getRect().bottom() + ConstDef::MENU_ITEM_MARGIN.bottom + ConstDef::MENU_ITEM_MARGIN.top,
+                                            targetWidth,
+                                            targetHeight));
+            SDL_Log("MenuContainer(%s)::addItem(%s): %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(),
+                    m_items.back()->getRect().left,
+                    m_items.back()->getRect().top,
+                    m_items.back()->getRect().width,
+                    m_items.back()->getRect().height);
+        }
+        // 调整当前菜单的宽高度以适应新增菜单项
+        setRect(SRect(getRect().left,
+                        getRect().top,
+                        targetWidth + ConstDef::MENU_ITEM_MARGIN.left + ConstDef::MENU_ITEM_MARGIN.right,
+                        m_items.back()->getRect().bottom() + ConstDef::MENU_ITEM_MARGIN.bottom));
+        SDL_Log("MenuContainer(%s)::addItem(%s): reset container rect: %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(),
+                getRect().left,
+                getRect().top,
+                getRect().width,
+                getRect().height);
+    } else { // Horizontal
+        SDL_Log("MenuContainer(%s)::addItem(%s): direction is horizontal.", getMountMenuCaption().c_str(), item->getCaption().c_str());
+        // 对于水平菜单，只要求菜单项高度一致，所以在新菜单项高度大于已有菜单项高度时，调整已有菜单项高度
+        if (targetHeight != m_alignedHeight) {
+            float targetLeft = ConstDef::MENU_ITEM_MARGIN.left;
+            float targetTop = ConstDef::MENU_ITEM_MARGIN.top;
+
+            for (size_t i = 0; i < m_items.size(); ++i) {
+                auto& existingItem = m_items[i];
+                if (existingItem->getType() != MenuItemType::Separator) {
+                    existingItem->setRect(SRect(targetLeft,
+                                                targetTop,
+                                                existingItem->getRect().width,
+                                                targetHeight));
+                    targetLeft += existingItem->getRect().width + ConstDef::MENU_ITEM_MARGIN.right + ConstDef::MENU_ITEM_MARGIN.left;
+                    SDL_Log("MenuContainer(%s)::addItem(%s): adjust item[%d] rect: %f, %f, %f, %f",getMountMenuCaption().c_str(), item->getCaption().c_str(), i,
+                            existingItem->getRect().left,
+                            existingItem->getRect().top,
+                            existingItem->getRect().width,
+                            existingItem->getRect().height);
+                } else { // Separator
+                    existingItem->setRect(SRect(targetLeft,
+                                                targetTop,
+                                                ConstDef::MENU_SEPARATOR_WIDTH,
+                                                targetHeight));
+                    targetLeft += ConstDef::MENU_SEPARATOR_WIDTH + ConstDef::MENU_ITEM_MARGIN.right + ConstDef::MENU_ITEM_MARGIN.left;
+                }
+            }
+        } else {
+            // 高度无变化时，直接在最后添加菜单项
+            m_items.back()->setRect(SRect(m_items[m_items.size() - 2]->getRect().right() + ConstDef::MENU_ITEM_MARGIN.right + ConstDef::MENU_ITEM_MARGIN.left,
+                                            ConstDef::MENU_ITEM_MARGIN.top,
+                                            m_items.back()->getRect().width,
+                                            targetHeight));
+            SDL_Log("MenuContainer(%s)::addItem(%s): %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(),
+                    m_items.back()->getRect().left,
+                    m_items.back()->getRect().top,
+                    m_items.back()->getRect().width,
+                    m_items.back()->getRect().height);
+        }
+        // 调整当前菜单的宽高度以适应新增菜单项
+        setRect(SRect(getRect().left,
+                        getRect().top,
+                        m_items.back()->getRect().right() + ConstDef::MENU_ITEM_MARGIN.right,
+                        ConstDef::MENU_ITEM_MARGIN.top + targetHeight + ConstDef::MENU_ITEM_MARGIN.bottom));
+        SDL_Log("MenuContainer(%s)::addItem(%s): reset container rect: %f, %f, %f, %f", getMountMenuCaption().c_str(), item->getCaption().c_str(),
+                getRect().left,
+                getRect().top,
+                getRect().width,
+                getRect().height);
+    }
+
+    // 更新菜单项的宽高对齐值
+    m_alignedWidth = targetWidth;
+    m_alignedHeight = targetHeight;
+}
+void MenuContainer::removeItem(shared_ptr<MenuBase> item){
+    // 重置宽高对齐值和菜单项位置
+    m_alignedWidth = 0;
+    m_alignedHeight = 0;
+    setRect(SRect(getRect().left, getRect().top, 0, 0));
+
+    // 从菜单项列表中移除指定菜单项
+    auto it = m_items.begin();
+    while (it != m_items.end()) {
+        if (*it == item) {
+            it = m_items.erase(it);
+        } else {
+            addItem(*it, false); // 重新布局剩余菜单项
+            ++it;
+        }
+    }
+
+}
+MenuDirection MenuContainer::getDirection(void) {
+    return dynamic_cast<MenuBase*>(getParent())->getDirection();
+}
+string MenuContainer::getMountMenuCaption(void) {
+    return dynamic_cast<MenuBase*>(getParent())->getCaption();
+}
+
+shared_ptr<MenuBase> MenuContainer::getSubMenuAtPoint(float x, float y) {
+    if (!isContainsPoint(x, y)) return nullptr;
+
+    for (auto& item : m_items) {
+        if (item->isContainsPoint(x, y)) {
+            return item;
+        }
+    }
+    return nullptr;
+}
