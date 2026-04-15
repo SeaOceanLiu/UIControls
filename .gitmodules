@@ -1,12 +1,12 @@
 [submodule "subModules/libs"]
-    path = subModules/libs
-    url = https://github.com/SeaOceanLiu/UIControls-libs.git
+	path = subModules/libs
+	url = https://github.com/SeaOceanLiu/UIControls-libs.git
 [submodule "subModules/SDL3"]
-    path = subModules/SDL3
-    url = https://github.com/SeaOceanLiu/UIControls-sdl3.git
+	path = subModules/SDL3
+	url = https://github.com/SeaOceanLiu/UIControls-sdl3.git
 [submodule "subModules/SDL3_ttf"]
-    path = subModules/SDL3_ttf
-    url = https://github.com/SeaOceanLiu/UIControls-sdl3_ttf.git
+	path = subModules/SDL3_ttf
+	url = https://github.com/SeaOceanLiu/UIControls-sdl3_ttf.git
 [submodule "subModules/DebugTrace"]
     path = subModules/DebugTrace
     url = https://github.com/SeaOceanLiu/DebugTrace.git
