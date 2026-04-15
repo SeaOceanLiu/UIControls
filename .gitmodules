@@ -8,8 +8,8 @@
 	path = subModules/SDL3_ttf
 	url = https://github.com/SeaOceanLiu/UIControls-sdl3_ttf.git
 [submodule "subModules/DebugTrace"]
-    path = subModules/DebugTrace
-    url = https://github.com/SeaOceanLiu/DebugTrace.git
+	path = subModules/DebugTrace
+	url = https://github.com/SeaOceanLiu/DebugTrace.git
 [submodule "subModules/assets"]
     path = subModules/assets
     url = https://github.com/SeaOceanLiu/UIControls-assets.git
