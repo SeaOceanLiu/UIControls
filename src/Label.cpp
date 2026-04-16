@@ -153,7 +153,7 @@ void Label::calculateTextSize() {
 
         int w, h;
         TTF_GetTextSize(m_lineTexts[i], &w, &h);
-        float scaledWidth = static_cast<float>(w) / getScaleXX();
+        float scaledWidth = static_cast<float>(w);
         if (scaledWidth > maxWidth) {
             maxWidth = scaledWidth;
         }
@@ -173,7 +173,7 @@ float Label::getTextWidth(const string& text) {
     TTF_GetTextSize(tempText, &w, &h);
     TTF_DestroyText(tempText);
 
-    return static_cast<float>(w / getScaleXX());
+    return static_cast<float>(w);
 }
 void Label::createTextEngine(void){
     fs::path fullPath = ConstDef::pathPrefix / m_fontFile;
@@ -395,20 +395,11 @@ void Label::setRect(SRect rect){
 }
 SRect Label::getHotRect(void){
     SRect drawRect = getDrawRect();
-    float scaleX = getScaleXX();
-    float scaleY = getScaleYY();
-    SDL_Log("Label::getHotRect - label: %s, m_hotRect: (%.1f, %.1f, %.1f, %.1f), scale: (%.1f, %.1f), drawRect: (%.1f, %.1f, %.1f, %.1f), result: (%.1f, %.1f, %.1f, %.1f)",
-        m_caption.c_str(), m_hotRect.left, m_hotRect.top, m_hotRect.width, m_hotRect.height, scaleX, scaleY,
-        drawRect.left, drawRect.top, drawRect.width, drawRect.height,
-        drawRect.left + m_hotRect.left,
-        drawRect.top + m_hotRect.top,
-        m_hotRect.width * scaleX,
-        m_hotRect.height * scaleY);
     return {
         drawRect.left + m_hotRect.left,
         drawRect.top + m_hotRect.top,
-        m_hotRect.width * scaleX,
-        m_hotRect.height * scaleY
+        m_hotRect.width,
+        m_hotRect.height
     };
 }
 SRect Label::getMarginedRect(void) {
@@ -445,13 +436,13 @@ void Label::setFont(FontName fontName){
     m_fontFile = fs::path(ResourceLoader::m_fontFiles[fontName]);
 }
 void Label::setAlignmentMode(AlignmentMode Alignment){
-    float scaledTextWidth = m_textSize.width;
-    float scaledTextHeight = m_textSize.height;
+    float textWidth = m_textSize.width;
+    float textHeight = m_textSize.height;
     float scaledMarginWidth = (m_margin.left + m_margin.right) * getScaleXX();
     float scaledMarginHeight = (m_margin.top + m_margin.bottom) * getScaleYY();
 
-    float requiredWidth = scaledTextWidth + scaledMarginWidth;
-    float requiredHeight = scaledTextHeight + scaledMarginHeight;
+    float requiredWidth = textWidth + scaledMarginWidth;
+    float requiredHeight = textHeight + scaledMarginHeight;
 
     if (m_enableExpand) {
         if (requiredWidth > getRect().width * getScaleXX()){
@@ -476,12 +467,12 @@ void Label::setAlignmentMode(AlignmentMode Alignment){
         case AlignmentMode::AM_TOP_CENTER:
         case AlignmentMode::AM_CENTER:
         case AlignmentMode::AM_BOTTOM_CENTER:
-            offsetX += (availableWidth - scaledTextWidth) / 2;
+            offsetX += (availableWidth - textWidth) / 2;
             break;
         case AlignmentMode::AM_TOP_RIGHT:
         case AlignmentMode::AM_MID_RIGHT:
         case AlignmentMode::AM_BOTTOM_RIGHT:
-            offsetX += availableWidth - scaledTextWidth;
+            offsetX += availableWidth - textWidth;
             break;
         default:
             break;
@@ -491,19 +482,19 @@ void Label::setAlignmentMode(AlignmentMode Alignment){
         case AlignmentMode::AM_CENTER:
         case AlignmentMode::AM_MID_LEFT:
         case AlignmentMode::AM_MID_RIGHT:
-            offsetY += (availableHeight - scaledTextHeight) / 2;
+            offsetY += (availableHeight - textHeight) / 2;
             break;
         case AlignmentMode::AM_BOTTOM_LEFT:
         case AlignmentMode::AM_BOTTOM_CENTER:
         case AlignmentMode::AM_BOTTOM_RIGHT:
-            offsetY += availableHeight - scaledTextHeight;
+            offsetY += availableHeight - textHeight;
             break;
         default:
             break;
     }
 
     m_AlignmentMode = Alignment;
-    m_hotRect = {offsetX, offsetY, m_textSize.width, m_textSize.height};
+    m_hotRect = {offsetX, offsetY, textWidth, textHeight};
 }
 AlignmentMode Label::getAlignmentMode(void) const{
     return m_AlignmentMode;
