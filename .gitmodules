@@ -7,6 +7,9 @@
 [submodule "subModules/SDL3_ttf"]
 	path = subModules/SDL3_ttf
 	url = https://github.com/SeaOceanLiu/UIControls-sdl3_ttf.git
+[submodule "subModules/SDL3_image"]
+	path = subModules/SDL3_image
+	url = https://github.com/libsdl-org/SDL_image.git
 [submodule "subModules/DebugTrace"]
 	path = subModules/DebugTrace
 	url = https://github.com/SeaOceanLiu/DebugTrace.git
@@ -14,3 +17,12 @@
 	path = subModules/assets
 	url = https://github.com/SeaOceanLiu/UIControls-assets.git
 	branch = main
+[submodule "subModules/json"]
+	path = subModules/json
+	url = https://github.com/nlohmann/json.git
+[submodule "SDL3_image"]
+	path = subModules/SDL3_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "json"]
+	path = subModules/json
+	url = https://github.com/nlohmann/json.git
