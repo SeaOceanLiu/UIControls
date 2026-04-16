@@ -302,7 +302,7 @@ void MenuBase::createSubMenuArrowLabel(void){
             m_subMenuArrow = nullptr;
         }
         m_subMenuArrow = LabelBuilder(this, {0, 0, 0, m_rect.height})    // 宽度设置为0，Label会根据内容自适应宽度
-                                .setFont(FontName::simsun)  // 使用系统宋字可以用直角的右尖括号作为箭头显示
+                                .setFont(FontName::Quando_Regular)  // 使用直角符号作为箭头显示
                                 .setAlignmentMode(AlignmentMode::AM_CENTER)
                                 .setMargin(m_captionMargin)
                                 .setFontSize((int)m_captionSize)

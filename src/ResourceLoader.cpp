@@ -16,7 +16,6 @@ const string ResourceLoader::RID_HarmonyOS_Sans_SC_Thin_ttf     = "fonts/Harmony
 const string ResourceLoader::RID_MapleMono_NF_CN_Regular_ttf    = "fonts/MapleMono-NF-CN-Regular.ttf";
 const string ResourceLoader::RID_Muyao_Softbrush_ttf            = "fonts/Muyao-Softbrush.ttf";
 const string ResourceLoader::RID_Quando_Regular_ttf             = "fonts/Quando-Regular.ttf";
-const string ResourceLoader::RID_simsun_ttc                     = "fonts/simsun.ttc";
 // 图片
 const string ResourceLoader::RID_cross_down_png                 = "images/cross_down.png";
 const string ResourceLoader::RID_cross_over_png                 = "images/cross_over.png";
@@ -134,8 +133,7 @@ unordered_map<FontName, string> ResourceLoader::m_fontFiles = {
     // {FontName::MapleMono_NF_CN_Thin, "MapleMono-NF-CN-Thin.ttf"},   // 未使用
     // {FontName::MapleMono_NF_CN_ThinItalic, "MapleMono-NF-CN-ThinItalic.ttf"},    // 未使用
     {FontName::Muyao_Softbrush, ResourceLoader::RID_Muyao_Softbrush_ttf},
-    {FontName::Quando_Regular, ResourceLoader::RID_Quando_Regular_ttf},
-    {FontName::simsun, ResourceLoader::RID_simsun_ttc}
+    {FontName::Quando_Regular, ResourceLoader::RID_Quando_Regular_ttf}
 };
 
 shared_ptr<Resource> ResourceLoader::getResource(string& resourceId){

@@ -40,8 +40,7 @@ enum class FontName {
     MapleMono_NF_CN_Thin,
     MapleMono_NF_CN_ThinItalic,
     Muyao_Softbrush,
-    Quando_Regular,
-    simsun
+    Quando_Regular
 };
 
 class Resource{
@@ -105,7 +104,7 @@ public:
     static const string RID_MapleMono_NF_CN_Regular_ttf;
     static const string RID_Muyao_Softbrush_ttf;
     static const string RID_Quando_Regular_ttf;
-    static const string RID_simsun_ttc;
+    static const string RID_Quando_Regular_ttc;
     // 图片
     static const string RID_cross_down_png;
     static const string RID_cross_over_png;
