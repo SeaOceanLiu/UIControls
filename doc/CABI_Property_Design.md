@@ -432,6 +432,10 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | Splitter | `"line-drag"` | Color | 分割线拖拽色 |
 | ColorPicker | `"closed-text"` | Color | 关闭态文字色 |
 | ColorPicker | `"popup-bg"` | Color | 弹窗背景色 |
+| WinFrame | `"win-frame-bg"` | Color | WinFrame 背景色 |
+| WinFrame | `"win-frame-border"` | Color | WinFrame 边框色 |
+| WinFrame | `"title-bar-bg"` | Color | 标题栏背景色 |
+| WinFrame | `"title-text"` | Color | 标题栏文字色 |
 | NumericUpDown | `"arrow"` | Color | 箭头色（Normal） |
 | NumericUpDown | `"arrow-hover"` | Color | 箭头悬停色 |
 | NumericUpDown | `"arrow-pressed"` | Color | 箭头按下色 |
@@ -445,8 +449,12 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | Label | `"font-style"` | `SetFontStyle(int)` | ❌ |
 | EditBox | `"font-size"` | `setFontSize(int)` | ❌ |
 | TextArea | `"line-height"` | `setLineHeight(int)` | ❌ |
+| TextArea | `"scroll-x"` | `setScrollX(int)` | ❌ |
+| TextArea | `"scroll-y"` | `setScrollY(int)` | ❌ |
 | ProgressBar | `"font-size"` | `setFontSize(int)` | ❌ |
 | Slider | `"label-font-size"` | `setLabelFontSize(int)` | ❌ |
+| ColorPicker | `"preset-cols"` | `setPresetLayout(cols, rows)` | ❌ |
+| ColorPicker | `"preset-rows"` | `setPresetLayout(cols, rows)` | ❌ |
 | ComboBox | `"max-visible-items"` | `setMaxVisibleItems(int)` | ❌ |
 | MenuPanel | `"hovered-index"` | `setHoveredIndex(int)` | ❌ |
 | NumericUpDown | `"decimals"` | `setDecimals(int)` | ✅ `SetNumericUpDownDecimals` |
@@ -465,17 +473,26 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | Slider | `"tick-interval"` | `setTickInterval(float)` | ❌ |
 | Slider | `"tick-length"` | `setTickLength(float)` | ❌ |
 | Slider | `"label-gap"` | `setLabelGap(float)` | ❌ |
+| Slider | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
+| Slider | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
 | ProgressBar | `"animation-speed"` | `setAnimationSpeed(float)` | ❌ |
+| ProgressBar | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
+| ProgressBar | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
+| ScrollBar | `"value"` | `setValue(float)` | ❌ |
 | ScrollBar | `"page-size"` | `setPageSize(float)` | ❌ |
 | ScrollBar | `"step-size"` | `setStepSize(float)` | ❌ |
 | ScrollBar | `"thickness"` | `setThickness(float)` | ❌ |
+| ScrollBar | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
+| ScrollBar | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
 | WinFrame | `"edge-margin"` | `setEdgeMargin(float)` | ❌ |
+| MenuBar | `"bar-height"` | `setBarHeight(float)` | ❌ |
+| MenuBar | `"item-height-ratio"` | `setItemHeightRatio(float)` — 需改为实例方法 | ❌ |
+| MenuBar | `"font-size"` | `setFontSize(float)` — 需改为实例方法 | ❌ |
 | ComboBox | `"arrow-width"` | `setArrowWidth(float)` | ❌ |
 | ComboBox | `"item-height"` | `setItemHeight(float)` | ❌ |
 | Dialog | `"button-height"` | `setButtonHeight(float)` | ❌ |
 | Dialog | `"button-gap"` | `setButtonGap(float)` | ❌ |
 | Dialog | `"padding"` | `setPadding(float)` | ❌ |
-| MenuBar | `"bar-height"` | `setBarHeight(float)` | ❌ |
 | TreeView | `"indent-width"` | `setIndentWidth(float)` | ✅ `TreeViewSetIndentWidth` |
 | TreeView | `"row-height"` | `setRowHeight(float)` | ✅ `TreeViewSetRowHeight` |
 | TreeView | `"line-spacing"` | `setLineSpacing(float)` | ✅ `TreeViewSetLineSpacing` |
@@ -487,6 +504,8 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | NumericUpDown | `"step"` | `setStep(double)` | ✅ `SetNumericUpDownStep` |
 | NumericUpDown | `"page-step"` | `setPageStep(double)` | ✅ `SetNumericUpDownPageStep` |
 | NumericUpDown | `"button-width"` | `setButtonWidth(float)` | ✅ `SetNumericUpDownButtonWidth` |
+| NumericUpDown | `"range-min"` | `setRange(min, max)` — 拆自双参 | ✅ `SetNumericUpDownRange` |
+| NumericUpDown | `"range-max"` | `setRange(min, max)` — 拆自双参 | ✅ `SetNumericUpDownRange` |
 
 ### 6.6 String 属性表
 
@@ -497,9 +516,10 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | ProgressBar | `"custom-text"` | `setCustomText(string)` | ❌ |
 | Slider | `"label-format"` | `setLabelFormat(string)` | ❌ |
 | MenuItem | `"shortcut"` | `setShortcut(string)` | ❌ |
+| WinFrame | `"title"` | `setTitle(const string&)` | ❌ |
 | Dialog | `"confirm-text"` | `setConfirmButtonText(string)` | ✅ `SetConfirmButtonText` |
 | Dialog | `"cancel-text"` | `setCancelButtonText(string)` | ✅ `SetCancelButtonText` |
-| ColorPicker | `"color"` | `setColor(string)` — hex | ❌ (已有 `SetClosedTextColor`/`SetPopupBGColor` 但非通用) |
+| ColorPicker | `"color"` | `setColor(string)` — hex | ❌ |
 
 ---
 
@@ -521,7 +541,16 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 - [ ] NumericUpDown override `setColorProperty`
 
 ### Phase 3 — Int/Float/String（待完成）
-对上述 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setStringProperty`，按 §6.4~§6.6 的属性表逐个实现。
+对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setStringProperty`，按 §6.4~§6.6 的属性表逐个实现。
+
+**注意 — MenuBar 静态方法改造**：
+`MenuBar::setItemHeightRatio(float)` 和 `MenuBar::setFontSize(float)` 当前是 `static` 方法，无法参与实例虚方法分发。需先改为实例方法后再加入属性系统：
+- 移除 `static` 关键字
+- 添加对应的实例成员变量（目前它们操作静态变量）
+- 更新现有调用点
+
+**注意 — `setRange(min, max)` 拆分**：
+ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。
 
 ### 实现模式
 
