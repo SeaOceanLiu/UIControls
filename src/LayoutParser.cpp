@@ -1619,6 +1619,9 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
                 node->id = item.value("id", "");
                 node->label = item.value("label", "");
                 node->expanded = item.value("expanded", false);
+                if (item.contains("userData") && item["userData"].is_string()) {
+                    node->userData = static_cast<void*>(new std::string(item["userData"].get<string>()));
+                }
                 if (item.contains("children") && item["children"].is_array()) {
                     parseItems(item["children"], node->children);
                 }
@@ -1627,6 +1630,9 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
         };
         parseItems(j["items"], items);
         tv->setItems(items);
+        tv->setOnClearNode([](void* ud) {
+            delete static_cast<std::string*>(ud);
+        });
     }
 
     parseEvents(tv, j);
@@ -1984,6 +1990,20 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
                 auto handler = it->second;
                 cb->setOnCheckChanged([handler](shared_ptr<CheckBox> sender, CheckState, CheckState) {
                     handler(sender);
+                });
+            }
+        }
+    }
+
+    // TreeView: onSelect
+    if (auto tv = dynamic_pointer_cast<TreeView>(ctrl)) {
+        if (events.contains("onSelect") && events["onSelect"].is_string()) {
+            string handlerName = events["onSelect"].get<string>();
+            auto it = m_handlers.find(handlerName);
+            if (it != m_handlers.end()) {
+                auto handler = it->second;
+                tv->setOnSelect([handler, tv](const string&) {
+                    handler(tv);
                 });
             }
         }
