@@ -41,55 +41,56 @@ static UIRegisterActionFn   uiRegisterAction  = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 
-static const char* TREEVIEW_JSON = R"({
-    "theme": {
-        "colors": {
-            "treeview": {
-                "background": { "normal": "#2D2D2D" },
-                "border": { "normal": "#555555" }
-            }
-        }
-    },
-    "controls": [
-        {
-            "type": "Panel",
-            "id": "rootPanel",
-            "rect": { "x": 10, "y": 10, "w": 760, "h": 560 },
-            "style": { "background": { "normal": "#1E1E1E" } },
-            "controls": [
-                {
-                    "type": "TreeView",
-                    "id": "controlTree",
-                    "rect": { "x": 10, "y": 10, "w": 250, "h": 300 },
-                    "indentWidth": 16,
-                    "rowHeight": 24,
-                    "cycleNavigation": true,
-                    "defaultExpand": false,
-                    "items": [
-                        {
-                            "id": "rootPnl",
-                            "label": "Root Panel",
-                            "expanded": true,
-                            "children": [
-                                { "id": "btn1", "label": "Button (btn1)" },
-                                {
-                                    "id": "subPnl",
-                                    "label": "Sub Panel",
-                                    "expanded": false,
-                                    "children": [
-                                        { "id": "innerBtn", "label": "Inner Button" }
-                                    ]
-                                }
-                            ]
-                        },
-                        { "id": "lbl1", "label": "Label (lbl1)" }
-                    ],
-                    "events": { "onSelect": "onTreeSelect" }
-                }
-            ]
-        }
-    ]
-})";
+static const char* TREEVIEW_JSON =
+    "{\n"
+    "    \"theme\": {\n"
+    "        \"colors\": {\n"
+    "            \"treeview\": {\n"
+    "                \"background\": { \"normal\": \"#2D2D2D\" },\n"
+    "                \"border\": { \"normal\": \"#555555\" }\n"
+    "            }\n"
+    "        }\n"
+    "    },\n"
+    "    \"controls\": [\n"
+    "        {\n"
+    "            \"type\": \"Panel\",\n"
+    "            \"id\": \"rootPanel\",\n"
+    "            \"rect\": { \"x\": 10, \"y\": 10, \"w\": 760, \"h\": 560 },\n"
+    "            \"style\": { \"background\": { \"normal\": \"#1E1E1E\" } },\n"
+    "            \"controls\": [\n"
+    "                {\n"
+    "                    \"type\": \"TreeView\",\n"
+    "                    \"id\": \"controlTree\",\n"
+    "                    \"rect\": { \"x\": 10, \"y\": 10, \"w\": 250, \"h\": 300 },\n"
+    "                    \"indentWidth\": 16,\n"
+    "                    \"rowHeight\": 24,\n"
+    "                    \"cycleNavigation\": true,\n"
+    "                    \"defaultExpand\": false,\n"
+    "                    \"items\": [\n"
+    "                        {\n"
+    "                            \"id\": \"rootPnl\",\n"
+    "                            \"label\": \"Root Panel\",\n"
+    "                            \"expanded\": true,\n"
+    "                            \"children\": [\n"
+    "                                { \"id\": \"btn1\", \"label\": \"Button (btn1)\" },\n"
+    "                                {\n"
+    "                                    \"id\": \"subPnl\",\n"
+    "                                    \"label\": \"Sub Panel\",\n"
+    "                                    \"expanded\": false,\n"
+    "                                    \"children\": [\n"
+    "                                        { \"id\": \"innerBtn\", \"label\": \"Inner Button\" }\n"
+    "                                    ]\n"
+    "                                }\n"
+    "                            ]\n"
+    "                        },\n"
+    "                        { \"id\": \"lbl1\", \"label\": \"Label (lbl1)\" }\n"
+    "                    ],\n"
+    "                    \"events\": { \"onSelect\": \"onTreeSelect\" }\n"
+    "                }\n"
+    "            ]\n"
+    "        }\n"
+    "    ]\n"
+    "}";
 
 static int g_selectCount = 0;
 static char g_lastSelected[256] = {0};
