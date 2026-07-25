@@ -26,6 +26,7 @@
 | 子模块依赖 | [dependencies.md](doc/guidelines/dependencies.md) |
 | Session 历史记录 | [history.md](doc/guidelines/history.md) |
 | 测试用例规范 | [testing.md](doc/guidelines/testing.md) |
+| C ABI 属性系统 | [CABI_Property_Design.md](doc/CABI_Property_Design.md) |
 
 ## Quick Links
 

@@ -772,3 +772,44 @@ void ControlImpl::inheritRenderer(void) {
         m_resourceProvider = MAINWIN->getResourceProvider();
     }
 }
+
+// ── Property system ──
+int ControlImpl::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, "background") == 0)           { setNormalStateBGColor(color);   return 1; }
+    if (strcmp(prop, "background.hover") == 0)     { setHoverStateBGColor(color);    return 1; }
+    if (strcmp(prop, "background.pressed") == 0)   { setPressedStateBGColor(color);  return 1; }
+    if (strcmp(prop, "background.disabled") == 0)  { setDisabledStateBGColor(color); return 1; }
+    if (strcmp(prop, "border") == 0)               { setNormalStateBDColor(color);   return 1; }
+    if (strcmp(prop, "border.hover") == 0)         { setHoverStateBDColor(color);    return 1; }
+    if (strcmp(prop, "border.pressed") == 0)       { setPressedStateBDColor(color);  return 1; }
+    if (strcmp(prop, "border.disabled") == 0)      { setDisabledStateBDColor(color); return 1; }
+    if (strcmp(prop, "text") == 0)                 { setTextNormalStateColor(color); return 1; }
+    if (strcmp(prop, "text.hover") == 0)           { setTextHoverStateColor(color);  return 1; }
+    if (strcmp(prop, "text.pressed") == 0)         { setTextPressedStateColor(color);return 1; }
+    if (strcmp(prop, "text.disabled") == 0)        { setTextDisabledStateColor(color);return 1; }
+    if (strcmp(prop, "text-shadow") == 0)          { setTextShadowNormalStateColor(color);return 1; }
+    if (strcmp(prop, "text-shadow.hover") == 0)    { setTextShadowHoverStateColor(color);return 1; }
+    if (strcmp(prop, "text-shadow.pressed") == 0)  { setTextShadowPressedStateColor(color);return 1; }
+    if (strcmp(prop, "text-shadow.disabled") == 0) { setTextShadowDisabledStateColor(color);return 1; }
+    return 0;
+}
+
+int ControlImpl::setStateColorProperty(const char* prop, StateColor sc) {
+    if (strcmp(prop, "background") == 0)   { setBackgroundStateColor(sc); return 1; }
+    if (strcmp(prop, "border") == 0)       { setBorderStateColor(sc);     return 1; }
+    if (strcmp(prop, "text") == 0)         { setTextStateColor(sc);       return 1; }
+    if (strcmp(prop, "text-shadow") == 0)  { setTextShadowStateColor(sc); return 1; }
+    return 0;
+}
+
+int ControlImpl::setIntProperty(const char* prop, int value) {
+    return 0;
+}
+
+int ControlImpl::setFloatProperty(const char* prop, float value) {
+    return 0;
+}
+
+int ControlImpl::setStringProperty(const char* prop, const char* value) {
+    return 0;
+}

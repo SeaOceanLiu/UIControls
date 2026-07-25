@@ -510,6 +510,34 @@ bool TreeView::collapseNode(const string& id) {
     return true;
 }
 
+void TreeView::expandAll() {
+    function<void(vector<shared_ptr<TreeNode>>&)> expandRecursive;
+    expandRecursive = [&](vector<shared_ptr<TreeNode>>& items) {
+        for (auto& node : items) {
+            if (!node->children.empty()) {
+                node->expanded = true;
+                expandRecursive(node->children);
+            }
+        }
+    };
+    expandRecursive(m_rootItems);
+    rebuildFlatRows();
+}
+
+void TreeView::collapseAll() {
+    function<void(vector<shared_ptr<TreeNode>>&)> collapseRecursive;
+    collapseRecursive = [&](vector<shared_ptr<TreeNode>>& items) {
+        for (auto& node : items) {
+            if (!node->children.empty()) {
+                node->expanded = false;
+                collapseRecursive(node->children);
+            }
+        }
+    };
+    collapseRecursive(m_rootItems);
+    rebuildFlatRows();
+}
+
 bool TreeView::selectNode(const string& id) {
     if (m_nodeMap.find(id) == m_nodeMap.end())
         return false;
@@ -623,4 +651,14 @@ void TreeView::updateScrollBar() {
         m_hScrollBar->setValue(0);
     }
     m_hScrollBar->setRect({0, viewH - sb, hW, sb});
+}
+
+// Property system
+int TreeView::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, "selected") == 0)  { setSelectedColor(color); return 1; }
+    if (strcmp(prop, "hover") == 0)     { setHoverColor(color);    return 1; }
+    if (strcmp(prop, "background") == 0){ setBgColor(color);       return 1; }
+    if (strcmp(prop, "border") == 0)    { setBorderColor(color);   return 1; }
+    if (strcmp(prop, "text") == 0)      { setTextColor(color);     return 1; }
+    return ControlImpl::setColorProperty(prop, color); // fallback
 }

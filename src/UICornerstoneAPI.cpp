@@ -17,6 +17,7 @@
 #include "Splitter.h"
 #include "Dialog.h"
 #include "WinFrame.h"
+#include "TreeView.h"
 #include "LayoutParser.h"
 #include "PlatformUtils.h"
 #include "Actor.h"
@@ -1161,5 +1162,141 @@ void UICornerstone_WinFrameSetClientText(UIControlHandle wf, const char* text) {
     client->addControl(label);
     label->create();
     label->setVisible(true);
+}
+
+// ============================================================
+// Property system (string-based, multi-type)
+// ============================================================
+
+int UICornerstone_SetColor(UIControlHandle ctl, const char* prop, UIColor value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setColorProperty(prop, SColor(value.r, value.g, value.b, value.a));
+}
+
+int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateColor value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setStateColorProperty(prop,
+        StateColor(
+            SColor(value.normal.r, value.normal.g, value.normal.b, value.normal.a),
+            SColor(value.hover.r, value.hover.g, value.hover.b, value.hover.a),
+            SColor(value.pressed.r, value.pressed.g, value.pressed.b, value.pressed.a),
+            SColor(value.disabled.r, value.disabled.g, value.disabled.b, value.disabled.a)
+        ));
+}
+
+int UICornerstone_SetInt(UIControlHandle ctl, const char* prop, int value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setIntProperty(prop, value);
+}
+
+int UICornerstone_SetFloat(UIControlHandle ctl, const char* prop, float value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setFloatProperty(prop, value);
+}
+
+int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setStringProperty(prop, value);
+}
+
+// ============================================================
+// TreeView C ABI
+// ============================================================
+static TreeView* toTreeView(UIControlHandle ctl) {
+    return ctl ? dynamic_cast<TreeView*>(static_cast<Control*>(ctl)) : nullptr;
+}
+
+const char* UICornerstone_TreeViewGetSelectedId(UIControlHandle ctl) {
+    auto* tv = toTreeView(ctl);
+    if (!tv) return nullptr;
+    static std::string s_id;
+    s_id = tv->getSelectedId();
+    return s_id.c_str();
+}
+
+const char* UICornerstone_TreeViewGetSelectedUserData(UIControlHandle ctl) {
+    auto* tv = toTreeView(ctl);
+    if (!tv) return nullptr;
+    auto node = tv->findNodeById(tv->getSelectedId());
+    if (!node || !node->userData) return nullptr;
+    static std::string s_userData;
+    auto* s = static_cast<std::string*>(node->userData);
+    s_userData = *s;
+    return s_userData.c_str();
+}
+
+int UICornerstone_TreeViewExpandNode(UIControlHandle ctl, const char* nodeId) {
+    auto* tv = toTreeView(ctl);
+    return (tv && nodeId && tv->expandNode(nodeId)) ? 1 : 0;
+}
+
+int UICornerstone_TreeViewCollapseNode(UIControlHandle ctl, const char* nodeId) {
+    auto* tv = toTreeView(ctl);
+    return (tv && nodeId && tv->collapseNode(nodeId)) ? 1 : 0;
+}
+
+void UICornerstone_TreeViewExpandAll(UIControlHandle ctl) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->expandAll();
+}
+
+void UICornerstone_TreeViewCollapseAll(UIControlHandle ctl) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->collapseAll();
+}
+
+void UICornerstone_TreeViewSetBgColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setBgColor(SColor(r, g, b, a));
+}
+
+void UICornerstone_TreeViewSetBorderColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setBorderColor(SColor(r, g, b, a));
+}
+
+void UICornerstone_TreeViewSetSelectedColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setSelectedColor(SColor(r, g, b, a));
+}
+
+void UICornerstone_TreeViewSetHoverColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setHoverColor(SColor(r, g, b, a));
+}
+
+void UICornerstone_TreeViewSetTextColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setTextColor(SColor(r, g, b, a));
+}
+
+void UICornerstone_TreeViewSetFontSize(UIControlHandle ctl, int size) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setFontSize(size);
+}
+
+void UICornerstone_TreeViewSetIndentWidth(UIControlHandle ctl, float px) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setIndentWidth(px);
+}
+
+void UICornerstone_TreeViewSetRowHeight(UIControlHandle ctl, float px) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setRowHeight(px);
+}
+
+void UICornerstone_TreeViewSetLineSpacing(UIControlHandle ctl, float px) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setLineSpacing(px);
+}
+
+void UICornerstone_TreeViewSetArrowGap(UIControlHandle ctl, float px) {
+    auto* tv = toTreeView(ctl);
+    if (tv) tv->setArrowGap(px);
 }
 

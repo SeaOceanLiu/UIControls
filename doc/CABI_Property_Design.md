@@ -1,0 +1,482 @@
+# C ABI 属性系统设计
+
+> 对应 Phase 16i | 编制 2026-07-25 | 状态: **设计中**
+
+## 目录
+
+1. [动机](#1-动机)
+2. [问题背景](#2-问题背景)
+3. [备选方案](#3-备选方案)
+4. [最终决策：结构化多态](#4-最终决策结构化多态)
+5. [详细设计](#5-详细设计)
+6. [属性命名约定](#6-属性命名约定)
+7. [扩展指南](#7-扩展指南)
+
+---
+
+## 1. 动机
+
+C ABI 层最初为每个控件的颜色属性暴露独立的导出函数（如 `UICornerstone_SetBGColor`、`UICornerstone_TreeViewSetSelectedColor`），每个自定义颜色需要写一个函数声明 + 一个实现。随着控件数量增加，这种方式导致大量重复代码：
+
+| 控件 | 特有颜色属性数 | 函数数 |
+|------|--------------|--------|
+| TreeView | 5 个 (bg/border/hover/selected/text) | 5 |
+| Slider | 7 个 (track/trackFill/thumb/thumbBorder/thumbHover/tick/label) | 7 |
+| ComboBox | 7 个 (arrow/arrowHover/itemSelected/itemHover/itemDisabled/listBg/listBorder) | 7 |
+| CheckBox | 4 个 (check/cross/indeterminate/boxBorder) | 4 |
+| 累计 | ~23 个 | ~23 |
+
+**目标**：提供一个统一、可扩展的 C ABI 入口，减少导出函数数量，同时支持任意控件的任意属性。
+
+---
+
+## 2. 问题背景
+
+### 2.1 现有的颜色体系
+
+代码库中存在两套并行的颜色存储机制：
+
+| 机制 | 基类 | 存放位置 | 特点 |
+|------|------|---------|------|
+| **StateColor** | `ControlImpl` | `m_bgColor` / `m_borderColor` / `m_textColor` / `m_textShadowColor` | 4 态 (Normal/Hover/Pressed/Disabled)，通过虚方法设置 |
+| **简单 SColor** | 各控件独立 | 控件自定义成员（如 `TreeView::m_selectedColor`） | 单态，通过控件特有方法设置 |
+
+### 2.2 现有的 C ABI 颜色函数
+
+| 函数 | 范围 | 类型 |
+|------|------|------|
+| `UICornerstone_SetBGColor(ctl, r,g,b,a)` | 全控件 | StateColor（仅 Normal 态） |
+| `UICornerstone_TreeViewSetBgColor(ctl, r,g,b,a)` | 仅 TreeView | SColor |
+| `UICornerstone_TreeViewSetSelectedColor(ctl, r,g,b,a)` | 仅 TreeView | SColor |
+| ... | 仅某控件 | SColor |
+
+### 2.3 关键数据
+
+全代码库颜色属性分布（详见 [控件颜色调研](#附录控件颜色属性分布)）：
+
+- **4 态 StateColor 通用属性**：background, border, text, text-shadow（ControlImpl 提供）
+- **单色控件特有属性**：Slider(7), ComboBox(7), TreeView(5), CheckBox(4), ProgressBar(1), Splitter(3色合一), ColorPicker(2), NumericUpDown(3色合一)
+- **总特有属性数**：约 20+
+
+---
+
+## 3. 备选方案
+
+### 3.1 方案 A：全局枚举 + 单入口
+
+```c
+typedef enum {
+    UIC_PROP_BACKGROUND,
+    UIC_PROP_BORDER,
+    UIC_PROP_TEXT,
+    UIC_PROP_SELECTED,
+    UIC_PROP_HOVER,
+    UIC_PROP_TRACK,
+    UIC_PROP_TRACK_FILL,
+    // ... 不断增长
+} UIColorProp;
+
+void UICornerstone_SetColor(UIControlHandle ctl, UIColorProp prop, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+```
+
+| 维度 | 评价 |
+|------|------|
+| 入口数 | **1 个** |
+| 枚举膨胀 | 必须包含所有控件特有属性 → 30+ 枚举值，成为大杂烩 |
+| 语义模糊 | `HOVER` 在 TreeView 是"行悬停色"，在 ComboBox 是"箭头悬停色"，含义不同 |
+| StateColor 不兼容 | 基类用 4 态，但枚举方案只能表达单色 |
+| 二进制稳定性 | 枚举值不可重排/插入，新值只能 append，否则破坏 ABI |
+
+### 3.2 方案 B：每控件独立导出
+
+```c
+void UICornerstone_SliderSetTrackColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+void UICornerstone_ComboBoxSetItemSelectedColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+// ... 每个属性一个函数
+```
+
+| 维度 | 评价 |
+|------|------|
+| 入口数 | **~28 个** |
+| 自文档 | 函数名即文档，含义精确 |
+| 签名灵活 | Splitter 的 3 色同设可用独立签名 |
+| 扩展成本高 | 每新增属性 = 1 个新导出函数（声明 + 实现） |
+| 无枚举耦合 | 互不影响 |
+
+### 3.3 方案 C：每控件聚合枚举 + 单入口
+
+```c
+typedef enum { UIC_TREEVIEW_COLOR_SELECTED, UIC_TREEVIEW_COLOR_HOVER, ... } UIC_TreeViewColorProp;
+void UICornerstone_TreeViewSetColor(UIControlHandle ctl, UIC_TreeViewColorProp prop, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+```
+
+| 维度 | 评价 |
+|------|------|
+| 入口数 | **~6 个**（每控件 1 个） |
+| 枚举域化 | 不互相污染 |
+| TreeView bg/border 歧义 | 同时存在通用 `SetBGColor`（StateColor 路径）+ TreeView 自身 `SetColor(..., BG)`（SColor 路径），效果不同 |
+
+### 3.4 方案 D：全局字符串 + 虚方法分发
+
+```c
+int UICornerstone_SetColor(UIControlHandle ctl, const char* prop, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+```
+
+Base Control 添加虚方法，各控件 override：
+
+```cpp
+// Control
+virtual int setColorProperty(const char* prop, SColor color) { return 0; }
+
+// ControlImpl
+int ControlImpl::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, "background") == 0) { setNormalStateBGColor(color); return 1; }
+    if (strcmp(prop, "border") == 0)     { setNormalStateBDColor(color); return 1; }
+    if (strcmp(prop, "text") == 0)       { setTextNormalStateColor(color); return 1; }
+    return 0;
+}
+
+// TreeView
+int TreeView::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, "selected") == 0) { setSelectedColor(color); return 1; }
+    if (strcmp(prop, "hover") == 0)    { setHoverColor(color);    return 1; }
+    return ControlImpl::setColorProperty(prop, color); // fallback
+}
+```
+
+| 维度 | 评价 |
+|------|------|
+| 入口数 | **1 个**（仅颜色） |
+| 虚方法分发 | 零 dynamic_cast，纯虚函数，性能开销可忽略 |
+| 字符串运行时错误 | 拼错属性名 → 返回 0，需调用方检查返回值 |
+| StateColor 4 态 | 无法表达，字符串只能设 Normal 态 |
+
+### 3.5 方案 E：变参 + 字符串
+
+```c
+int UICornerstone_SetProperty(UIControlHandle ctl, const char* prop, const char* type, ...);
+```
+
+```c
+// 单色
+UICornerstone_SetProperty(ctl, "selected", "color", 255, 0, 0, 255);
+// StateColor 4 态（16 个参数）
+UICornerstone_SetProperty(ctl, "background", "state", 200,200,200,255, 180,180,180,255, 160,160,160,255, 220,220,220,255);
+// 整数
+UICornerstone_SetProperty(ctl, "font-size", "int", 16);
+```
+
+| 问题 | 表现 |
+|------|------|
+| C 变参提升 | `uint8_t` 自动提升为 `int`，易出错 |
+| StateColor 爆炸 | 4 态 × 4 通道 = 16 个 int 参数，不可维护 |
+| 无类型安全 | `"color"` 拼成 `"colo"` → 静默乱解析 → 运行时崩溃 |
+| 无 IDE 提示 | 16 个参数，无法记住顺序 |
+
+### 3.6 方案 F（最终）：结构化多态
+
+```c
+typedef struct { uint8_t r, g, b, a; } UIColor;
+
+typedef struct {
+    UIColor normal;
+    UIColor hover;
+    UIColor pressed;
+    UIColor disabled;
+} UIStateColor;
+
+// 5 个类型安全入口，每个支持字符串属性名
+int UICornerstone_SetColor(     UIControlHandle ctl, const char* prop, UIColor       value);
+int UICornerstone_SetStateColor( UIControlHandle ctl, const char* prop, UIStateColor  value);
+int UICornerstone_SetInt(       UIControlHandle ctl, const char* prop, int           value);
+int UICornerstone_SetFloat(     UIControlHandle ctl, const char* prop, float         value);
+int UICornerstone_SetString(    UIControlHandle ctl, const char* prop, const char*   value);
+```
+
+| 维度 | 评价 |
+|------|------|
+| 入口数 | **5 个**（覆盖所有值类型） |
+| 类型安全 | struct 成员名自解释，无变参 |
+| StateColor 友好 | 原生结构体支持，命名成员无歧义 |
+| 扩展性 | 新属性加一行 `strcmp`，不改变 ABI |
+| IDE 可发现 | struct 成员在 VS 等 IDE 中有补全 |
+
+---
+
+## 4. 最终决策：结构化多态
+
+### 4.1 理由
+
+1. **类型安全**：5 个显式函数替代变参，参数通过 struct 成员命名
+2. **StateColor 友好**：`UIStateColor` 的 `.normal/.hover/.pressed/.disabled` 成员自解释，避免 16 参数混乱
+3. **虚方法分发**：每值类型一个虚方法，零 `dynamic_cast`，O(1) 分发
+4. **属性名全局统一字符串**：不占用枚举 ABI 槽位，不共享枚举域，互不污染
+5. **结构体 ABI 稳定**：`UIColor`/`UIStateColor` 是简单 POD 结构，成员位置固定
+
+### 4.2 对比总结
+
+| 维度 | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串 | E:变参 | **F:结构化(选)** |
+|------|-----------|-----------|-----------|---------|-------|-----------------|
+| 函数数 | 1 | 28+ | ~6 | 1 | 1 | 5 |
+| 类型安全 | ✅ | ✅ | ✅ | ⚠️ | ❌ | ✅ |
+| StateColor 4态 | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| 无枚举耦合 | — | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| 签名灵活 | ❌ | ✅ | ❌ | ✅ | ⚠️ | ✅ |
+| IDE 补全 | ✅ | ✅ | ✅ | ❌(字符串) | ❌ | ⚠️(struct) |
+| 新属性扩展 | 改枚举 | 加函数 | 改枚举 | 加strcmp | 加strcmp | 加strcmp |
+
+---
+
+## 5. 详细设计
+
+### 5.1 架构
+
+```
+C ABI (5 入口)
+    │
+    ▼
+Control::setColorProperty(prop, SColor)       ← 虚方法分发
+Control::setStateColorProperty(prop, StateColor)
+Control::setIntProperty(prop, int)
+Control::setFloatProperty(prop, float)
+Control::setStringProperty(prop, const char*)
+    │
+    ├─ ControlImpl: 处理通用属性
+    │     ("background", "border", "text", "text-shadow")
+    │
+    └─ TreeView:    处理特有属性 + fallback 到基类
+          ("selected", "hover", "bg", "border", "text")
+```
+
+### 5.2 C ABI 类型定义
+
+```c
+// include/UICornerstoneAPI.h
+
+/* ============ 属性系统类型 ============ */
+typedef struct { uint8_t r, g, b, a; } UIColor;
+
+typedef struct {
+    UIColor normal;
+    UIColor hover;
+    UIColor pressed;
+    UIColor disabled;
+} UIStateColor;
+
+/* ============ 属性系统入口 ============ */
+// 设置单色属性（例如 TreeView 的 "selected"、"hover"）
+// prop 属性名，value 颜色值
+// 返回 1 成功，0 不识别
+int UICornerstone_SetColor(UIControlHandle ctl, const char* prop, UIColor value);
+
+// 设置 4 态颜色属性（例如全控件通用的 "background"、"border"）
+// prop 属性名，value 四态颜色
+int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateColor value);
+
+// 设置整数属性（例如 "font-size"）
+int UICornerstone_SetInt(UIControlHandle ctl, const char* prop, int value);
+
+// 设置浮点属性（例如 "row-height", "indent-width"）
+int UICornerstone_SetFloat(UIControlHandle ctl, const char* prop, float value);
+
+// 设置字符串属性（例如 "text"、"font"）
+int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* value);
+```
+
+### 5.3 虚方法接口
+
+```cpp
+// include/ControlBase.h (Control 类新增)
+
+virtual int setColorProperty(const char* prop, SColor color) { return 0; }
+virtual int setStateColorProperty(const char* prop, StateColor stateColor) { return 0; }
+virtual int setIntProperty(const char* prop, int value) { return 0; }
+virtual int setFloatProperty(const char* prop, float value) { return 0; }
+virtual int setStringProperty(const char* prop, const char* value) { return 0; }
+```
+
+### 5.4 ControlImpl 实现通用属性
+
+```cpp
+// src/ControlBase.cpp
+
+int ControlImpl::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, "background") == 0)         { setNormalStateBGColor(color);  return 1; }
+    if (strcmp(prop, "background.hover") == 0)   { setHoverStateBGColor(color);   return 1; }
+    if (strcmp(prop, "background.pressed") == 0) { setPressedStateBGColor(color); return 1; }
+    if (strcmp(prop, "background.disabled") == 0){ setDisabledStateBGColor(color);return 1; }
+    if (strcmp(prop, "border") == 0)             { setNormalStateBDColor(color);  return 1; }
+    if (strcmp(prop, "border.hover") == 0)       { setHoverStateBDColor(color);   return 1; }
+    if (strcmp(prop, "border.pressed") == 0)     { setPressedStateBDColor(color); return 1; }
+    if (strcmp(prop, "border.disabled") == 0)    { setDisabledStateBDColor(color);return 1; }
+    if (strcmp(prop, "text") == 0)               { setTextNormalStateColor(color);return 1; }
+    if (strcmp(prop, "text.hover") == 0)         { setTextHoverStateColor(color); return 1; }
+    if (strcmp(prop, "text.pressed") == 0)       { setTextPressedStateColor(color);return 1; }
+    if (strcmp(prop, "text.disabled") == 0)      { setTextDisabledStateColor(color);return 1; }
+    if (strcmp(prop, "text-shadow") == 0)        { setTextShadowNormalStateColor(color);return 1; }
+    // ...
+    return 0;
+}
+
+int ControlImpl::setStateColorProperty(const char* prop, StateColor sc) {
+    if (strcmp(prop, "background") == 0) { setBackgroundStateColor(sc); return 1; }
+    if (strcmp(prop, "border") == 0)     { setBorderStateColor(sc);     return 1; }
+    if (strcmp(prop, "text") == 0)       { setTextStateColor(sc);       return 1; }
+    if (strcmp(prop, "text-shadow") == 0){ setTextShadowStateColor(sc); return 1; }
+    return 0;
+}
+```
+
+### 5.5 C ABI 实现
+
+```cpp
+// src/UICornerstoneAPI.cpp
+
+int UICornerstone_SetColor(UIControlHandle ctl, const char* prop, UIColor value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setColorProperty(prop, SColor(value.r, value.g, value.b, value.a));
+}
+
+int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateColor value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    StateColor sc(value.normal, value.hover, value.pressed, value.disabled);
+    return c->setStateColorProperty(prop, sc);
+}
+// ...其余类似
+```
+
+### 5.6 TreeView 覆写
+
+```cpp
+// src/TreeView.cpp
+
+int TreeView::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, "selected") == 0) { setSelectedColor(color); return 1; }
+    if (strcmp(prop, "hover") == 0)    { setHoverColor(color);    return 1; }
+    if (strcmp(prop, "background") == 0){ setBgColor(color);      return 1; }
+    if (strcmp(prop, "border") == 0)   { setBorderColor(color);   return 1; }
+    if (strcmp(prop, "text") == 0)     { setTextColor(color);     return 1; }
+    // fallback: 用基类的 StateColor Normal 态
+    return ControlImpl::setColorProperty(prop, color);
+}
+```
+
+---
+
+## 6. 属性命名约定
+
+### 6.1 命名规则
+
+```
+{property-name}[.{state}]
+```
+
+- 属性名全小写，多词用连字符 `-`
+- 4 态后缀 (仅用于 `SetColor` 单色入口设置 StateColor 的某态)：
+  - `.normal`（默认，可不写）
+  - `.hover`
+  - `.pressed`
+  - `.disabled`
+
+### 6.2 通用属性表
+
+| 属性名 | 值类型 | C ABI 入口 | 范围 |
+|--------|-------|-----------|------|
+| `"background"` | StateColor | `SetStateColor` | 全控件 |
+| `"background"` | Color | `SetColor` → Normal 态 | 全控件 |
+| `"background.hover"` | Color | `SetColor` | 全控件 |
+| `"background.pressed"` | Color | `SetColor` | 全控件 |
+| `"background.disabled"` | Color | `SetColor` | 全控件 |
+| `"border"` | StateColor | `SetStateColor` | 全控件 |
+| `"border"` | Color | `SetColor` → Normal 态 | 全控件 |
+| `"border.hover"` | Color | `SetColor` | 全控件 |
+| `"border.pressed"` | Color | `SetColor` | 全控件 |
+| `"border.disabled"` | Color | `SetColor` | 全控件 |
+| `"text"` | StateColor | `SetStateColor` | 全控件 |
+| `"text"` | Color | `SetColor` → Normal 态 | 全控件 |
+| `"text.hover"` | Color | `SetColor` | 全控件 |
+| `"text.pressed"` | Color | `SetColor` | 全控件 |
+| `"text.disabled"` | Color | `SetColor` | 全控件 |
+| `"text-shadow"` | StateColor | `SetStateColor` | 全控件 |
+| `"text-shadow"` | Color | `SetColor` → Normal 态 | 全控件 |
+
+### 6.3 控件特有属性表
+
+| 控件 | 属性名 | 值类型 | 说明 |
+|------|--------|-------|------|
+| TreeView | `"selected"` | Color | 选中行背景色 |
+| TreeView | `"hover"` | Color | 悬停行背景色 |
+| Slider | `"track"` | Color | 轨道色 |
+| Slider | `"track-fill"` | Color | 轨道填充色 |
+| Slider | `"thumb"` | Color | 滑块色 |
+| Slider | `"thumb-border"` | Color | 滑块边框色 |
+| Slider | `"thumb-hover"` | Color | 滑块悬停色 |
+| Slider | `"tick"` | Color | 刻度线色 |
+| Slider | `"label"` | Color | 标签色 |
+| ComboBox | `"arrow"` | Color | 箭头色 |
+| ComboBox | `"arrow-hover"` | Color | 箭头悬停色 |
+| ComboBox | `"item-selected"` | Color | 列表选中项色 |
+| ComboBox | `"item-hover"` | Color | 列表悬停项色 |
+| ComboBox | `"item-disabled"` | Color | 列表禁选项色 |
+| ComboBox | `"list-bg"` | Color | 列表背景色 |
+| ComboBox | `"list-border"` | Color | 列表边框色 |
+| CheckBox | `"check"` | Color | 勾选标记色 |
+| CheckBox | `"cross"` | Color | 叉号标记色 |
+| CheckBox | `"indeterminate"` | Color | 不确定态标记色 |
+| CheckBox | `"box-border"` | Color | 复选框边框色 |
+| ProgressBar | `"progress"` | Color | 进度条填充色 |
+| Splitter | `"line"` | Color | 分割线色（Normal） |
+| Splitter | `"line-hover"` | Color | 分割线悬停色 |
+| Splitter | `"line-drag"` | Color | 分割线拖拽色 |
+| ColorPicker | `"closed-text"` | Color | 关闭态文字色 |
+| ColorPicker | `"popup-bg"` | Color | 弹窗背景色 |
+| NumericUpDown | `"arrow"` | Color | 箭头色（Normal） |
+| NumericUpDown | `"arrow-hover"` | Color | 箭头悬停色 |
+| NumericUpDown | `"arrow-pressed"` | Color | 箭头按下色 |
+
+---
+
+## 7. 扩展指南
+
+### 7.1 新增通用属性
+
+修改 `ControlImpl::setColorProperty` / `setStateColorProperty` 加一行 `strcmp`。
+
+### 7.2 新增控件特有属性
+
+1. 在控件类中实现 setter 方法
+2. Override `setColorProperty`（或其他类型对应虚方法）
+3. 加 `strcmp` case 处理属性名，fallback 到基类
+
+### 7.3 新增值类型
+
+如果需要新的值类型（如 `bool`），请在 `Control` 中加对应的虚方法，C ABI 加对应的入口函数，并在实现中 fallback 到基类空实现。
+
+---
+
+## 附录：控件颜色属性分布
+
+| 控件 | bg | border | text | textShadow | 特有颜色 |
+|------|----|--------|------|-----------|---------|
+| Button | 4态 | 4态 | 4态* | 4态* | — |
+| Label | 4态 | 4态 | 4态 | 4态 | — |
+| EditBox | 4态 | 4态 | 4态 | — | — |
+| TextArea | 4态 | 4态 | 4态 | — | — |
+| CheckBox | 4态 | 4态 | 4态 | — | check, cross, indeterminate, boxBorder |
+| ProgressBar | 4态 | 4态 | 4态 | — | progress |
+| Slider | 4态 | 4态 | — | — | track, trackFill, thumb, thumbBorder, thumbHover, tick, label |
+| ScrollBar | 4态 | 4态 | — | — | — |
+| Splitter | 4态 | 4态 | — | — | line(normal+hover+drag) |
+| Panel | 4态 | 4态 | — | — | — |
+| WinFrame | 4态 | 4态 | — | — | winFrameBG, winFrameBorder, titleBarBG, titleText |
+| ColorPicker | 4态 | 4态 | — | — | closedText, popupBG |
+| ComboBox | 4态 | 4态 | 4态 | — | arrow, arrowHover, itemSelected, itemHover, itemDisabled, listBg, listBorder |
+| NumericUpDown | 4态 | 4态 | 4态 | — | arrow(normal+hover+press) |
+| MenuItem | 4态 | — | 4态 | — | — |
+| MenuBar | 4态 | — | 4态 | — | — |
+| TreeView | 4态+SColor | 4态+SColor | SColor | — | selected, hover |
+
+> `*` = Button 重写了 `setTextStateColor` / `setTextShadowStateColor` 以同步到内部 caption Label。
+> `4态` = StateColor (Normal/Hover/Pressed/Disabled)，`SColor` = 简单单色。

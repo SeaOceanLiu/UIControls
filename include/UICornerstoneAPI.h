@@ -34,6 +34,13 @@ typedef void* UITextureHandle;
 typedef struct { float x, y, w, h; }   UIRect;
 typedef struct { uint8_t r, g, b, a; } UIColor;
 
+typedef struct {
+    UIColor normal;
+    UIColor hover;
+    UIColor pressed;
+    UIColor disabled;
+} UIStateColor;
+
 /* ============ 事件类型 ============ */
 typedef enum {
     UI_EVENT_NONE = 0,
@@ -301,6 +308,43 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(
 UICORNERSTONE_API void UICornerstone_SetButtonAnimation(
     UIControlHandle btn,
     const char* jsoncPath);
+
+/* ============ 属性系统 (统一字符串名 + 多类型入口) ============ */
+// 设置单色属性。prop 是属性名，如 "selected"、"hover"、"background"
+// 返回 1 成功，0 不识别的属性
+UICORNERSTONE_API int UICornerstone_SetColor(   UIControlHandle ctl, const char* prop, UIColor       value);
+
+// 设置 4 态颜色属性。prop 如 "background"、"border"、"text"
+UICORNERSTONE_API int UICornerstone_SetStateColor( UIControlHandle ctl, const char* prop, UIStateColor  value);
+
+// 设置整数属性。prop 如 "font-size"
+UICORNERSTONE_API int UICornerstone_SetInt(     UIControlHandle ctl, const char* prop, int           value);
+
+// 设置浮点属性。prop 如 "indent-width"、"row-height"
+UICORNERSTONE_API int UICornerstone_SetFloat(   UIControlHandle ctl, const char* prop, float         value);
+
+// 设置字符串属性。prop 如 "text"、"font"
+UICORNERSTONE_API int UICornerstone_SetString(  UIControlHandle ctl, const char* prop, const char*   value);
+
+// ============================================================
+// TreeView
+// ============================================================
+UICORNERSTONE_API const char* UICornerstone_TreeViewGetSelectedId(UIControlHandle ctl);
+UICORNERSTONE_API const char* UICornerstone_TreeViewGetSelectedUserData(UIControlHandle ctl);
+UICORNERSTONE_API int   UICornerstone_TreeViewExpandNode(UIControlHandle ctl, const char* nodeId);
+UICORNERSTONE_API int   UICornerstone_TreeViewCollapseNode(UIControlHandle ctl, const char* nodeId);
+UICORNERSTONE_API void  UICornerstone_TreeViewExpandAll(UIControlHandle ctl);
+UICORNERSTONE_API void  UICornerstone_TreeViewCollapseAll(UIControlHandle ctl);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetBgColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetBorderColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetSelectedColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetHoverColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetTextColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetFontSize(UIControlHandle ctl, int size);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetIndentWidth(UIControlHandle ctl, float px);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetRowHeight(UIControlHandle ctl, float px);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetLineSpacing(UIControlHandle ctl, float px);
+UICORNERSTONE_API void  UICornerstone_TreeViewSetArrowGap(UIControlHandle ctl, float px);
 
 #ifdef __cplusplus
 }

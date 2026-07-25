@@ -137,6 +137,8 @@ public:
 
     bool expandNode(const std::string& id);
     bool collapseNode(const std::string& id);
+    void expandAll();
+    void collapseAll();
     bool selectNode(const std::string& id);
     std::string getSelectedId() const { return m_selectedId; }
 
@@ -171,6 +173,9 @@ public:
     SColor getTextColor() const { return m_textColor; }
 
     void setFont(FontName fontName);
+
+    // Property system override
+    int setColorProperty(const char* prop, SColor color) override;
 
     static constexpr float LEFT_PADDING = 4.0f;
     static constexpr float RIGHT_GAP = 4.0f;
