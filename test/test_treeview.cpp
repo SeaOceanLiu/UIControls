@@ -47,7 +47,8 @@ void onTreeCollapse(const string& nodeId) {
 
 void onTreeSelectData(const string& nodeId, void* userData) {
     char buf[256];
-    const char* data = userData ? static_cast<const char*>(userData) : "(null)";
+    auto* s = static_cast<const string*>(userData);
+    const char* data = s ? s->c_str() : "(null)";
     snprintf(buf, sizeof(buf), "Styled select: %s, data: %s", nodeId.c_str(), data);
     if (g_dataLabel) g_dataLabel->setCaption(buf);
     cout << buf << endl;
@@ -55,10 +56,10 @@ void onTreeSelectData(const string& nodeId, void* userData) {
 
 void onClearNode(void* userData) {
     g_clearNodeCount++;
-    const char* data = userData ? static_cast<const char*>(userData) : "(null)";
+    const auto* s = static_cast<const string*>(userData);
+    const char* data = s ? s->c_str() : "(null)";
     cout << "ClearNode called, userData: " << data << endl;
-    // Free the string allocated with strdup/new
-    delete[] static_cast<const char*>(userData);
+    delete s;
 }
 
 void initTestTree() {
@@ -92,8 +93,10 @@ void initTestTree() {
 void initTest2xTree() {
     auto items = g_treeView->getItems();
     vector<shared_ptr<TreeNode>> clonedItems;
+    int tailIndex = 0;
     for (const auto& item : items) {
         auto cloned = cloneNode(item, "2x_", "2x ");
+        int rootIdx = tailIndex;
 
         function<shared_ptr<TreeNode>(int)> deepTail;
         deepTail = [&](int level) -> shared_ptr<TreeNode> {
@@ -102,10 +105,11 @@ void initTest2xTree() {
             vector<shared_ptr<TreeNode>> children;
             if (child) children.push_back(child);
             string label = "Lv" + to_string(level) + " long label for h-scroll test";
-            return makeNode("2x_tail_" + to_string(level), label, true, children);
+            return makeNode("2x_tail_" + to_string(rootIdx) + "_" + to_string(level), label, true, children);
         };
         cloned->children.push_back(deepTail(0));
         clonedItems.push_back(cloned);
+        tailIndex++;
     }
 
     g_treeView2x->setItems(clonedItems);

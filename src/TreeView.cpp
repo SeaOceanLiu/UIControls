@@ -552,7 +552,7 @@ float TreeView::calcContentWidth() {
             SSize sz = renderer->measureText(m_font.get(), row.node->label);
             labelW = sz.width / scale;
         }
-        float rowW = LEFT_PADDING + row.depth * m_indentWidth + m_arrowGap + labelW;
+        float rowW = LEFT_PADDING + row.depth * m_indentWidth + m_arrowGap + labelW + RIGHT_GAP;
         if (rowW > maxW) maxW = rowW;
     }
     return maxW;
@@ -587,11 +587,11 @@ void TreeView::updateScrollBar() {
 
     float sb = ConstDef::SCROLLBAR_WIDTH;
 
-    // Two-pass layout: scrollbar mutual exclusion with right gap
+    // Two-pass layout: scrollbar mutual exclusion
     bool vVis = contentH > viewH;
-    bool hVis = contentW > (viewW - RIGHT_GAP - (vVis ? sb : 0));
+    bool hVis = contentW > (viewW - (vVis ? sb : 0));
     vVis = contentH > (viewH - (hVis ? sb : 0));
-    hVis = contentW > (viewW - RIGHT_GAP - (vVis ? sb : 0));
+    hVis = contentW > (viewW - (vVis ? sb : 0));
 
     float vH = viewH - (hVis ? sb : 0);
     float hW = viewW - (vVis ? sb : 0);

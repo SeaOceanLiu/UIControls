@@ -623,7 +623,7 @@ static const int    TREEVIEW_SCROLL_STEP_LINES;   // 3
 
 // TreeView.h — 类内静态常量
 static constexpr float LEFT_PADDING = 4.0f;  // 内容左侧内边距
-static constexpr float RIGHT_GAP   = 4.0f;  // 内容与垂直滚动条之间的间隙
+static constexpr float RIGHT_GAP   = 4.0f;  // 计入行宽，触发水平滚动条提前出现，确保内容与垂直滚动条之间有间隙
 ```
 
 ---
@@ -711,15 +711,15 @@ v0.2 新增水平滚动条，支持深度嵌套的内容横向滚动。
 
 ```
 Pass 1: vVis = contentH > viewH
-Pass 1: hVis = contentW > viewW - RIGHT_GAP - (vVis ? SB : 0)
+Pass 1: hVis = contentW > viewW - (vVis ? SB : 0)
 Pass 2: vVis = contentH > viewH - (hVis ? SB : 0)
-Pass 2: hVis = contentW > viewW - RIGHT_GAP - (vVis ? SB : 0)
+Pass 2: hVis = contentW > viewW - (vVis ? SB : 0)
 ```
 
 垂直条高度 = `viewH - (hVis ? SB : 0)`  
-水平条宽度 = `viewW - RIGHT_GAP - (vVis ? SB : 0)`
+水平条宽度 = `viewW - (vVis ? SB : 0)`
 
-**右侧间隙**：`RIGHT_GAP = 4px`，确保内容与垂直滚动条之间留有空隙。
+**右侧间隙**：`RIGHT_GAP = 4px`，加在 `calcContentWidth()` 每行的内容宽度末尾（`rowW += RIGHT_GAP`），使内容"测量为更宽"——水平滚动条在内容距垂直滚动条 4px 内时提前出现，滚动 offset=0 时内容右侧自然留有间隙。不参与 clip rect 剪裁（`cr.width -= vSb` 无 RIGHT_GAP），也不出现在水平条宽度中。
 
 ### 13.3 子控件缩放传递规则
 
