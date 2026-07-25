@@ -436,9 +436,111 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | NumericUpDown | `"arrow-hover"` | Color | 箭头悬停色 |
 | NumericUpDown | `"arrow-pressed"` | Color | 箭头按下色 |
 
+### 6.4 Int 属性表
+
+| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
+|------|--------|-----------|---------------|
+| Label | `"font-size"` | `setFontSize(int)` | ❌ |
+| Label | `"line-height"` | `setLineHeight(int)` | ❌ |
+| Label | `"font-style"` | `SetFontStyle(int)` | ❌ |
+| EditBox | `"font-size"` | `setFontSize(int)` | ❌ |
+| TextArea | `"line-height"` | `setLineHeight(int)` | ❌ |
+| ProgressBar | `"font-size"` | `setFontSize(int)` | ❌ |
+| Slider | `"label-font-size"` | `setLabelFontSize(int)` | ❌ |
+| ComboBox | `"max-visible-items"` | `setMaxVisibleItems(int)` | ❌ |
+| MenuPanel | `"hovered-index"` | `setHoveredIndex(int)` | ❌ |
+| NumericUpDown | `"decimals"` | `setDecimals(int)` | ✅ `SetNumericUpDownDecimals` |
+| TreeView | `"font-size"` | `setFontSize(int)` | ✅ `TreeViewSetFontSize` |
+
+### 6.5 Float 属性表
+
+| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
+|------|--------|-----------|---------------|
+| Button | `"caption-size"` | `setCaptionSize(float)` | ❌ |
+| Label | `"line-spacing-ratio"` | `setLineSpacingRatio(float)` | ❌ |
+| CheckBox | `"size-ratio"` | `setSizeRatio(float)` | ❌ |
+| Slider | `"step"` | `setStep(float)` | ❌ |
+| Slider | `"track-thickness"` | `setTrackThickness(float)` | ❌ |
+| Slider | `"thumb-size"` | `setThumbSize(float)` | ❌ |
+| Slider | `"tick-interval"` | `setTickInterval(float)` | ❌ |
+| Slider | `"tick-length"` | `setTickLength(float)` | ❌ |
+| Slider | `"label-gap"` | `setLabelGap(float)` | ❌ |
+| ProgressBar | `"animation-speed"` | `setAnimationSpeed(float)` | ❌ |
+| ScrollBar | `"page-size"` | `setPageSize(float)` | ❌ |
+| ScrollBar | `"step-size"` | `setStepSize(float)` | ❌ |
+| ScrollBar | `"thickness"` | `setThickness(float)` | ❌ |
+| WinFrame | `"edge-margin"` | `setEdgeMargin(float)` | ❌ |
+| ComboBox | `"arrow-width"` | `setArrowWidth(float)` | ❌ |
+| ComboBox | `"item-height"` | `setItemHeight(float)` | ❌ |
+| Dialog | `"button-height"` | `setButtonHeight(float)` | ❌ |
+| Dialog | `"button-gap"` | `setButtonGap(float)` | ❌ |
+| Dialog | `"padding"` | `setPadding(float)` | ❌ |
+| MenuBar | `"bar-height"` | `setBarHeight(float)` | ❌ |
+| TreeView | `"indent-width"` | `setIndentWidth(float)` | ✅ `TreeViewSetIndentWidth` |
+| TreeView | `"row-height"` | `setRowHeight(float)` | ✅ `TreeViewSetRowHeight` |
+| TreeView | `"line-spacing"` | `setLineSpacing(float)` | ✅ `TreeViewSetLineSpacing` |
+| TreeView | `"arrow-gap"` | `setArrowGap(float)` | ✅ `TreeViewSetArrowGap` |
+| Splitter | `"thickness"` | `setThickness(float)` | ✅ `SetSplitterThickness` |
+| Splitter | `"ratio"` | `setSplitRatio(float)` | ✅ `SetSplitterRatio` |
+| ColorPicker | `"closed-swatch-size"` | `setClosedSwatchSize(float)` | ✅ `SetClosedSwatchSize` |
+| NumericUpDown | `"value"` | `setValue(double)` | ✅ `SetNumericUpDownValue` |
+| NumericUpDown | `"step"` | `setStep(double)` | ✅ `SetNumericUpDownStep` |
+| NumericUpDown | `"page-step"` | `setPageStep(double)` | ✅ `SetNumericUpDownPageStep` |
+| NumericUpDown | `"button-width"` | `setButtonWidth(float)` | ✅ `SetNumericUpDownButtonWidth` |
+
+### 6.6 String 属性表
+
+| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
+|------|--------|-----------|---------------|
+| EditBox | `"placeholder"` | `setPlaceholder(string)` | ❌ |
+| ComboBox | `"placeholder"` | `setPlaceholder(string)` | ❌ |
+| ProgressBar | `"custom-text"` | `setCustomText(string)` | ❌ |
+| Slider | `"label-format"` | `setLabelFormat(string)` | ❌ |
+| MenuItem | `"shortcut"` | `setShortcut(string)` | ❌ |
+| Dialog | `"confirm-text"` | `setConfirmButtonText(string)` | ✅ `SetConfirmButtonText` |
+| Dialog | `"cancel-text"` | `setCancelButtonText(string)` | ✅ `SetCancelButtonText` |
+| ColorPicker | `"color"` | `setColor(string)` — hex | ❌ (已有 `SetClosedTextColor`/`SetPopupBGColor` 但非通用) |
+
 ---
 
-## 7. 扩展指南
+## 7. 实施清单（待完成）
+
+### Phase 1 — Color（已完成）
+- [x] Control 基类虚方法
+- [x] ControlImpl 通用属性
+- [x] TreeView override `setColorProperty`
+
+### Phase 2 — Color（待完成）
+- [ ] Slider override `setColorProperty`
+- [ ] ComboBox override `setColorProperty`
+- [ ] CheckBox override `setColorProperty`
+- [ ] ProgressBar override `setColorProperty`
+- [ ] Splitter override `setColorProperty`
+- [ ] WinFrame override `setColorProperty`
+- [ ] ColorPicker override `setColorProperty`
+- [ ] NumericUpDown override `setColorProperty`
+
+### Phase 3 — Int/Float/String（待完成）
+对上述 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setStringProperty`，按 §6.4~§6.6 的属性表逐个实现。
+
+### 实现模式
+
+```cpp
+// xxx.cpp
+int Slider::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, "step") == 0)             { setStep(value);             return 1; }
+    if (strcmp(prop, "track-thickness") == 0)  { setTrackThickness(value);   return 1; }
+    if (strcmp(prop, "thumb-size") == 0)       { setThumbSize(value);        return 1; }
+    if (strcmp(prop, "tick-interval") == 0)    { setTickInterval(value);     return 1; }
+    if (strcmp(prop, "tick-length") == 0)      { setTickLength(value);       return 1; }
+    if (strcmp(prop, "label-gap") == 0)        { setLabelGap(value);         return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+```
+
+---
+
+## 8. 扩展指南
 
 ### 7.1 新增通用属性
 
