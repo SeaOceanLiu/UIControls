@@ -59,6 +59,7 @@ set(CORE_SOURCES
     src/NumericUpDown.cpp
     src/ProgressBar.cpp
     src/Splitter.cpp
+    src/TreeView.cpp
     src/ResourceProvider.cpp
     src/ScrollBar.cpp
     src/Slider.cpp

@@ -199,6 +199,16 @@ const int    ConstDef::SPLITTER_DOUBLE_CLICK_MS   = 300;
 const float  ConstDef::SPLITTER_KEY_STEP          = 5.0f;
 const float  ConstDef::SPLITTER_KEY_FINE_STEP     = 1.0f;
 
+// ── TreeView ──
+const float   ConstDef::TREEVIEW_INDENT_WIDTH        = 16.0f;
+const float   ConstDef::TREEVIEW_DEFAULT_ROW_HEIGHT  = 24.0f;
+const SColor  ConstDef::TREEVIEW_BG_COLOR(25, 25, 25, 255);
+const SColor  ConstDef::TREEVIEW_BORDER_COLOR(60, 60, 60, 255);
+const SColor  ConstDef::TREEVIEW_SELECTED_COLOR(58, 128, 201, 255);
+const SColor  ConstDef::TREEVIEW_HOVER_COLOR(48, 48, 48, 255);
+const SColor  ConstDef::TREEVIEW_TEXT_COLOR(220, 220, 220, 255);
+const int     ConstDef::TREEVIEW_SCROLL_STEP_LINES  = 3;
+
 const std::unordered_map<FontName, std::string> ConstDef::fontFiles = {
     {FontName::Asul_Bold, "fonts/Asul-Bold.ttf"},
     {FontName::Asul_Regular, "fonts/Asul-Regular.ttf"},

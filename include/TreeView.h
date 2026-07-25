@@ -1,0 +1,269 @@
+﻿#ifndef TreeViewH
+#define TreeViewH
+
+#include <string>
+#include <vector>
+#include <functional>
+#include <memory>
+#include <unordered_map>
+
+#include "ConstDef.h"
+#include "ScrollBar.h"
+#include "RenderDevice.h"
+#include "EventTypes.h"
+#include "TextRenderer.h"
+#include "ResourceProvider.h"
+
+struct TreeNode {
+    std::string id;
+    std::string label;
+    bool expanded = false;
+    std::vector<std::shared_ptr<TreeNode>> children;
+    void* userData = nullptr;
+};
+
+inline std::shared_ptr<TreeNode> makeNode(
+    const std::string& id,
+    const std::string& label,
+    bool expanded = false,
+    std::vector<std::shared_ptr<TreeNode>> children = {}) {
+    auto node = std::make_shared<TreeNode>();
+    node->id = id;
+    node->label = label;
+    node->expanded = expanded;
+    node->children = std::move(children);
+    return node;
+}
+
+inline std::shared_ptr<TreeNode> cloneNode(
+    const std::shared_ptr<TreeNode>& src,
+    const std::string& idPrefix = "",
+    const std::string& labelPrefix = "") {
+    std::vector<std::shared_ptr<TreeNode>> clonedChildren;
+    for (const auto& child : src->children)
+        clonedChildren.push_back(cloneNode(child, idPrefix, labelPrefix));
+    auto node = std::make_shared<TreeNode>();
+    node->id = idPrefix + src->id;
+    node->label = labelPrefix + src->label;
+    node->expanded = src->expanded;
+    node->children = std::move(clonedChildren);
+    node->userData = src->userData;
+    return node;
+}
+
+class TreeView : public ControlImpl {
+    friend class TreeViewBuilder;
+public:
+    using OnSelectHandler = std::function<void(const std::string& nodeId)>;
+    using OnSelectDataHandler = std::function<void(const std::string& nodeId, void* userData)>;
+    using OnExpandHandler = std::function<void(const std::string& nodeId)>;
+    using OnCollapseHandler = std::function<void(const std::string& nodeId)>;
+    using OnClearNodeHandler = std::function<void(void* userData)>;
+
+private:
+    std::vector<std::shared_ptr<TreeNode>> m_rootItems;
+    std::unordered_map<std::string, std::shared_ptr<TreeNode>> m_nodeMap;
+
+    struct FlatRow {
+        std::shared_ptr<TreeNode> node;
+        int depth;
+    };
+    std::vector<FlatRow> m_flatRows;
+
+    std::string m_selectedId;
+    int m_selectedRow = -1;
+    int m_hoveredRow = -1;
+
+    std::shared_ptr<ScrollBar> m_scrollBar;
+    float m_scrollOffset = 0;
+    std::shared_ptr<ScrollBar> m_hScrollBar;
+    float m_hScrollOffset = 0;
+    float m_contentWidth = 0;
+
+    float m_indentWidth;
+    float m_rowHeight;
+    float m_lineSpacing = 0;
+    float m_arrowGap;
+    bool m_cycleNavigation = true;
+    bool m_defaultExpand = false;
+
+    FontName m_fontName;
+    int m_fontSize;
+    SharedFont m_font;
+
+    SColor m_bgColor = ConstDef::TREEVIEW_BG_COLOR;
+    SColor m_borderColor = ConstDef::TREEVIEW_BORDER_COLOR;
+    SColor m_hoverColor = ConstDef::TREEVIEW_HOVER_COLOR;
+    SColor m_selectedColor = ConstDef::TREEVIEW_SELECTED_COLOR;
+    SColor m_textColor = ConstDef::TREEVIEW_TEXT_COLOR;
+
+    OnSelectHandler m_onSelect;
+    OnSelectDataHandler m_onSelectData;
+    OnExpandHandler m_onExpand;
+    OnCollapseHandler m_onCollapse;
+    OnClearNodeHandler m_onClearNode;
+
+    void ensureFont();
+    bool toggleExpand(const string& id);
+    void rebuildFlatRows();
+    int hitTestRow(float mx, float my);
+    bool hitTestArrow(int row, float mx);
+    void updateScrollBar();
+    void ensureSelectedVisible();
+    void drawArrow(RenderDevice* dev, float x, float y, bool expanded);
+    float calcContentWidth();
+    void clearNodeRecursive(const std::shared_ptr<TreeNode>& node);
+    float getStride() const { return m_rowHeight + m_lineSpacing; }
+    void syncStateColor();
+
+public:
+    TreeView(Control* parent, const SRect& rect,
+             float xScale = 1.0f, float yScale = 1.0f);
+    ~TreeView() override;
+
+    void create() override;
+    void draw() override;
+    bool handleEvent(std::shared_ptr<Event> event) override;
+
+    // ── CRUD ──
+    void setItems(const std::vector<std::shared_ptr<TreeNode>>& items);
+    const std::vector<std::shared_ptr<TreeNode>>& getItems() const { return m_rootItems; }
+    bool addChild(const std::string& parentId, std::shared_ptr<TreeNode> node);
+    bool removeNode(const std::string& id);
+    bool setNodeLabel(const std::string& id, const std::string& label);
+    bool setNodeUserData(const std::string& id, void* userData);
+    void clearItems();
+    std::shared_ptr<TreeNode> findNodeById(const std::string& id);
+
+    bool expandNode(const std::string& id);
+    bool collapseNode(const std::string& id);
+    bool selectNode(const std::string& id);
+    std::string getSelectedId() const { return m_selectedId; }
+
+    void setIndentWidth(float px);
+    float getIndentWidth() const { return m_indentWidth; }
+    void setRowHeight(float px);
+    float getRowHeight() const { return m_rowHeight; }
+    void setLineSpacing(float px);
+    float getLineSpacing() const { return m_lineSpacing; }
+    void setArrowGap(float px);
+    float getArrowGap() const { return m_arrowGap; }
+    void setCycleNavigation(bool cycle) { m_cycleNavigation = cycle; }
+    bool getCycleNavigation() const { return m_cycleNavigation; }
+    void setDefaultExpand(bool expand) { m_defaultExpand = expand; }
+    bool getDefaultExpand() const { return m_defaultExpand; }
+
+    void setOnSelect(OnSelectHandler h) { m_onSelect = h; }
+    void setOnSelectData(OnSelectDataHandler h) { m_onSelectData = h; }
+    void setOnExpand(OnExpandHandler h) { m_onExpand = h; }
+    void setOnCollapse(OnCollapseHandler h) { m_onCollapse = h; }
+    void setOnClearNode(OnClearNodeHandler h) { m_onClearNode = h; }
+
+    void setBgColor(const SColor& c);
+    SColor getBgColor() const { return m_bgColor; }
+    void setBorderColor(const SColor& c);
+    SColor getBorderColor() const { return m_borderColor; }
+    void setHoverColor(const SColor& c) { m_hoverColor = c; }
+    SColor getHoverColor() const { return m_hoverColor; }
+    void setSelectedColor(const SColor& c) { m_selectedColor = c; }
+    SColor getSelectedColor() const { return m_selectedColor; }
+    void setTextColor(const SColor& c) { m_textColor = c; }
+    SColor getTextColor() const { return m_textColor; }
+
+    void setFont(FontName fontName);
+
+    static constexpr float LEFT_PADDING = 4.0f;
+    static constexpr float RIGHT_GAP = 4.0f;
+    void setFontSize(int size);
+    int getFontSize() const { return m_fontSize; }
+    FontName getFontName() const { return m_fontName; }
+    Font* getFont() const { return m_font.get(); }
+
+    std::shared_ptr<ScrollBar> getScrollBar() const { return m_scrollBar; }
+    std::shared_ptr<ScrollBar> getHScrollBar() const { return m_hScrollBar; }
+    int getFlatRowCount() const { return (int)m_flatRows.size(); }
+    int getSelectedRow() const { return m_selectedRow; }
+};
+
+class TreeViewBuilder {
+private:
+    std::shared_ptr<TreeView> m_treeView;
+public:
+    TreeViewBuilder(Control* parent, const SRect& rect,
+                    float xScale = 1.0f, float yScale = 1.0f)
+        : m_treeView(std::make_shared<TreeView>(parent, rect, xScale, yScale)) {}
+
+    TreeViewBuilder& setItems(const std::vector<std::shared_ptr<TreeNode>>& items) {
+        m_treeView->setItems(items); return *this;
+    }
+    TreeViewBuilder& setIndentWidth(float px) {
+        m_treeView->setIndentWidth(px); return *this;
+    }
+    TreeViewBuilder& setRowHeight(float px) {
+        m_treeView->setRowHeight(px); return *this;
+    }
+    TreeViewBuilder& setLineSpacing(float px) {
+        m_treeView->setLineSpacing(px); return *this;
+    }
+    TreeViewBuilder& setArrowGap(float px) {
+        m_treeView->setArrowGap(px); return *this;
+    }
+    TreeViewBuilder& setCycleNavigation(bool cycle) {
+        m_treeView->setCycleNavigation(cycle); return *this;
+    }
+    TreeViewBuilder& setDefaultExpand(bool expand) {
+        m_treeView->setDefaultExpand(expand); return *this;
+    }
+    TreeViewBuilder& setOnSelect(TreeView::OnSelectHandler h) {
+        m_treeView->setOnSelect(h); return *this;
+    }
+    TreeViewBuilder& setOnSelectData(TreeView::OnSelectDataHandler h) {
+        m_treeView->setOnSelectData(h); return *this;
+    }
+    TreeViewBuilder& setOnExpand(TreeView::OnExpandHandler h) {
+        m_treeView->setOnExpand(h); return *this;
+    }
+    TreeViewBuilder& setOnCollapse(TreeView::OnCollapseHandler h) {
+        m_treeView->setOnCollapse(h); return *this;
+    }
+    TreeViewBuilder& setOnClearNode(TreeView::OnClearNodeHandler h) {
+        m_treeView->setOnClearNode(h); return *this;
+    }
+    TreeViewBuilder& setFont(FontName fontName) {
+        m_treeView->setFont(fontName); return *this;
+    }
+    TreeViewBuilder& setFontSize(int size) {
+        m_treeView->setFontSize(size); return *this;
+    }
+    TreeViewBuilder& setBackgroundStateColor(StateColor sc) {
+        m_treeView->setBackgroundStateColor(sc); return *this;
+    }
+    TreeViewBuilder& setBorderStateColor(StateColor sc) {
+        m_treeView->setBorderStateColor(sc); return *this;
+    }
+    TreeViewBuilder& setBgColor(const SColor& c) {
+        m_treeView->setBgColor(c); return *this;
+    }
+    TreeViewBuilder& setBorderColor(const SColor& c) {
+        m_treeView->setBorderColor(c); return *this;
+    }
+    TreeViewBuilder& setHoverColor(const SColor& c) {
+        m_treeView->setHoverColor(c); return *this;
+    }
+    TreeViewBuilder& setSelectedColor(const SColor& c) {
+        m_treeView->setSelectedColor(c); return *this;
+    }
+    TreeViewBuilder& setTextColor(const SColor& c) {
+        m_treeView->setTextColor(c); return *this;
+    }
+    TreeViewBuilder& setId(int id) {
+        m_treeView->setId(id); return *this;
+    }
+
+    std::shared_ptr<TreeView> build() {
+        m_treeView->create();
+        return m_treeView;
+    }
+};
+
+#endif

@@ -1,0 +1,626 @@
+﻿#define NOMINMAX
+#include "TreeView.h"
+#include "PlatformUtils.h"
+#include "EventQueue.h"
+#include <algorithm>
+#include <cmath>
+
+TreeView::TreeView(Control* parent, const SRect& rect,
+                   float xScale, float yScale)
+    : ControlImpl(parent, xScale, yScale)
+    , m_indentWidth(ConstDef::TREEVIEW_INDENT_WIDTH)
+    , m_rowHeight(ConstDef::TREEVIEW_DEFAULT_ROW_HEIGHT)
+    , m_arrowGap(16.0f)
+    , m_fontName(FontName::HarmonyOS_Sans_SC_Regular)
+    , m_fontSize(14)
+    , m_font()
+{
+    m_rect = rect;
+    setFocusable(true);
+    setBorderVisible(true);
+    syncStateColor();
+}
+
+TreeView::~TreeView() {
+    for (auto& root : m_rootItems)
+        clearNodeRecursive(root);
+}
+
+void TreeView::syncStateColor() {
+    setBackgroundStateColor(StateColor(m_bgColor, m_bgColor, m_bgColor, m_bgColor));
+    setBorderStateColor(StateColor(m_borderColor, m_borderColor, m_borderColor, m_borderColor));
+}
+
+void TreeView::clearNodeRecursive(const shared_ptr<TreeNode>& node) {
+    if (m_onClearNode && node->userData)
+        m_onClearNode(node->userData);
+    for (auto& child : node->children)
+        clearNodeRecursive(child);
+}
+
+void TreeView::create() {
+    if (m_isCreated) return;
+    ControlImpl::create();
+
+    m_scrollBar = ScrollBarBuilder(this,
+        {m_rect.width - ConstDef::SCROLLBAR_WIDTH, 0,
+         ConstDef::SCROLLBAR_WIDTH, m_rect.height},
+        ScrollBarOrientation::Vertical, 1.0f, 1.0f)
+        .setStepSize(getStride())
+        .setPageSize(m_rect.height)
+        .setOnPositionChanged([this](shared_ptr<ScrollBar>, float, float, float, float) {
+            m_scrollOffset = m_scrollBar->getValue();
+        })
+        .build();
+    addControl(m_scrollBar);
+
+    m_hScrollBar = ScrollBarBuilder(this,
+        {0, m_rect.height - ConstDef::SCROLLBAR_WIDTH,
+         m_rect.width, ConstDef::SCROLLBAR_WIDTH},
+        ScrollBarOrientation::Horizontal, 1.0f, 1.0f)
+        .setStepSize(m_indentWidth)
+        .setOnPositionChanged([this](shared_ptr<ScrollBar>, float, float, float, float) {
+            m_hScrollOffset = m_hScrollBar->getValue();
+        })
+        .build();
+    addControl(m_hScrollBar);
+
+    ensureFont();
+    m_isCreated = true;
+}
+
+void TreeView::ensureFont() {
+    if (m_font) return;
+    TextRenderer* renderer = getTextRenderer();
+    if (!renderer) return;
+    ResourceProvider* provider = getResourceProvider();
+    if (!provider) return;
+
+    auto it = ConstDef::fontFiles.find(m_fontName);
+    if (it == ConstDef::fontFiles.end()) return;
+    string fontPath = ConstDef::pathPrefix.string() + "/" + it->second;
+    auto data = provider->readFile(fontPath);
+    if (!data || data->empty()) return;
+
+    int scaledSize = static_cast<int>(m_fontSize * getScaleXX());
+    m_font = renderer->loadFontFromMemoryWithText(
+        data->data(), data->size(), scaledSize, "W");
+}
+
+void TreeView::setFont(FontName fontName) {
+    if (m_fontName == fontName && m_font) return;
+    m_fontName = fontName;
+    m_font.reset();
+    if (m_isCreated) ensureFont();
+}
+
+void TreeView::setFontSize(int size) {
+    if (m_fontSize == size) return;
+    m_fontSize = size;
+    m_font.reset();
+    if (m_isCreated) ensureFont();
+}
+
+void TreeView::setBgColor(const SColor& c) {
+    m_bgColor = c;
+    syncStateColor();
+}
+
+void TreeView::setBorderColor(const SColor& c) {
+    m_borderColor = c;
+    syncStateColor();
+}
+
+void TreeView::draw() {
+    if (!m_visible) return;
+    auto* dev = getRenderDevice();
+    if (!dev) return;
+
+    beforeDraw();
+
+    updateScrollBar();
+
+    float scaleX = getScaleXX();
+    float scaleY = getScaleYY();
+    float hSb = (m_hScrollBar && m_hScrollBar->getVisible()) ? ConstDef::SCROLLBAR_WIDTH * scaleX : 0;
+    float vSb = (m_scrollBar && m_scrollBar->getVisible()) ? ConstDef::SCROLLBAR_WIDTH * scaleX : 0;
+
+    SRect cr = m_frameDrawRect;
+    cr.width -= vSb;
+    cr.height -= hSb;
+    dev->setClipRect(cr);
+
+    if (!m_flatRows.empty()) {
+        float stride = getStride();
+        int firstVisible = max(0, (int)(m_scrollOffset / stride));
+        float scaledRowH = m_rowHeight * scaleY;
+        float topY = cr.top - fmod(m_scrollOffset, stride) * scaleY;
+        float leftX = cr.left - m_hScrollOffset * scaleX;
+        TextRenderer* renderer = getTextRenderer();
+
+        int fontHeight = 0;
+        if (renderer && m_font)
+            fontHeight = renderer->getFontHeight(m_font.get());
+
+        for (int i = firstVisible; i < (int)m_flatRows.size(); i++) {
+            float y = topY + (i - firstVisible) * stride * scaleY;
+            if (y > cr.bottom()) break;
+
+            float rowLeft = cr.left;
+            float rowWidth = m_rect.width * scaleX - m_hScrollOffset * scaleX;
+            if (rowLeft + rowWidth < cr.left) continue;
+
+            if (i == m_selectedRow) {
+                dev->setDrawColor(m_selectedColor);
+                dev->fillRect({cr.left, y, cr.width, scaledRowH});
+            } else if (i == m_hoveredRow) {
+                dev->setDrawColor(m_hoverColor);
+                dev->fillRect({cr.left, y, cr.width, scaledRowH});
+            }
+
+            float arrowX = leftX + LEFT_PADDING * scaleX + m_flatRows[i].depth * m_indentWidth * scaleX;
+            float labelX = arrowX + m_arrowGap * scaleX;
+
+            if (!m_flatRows[i].node->children.empty())
+                drawArrow(dev, arrowX, y, m_flatRows[i].node->expanded);
+
+            if (renderer && m_font) {
+                float textY = y + (scaledRowH - fontHeight) / 2;
+                renderer->drawText(m_font.get(), m_flatRows[i].node->label,
+                                   labelX, textY, m_textColor);
+            }
+        }
+    }
+
+    dev->clearClipRect();
+
+    for (auto& child : m_children) {
+        child->draw();
+    }
+
+    afterDraw();
+}
+
+void TreeView::drawArrow(RenderDevice* dev, float x, float y, bool expanded) {
+    float scale = getScaleYY();
+    float cx = x + 6 * scale;
+    float cy = y + m_rowHeight * scale / 2.0f;
+    float size = 5.0f * scale;
+
+    dev->setDrawColor(m_textColor);
+    if (expanded) {
+        dev->drawTriangle(
+            cx - size, cy - size * 0.577f,
+            cx + size, cy - size * 0.577f,
+            cx,        cy + size * 0.577f * 2,
+            m_textColor);
+    } else {
+        dev->drawTriangle(
+            cx - size * 0.577f, cy - size,
+            cx - size * 0.577f, cy + size,
+            cx + size * 0.577f * 2, cy,
+            m_textColor);
+    }
+}
+
+bool TreeView::handleEvent(shared_ptr<Event> event) {
+    if (!m_enable || !m_visible) return false;
+
+    if (event->m_type == EventType::KeyDown && getFocused()) {
+        KeyCode kc = event->keyEvent.keycode;
+        switch (kc) {
+        case KeyCode::Up:
+            if (m_selectedRow > 0) {
+                selectNode(m_flatRows[m_selectedRow - 1].node->id);
+            } else if (m_cycleNavigation && !m_flatRows.empty()) {
+                selectNode(m_flatRows.back().node->id);
+            }
+            return true;
+
+        case KeyCode::Down:
+            if (m_selectedRow >= 0 && m_selectedRow < (int)m_flatRows.size() - 1) {
+                selectNode(m_flatRows[m_selectedRow + 1].node->id);
+            } else if (m_cycleNavigation && !m_flatRows.empty()) {
+                selectNode(m_flatRows[0].node->id);
+            }
+            return true;
+
+        case KeyCode::Left:
+            if (m_selectedRow >= 0) {
+                auto& node = m_flatRows[m_selectedRow].node;
+                if (node->expanded)
+                    collapseNode(node->id);
+            }
+            return true;
+
+        case KeyCode::Right:
+            if (m_selectedRow >= 0) {
+                auto& node = m_flatRows[m_selectedRow].node;
+                if (!node->children.empty() && !node->expanded)
+                    expandNode(node->id);
+            }
+            return true;
+
+        case KeyCode::PageUp: {
+            int pageLines = max(1, (int)(m_frameDrawRect.height / getStride()));
+            int target = max(0, m_selectedRow - pageLines);
+            if (target < (int)m_flatRows.size())
+                selectNode(m_flatRows[target].node->id);
+            return true;
+        }
+
+        case KeyCode::PageDown: {
+            int pageLines = max(1, (int)(m_frameDrawRect.height / getStride()));
+            int target = min((int)m_flatRows.size() - 1, m_selectedRow + pageLines);
+            if (target >= 0)
+                selectNode(m_flatRows[target].node->id);
+            return true;
+        }
+
+        case KeyCode::Home:
+            if (!m_flatRows.empty())
+                selectNode(m_flatRows[0].node->id);
+            return true;
+
+        case KeyCode::End:
+            if (!m_flatRows.empty())
+                selectNode(m_flatRows.back().node->id);
+            return true;
+
+        default:
+            break;
+        }
+    }
+
+    if (event->m_type == EventType::MouseDown &&
+        event->mouseButton.button == MouseButton::Left) {
+        if (!isContainsPoint(event->mouseButton.x, event->mouseButton.y))
+            return false;
+        if (!getFocused()) setFocused(true);
+
+        for (auto sb : {m_hScrollBar, m_scrollBar}) {
+            if (sb && sb->getVisible() &&
+                sb->isContainsPoint(event->mouseButton.x, event->mouseButton.y)) {
+                return sb->handleEvent(event);
+            }
+        }
+
+        int row = hitTestRow(event->mouseButton.x, event->mouseButton.y);
+        if (row >= 0) {
+            if (hitTestArrow(row, event->mouseButton.x)) {
+                toggleExpand(m_flatRows[row].node->id);
+                return true;
+            }
+            selectNode(m_flatRows[row].node->id);
+            return true;
+        }
+    }
+
+    if (event->m_type == EventType::MouseMove) {
+        if (isContainsPoint(event->mousePos.x, event->mousePos.y)) {
+            m_hoveredRow = hitTestRow(event->mousePos.x, event->mousePos.y);
+        } else {
+            m_hoveredRow = -1;
+        }
+    }
+
+    if (event->m_type == EventType::MouseWheel) {
+        if (!isContainsPoint(event->mouseWheel.x, event->mouseWheel.y))
+            return false;
+
+        if (event->mouseWheel.scrollY != 0 && m_scrollBar) {
+            float step = getStride() * ConstDef::TREEVIEW_SCROLL_STEP_LINES;
+            float newOffset = m_scrollOffset - event->mouseWheel.scrollY * step;
+            m_scrollOffset = max(0.0f, newOffset);
+            m_scrollBar->setValue(m_scrollOffset);
+        }
+        if (event->mouseWheel.scrollX != 0 && m_hScrollBar) {
+            float step = m_indentWidth;
+            float newOffset = m_hScrollOffset - event->mouseWheel.scrollX * step;
+            m_hScrollOffset = max(0.0f, newOffset);
+            m_hScrollBar->setValue(m_hScrollOffset);
+        }
+        return true;
+    }
+
+    for (auto sb : {m_hScrollBar, m_scrollBar}) {
+        if (sb && sb->getVisible()) {
+            if (event->m_type == EventType::MouseDown ||
+                event->m_type == EventType::MouseUp ||
+                event->m_type == EventType::MouseMove) {
+                if (sb->handleEvent(event)) return true;
+            }
+        }
+    }
+
+    return ControlImpl::handleEvent(event);
+}
+
+int TreeView::hitTestRow(float mx, float my) {
+    float relY = (my - m_frameDrawRect.top) / getScaleYY() + m_scrollOffset;
+    int row = (int)(relY / getStride());
+    if (row >= 0 && row < (int)m_flatRows.size()) return row;
+    return -1;
+}
+
+bool TreeView::hitTestArrow(int row, float mx) {
+    if (row < 0 || row >= (int)m_flatRows.size()) return false;
+    auto& flat = m_flatRows[row];
+    if (flat.node->children.empty()) return false;
+
+    float scale = getScaleXX();
+    float arrowX = m_frameDrawRect.left - m_hScrollOffset * scale + LEFT_PADDING * scale + flat.depth * m_indentWidth * scale;
+    return mx >= arrowX && mx <= arrowX + m_arrowGap * scale;
+}
+
+void TreeView::rebuildFlatRows() {
+    m_flatRows.clear();
+    m_nodeMap.clear();
+    m_selectedRow = -1;
+
+    function<void(const shared_ptr<TreeNode>&, int)> flatten;
+    flatten = [&](const shared_ptr<TreeNode>& node, int depth) {
+        m_nodeMap[node->id] = node;
+        m_flatRows.push_back({node, depth});
+        if (node->id == m_selectedId)
+            m_selectedRow = (int)m_flatRows.size() - 1;
+        if (node->expanded)
+            for (auto& child : node->children)
+                flatten(child, depth + 1);
+    };
+
+    for (auto& root : m_rootItems)
+        flatten(root, 0);
+
+    updateScrollBar();
+}
+
+void TreeView::setItems(const vector<shared_ptr<TreeNode>>& items) {
+    for (auto& root : m_rootItems)
+        clearNodeRecursive(root);
+
+    m_rootItems = items;
+
+    function<void(shared_ptr<TreeNode>&)> applyDefault;
+    applyDefault = [&](shared_ptr<TreeNode>& node) {
+        if (!node->children.empty())
+            node->expanded = m_defaultExpand;
+        for (auto& child : node->children)
+            applyDefault(child);
+    };
+    for (auto& root : m_rootItems)
+        applyDefault(root);
+
+    rebuildFlatRows();
+}
+
+bool TreeView::addChild(const string& parentId, shared_ptr<TreeNode> node) {
+    if (!node) return false;
+    auto parent = findNodeById(parentId);
+    if (!parent) return false;
+
+    parent->children.push_back(node);
+    if (!parent->expanded) {
+        parent->expanded = true;
+        if (m_onExpand) m_onExpand(parentId);
+    }
+    rebuildFlatRows();
+    return true;
+}
+
+bool TreeView::removeNode(const string& id) {
+    if (m_rootItems.empty()) return false;
+    if (m_nodeMap.find(id) == m_nodeMap.end()) return false;
+
+    // Check root items first
+    for (auto it = m_rootItems.begin(); it != m_rootItems.end(); ++it) {
+        if ((*it)->id == id) {
+            clearNodeRecursive(*it);
+            m_rootItems.erase(it);
+            if (m_selectedId == id) {
+                m_selectedId.clear();
+                m_selectedRow = -1;
+            }
+            rebuildFlatRows();
+            return true;
+        }
+    }
+
+    // Search children recursively
+    function<bool(shared_ptr<TreeNode>&)> removeRecursive;
+    removeRecursive = [&](shared_ptr<TreeNode>& node) -> bool {
+        for (auto it = node->children.begin(); it != node->children.end(); ++it) {
+            if ((*it)->id == id) {
+                clearNodeRecursive(*it);
+                node->children.erase(it);
+                if (m_selectedId == id) {
+                    m_selectedId.clear();
+                    m_selectedRow = -1;
+                }
+                rebuildFlatRows();
+                return true;
+            }
+            if (removeRecursive(*it)) return true;
+        }
+        return false;
+    };
+
+    for (auto& root : m_rootItems) {
+        if (removeRecursive(root)) return true;
+    }
+    return false;
+}
+
+bool TreeView::setNodeLabel(const string& id, const string& label) {
+    auto node = findNodeById(id);
+    if (!node) return false;
+    node->label = label;
+    return true;
+}
+
+bool TreeView::setNodeUserData(const string& id, void* userData) {
+    auto node = findNodeById(id);
+    if (!node) return false;
+    node->userData = userData;
+    return true;
+}
+
+void TreeView::clearItems() {
+    for (auto& root : m_rootItems)
+        clearNodeRecursive(root);
+    m_rootItems.clear();
+    m_flatRows.clear();
+    m_nodeMap.clear();
+    m_selectedId.clear();
+    m_selectedRow = -1;
+    m_hoveredRow = -1;
+    m_scrollOffset = 0;
+    updateScrollBar();
+}
+
+shared_ptr<TreeNode> TreeView::findNodeById(const string& id) {
+    auto it = m_nodeMap.find(id);
+    return it != m_nodeMap.end() ? it->second : nullptr;
+}
+
+bool TreeView::toggleExpand(const string& id) {
+    auto node = findNodeById(id);
+    if (!node || node->children.empty()) return false;
+    if (node->expanded)
+        return collapseNode(id);
+    else
+        return expandNode(id);
+}
+
+bool TreeView::expandNode(const string& id) {
+    auto node = findNodeById(id);
+    if (!node || node->expanded || node->children.empty()) return false;
+    node->expanded = true;
+    rebuildFlatRows();
+    if (m_onExpand) m_onExpand(id);
+    return true;
+}
+
+bool TreeView::collapseNode(const string& id) {
+    auto node = findNodeById(id);
+    if (!node || !node->expanded) return false;
+    node->expanded = false;
+    rebuildFlatRows();
+    if (m_onCollapse) m_onCollapse(id);
+    return true;
+}
+
+bool TreeView::selectNode(const string& id) {
+    if (m_nodeMap.find(id) == m_nodeMap.end())
+        return false;
+    m_selectedId = id;
+    rebuildFlatRows();
+    ensureSelectedVisible();
+    if (m_onSelect) m_onSelect(id);
+    if (m_onSelectData) {
+        auto node = findNodeById(id);
+        m_onSelectData(id, node ? node->userData : nullptr);
+    }
+    return true;
+}
+
+void TreeView::ensureSelectedVisible() {
+    if (m_selectedRow < 0 || !m_scrollBar) return;
+    float stride = getStride();
+    float rowTop = m_selectedRow * stride;
+    float rowBottom = rowTop + m_rowHeight;
+    float viewH = m_rect.height;
+
+    if (rowTop < m_scrollOffset) {
+        m_scrollOffset = rowTop;
+    } else if (rowBottom > m_scrollOffset + viewH) {
+        m_scrollOffset = rowBottom - viewH;
+    }
+
+    m_scrollOffset = max(0.0f, m_scrollOffset);
+    m_scrollBar->setValue(m_scrollOffset);
+}
+
+float TreeView::calcContentWidth() {
+    if (m_flatRows.empty() || !m_font) return 0;
+    float maxW = 0;
+    TextRenderer* renderer = getTextRenderer();
+    float scale = getScaleXX();
+    for (auto& row : m_flatRows) {
+        float labelW = 0;
+        if (renderer) {
+            SSize sz = renderer->measureText(m_font.get(), row.node->label);
+            labelW = sz.width / scale;
+        }
+        float rowW = LEFT_PADDING + row.depth * m_indentWidth + m_arrowGap + labelW;
+        if (rowW > maxW) maxW = rowW;
+    }
+    return maxW;
+}
+
+void TreeView::setIndentWidth(float px) {
+    m_indentWidth = max(0.0f, px);
+}
+
+void TreeView::setRowHeight(float px) {
+    m_rowHeight = max(1.0f, px);
+    if (m_scrollBar) m_scrollBar->setStepSize(getStride());
+}
+
+void TreeView::setLineSpacing(float px) {
+    m_lineSpacing = max(0.0f, px);
+    if (m_scrollBar) m_scrollBar->setStepSize(getStride());
+}
+
+void TreeView::setArrowGap(float px) {
+    m_arrowGap = max(0.0f, px);
+}
+
+void TreeView::updateScrollBar() {
+    if (!m_scrollBar || !m_hScrollBar) return;
+
+    float stride = getStride();
+    float contentH = m_flatRows.size() * stride;
+    float contentW = calcContentWidth();
+    float viewH = m_rect.height;
+    float viewW = m_rect.width;
+
+    float sb = ConstDef::SCROLLBAR_WIDTH;
+
+    // Two-pass layout: scrollbar mutual exclusion with right gap
+    bool vVis = contentH > viewH;
+    bool hVis = contentW > (viewW - RIGHT_GAP - (vVis ? sb : 0));
+    vVis = contentH > (viewH - (hVis ? sb : 0));
+    hVis = contentW > (viewW - RIGHT_GAP - (vVis ? sb : 0));
+
+    float vH = viewH - (hVis ? sb : 0);
+    float hW = viewW - (vVis ? sb : 0);
+
+    // Vertical scrollbar
+    m_scrollBar->setVisible(vVis);
+    if (vVis) {
+        float maxScroll = contentH - vH;
+        m_scrollOffset = min(m_scrollOffset, maxScroll);
+        m_scrollBar->setRange(0, maxScroll);
+        m_scrollBar->setPageSize(vH);
+        m_scrollBar->setValue(m_scrollOffset);
+    } else {
+        m_scrollOffset = 0;
+        m_scrollBar->setValue(0);
+    }
+    m_scrollBar->setRect({viewW - sb, 0, sb, vH});
+
+    // Horizontal scrollbar
+    m_hScrollBar->setVisible(hVis);
+    if (hVis) {
+        float maxScroll = contentW - hW;
+        m_hScrollOffset = min(m_hScrollOffset, maxScroll);
+        m_hScrollBar->setRange(0, maxScroll);
+        m_hScrollBar->setPageSize(hW);
+        m_hScrollBar->setValue(m_hScrollOffset);
+    } else {
+        m_hScrollOffset = 0;
+        m_hScrollBar->setValue(0);
+    }
+    m_hScrollBar->setRect({0, viewH - sb, hW, sb});
+}

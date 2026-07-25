@@ -105,6 +105,7 @@ set(UI_TEST_EXECUTABLES
     test_slider
     test_numericupdown
     test_splitter
+    test_treeview
     test_layout
     test_layout_advanced
     test_winframe
@@ -331,4 +332,6 @@ if(UICORNERSTONE_BUILD_DLL)
         add_fromsource_target(test_splitter_cabi test_splitter_cabi.cpp)
     endif()
 endif()
+
+
 

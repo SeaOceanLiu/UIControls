@@ -261,6 +261,8 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = parseNumericUpDown(j, parent);
     } else if (type == "Splitter") {
         result = parseSplitter(j, parent);
+    } else if (type == "TreeView") {
+        result = parseTreeView(j, parent);
     } else if (m_components.find(type) != m_components.end()) {
         // Component type: instantiate from template
         result = instantiateComponent(type, j, parent, index);
@@ -1583,6 +1585,59 @@ shared_ptr<Splitter> LayoutParser::parseSplitter(const json& j, Control* parent)
     return sp;
 }
 
+// ==================== TreeView ====================
+
+shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent) {
+    SRect rect = {0, 0, 200, 300};
+    if (j.contains("rect")) rect = parseRect(j["rect"]);
+
+    float xScale = 1.0f, yScale = 1.0f;
+    if (j.contains("scale") && j["scale"].is_object()) {
+        xScale = j["scale"].value("x", 1.0f);
+        yScale = j["scale"].value("y", 1.0f);
+    }
+
+    auto tv = make_shared<TreeView>(parent, rect, xScale, yScale);
+    m_theme.applyCommonColors(tv, "treeview");
+    parseCommonProperties(tv, j);
+
+    if (j.contains("indentWidth"))
+        tv->setIndentWidth(j["indentWidth"].get<float>());
+    if (j.contains("rowHeight"))
+        tv->setRowHeight(j["rowHeight"].get<float>());
+    if (j.contains("cycleNavigation"))
+        tv->setCycleNavigation(j["cycleNavigation"].get<bool>());
+    if (j.contains("defaultExpand"))
+        tv->setDefaultExpand(j["defaultExpand"].get<bool>());
+
+    if (j.contains("items") && j["items"].is_array()) {
+        vector<shared_ptr<TreeNode>> items;
+        function<void(const json&, vector<shared_ptr<TreeNode>>&)> parseItems;
+        parseItems = [&](const json& arr, vector<shared_ptr<TreeNode>>& out) {
+            for (const auto& item : arr) {
+                auto node = make_shared<TreeNode>();
+                node->id = item.value("id", "");
+                node->label = item.value("label", "");
+                node->expanded = item.value("expanded", false);
+                if (item.contains("children") && item["children"].is_array()) {
+                    parseItems(item["children"], node->children);
+                }
+                out.push_back(node);
+            }
+        };
+        parseItems(j["items"], items);
+        tv->setItems(items);
+    }
+
+    parseEvents(tv, j);
+
+    if (j.contains("id") && j["id"].is_string())
+        m_controlsById[j["id"].get<string>()] = tv;
+
+    tv->create();
+    return tv;
+}
+
 // ==================== ScrollBar ====================
 
 static ScrollBarOrientation parseScrollBarOrientation(const string& s) {
@@ -2435,7 +2490,8 @@ void LayoutParser::parseComponents(const json& j) {
     unordered_set<string> knownTypes = {
         "Label", "Button", "EditBox", "ComboBox", "TextArea", "CheckBox",
         "ProgressBar", "ScrollBar", "Panel", "WinFrame", "MenuBar",
-        "ColorPicker", "Slider", "Popup", "ConfirmPopup", "Dialog"
+        "ColorPicker", "Slider", "Popup", "ConfirmPopup", "Dialog",
+        "TreeView"
     };
 
     for (auto it = comps.begin(); it != comps.end(); ++it) {

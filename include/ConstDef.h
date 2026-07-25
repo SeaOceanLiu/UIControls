@@ -268,6 +268,16 @@ public:
     static const int    SPLITTER_DOUBLE_CLICK_MS;
     static const float  SPLITTER_KEY_STEP;
     static const float  SPLITTER_KEY_FINE_STEP;
+
+    // TreeView
+    static const float   TREEVIEW_INDENT_WIDTH;
+    static const float   TREEVIEW_DEFAULT_ROW_HEIGHT;
+    static const SColor  TREEVIEW_BG_COLOR;
+    static const SColor  TREEVIEW_BORDER_COLOR;
+    static const SColor  TREEVIEW_SELECTED_COLOR;
+    static const SColor  TREEVIEW_HOVER_COLOR;
+    static const SColor  TREEVIEW_TEXT_COLOR;
+    static const int     TREEVIEW_SCROLL_STEP_LINES;
 };
 
 #endif // ConstDefH
