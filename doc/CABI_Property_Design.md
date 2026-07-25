@@ -195,7 +195,7 @@ int UICornerstone_SetString(    UIControlHandle ctl, const char* prop, const cha
 
 | 维度 | 评价 |
 |------|------|
-| 入口数 | **5 个**（覆盖所有值类型） |
+| 入口数 | **6 个**（覆盖所有值类型） |
 | 类型安全 | struct 成员名自解释，无变参 |
 | StateColor 友好 | 原生结构体支持，命名成员无歧义 |
 | 扩展性 | 新属性加一行 `strcmp`，不改变 ABI |
@@ -215,34 +215,79 @@ int UICornerstone_SetString(    UIControlHandle ctl, const char* prop, const cha
 
 ### 4.2 对比总结
 
-| 维度 | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串 | E:变参 | **F:结构化(选)** |
-|------|-----------|-----------|-----------|---------|-------|-----------------|
-| 函数数 | 1 | 28+ | ~6 | 1 | 1 | 5 |
-| 类型安全 | ✅ | ✅ | ✅ | ⚠️ | ❌ | ✅ |
-| StateColor 4态 | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| 无枚举耦合 | — | ✅ | ⚠️ | ✅ | ✅ | ✅ |
-| 签名灵活 | ❌ | ✅ | ❌ | ✅ | ⚠️ | ✅ |
-| IDE 补全 | ✅ | ✅ | ✅ | ❌(字符串) | ❌ | ⚠️(struct) |
-| 新属性扩展 | 改枚举 | 加函数 | 改枚举 | 加strcmp | 加strcmp | 加strcmp |
+| 维度 | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串 | E:变参 | F:Union | G:Struct | **H:结构化(选)** |
+|------|-----------|-----------|-----------|---------|-------|---------|---------|-----------------|
+| 函数数 | 1 | 28+ | ~6 | 1 | 1 | 1 | 1 | **6** |
+| 类型安全 | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
+| StateColor 4态 | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** |
+| Bool 支持 | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
+| 无枚举耦合 | — | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | **✅** |
+| 签名灵活 | ❌ | ✅ | ❌ | ✅ | ⚠️ | ⚠️ | ⚠️ | **✅** |
+| IDE 补全 | ✅ | ✅ | ✅ | ❌(字符串) | ❌ | ⚠️(struct) | ❌(void*) | **⚠️(struct)** |
+| 新属性扩展 | 改枚举 | 加函数 | 改枚举 | 加strcmp | 加strcmp | 加strcmp | 加strcmp | **加strcmp** |
 
 ---
+
+### 3.7 方案 G：Union 单入口
+
+```c
+typedef union {
+    UIColor      color;
+    UIStateColor stateColor;
+    int          i;
+    float        f;
+    const char*  str;
+} UPropValue;
+
+int UICornerstone_SetProp(UIControlHandle ctl, const char* prop, UPropValue value);
+
+// 调用
+UICornerstone_SetProp(ctl, "selected",  (UPropValue){.color = {255,0,0,255}});
+UICornerstone_SetProp(ctl, "font-size", (UPropValue){.i     = 16});
+```
+
+| 问题 | 表现 |
+|------|------|
+| **union 不携带类型信息** | 实现层无法判断该读哪个成员。try-all 有崩溃风险：`const char*` 占 8 字节，读 float 的 4 字节当成指针 → 非法地址 |
+| **加 type tag 则更啰嗦** | `SetProp(ctl, "x", {TYPE_COLOR, {.color=...}})` — 类型写了 2 次，不如独立函数简洁 |
+| **入口数** | 1 个，但代价是安全性或冗余度 |
+
+### 3.8 方案 H：Struct 泛化入口
+
+```c
+int UICornerstone_SetStruct(UIControlHandle ctl, const char* prop, const void* data, int dataSize);
+
+UIRange range = {0.0f, 100.0f};
+UICornerstone_SetStruct(ctl, "range", &range, sizeof(range));
+```
+
+| 问题 | 表现 |
+|------|------|
+| **void* 绕过类型系统** | 编译期零检查，运行期靠 size 校验，不足 |
+| **struct 对齐风险** | `#pragma pack` 不一致导致跨 ABI 边界崩溃 |
+| **受益面极窄** | 仅 7 个复合属性（`setRange`、`setPresetLayout`、`setMinSize` 等），占总属性数 < 10% |
+| **拆分方案已足够** | 多调 1-3 次 C ABI 函数在初始化路径上无感知 |
+
+**结论**：Union 和 Struct 都为少数场景引入了不成正比的风险和复杂度，不采纳。
 
 ## 5. 详细设计
 
 ### 5.1 架构
 
 ```
-C ABI (5 入口)
+C ABI (6 入口)
     │
     ▼
 Control::setColorProperty(prop, SColor)       ← 虚方法分发
 Control::setStateColorProperty(prop, StateColor)
 Control::setIntProperty(prop, int)
 Control::setFloatProperty(prop, float)
+Control::setBoolProperty(prop, int)           // int 0/1
 Control::setStringProperty(prop, const char*)
     │
     ├─ ControlImpl: 处理通用属性
-    │     ("background", "border", "text", "text-shadow")
+    │     ("background", "border", "text", "text-shadow",
+    │      "visible", "enabled", "transparent", "border-visible")
     │
     └─ TreeView:    处理特有属性 + fallback 到基类
           ("selected", "hover", "bg", "border", "text")
@@ -273,6 +318,10 @@ int UICornerstone_SetColor(UIControlHandle ctl, const char* prop, UIColor value)
 // prop 属性名，value 四态颜色
 int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateColor value);
 
+// 设置布尔属性（例如 "visible"、"enabled"）
+// value: 0=假, 非0=真
+int UICornerstone_SetBool(UIControlHandle ctl, const char* prop, int value);
+
 // 设置整数属性（例如 "font-size"）
 int UICornerstone_SetInt(UIControlHandle ctl, const char* prop, int value);
 
@@ -290,6 +339,7 @@ int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* v
 
 virtual int setColorProperty(const char* prop, SColor color) { return 0; }
 virtual int setStateColorProperty(const char* prop, StateColor stateColor) { return 0; }
+virtual int setBoolProperty(const char* prop, int value) { return 0; }
 virtual int setIntProperty(const char* prop, int value) { return 0; }
 virtual int setFloatProperty(const char* prop, float value) { return 0; }
 virtual int setStringProperty(const char* prop, const char* value) { return 0; }
@@ -325,6 +375,15 @@ int ControlImpl::setStateColorProperty(const char* prop, StateColor sc) {
     if (strcmp(prop, "text-shadow") == 0){ setTextShadowStateColor(sc); return 1; }
     return 0;
 }
+
+int ControlImpl::setBoolProperty(const char* prop, int value) {
+    bool b = value != 0;
+    if (strcmp(prop, "visible") == 0)         { setVisible(b); return 1; }
+    if (strcmp(prop, "enabled") == 0)         { setEnable(b);  return 1; }
+    if (strcmp(prop, "transparent") == 0)     { setTransparent(b); return 1; }
+    if (strcmp(prop, "border-visible") == 0)  { setBorderVisible(b); return 1; }
+    return 0;
+}
 ```
 
 ### 5.5 C ABI 实现
@@ -345,7 +404,13 @@ int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateCo
     return c->setStateColorProperty(prop, sc);
 }
 // ...其余类似
-```
+}
+
+int UICornerstone_SetBool(UIControlHandle ctl, const char* prop, int value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setBoolProperty(prop, value);
+}
 
 ### 5.6 TreeView 覆写
 
@@ -440,7 +505,20 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | NumericUpDown | `"arrow-hover"` | Color | 箭头悬停色 |
 | NumericUpDown | `"arrow-pressed"` | Color | 箭头按下色 |
 
-### 6.4 Int 属性表
+### 6.4 Bool 属性表
+
+| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
+|------|--------|-----------|---------------|
+| 全控件 | `"visible"` | `setVisible(bool)` | ✅ `SetVisible` |
+| 全控件 | `"enabled"` | `setEnable(bool)` | ✅ `SetEnabled` |
+| 全控件 | `"transparent"` | `setTransparent(bool)` | ❌ |
+| 全控件 | `"border-visible"` | `setBorderVisible(bool)` | ❌ |
+| TreeView | `"cycle-navigation"` | `setCycleNavigation(bool)` | ❌ |
+| TreeView | `"default-expand"` | `setDefaultExpand(bool)` | ❌ |
+| WinFrame | `"resizable"` | `setResizable(bool)` | ❌ |
+| NumericUpDown | `"read-only"` | `setReadOnly(bool)` | ✅ `SetNumericUpDownReadOnly` |
+
+### 6.5 Int 属性表
 
 | 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
 |------|--------|-----------|---------------|
@@ -460,11 +538,7 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | NumericUpDown | `"decimals"` | `setDecimals(int)` | ✅ `SetNumericUpDownDecimals` |
 | TreeView | `"font-size"` | `setFontSize(int)` | ✅ `TreeViewSetFontSize` |
 
-### 6.5 Float 属性表
-
-| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
-|------|--------|-----------|---------------|
-| Button | `"caption-size"` | `setCaptionSize(float)` | ❌ |
+### 6.6 Float 属性表
 | Label | `"line-spacing-ratio"` | `setLineSpacingRatio(float)` | ❌ |
 | CheckBox | `"size-ratio"` | `setSizeRatio(float)` | ❌ |
 | Slider | `"step"` | `setStep(float)` | ❌ |
@@ -507,7 +581,7 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | NumericUpDown | `"range-min"` | `setRange(min, max)` — 拆自双参 | ✅ `SetNumericUpDownRange` |
 | NumericUpDown | `"range-max"` | `setRange(min, max)` — 拆自双参 | ✅ `SetNumericUpDownRange` |
 
-### 6.6 String 属性表
+### 6.7 String 属性表
 
 | 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
 |------|--------|-----------|---------------|
@@ -540,8 +614,8 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 - [ ] ColorPicker override `setColorProperty`
 - [ ] NumericUpDown override `setColorProperty`
 
-### Phase 3 — Int/Float/String（待完成）
-对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setStringProperty`，按 §6.4~§6.6 的属性表逐个实现。
+### Phase 3 — Int/Float/Bool/String（待完成）
+对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty`，按 §6.4~§6.7 的属性表逐个实现。
 
 **注意 — MenuBar 静态方法改造**：
 `MenuBar::setItemHeightRatio(float)` 和 `MenuBar::setFontSize(float)` 当前是 `static` 方法，无法参与实例虚方法分发。需先改为实例方法后再加入属性系统：
@@ -565,25 +639,31 @@ int Slider::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, "label-gap") == 0)        { setLabelGap(value);         return 1; }
     return ControlImpl::setFloatProperty(prop, value);
 }
+
+int TreeView::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, "cycle-navigation") == 0) { setCycleNavigation(value != 0); return 1; }
+    if (strcmp(prop, "default-expand") == 0)   { setDefaultExpand(value != 0);   return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
 ```
 
 ---
 
 ## 8. 扩展指南
 
-### 7.1 新增通用属性
+### 8.1 新增通用属性
 
-修改 `ControlImpl::setColorProperty` / `setStateColorProperty` 加一行 `strcmp`。
+修改 `ControlImpl::setColorProperty` / `setStateColorProperty` / `setBoolProperty` 加一行 `strcmp`。
 
-### 7.2 新增控件特有属性
+### 8.2 新增控件特有属性
 
 1. 在控件类中实现 setter 方法
 2. Override `setColorProperty`（或其他类型对应虚方法）
 3. 加 `strcmp` case 处理属性名，fallback 到基类
 
-### 7.3 新增值类型
+### 8.3 新增值类型
 
-如果需要新的值类型（如 `bool`），请在 `Control` 中加对应的虚方法，C ABI 加对应的入口函数，并在实现中 fallback 到基类空实现。
+如果需要新的值类型，请在 `Control` 中加对应的虚方法，C ABI 加对应的入口函数，并在实现中 fallback 到基类空实现。
 
 ---
 
