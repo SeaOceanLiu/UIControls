@@ -81,6 +81,12 @@ public:
 
     void setResizable(bool resizable) { m_resizable = resizable; }
     bool isResizable() const { return m_resizable; }
+
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setBoolProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setStringProperty(const char* prop, const char* value) override;
 };
 
 class WinFrameBuilder

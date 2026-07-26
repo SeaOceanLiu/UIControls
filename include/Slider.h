@@ -14,6 +14,12 @@ enum class SliderStyle {
     Vertical
 };
 
+inline SliderStyle SliderStyleFromString(const char* s) {
+    if (_stricmp(s, "horizontal") == 0) return SliderStyle::Horizontal;
+    if (_stricmp(s, "vertical")   == 0) return SliderStyle::Vertical;
+    return SliderStyle::Horizontal;
+}
+
 class Slider : public ControlImpl {
     friend class SliderBuilder;
 public:
@@ -161,6 +167,13 @@ public:
 
     // Callback
     void setOnValueChanged(OnValueChangedHandler handler);
+
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setBoolProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
 };
 
 class SliderBuilder {

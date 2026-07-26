@@ -8,6 +8,37 @@ inline constexpr const char* kBorder          = "border";
 inline constexpr const char* kText            = "text";
 inline constexpr const char* kTextShadow      = "text-shadow";
 
+// ── 控件特有颜色 ──
+inline constexpr const char* kTrack           = "track";
+inline constexpr const char* kTrackFill       = "track-fill";
+inline constexpr const char* kThumb           = "thumb";
+inline constexpr const char* kThumbBorder     = "thumb-border";
+inline constexpr const char* kThumbHover      = "thumb-hover";
+inline constexpr const char* kTick            = "tick";
+inline constexpr const char* kLabelColor      = "label";
+inline constexpr const char* kArrow           = "arrow";
+inline constexpr const char* kArrowHover      = "arrow-hover";
+inline constexpr const char* kArrowPressed    = "arrow-pressed";
+inline constexpr const char* kItemSelected    = "item-selected";
+inline constexpr const char* kItemHover       = "item-hover";
+inline constexpr const char* kItemDisabled    = "item-disabled";
+inline constexpr const char* kListBg          = "list-bg";
+inline constexpr const char* kListBorder      = "list-border";
+inline constexpr const char* kCheck           = "check";
+inline constexpr const char* kCross           = "cross";
+inline constexpr const char* kIndeterminate   = "indeterminate";
+inline constexpr const char* kBoxBorder       = "box-border";
+inline constexpr const char* kProgress        = "progress";
+inline constexpr const char* kLine            = "line";
+inline constexpr const char* kLineHover       = "line-hover";
+inline constexpr const char* kLineDrag        = "line-drag";
+inline constexpr const char* kWinFrameBG      = "win-frame-bg";
+inline constexpr const char* kWinFrameBorder  = "win-frame-border";
+inline constexpr const char* kTitleBarBG      = "title-bar-bg";
+inline constexpr const char* kTitleText       = "title-text";
+inline constexpr const char* kClosedText      = "closed-text";
+inline constexpr const char* kPopupBG         = "popup-bg";
+
 // ── 通用 Bool（全控件）──
 inline constexpr const char* kVisible         = "visible";
 inline constexpr const char* kEnabled         = "enabled";

@@ -70,6 +70,8 @@ enum class FontName {
     Quando_Regular
 };
 
+FontName FontNameFromString(const char* s);
+
 class ConstDef {
 public:
     // 路径定义

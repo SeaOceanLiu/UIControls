@@ -2,6 +2,7 @@
 #include "CheckBox.h"
 #include "GraphTool.h"
 #include "PlatformUtils.h"
+#include "PropertyNames.h"
 
 CheckBox::CheckBox(Control *parent, SRect rect, float xScale, float yScale):
     ControlImpl(parent, xScale, yScale),
@@ -615,6 +616,49 @@ CheckBoxBuilder& CheckBoxBuilder::setBorderStateColor(StateColor stateColor) {
 CheckBoxBuilder& CheckBoxBuilder::setTextStateColor(StateColor stateColor) {
     m_checkBox->setTextStateColor(stateColor);
     return *this;
+}
+
+// ── Property system overrides ──
+
+int CheckBox::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kCheck) == 0)         { setCheckColor(color);         return 1; }
+    if (strcmp(prop, PropertyNames::kCross) == 0)         { setCrossColor(color);         return 1; }
+    if (strcmp(prop, PropertyNames::kIndeterminate) == 0) { setIndeterminateColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kBoxBorder) == 0)     { setBoxBorderColor(color);     return 1; }
+    return ControlImpl::setColorProperty(prop, color);
+}
+
+int CheckBox::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kTriState) == 0) { setTriStateEnabled(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+
+int CheckBox::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kSizeRatio) == 0) { setSizeRatio(value); return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
+int CheckBox::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kCheckBoxStyle) == 0) {
+        setStyle(CheckBoxStyleFromString(value));
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kCheckState) == 0) {
+        setCheckState(CheckStateFromString(value));
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kLayout) == 0) {
+        if (_stricmp(value, "text-right") == 0) { setLayout(CheckBoxLayout::TextRight); return 1; }
+        if (_stricmp(value, "text-left")  == 0) { setLayout(CheckBoxLayout::TextLeft);  return 1; }
+        return 0;
+    }
+    if (strcmp(prop, PropertyNames::kVerticalAlign) == 0) {
+        if (_stricmp(value, "center") == 0) { setVerticalAlign(CheckBoxVerticalAlign::Center); return 1; }
+        if (_stricmp(value, "top")    == 0) { setVerticalAlign(CheckBoxVerticalAlign::Top);    return 1; }
+        if (_stricmp(value, "bottom") == 0) { setVerticalAlign(CheckBoxVerticalAlign::Bottom); return 1; }
+        return 0;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
 }
 
 CheckBoxBuilder& CheckBoxBuilder::setId(int id) {

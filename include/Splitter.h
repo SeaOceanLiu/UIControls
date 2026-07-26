@@ -80,6 +80,10 @@ public:
 
     void setOnSplitterMoved(OnSplitterMovedHandler handler);
 
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setFloatProperty(const char* prop, float value) override;
+
 private:
     bool ensureControls();
     void startDrag(const SPoint& mousePos);

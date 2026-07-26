@@ -1,5 +1,6 @@
 ﻿// 由AI(DeepSeek V4 Flash)生成，可能不完整或有错误，请自行检查和修改
 #include "WinFrame.h"
+#include "PropertyNames.h"
 
 WinFrame::WinFrame(Control* parent, SRect rect, float xScale, float yScale):
     Panel(parent, rect, xScale, yScale),
@@ -385,6 +386,31 @@ void WinFrame::addToClient(shared_ptr<Control> control) {
     if (m_clientPanel) {
         m_clientPanel->addControl(control);
     }
+}
+
+// ── Property system overrides ──
+
+int WinFrame::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kWinFrameBG) == 0)     { setWinFrameBGColor(color);     return 1; }
+    if (strcmp(prop, PropertyNames::kWinFrameBorder) == 0) { setWinFrameBorderColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kTitleBarBG) == 0)     { setTitleBarBGColor(color);     return 1; }
+    if (strcmp(prop, PropertyNames::kTitleText) == 0)      { setTitleTextColor(color);      return 1; }
+    return Panel::setColorProperty(prop, color);
+}
+
+int WinFrame::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kResizable) == 0) { setResizable(value != 0); return 1; }
+    return Panel::setBoolProperty(prop, value);
+}
+
+int WinFrame::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kEdgeMargin) == 0) { setEdgeMargin(value); return 1; }
+    return Panel::setFloatProperty(prop, value);
+}
+
+int WinFrame::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kTitle) == 0) { setTitle(value); return 1; }
+    return Panel::setStringProperty(prop, value);
 }
 
 // ==================== WinFrameBuilder ====================

@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include "MainWindow.h"
 #include "EventQueue.h"
+#include "PropertyNames.h"
 #include <algorithm>
 
 // ═══════════════════════════════════════════════════════════════
@@ -837,6 +838,36 @@ bool ComboBoxListPanel::handleEvent(shared_ptr<Event> event)
     return false;
 }
 
+
+// ── Property system overrides ──
+
+int ComboBox::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kArrow) == 0)          { setArrowColor(color);      return 1; }
+    if (strcmp(prop, PropertyNames::kArrowHover) == 0)     { setArrowHoverColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kItemSelected) == 0)   { setItemSelectedColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kItemHover) == 0)      { setItemHoverColor(color);  return 1; }
+    if (strcmp(prop, PropertyNames::kItemDisabled) == 0)   { setItemDisabledColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kListBg) == 0)         { setListBgColor(color);     return 1; }
+    if (strcmp(prop, PropertyNames::kListBorder) == 0)     { setListBorderColor(color); return 1; }
+    return ControlImpl::setColorProperty(prop, color);
+}
+
+int ComboBox::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kCycleEnabled) == 0) { setCycleEnabled(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+
+int ComboBox::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kMaxVisibleItems) == 0) { setMaxVisibleItems(value); return 1; }
+    if (strcmp(prop, PropertyNames::kSelectedIndex) == 0)   { setSelectedIndex(value);   return 1; }
+    return ControlImpl::setIntProperty(prop, value);
+}
+
+int ComboBox::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kArrowWidth) == 0) { setArrowWidth(value); return 1; }
+    if (strcmp(prop, PropertyNames::kItemHeight) == 0) { setItemHeight(value); return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // ComboBoxBuilder

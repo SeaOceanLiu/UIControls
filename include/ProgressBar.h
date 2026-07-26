@@ -19,6 +19,19 @@ enum class ProgressBarTextMode {
     Custom
 };
 
+inline ProgressBarStyle ProgressBarStyleFromString(const char* s) {
+    if (_stricmp(s, "horizontal") == 0) return ProgressBarStyle::Horizontal;
+    if (_stricmp(s, "vertical")   == 0) return ProgressBarStyle::Vertical;
+    return ProgressBarStyle::Horizontal;
+}
+
+inline ProgressBarTextMode ProgressBarTextModeFromString(const char* s) {
+    if (_stricmp(s, "none")    == 0) return ProgressBarTextMode::None;
+    if (_stricmp(s, "percent") == 0) return ProgressBarTextMode::Percent;
+    if (_stricmp(s, "custom")  == 0) return ProgressBarTextMode::Custom;
+    return ProgressBarTextMode::None;
+}
+
 class ProgressBar : public ControlImpl {
     friend class ProgressBarBuilder;
 public:
@@ -84,6 +97,13 @@ public:
     void setAlignmentMode(AlignmentMode mode);
 
     void setOnValueChanged(OnValueChangedHandler handler);
+
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setIntProperty(const char* prop, int value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
 };
 
 class ProgressBarBuilder {

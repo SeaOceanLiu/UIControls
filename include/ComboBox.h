@@ -152,6 +152,12 @@ public:
     void setOnSelectionChanged(OnSelectionChangedHandler handler)
         { m_onSelectionChanged = handler; }
 
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setBoolProperty(const char* prop, int value) override;
+    int setIntProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+
     // ── 测试辅助 ──
     shared_ptr<ComboBoxListPanel> getListPanel() { return m_listPanel; }
     shared_ptr<ScrollBar> getListScrollBar() { return m_scrollBar; }

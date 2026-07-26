@@ -117,6 +117,12 @@ public:
     void setClosedFontSize(int size) { m_closedFontSize = size; recreateClosedState(); }
     void setClosedTextColor(SColor color) { m_closedTextColor = color; recreateClosedState(); }
     void setPopupBGColor(SColor color) { m_popupBGColor = color; if (m_dialog) m_dialog->setNormalStateBGColor(color); }
+
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setIntProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setStringProperty(const char* prop, const char* value) override;
 };
 
 class ColorPickerBuilder {

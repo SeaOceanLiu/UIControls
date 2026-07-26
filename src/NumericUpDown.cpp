@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "NumericUpDown.h"
 #include "GraphTool.h"
+#include "PropertyNames.h"
 #include "InputBackend.h"
 #include "PlatformUtils.h"
 #include <algorithm>
@@ -266,6 +267,39 @@ void NumericUpDown::setReadOnly(bool ro) { m_readOnly = ro; }
 void NumericUpDown::setButtonWidth(float w) { m_buttonWidth = w; m_margin.right = 4.0f + m_buttonWidth; }
 void NumericUpDown::setArrowColor(SColor n, SColor h, SColor p) { m_arrowColor = n; m_arrowHoverColor = h; m_arrowPressColor = p; }
 void NumericUpDown::setOnValueChanged(OnValueChangedHandler handler) { m_onValueChanged = handler; }
+
+// ── Property system overrides ──
+
+int NumericUpDown::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kArrow) == 0)        { m_arrowColor = color;      return 1; }
+    if (strcmp(prop, PropertyNames::kArrowHover) == 0)   { m_arrowHoverColor = color; return 1; }
+    if (strcmp(prop, PropertyNames::kArrowPressed) == 0) { m_arrowPressColor = color; return 1; }
+    return EditBox::setColorProperty(prop, color);
+}
+
+int NumericUpDown::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kReadOnly) == 0) { setReadOnly(value != 0); return 1; }
+    return EditBox::setBoolProperty(prop, value);
+}
+
+int NumericUpDown::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kDecimals) == 0) { setDecimals(value); return 1; }
+    return EditBox::setIntProperty(prop, value);
+}
+
+int NumericUpDown::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kValue) == 0)     { setValue(value);              return 1; }
+    if (strcmp(prop, PropertyNames::kStep) == 0)      { setStep(value);               return 1; }
+    if (strcmp(prop, PropertyNames::kPageStep) == 0)  { setPageStep(value);           return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)  { setRange(value, m_maxValue);  return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)  { setRange(m_minValue, value);  return 1; }
+    if (strcmp(prop, PropertyNames::kButtonWidth) == 0){ setButtonWidth(value);       return 1; }
+    return EditBox::setFloatProperty(prop, value);
+}
+
+int NumericUpDown::setStringProperty(const char* prop, const char* value) {
+    return EditBox::setStringProperty(prop, value);
+}
 
 // ── Builder ──
 

@@ -12,6 +12,7 @@
    - [5.7 Getter C ABI](#57-getter-c-abi)
    - [5.8 Callback C ABI](#58-callback-c-abi)
    - [5.9 属性名注册表](#59-属性名注册表)
+   - [5.10 枚举值字符串管理](#510-枚举值字符串管理)
 6. [属性命名约定](#6-属性命名约定)
    - [6.8 Enum 属性表](#68-enum-属性表)
    - [6.9 Callback 事件表](#69-callback-事件表)
@@ -744,6 +745,30 @@ inline constexpr const char* kProgressBarStyle = "style";   // ProgressBar: hori
 ```
 
 `kCheckBoxStyle` 和 `kProgressBarStyle` 值相同但名字不同，IDE 检索 `"style"` 仍能发现两条定义，做冲突判断。
+
+### 5.10 枚举值字符串管理
+
+`SetEnum` 接口传入枚举值字符串（如 `"horizontal"`、`"checked"`），实现层需将其映射为 C++ 枚举值。策略：
+
+**原则**：枚举值字符串的映射函数与枚举定义放在同一文件，不由 `PropertyNames.h` 管理。
+
+```cpp
+// Slider.h — 紧挨着 enum class SliderStyle
+inline SliderStyle SliderStyleFromString(const char* s) {
+    if (_stricmp(s, "horizontal") == 0) return SliderStyle::Horizontal;
+    if (_stricmp(s, "vertical")   == 0) return SliderStyle::Vertical;
+    return SliderStyle::Horizontal; // default
+}
+```
+
+| 角度 | 评价 |
+|------|------|
+| **职责归位** | 属性名常量归 `PropertyNames.h`，枚举值映射归枚举所在文件，两个维度不耦合 |
+| **改不漏** | 增删枚举值，顺手更新同文件的 FromString 函数，不担心跨文件遗漏 |
+| **查询方便** | `rg "SliderStyleFromString"` 即可找到所有调用点 |
+| **命名统一** | `{EnumName}FromString` 模式，IDE 输入 `FromString` 即得补全 |
+
+FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 
 ---
 

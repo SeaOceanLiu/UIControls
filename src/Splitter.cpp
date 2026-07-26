@@ -1,6 +1,7 @@
 ﻿#define NOMINMAX
 #include "Splitter.h"
 #include "GraphTool.h"
+#include "PropertyNames.h"
 #include "PlatformUtils.h"
 #include "EventQueue.h"
 #include <algorithm>
@@ -350,6 +351,22 @@ void Splitter::cleanupCursors() {
 void Splitter::updateCursor(bool inside) {
     if (inside) { ensureCursors(); if (m_cursorResize) Cursor::setCurrent(m_cursorResize); }
     else { if (!m_cursorDefault) m_cursorDefault = Cursor::getDefault(); Cursor::setCurrent(m_cursorDefault); }
+}
+
+// ── Property system overrides ──
+
+int Splitter::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kLine) == 0)      { m_colorNormal = color; return 1; }
+    if (strcmp(prop, PropertyNames::kLineHover) == 0)  { m_colorHover  = color; return 1; }
+    if (strcmp(prop, PropertyNames::kLineDrag) == 0)   { m_colorDrag   = color; return 1; }
+    return ControlImpl::setColorProperty(prop, color);
+}
+
+int Splitter::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kRatio) == 0)     { setSplitRatio(value); return 1; }
+    if (strcmp(prop, PropertyNames::kThickness) == 0) { setThickness(value);  return 1; }
+    if (strcmp(prop, PropertyNames::kEdgeMargin) == 0){ m_minFirst = value; m_minSecond = value; return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
 }
 
 // ── Builder ──

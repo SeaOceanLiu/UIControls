@@ -67,6 +67,13 @@ public:
     void   setOnValueChanged(OnValueChangedHandler handler);
     void   stepValue(int dir);
 
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setBoolProperty(const char* prop, int value) override;
+    int setIntProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+
 private:
     bool isInArrowArea(float x) ;
     bool isInUpArrow(float x, float y) ;

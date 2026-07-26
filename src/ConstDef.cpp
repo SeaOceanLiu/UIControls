@@ -209,6 +209,38 @@ const SColor  ConstDef::TREEVIEW_HOVER_COLOR(48, 48, 48, 255);
 const SColor  ConstDef::TREEVIEW_TEXT_COLOR(220, 220, 220, 255);
 const int     ConstDef::TREEVIEW_SCROLL_STEP_LINES  = 3;
 
+FontName FontNameFromString(const char* s) {
+    if (_stricmp(s, "asul-bold") == 0) return FontName::Asul_Bold;
+    if (_stricmp(s, "asul-regular") == 0) return FontName::Asul_Regular;
+    if (_stricmp(s, "harmonyos-sans-condensed-regular") == 0) return FontName::HarmonyOS_Sans_Condensed_Regular;
+    if (_stricmp(s, "harmonyos-sans-condensed-thin") == 0) return FontName::HarmonyOS_Sans_Condensed_Thin;
+    if (_stricmp(s, "harmonyos-sans-sc-black") == 0) return FontName::HarmonyOS_Sans_SC_Black;
+    if (_stricmp(s, "harmonyos-sans-sc-bold") == 0) return FontName::HarmonyOS_Sans_SC_Bold;
+    if (_stricmp(s, "harmonyos-sans-sc-light") == 0) return FontName::HarmonyOS_Sans_SC_Light;
+    if (_stricmp(s, "harmonyos-sans-sc-medium") == 0) return FontName::HarmonyOS_Sans_SC_Medium;
+    if (_stricmp(s, "harmonyos-sans-sc-regular") == 0) return FontName::HarmonyOS_Sans_SC_Regular;
+    if (_stricmp(s, "harmonyos-sans-sc-thin") == 0) return FontName::HarmonyOS_Sans_SC_Thin;
+    if (_stricmp(s, "maplemono-nf-cn-bold") == 0) return FontName::MapleMono_NF_CN_Bold;
+    if (_stricmp(s, "maplemono-nf-cn-bolditalic") == 0) return FontName::MapleMono_NF_CN_BoldItalic;
+    if (_stricmp(s, "maplemono-nf-cn-extrabold") == 0) return FontName::MapleMono_NF_CN_ExtraBold;
+    if (_stricmp(s, "maplemono-nf-cn-extrabolditalic") == 0) return FontName::MapleMono_NF_CN_ExtraBoldItalic;
+    if (_stricmp(s, "maplemono-nf-cn-extralight") == 0) return FontName::MapleMono_NF_CN_ExtraLight;
+    if (_stricmp(s, "maplemono-nf-cn-extralightitalic") == 0) return FontName::MapleMono_NF_CN_ExtraLightItalic;
+    if (_stricmp(s, "maplemono-nf-cn-italic") == 0) return FontName::MapleMono_NF_CN_Italic;
+    if (_stricmp(s, "maplemono-nf-cn-light") == 0) return FontName::MapleMono_NF_CN_Light;
+    if (_stricmp(s, "maplemono-nf-cn-lightitalic") == 0) return FontName::MapleMono_NF_CN_LightItalic;
+    if (_stricmp(s, "maplemono-nf-cn-medium") == 0) return FontName::MapleMono_NF_CN_Medium;
+    if (_stricmp(s, "maplemono-nf-cn-mediumitalic") == 0) return FontName::MapleMono_NF_CN_MediumItalic;
+    if (_stricmp(s, "maplemono-nf-cn-regular") == 0) return FontName::MapleMono_NF_CN_Regular;
+    if (_stricmp(s, "maplemono-nf-cn-semibold") == 0) return FontName::MapleMono_NF_CN_SemiBold;
+    if (_stricmp(s, "maplemono-nf-cn-semibolditalic") == 0) return FontName::MapleMono_NF_CN_SemiBoldItalic;
+    if (_stricmp(s, "maplemono-nf-cn-thin") == 0) return FontName::MapleMono_NF_CN_Thin;
+    if (_stricmp(s, "maplemono-nf-cn-thinitalic") == 0) return FontName::MapleMono_NF_CN_ThinItalic;
+    if (_stricmp(s, "muyao-softbrush") == 0) return FontName::Muyao_Softbrush;
+    if (_stricmp(s, "quando-regular") == 0) return FontName::Quando_Regular;
+    return FontName::HarmonyOS_Sans_SC_Regular;
+}
+
 const std::unordered_map<FontName, std::string> ConstDef::fontFiles = {
     {FontName::Asul_Bold, "fonts/Asul-Bold.ttf"},
     {FontName::Asul_Regular, "fonts/Asul-Regular.ttf"},

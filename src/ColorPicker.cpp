@@ -1,6 +1,7 @@
 ﻿#define NOMINMAX
 #include "ColorPicker.h"
 #include "GraphTool.h"
+#include "PropertyNames.h"
 #include "FocusManager.h"
 #include "Bench.h"
 #include <algorithm>
@@ -592,6 +593,31 @@ void ColorPicker::onOK() {
 void ColorPicker::onCancel() {
     m_color = m_committedColor;
     syncUIFromColor();
+}
+
+// ── Property system overrides ──
+
+int ColorPicker::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kClosedText) == 0) { setClosedTextColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kPopupBG) == 0)    { setPopupBGColor(color);    return 1; }
+    return Panel::setColorProperty(prop, color);
+}
+
+int ColorPicker::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kPresetCols) == 0)     { setPresetLayout(value, m_presetRows); return 1; }
+    if (strcmp(prop, PropertyNames::kPresetRows) == 0)     { setPresetLayout(m_presetCols, value); return 1; }
+    if (strcmp(prop, PropertyNames::kClosedFontSize) == 0) { setClosedFontSize(value);             return 1; }
+    return Panel::setIntProperty(prop, value);
+}
+
+int ColorPicker::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kClosedSwatchSize) == 0) { setClosedSwatchSize(value); return 1; }
+    return Panel::setFloatProperty(prop, value);
+}
+
+int ColorPicker::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kColor) == 0) { setColor(string(value)); return 1; }
+    return Panel::setStringProperty(prop, value);
 }
 
 // ==================== ColorPickerBuilder ====================

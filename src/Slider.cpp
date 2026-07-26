@@ -2,6 +2,7 @@
 #include "Slider.h"
 #include "GraphTool.h"
 #include "Cursor.h"
+#include "PropertyNames.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -777,6 +778,56 @@ SliderBuilder& SliderBuilder::setThumbBorderColor(SColor color)
 
 SliderBuilder& SliderBuilder::setThumbHoverColor(SColor color)
 { m_slider->setThumbHoverColor(color); return *this; }
+
+// ── Property system overrides ──
+
+int Slider::setColorProperty(const char* prop, SColor color) {
+    if (strcmp(prop, PropertyNames::kTrack) == 0)        { setTrackColor(color);     return 1; }
+    if (strcmp(prop, PropertyNames::kTrackFill) == 0)    { setTrackFillColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kThumb) == 0)        { setThumbColor(color);     return 1; }
+    if (strcmp(prop, PropertyNames::kThumbBorder) == 0)  { setThumbBorderColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kThumbHover) == 0)   { setThumbHoverColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kTick) == 0)         { setTickColor(color);      return 1; }
+    if (strcmp(prop, PropertyNames::kLabelColor) == 0)   { setLabelColor(color);     return 1; }
+    return ControlImpl::setColorProperty(prop, color);
+}
+
+int Slider::setBoolProperty(const char* prop, int value) {
+    bool b = value != 0;
+    if (strcmp(prop, PropertyNames::kReverse) == 0)          { setReverse(b);         return 1; }
+    if (strcmp(prop, PropertyNames::kShowValueLabel) == 0)   { setShowValueLabel(b);  return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+
+int Slider::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kStep) == 0)            { setStep(value);            return 1; }
+    if (strcmp(prop, PropertyNames::kTrackThickness) == 0)  { setTrackThickness(value);  return 1; }
+    if (strcmp(prop, PropertyNames::kThumbSize) == 0)       { setThumbSize(value);       return 1; }
+    if (strcmp(prop, PropertyNames::kTickInterval) == 0)    { setTickInterval(value);    return 1; }
+    if (strcmp(prop, PropertyNames::kTickLength) == 0)      { setTickLength(value);      return 1; }
+    if (strcmp(prop, PropertyNames::kLabelGap) == 0)        { setLabelGap(value);        return 1; }
+    if (strcmp(prop, PropertyNames::kValue) == 0)           { setValue(value);           return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)        { setRange(value, m_maxValue); return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)        { setRange(m_minValue, value); return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
+int Slider::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kLabelFormat) == 0) { setLabelFormat(value); return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+
+int Slider::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kSliderStyle) == 0) {
+        setStyle(SliderStyleFromString(value));
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kLabelFont) == 0) {
+        setLabelFont(FontNameFromString(value));
+        return 1;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
 
 SliderBuilder& SliderBuilder::setTickInterval(float interval)
 { m_slider->setTickInterval(interval); return *this; }

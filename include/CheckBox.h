@@ -30,6 +30,20 @@ enum class CheckBoxVerticalAlign {
     Bottom
 };
 
+inline CheckBoxStyle CheckBoxStyleFromString(const char* s) {
+    if (_stricmp(s, "classic") == 0) return CheckBoxStyle::Classic;
+    if (_stricmp(s, "cross")   == 0) return CheckBoxStyle::Cross;
+    if (_stricmp(s, "circle")  == 0) return CheckBoxStyle::Circle;
+    return CheckBoxStyle::Classic;
+}
+
+inline CheckState CheckStateFromString(const char* s) {
+    if (_stricmp(s, "unchecked")     == 0) return CheckState::Unchecked;
+    if (_stricmp(s, "checked")       == 0) return CheckState::Checked;
+    if (_stricmp(s, "indeterminate") == 0) return CheckState::Indeterminate;
+    return CheckState::Unchecked;
+}
+
 class CheckBox : public ControlImpl {
     friend class CheckBoxBuilder;
 public:
@@ -96,6 +110,12 @@ public:
 
     void setBoxBorderColor(SColor color);
     SColor getBoxBorderColor();
+
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor color) override;
+    int setBoolProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
 
 private:
     void setBoxSize(void);
