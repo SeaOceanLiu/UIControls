@@ -9,8 +9,13 @@
 3. [备选方案](#3-备选方案)
 4. [最终决策：结构化多态](#4-最终决策结构化多态)
 5. [详细设计](#5-详细设计)
+   - [5.7 Getter C ABI](#57-getter-c-abi)
+   - [5.8 Callback C ABI](#58-callback-c-abi)
 6. [属性命名约定](#6-属性命名约定)
-7. [扩展指南](#7-扩展指南)
+   - [6.8 Enum 属性表](#68-enum-属性表)
+   - [6.9 Callback 事件表](#69-callback-事件表)
+7. [实施清单（待完成）](#7-实施清单待完成)
+8. [扩展指南](#8-扩展指南)
 
 ---
 
@@ -203,31 +208,6 @@ int UICornerstone_SetString(    UIControlHandle ctl, const char* prop, const cha
 
 ---
 
-## 4. 最终决策：结构化多态
-
-### 4.1 理由
-
-1. **类型安全**：5 个显式函数替代变参，参数通过 struct 成员命名
-2. **StateColor 友好**：`UIStateColor` 的 `.normal/.hover/.pressed/.disabled` 成员自解释，避免 16 参数混乱
-3. **虚方法分发**：每值类型一个虚方法，零 `dynamic_cast`，O(1) 分发
-4. **属性名全局统一字符串**：不占用枚举 ABI 槽位，不共享枚举域，互不污染
-5. **结构体 ABI 稳定**：`UIColor`/`UIStateColor` 是简单 POD 结构，成员位置固定
-
-### 4.2 对比总结
-
-| 维度 | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串 | E:变参 | F:Union | G:Struct | **H:结构化(选)** |
-|------|-----------|-----------|-----------|---------|-------|---------|---------|-----------------|
-| 函数数 | 1 | 28+ | ~6 | 1 | 1 | 1 | 1 | **6** |
-| 类型安全 | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
-| StateColor 4态 | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** |
-| Bool 支持 | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
-| 无枚举耦合 | — | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | **✅** |
-| 签名灵活 | ❌ | ✅ | ❌ | ✅ | ⚠️ | ⚠️ | ⚠️ | **✅** |
-| IDE 补全 | ✅ | ✅ | ✅ | ❌(字符串) | ❌ | ⚠️(struct) | ❌(void*) | **⚠️(struct)** |
-| 新属性扩展 | 改枚举 | 加函数 | 改枚举 | 加strcmp | 加strcmp | 加strcmp | 加strcmp | **加strcmp** |
-
----
-
 ### 3.7 方案 G：Union 单入口
 
 ```c
@@ -270,27 +250,48 @@ UICornerstone_SetStruct(ctl, "range", &range, sizeof(range));
 
 **结论**：Union 和 Struct 都为少数场景引入了不成正比的风险和复杂度，不采纳。
 
+---
+
+## 4. 最终决策：结构化多态
+
+### 4.1 理由
+
+1. **类型安全**：5 个显式函数替代变参，参数通过 struct 成员命名
+2. **StateColor 友好**：`UIStateColor` 的 `.normal/.hover/.pressed/.disabled` 成员自解释，避免 16 参数混乱
+3. **虚方法分发**：每值类型一个虚方法，零 `dynamic_cast`，O(1) 分发
+4. **属性名全局统一字符串**：不占用枚举 ABI 槽位，不共享枚举域，互不污染
+5. **结构体 ABI 稳定**：`UIColor`/`UIStateColor` 是简单 POD 结构，成员位置固定
+
+### 4.2 对比总结
+
+| 维度 | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串 | E:变参 | F:Union | G:Struct | **H:结构化(选)** |
+|------|-----------|-----------|-----------|---------|-------|---------|---------|-----------------|
+| 函数数 | 1 | 28+ | ~6 | 1 | 1 | 1 | 1 | **6** |
+| 类型安全 | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
+| StateColor 4态 | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** |
+| Bool 支持 | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
+| 无枚举耦合 | — | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | **✅** |
+| 签名灵活 | ❌ | ✅ | ❌ | ✅ | ⚠️ | ⚠️ | ⚠️ | **✅** |
+| IDE 补全 | ✅ | ✅ | ✅ | ❌(字符串) | ❌ | ⚠️(struct) | ❌(void*) | **⚠️(struct)** |
+| 新属性扩展 | 改枚举 | 加函数 | 改枚举 | 加strcmp | 加strcmp | 加strcmp | 加strcmp | **加strcmp** |
+
+---
+
 ## 5. 详细设计
 
 ### 5.1 架构
 
 ```
-C ABI (6 入口)
-    │
-    ▼
-Control::setColorProperty(prop, SColor)       ← 虚方法分发
-Control::setStateColorProperty(prop, StateColor)
-Control::setIntProperty(prop, int)
-Control::setFloatProperty(prop, float)
-Control::setBoolProperty(prop, int)           // int 0/1
-Control::setStringProperty(prop, const char*)
-    │
-    ├─ ControlImpl: 处理通用属性
-    │     ("background", "border", "text", "text-shadow",
-    │      "visible", "enabled", "transparent", "border-visible")
-    │
-    └─ TreeView:    处理特有属性 + fallback 到基类
-          ("selected", "hover", "bg", "border", "text")
+Setter C ABI (8 入口)                  Getter C ABI (7 入口)
+    │                                        │
+    ▼                                        ▼
+Control::set*Property(prop, val)      Control::get*Property(prop, &out)
+    │                                        │
+    ├─ Property（颜色/数值/文本/枚举）        ├─ Property 读取
+    └─ Callback（事件绑定）
+
+值类型: Color | StateColor | Int | Float | Bool | String | Enum | Callback
+                                                    └── 新增，字符串传枚举名
 ```
 
 ### 5.2 C ABI 类型定义
@@ -330,6 +331,29 @@ int UICornerstone_SetFloat(UIControlHandle ctl, const char* prop, float value);
 
 // 设置字符串属性（例如 "text"、"font"）
 int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* value);
+
+// 设置枚举属性（例如 "style"、"align"）
+// value 为枚举值名称的字符串，如 "Vertical"、"Checked"
+// 不区分大小写
+int UICornerstone_SetEnum(UIControlHandle ctl, const char* prop, const char* value);
+
+/* ============ 回调系统 ============ */
+typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, void* userData);
+
+typedef struct {
+    const char* eventName;
+    union {
+        float           floatVal;
+        double          doubleVal;
+        int             intVal;
+        const char*     strVal;
+        struct { int idx; const char* val; } selection;
+    } data;
+} UIEventData;
+
+// 绑定事件回调
+// 所有控件的事件（click、value-changed、text-changed 等）统一走此入口
+int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData);
 ```
 
 ### 5.3 虚方法接口
@@ -343,6 +367,11 @@ virtual int setBoolProperty(const char* prop, int value) { return 0; }
 virtual int setIntProperty(const char* prop, int value) { return 0; }
 virtual int setFloatProperty(const char* prop, float value) { return 0; }
 virtual int setStringProperty(const char* prop, const char* value) { return 0; }
+virtual int setEnumProperty(const char* prop, const char* value) { return 0; }
+
+// 回调绑定：event 事件名（不包含 "on" 前缀），如 "click"、"value-changed"
+// cb C 回调函数指针，userData 透传给 cb
+virtual int setCallbackProperty(const char* event, UIEventCallback cb, void* userData) { return 0; }
 ```
 
 ### 5.4 ControlImpl 实现通用属性
@@ -403,14 +432,26 @@ int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateCo
     StateColor sc(value.normal, value.hover, value.pressed, value.disabled);
     return c->setStateColorProperty(prop, sc);
 }
-// ...其余类似
-}
+// ...其余类似（SetInt、SetFloat、SetString、SetEnum）
 
 int UICornerstone_SetBool(UIControlHandle ctl, const char* prop, int value) {
     auto* c = static_cast<Control*>(ctl);
     if (!c || !prop) return 0;
     return c->setBoolProperty(prop, value);
 }
+
+int UICornerstone_SetEnum(UIControlHandle ctl, const char* prop, const char* value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !value) return 0;
+    return c->setEnumProperty(prop, value);
+}
+
+int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !event) return 0;
+    return c->setCallbackProperty(event, cb, userData);
+}
+```
 
 ### 5.6 TreeView 覆写
 
@@ -427,6 +468,199 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
     return ControlImpl::setColorProperty(prop, color);
 }
 ```
+
+---
+
+### 5.7 Getter C ABI
+
+Getter 与 Setter 对称：6 个虚方法 + 6 个 C ABI 函数。返回值表示属性是否被识别（1=成功，0=未识别），值通过输出参数返回。
+
+#### 虚方法接口
+
+```cpp
+// include/ControlBase.h (Control 类新增)
+
+virtual int getColorProperty(const char* prop, SColor& out) { return 0; }
+virtual int getStateColorProperty(const char* prop, StateColor& out) { return 0; }
+virtual int getBoolProperty(const char* prop, int& out) { return 0; }
+virtual int getIntProperty(const char* prop, int& out) { return 0; }
+virtual int getFloatProperty(const char* prop, float& out) { return 0; }
+virtual int getStringProperty(const char* prop, const char*& out) { return 0; }
+virtual int getEnumProperty(const char* prop, const char*& out) { return 0; }
+```
+
+#### C ABI 函数
+
+```c
+// include/UICornerstoneAPI.h
+
+int UICornerstone_GetColor(UIControlHandle ctl, const char* prop, UIColor* out);
+int UICornerstone_GetStateColor(UIControlHandle ctl, const char* prop, UIStateColor* out);
+int UICornerstone_GetBool(UIControlHandle ctl, const char* prop, int* out);
+int UICornerstone_GetInt(UIControlHandle ctl, const char* prop, int* out);
+int UICornerstone_GetFloat(UIControlHandle ctl, const char* prop, float* out);
+int UICornerstone_GetString(UIControlHandle ctl, const char* prop, char* out, int maxLen);
+int UICornerstone_GetEnum(UIControlHandle ctl, const char* prop, char* out, int maxLen);
+```
+
+String 使用 `char* out + maxLen` 模式，避免静态 buffer 或 malloc 生命周期问题。
+
+#### ControlImpl 默认实现
+
+Setter 在写入时同时保存当前值，Getter 直接从内存读取（例如 `getNormalStateBGColor`）。若属性不存在返回 0。
+
+```cpp
+int ControlImpl::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, "background") == 0)          { out = getNormalStateBGColor();  return 1; }
+    if (strcmp(prop, "background.hover") == 0)    { out = getHoverStateBGColor();   return 1; }
+    if (strcmp(prop, "background.pressed") == 0)  { out = getPressedStateBGColor(); return 1; }
+    if (strcmp(prop, "background.disabled") == 0) { out = getDisabledStateBGColor();return 1; }
+    if (strcmp(prop, "border") == 0)              { out = getNormalStateBDColor();  return 1; }
+    // ...
+    return 0;
+}
+```
+
+#### C ABI 实现
+
+```cpp
+// src/UICornerstoneAPI.cpp
+
+int UICornerstone_GetColor(UIControlHandle ctl, const char* prop, UIColor* out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    SColor s;
+    if (!c->getColorProperty(prop, s)) return 0;
+    out->r = s.getRed(); out->g = s.getGreen();
+    out->b = s.getBlue(); out->a = s.getAlpha();
+    return 1;
+}
+// ...其余类似（GetStateColor、GetBool、GetInt、GetFloat、GetString、GetEnum）
+```
+
+---
+
+### 5.8 Callback C ABI
+
+回调（事件）与属性不同：属性设值后一直有效，回调注册后等待触发。回调走独立的 C ABI 入口 `SetCallback`，与 Set/Get Property 并列。
+
+#### 数据结构
+
+```c
+typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, void* userData);
+
+typedef struct {
+    const char* eventName;  // "click"、"value-changed" 等
+    union {
+        float           floatVal;
+        double          doubleVal;
+        int             intVal;
+        const char*     strVal;   // 临时指针，回调内立即用
+        struct { int idx; const char* val; } selection;
+    } data;
+} UIEventData;
+```
+
+`eventName` 使 C 方可在同一个回调函数中通过 `strcmp(event->eventName, "click")` 区分不同事件。
+
+#### 虚方法
+
+```cpp
+// include/ControlBase.h
+virtual int setCallbackProperty(const char* event, UIEventCallback cb, void* userData) { return 0; }
+```
+
+每个控件 override 此方法，将 C ABI 回调桥接到 C++ `std::function`：
+
+```cpp
+// Button.cpp
+int Button::setCallbackProperty(const char* event, UIEventCallback cb, void* userData) {
+    if (strcmp(event, "click") == 0) {
+        setOnClick([this, cb, userData](auto self) {
+            UIEventData ev{};
+            ev.eventName = "click";
+            cb((UIControlHandle)this, &ev, userData);
+        });
+        return 1;
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
+}
+```
+
+#### 带数据的回调桥接
+
+```cpp
+// Slider.cpp
+int Slider::setCallbackProperty(const char* event, UIEventCallback cb, void* userData) {
+    if (strcmp(event, "click") == 0) { /* ... */ }
+    if (strcmp(event, "value-changed") == 0) {
+        setOnValueChanged([this, cb, userData](auto self, float val) {
+            UIEventData ev{};
+            ev.eventName = "value-changed";
+            ev.data.floatVal = val;
+            cb((UIControlHandle)this, &ev, userData);
+        });
+        return 1;
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
+}
+```
+
+C 方处理：
+
+```c
+void myHandler(UIControlHandle ctl, const UIEventData* event, void* userData) {
+    if (strcmp(event->eventName, "click") == 0) {
+        // 按钮被点击
+    } else if (strcmp(event->eventName, "value-changed") == 0) {
+        float newVal = event->data.floatVal;
+        // ...
+    }
+}
+// UICornerstone_SetCallback(ctl, "value-changed", myHandler, NULL);
+```
+
+#### 设计要点
+
+| 点 | 说明 |
+|----|------|
+| 一个回调函数处理所有事件 | 通过 `event->eventName` 区分，避免每个事件一个导出函数 |
+| 不丢失事件数据 | `UIEventData` 的 union 覆盖所有回调参数类型 |
+| 字符串参数为临时指针 | `strVal` 指向 C++ 侧临时 buffer，回调返回后失效，必须立即使用或拷贝 |
+| 事件名字典 | 事件名统一 kebab-case，不加 "on" 前缀：`"click"`、`"value-changed"`、`"text-changed"`、`"selection-changed"`、`"check-changed"`、`"confirm"`、`"cancel"`、`"close"`、`"enter"`、`"select"`、`"expand"`、`"collapse"` 等 |
+| 替换范围 | 替换现有的 `UICornerstone_SetOnClick` 等 7 个 `UIActionCallback` 导出和 2 个带数据回调导出 |
+
+#### 性能分析
+
+**注册时**：`setCallbackProperty` 内逐条 `strcmp` 匹配事件名，一次性开销，不关键。
+
+**触发时（关键路径）**：C++ 回调触发 → 构造 `UIEventData` → 直接调用绑定的 C 函数指针。**零 strcmp、零查找**——每个 C 回调只对应一个事件，handler 无需区分事件名：
+
+```c
+void myValueChangedHandler(UIControlHandle ctl, const UIEventData* event, void* userData) {
+    float newVal = event->data.floatVal;  // 直接读，无需 strcmp
+    // ...
+}
+// UICornerstone_SetCallback(ctl, "value-changed", myValueChangedHandler, NULL);
+```
+
+`eventName` 字段仅用于通用路由器（一个回调注册多个事件时做分发）或调试日志，非通用路由器场景下 C 方忽略即可。
+
+对比：专有导出方案在触发时同样是直接调用 C 函数指针，零 strcmp。统一 `SetCallback` 的最坏路径（通用路由器 + 20 个事件）每次触发 1 次 strcmp，实测 < 100ns，60fps 下 6μs/秒，无感。
+
+#### 未来优化（profile-driven）
+
+若 profiler 证实在通用路由器场景下 strcmp 成热点：
+
+```c
+typedef struct {
+    const char* eventName;
+    int         eventId;    // C 方缓存后走 switch
+    union { /* ... */ } data;
+} UIEventData;
+```
+
+初始注册时 C 方通过 `strcmp` 查一次 `eventId`，后续触发直接 `switch (eventId)`。未成为热点前不引入。
 
 ---
 
@@ -513,10 +747,25 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | 全控件 | `"enabled"` | `setEnable(bool)` | ✅ `SetEnabled` |
 | 全控件 | `"transparent"` | `setTransparent(bool)` | ❌ |
 | 全控件 | `"border-visible"` | `setBorderVisible(bool)` | ❌ |
+| Button | `"text-shadow-enable"` | `setTextShadowEnable(bool)` | ❌ |
+| Label | `"shadow"` | `setShadow(bool)` | ❌ |
+| Label | `"expand"` | `setEnableExpand(bool)` | ❌ |
+| Label | `"clickable"` | `setClickable(bool)` | ❌ |
+| EditBox | `"password-mode"` | `setPasswordMode(bool)` | ❌ |
+| TextArea | `"word-wrap"` | `setWordWrap(bool)` | ❌ |
+| CheckBox | `"tri-state"` | `setTriStateEnabled(bool)` | ❌ |
+| Slider | `"reverse"` | `setReverse(bool)` | ❌ |
+| Slider | `"show-value-label"` | `setShowValueLabel(bool)` | ❌ |
+| ComboBox | `"cycle-enabled"` | `setCycleEnabled(bool)` | ❌ |
 | TreeView | `"cycle-navigation"` | `setCycleNavigation(bool)` | ❌ |
 | TreeView | `"default-expand"` | `setDefaultExpand(bool)` | ❌ |
 | WinFrame | `"resizable"` | `setResizable(bool)` | ❌ |
+| Splitter | `"horizontal"` | `setOrientation(bool)` — true=水平, false=垂直 | ❌ |
+| Dialog | `"close-on-click-outside"` | `setCloseOnClickOutside(bool)` | ❌ |
+| Dialog | `"close-on-esc"` | `setCloseOnEsc(bool)` | ❌ |
+| ConfirmPopup | `"confirm-visible"` | `setConfirmButtonVisible(bool)` | ❌ |
 | NumericUpDown | `"read-only"` | `setReadOnly(bool)` | ✅ `SetNumericUpDownReadOnly` |
+| MenuItem | `"checked"` | `setChecked(bool)` | ❌ |
 
 ### 6.5 Int 属性表
 
@@ -524,7 +773,6 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 |------|--------|-----------|---------------|
 | Label | `"font-size"` | `setFontSize(int)` | ❌ |
 | Label | `"line-height"` | `setLineHeight(int)` | ❌ |
-| Label | `"font-style"` | `SetFontStyle(int)` | ❌ |
 | EditBox | `"font-size"` | `setFontSize(int)` | ❌ |
 | TextArea | `"line-height"` | `setLineHeight(int)` | ❌ |
 | TextArea | `"scroll-x"` | `setScrollX(int)` | ❌ |
@@ -533,15 +781,21 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | Slider | `"label-font-size"` | `setLabelFontSize(int)` | ❌ |
 | ColorPicker | `"preset-cols"` | `setPresetLayout(cols, rows)` | ❌ |
 | ColorPicker | `"preset-rows"` | `setPresetLayout(cols, rows)` | ❌ |
+| ColorPicker | `"closed-font-size"` | `setClosedFontSize(int)` | ❌ |
 | ComboBox | `"max-visible-items"` | `setMaxVisibleItems(int)` | ❌ |
+| ComboBox | `"selected-index"` | `setSelectedIndex(int)` | ❌ |
 | MenuPanel | `"hovered-index"` | `setHoveredIndex(int)` | ❌ |
 | NumericUpDown | `"decimals"` | `setDecimals(int)` | ✅ `SetNumericUpDownDecimals` |
 | TreeView | `"font-size"` | `setFontSize(int)` | ✅ `TreeViewSetFontSize` |
 
 ### 6.6 Float 属性表
+
+| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
+|------|--------|-----------|---------------|
 | Label | `"line-spacing-ratio"` | `setLineSpacingRatio(float)` | ❌ |
 | CheckBox | `"size-ratio"` | `setSizeRatio(float)` | ❌ |
 | Slider | `"step"` | `setStep(float)` | ❌ |
+| Slider | `"value"` | `setValue(float)` | ❌ |
 | Slider | `"track-thickness"` | `setTrackThickness(float)` | ❌ |
 | Slider | `"thumb-size"` | `setThumbSize(float)` | ❌ |
 | Slider | `"tick-interval"` | `setTickInterval(float)` | ❌ |
@@ -550,8 +804,10 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 | Slider | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
 | Slider | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
 | ProgressBar | `"animation-speed"` | `setAnimationSpeed(float)` | ❌ |
+| ProgressBar | `"value"` | `setValue(float)` | ❌ |
 | ProgressBar | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
 | ProgressBar | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
+| TextArea | `"scrollbar-thickness"` | `setScrollBarThickness(float)` | ❌ |
 | ScrollBar | `"value"` | `setValue(float)` | ❌ |
 | ScrollBar | `"page-size"` | `setPageSize(float)` | ❌ |
 | ScrollBar | `"step-size"` | `setStepSize(float)` | ❌ |
@@ -585,15 +841,72 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 
 | 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
 |------|--------|-----------|---------------|
+| Button | `"caption"` | `setCaption(string)` | ❌ |
+| Label | `"caption"` | `setCaption(string)` | ❌ |
+| EditBox | `"text"` | `setText(string)` | ❌ |
 | EditBox | `"placeholder"` | `setPlaceholder(string)` | ❌ |
 | ComboBox | `"placeholder"` | `setPlaceholder(string)` | ❌ |
+| ComboBox | `"selected-value"` | `setSelectedValue(string)` | ❌ |
 | ProgressBar | `"custom-text"` | `setCustomText(string)` | ❌ |
 | Slider | `"label-format"` | `setLabelFormat(string)` | ❌ |
+| MenuItem | `"caption"` | `setCaption(string)` | ❌ |
 | MenuItem | `"shortcut"` | `setShortcut(string)` | ❌ |
 | WinFrame | `"title"` | `setTitle(const string&)` | ❌ |
 | Dialog | `"confirm-text"` | `setConfirmButtonText(string)` | ✅ `SetConfirmButtonText` |
 | Dialog | `"cancel-text"` | `setCancelButtonText(string)` | ✅ `SetCancelButtonText` |
 | ColorPicker | `"color"` | `setColor(string)` — hex | ❌ |
+
+---
+
+### 6.8 Enum 属性表
+
+> 使用 `SetEnum` 接口，传枚举值名称字符串，不区分大小写。
+
+| 控件 | 事件名 | setter/说明 | 枚举值 |
+|------|--------|-----------|-------|
+| Label | `"align"` | 对齐模式 | `am-top-left`, `am-mid-left`, `am-bottom-left`, `am-top-right`, `am-mid-right`, `am-bottom-right`, `am-top-center`, `am-center`, `am-bottom-center` |
+| EditBox | `"align"` | 对齐模式 | 同上 |
+| ProgressBar | `"align"` | 对齐模式 | 同上 |
+| CheckBox | `"check-state"` | 勾选状态 | `unchecked`, `checked`, `indeterminate` |
+| CheckBox | `"style"` | 复选框样式 | `classic`, `cross`, `circle` |
+| CheckBox | `"layout"` | 文字布局 | `text-right`, `text-left` |
+| CheckBox | `"vertical-align"` | 垂直对齐 | `center`, `top`, `bottom` |
+| ProgressBar | `"style"` | 进度条方向 | `horizontal`, `vertical` |
+| ProgressBar | `"text-mode"` | 文字模式 | `none`, `percent`, `custom` |
+| Slider | `"style"` | 滑块方向 | `horizontal`, `vertical` |
+| ScrollBar | `"orientation"` | 滚动条方向 | `vertical`, `horizontal` |
+| Label | `"font"` | 字体名 | `asul-bold`, `asul-regular`, `harmonyos-sans-sc-regular`, ...（共 28 个，kebab-case 全小写） |
+| EditBox | `"font"` | 字体名 | 同上 |
+| ProgressBar | `"font"` | 字体名 | 同上 |
+| Slider | `"label-font"` | 标签字体名 | 同上 |
+| TreeView | `"font"` | 字体名 | 同上 |
+
+### 6.9 Callback 事件表
+
+> 使用 `SetCallback` 接口，事件名不加 "on" 前缀。
+
+| 控件 | 事件名 | C++ 回调签名 | 事件数据 |
+|------|--------|-------------|---------|
+| Button | `"click"` | `void(shared_ptr<Button>)` | 无 |
+| Label | `"click"` | `void(shared_ptr<Label>)` | 无 |
+| EditBox | `"enter"` | `void(shared_ptr<Control>)` | 无 |
+| EditBox | `"text-changed"` | `void(shared_ptr<Control>, string)` | `.data.strVal` |
+| TextArea | `"text-changed"` | `void(shared_ptr<Control>, string)` | `.data.strVal` |
+| Popup | `"close"` | `void(shared_ptr<Popup>, DialogResult)` | `.data.intVal`（DialogResult 映射） |
+| ConfirmPopup | `"confirm"` | `void(shared_ptr<ConfirmPopup>)` | 无 |
+| Dialog | `"cancel"` | `void(shared_ptr<Dialog>)` | 无 |
+| CheckBox | `"check-changed"` | `void(shared_ptr<CheckBox>, CheckState, CheckState)` | `.data.intVal`（新 CheckState） |
+| Slider | `"value-changed"` | `void(shared_ptr<Slider>, float)` | `.data.floatVal` |
+| ProgressBar | `"value-changed"` | `void(shared_ptr<ProgressBar>, float, float)` | `.data.floatVal` |
+| ScrollBar | `"position-changed"` | `void(shared_ptr<ScrollBar>, float, float, float, float)` | `.data.floatVal` |
+| ComboBox | `"selection-changed"` | `void(shared_ptr<ComboBox>, int, const string&)` | `.data.selection`（`.idx` + `.val`） |
+| NumericUpDown | `"value-changed"` | `void(shared_ptr<NumericUpDown>, double)` | `.data.doubleVal` |
+| Splitter | `"moved"` | `void(shared_ptr<Splitter>, float)` | `.data.floatVal` |
+| ColorPicker | `"color-changed"` | `void(shared_ptr<ColorPicker>, const SColor&)` | （颜色暂不通过 C ABI 回调传回，用 `GetColor` 轮询） |
+| TreeView | `"select"` | `void(const string&)` | `.data.strVal`（节点 id） |
+| TreeView | `"expand"` | `void(const string&)` | `.data.strVal` |
+| TreeView | `"collapse"` | `void(const string&)` | `.data.strVal` |
+| MenuItem | `"click"` | `void(shared_ptr<MenuItem>)` | 无 |
 
 ---
 
@@ -614,8 +927,8 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 - [ ] ColorPicker override `setColorProperty`
 - [ ] NumericUpDown override `setColorProperty`
 
-### Phase 3 — Int/Float/Bool/String（待完成）
-对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty`，按 §6.4~§6.7 的属性表逐个实现。
+### Phase 3 — Int/Float/Bool/String/Enum（待完成）
+对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty` / `setEnumProperty`，按 §6.4~§6.8 的属性表逐个实现。
 
 **注意 — MenuBar 静态方法改造**：
 `MenuBar::setItemHeightRatio(float)` 和 `MenuBar::setFontSize(float)` 当前是 `static` 方法，无法参与实例虚方法分发。需先改为实例方法后再加入属性系统：
@@ -625,6 +938,22 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 
 **注意 — `setRange(min, max)` 拆分**：
 ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。
+
+### Phase 4 — Getter C ABI（待完成）
+为属性系统添加对称的读取能力：
+- [ ] Control 基类新增 6 个 `get*Property` 虚方法（默认返回 0）
+- [ ] ControlImpl 实现通用属性 Getter（从已有的 getter 方法读取）
+- [ ] TreeView 实现控件特有属性 Getter
+- [ ] Phase 2/3 各控件实现对等的 Getter
+- [ ] 6 个 C ABI Getter 函数声明 + 实现
+
+### Phase 5 — Callback C ABI（待完成）
+统一事件回调系统，替换现有的 9 个专用回调导出：
+- [ ] `UIEventData` 结构体定义 + `UIEventCallback` 类型
+- [ ] Control 基类 `setCallbackProperty` 虚方法
+- [ ] 各控件 override，将 C ABI 回调桥接到 C++ `std::function`（按 §6.9 事件表逐个实现）
+- [ ] `UICornerstone_SetCallback` C ABI 函数声明 + 实现
+- [ ] 移除旧的专用 C ABI 回调导出（`SetOnClick` 等 9 个）
 
 ### 实现模式
 
@@ -639,12 +968,6 @@ int Slider::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, "label-gap") == 0)        { setLabelGap(value);         return 1; }
     return ControlImpl::setFloatProperty(prop, value);
 }
-
-int TreeView::setBoolProperty(const char* prop, int value) {
-    if (strcmp(prop, "cycle-navigation") == 0) { setCycleNavigation(value != 0); return 1; }
-    if (strcmp(prop, "default-expand") == 0)   { setDefaultExpand(value != 0);   return 1; }
-    return ControlImpl::setBoolProperty(prop, value);
-}
 ```
 
 ---
@@ -653,7 +976,7 @@ int TreeView::setBoolProperty(const char* prop, int value) {
 
 ### 8.1 新增通用属性
 
-修改 `ControlImpl::setColorProperty` / `setStateColorProperty` / `setBoolProperty` 加一行 `strcmp`。
+修改 `ControlImpl::setColorProperty` / `setStateColorProperty` 加一行 `strcmp`。
 
 ### 8.2 新增控件特有属性
 
@@ -663,7 +986,7 @@ int TreeView::setBoolProperty(const char* prop, int value) {
 
 ### 8.3 新增值类型
 
-如果需要新的值类型，请在 `Control` 中加对应的虚方法，C ABI 加对应的入口函数，并在实现中 fallback 到基类空实现。
+如果需要新的值类型（如 `bool`），请在 `Control` 中加对应的虚方法，C ABI 加对应的入口函数，并在实现中 fallback 到基类空实现。
 
 ---
 
