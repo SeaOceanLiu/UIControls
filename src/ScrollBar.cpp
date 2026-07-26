@@ -126,7 +126,7 @@ void ScrollBar::notifyPositionChanged(float oldValue) {
     if (m_onPositionChanged) {
         m_onPositionChanged(dynamic_pointer_cast<ScrollBar>(getThis()), oldValue, m_value, m_minValue, m_maxValue);
     }
-    fireCCallback(PropertyNames::kEventPositionChanged, 2, &m_value);
+    fireCCallback(PropertyNames::kEventPositionChanged, CCallbackData::Float, &m_value);
 }
 
 bool ScrollBar::shouldShow() const {

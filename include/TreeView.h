@@ -54,11 +54,11 @@ inline std::shared_ptr<TreeNode> cloneNode(
 class TreeView : public ControlImpl {
     friend class TreeViewBuilder;
 public:
-    using OnSelectHandler = std::function<void(const std::string& nodeId)>;
-    using OnSelectDataHandler = std::function<void(const std::string& nodeId, void* userData)>;
-    using OnExpandHandler = std::function<void(const std::string& nodeId)>;
-    using OnCollapseHandler = std::function<void(const std::string& nodeId)>;
-    using OnClearNodeHandler = std::function<void(void* userData)>;
+    using OnSelectHandler = std::function<void(shared_ptr<TreeView>, const std::string& nodeId)>;
+    using OnSelectDataHandler = std::function<void(shared_ptr<TreeView>, const std::string& nodeId, void* userData)>;
+    using OnExpandHandler = std::function<void(shared_ptr<TreeView>, const std::string& nodeId)>;
+    using OnCollapseHandler = std::function<void(shared_ptr<TreeView>, const std::string& nodeId)>;
+    using OnClearNodeHandler = std::function<void(shared_ptr<TreeView>, void* userData)>;
 
 private:
     std::vector<std::shared_ptr<TreeNode>> m_rootItems;
@@ -155,11 +155,11 @@ public:
     void setDefaultExpand(bool expand) { m_defaultExpand = expand; }
     bool getDefaultExpand() const { return m_defaultExpand; }
 
-    void setOnSelect(OnSelectHandler h) { m_onSelect = h; }
-    void setOnSelectData(OnSelectDataHandler h) { m_onSelectData = h; }
-    void setOnExpand(OnExpandHandler h) { m_onExpand = h; }
-    void setOnCollapse(OnCollapseHandler h) { m_onCollapse = h; }
-    void setOnClearNode(OnClearNodeHandler h) { m_onClearNode = h; }
+    void setOnSelect(OnSelectHandler h) { m_onSelect = std::move(h); }
+    void setOnSelectData(OnSelectDataHandler h) { m_onSelectData = std::move(h); }
+    void setOnExpand(OnExpandHandler h) { m_onExpand = std::move(h); }
+    void setOnCollapse(OnCollapseHandler h) { m_onCollapse = std::move(h); }
+    void setOnClearNode(OnClearNodeHandler h) { m_onClearNode = std::move(h); }
 
     void setBgColor(const SColor& c);
     SColor getBgColor() const { return m_bgColor; }

@@ -464,11 +464,13 @@ public:
     int setEnumProperty(const char* prop, const char* value) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
+    struct SelectionPayload { int idx; const char* val; };
+    enum class CCallbackData { None, Int, Float, String, Selection };
+
     // 从子控件事件处理器中触发 C ABI 回调
     // eventName: PropertyNames 中的事件常量
-    // dataType: 0=无数据, 1=int, 2=float, 3=string(kN), 4=color(kN)
-    // data: 指向数据的指针（int*/float*）
-    void fireCCallback(const char* eventName, int dataType, const void* data);
+    // data: 指向数据的指针（int*/float*/SelectionPayload*）
+    void fireCCallback(const char* eventName, CCallbackData data, const void* ptr);
 
     int getColorProperty(const char* prop, SColor& out) override;
     int getStateColorProperty(const char* prop, StateColor& out) override;

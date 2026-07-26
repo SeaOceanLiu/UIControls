@@ -233,7 +233,7 @@ bool CheckBox::handleEvent(shared_ptr<Event> event) {
                     m_onCheckChanged(dynamic_pointer_cast<CheckBox>(getThis()), oldState, m_checkState);
                 }
                 int state = static_cast<int>(m_checkState);
-                fireCCallback(PropertyNames::kEventCheckChanged, 1, &state);
+                fireCCallback(PropertyNames::kEventCheckChanged, CCallbackData::Int, &state);
                 return true;
             }
             if (event->m_type == EventType::MouseMove) {
@@ -272,7 +272,7 @@ bool CheckBox::handleEvent(shared_ptr<Event> event) {
                 m_onCheckChanged(dynamic_pointer_cast<CheckBox>(getThis()), oldState, m_checkState);
             }
             int state = static_cast<int>(m_checkState);
-            fireCCallback(PropertyNames::kEventCheckChanged, 1, &state);
+            fireCCallback(PropertyNames::kEventCheckChanged, CCallbackData::Int, &state);
             return true;
         }
     }

@@ -1630,7 +1630,7 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
         };
         parseItems(j["items"], items);
         tv->setItems(items);
-        tv->setOnClearNode([](void* ud) {
+        tv->setOnClearNode([](shared_ptr<TreeView>, void* ud) {
             delete static_cast<std::string*>(ud);
         });
     }
@@ -2002,7 +2002,7 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
-                tv->setOnSelect([handler, tv](const string&) {
+                tv->setOnSelect([handler, tv](shared_ptr<TreeView>, const string&) {
                     handler(tv);
                 });
             }

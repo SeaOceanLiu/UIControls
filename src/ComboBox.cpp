@@ -460,7 +460,8 @@ void ComboBox::selectItem(int index)
         m_onSelectionChanged(std::dynamic_pointer_cast<ComboBox>(getThis()),
                              index, m_items[index].value);
 
-    fireCCallback(PropertyNames::kEventSelectionChanged, 1, &m_selectedIndex);
+    SelectionPayload sel = { m_selectedIndex, m_items[m_selectedIndex].label.c_str() };
+    fireCCallback(PropertyNames::kEventSelectionChanged, CCallbackData::Selection, &sel);
 }
 
 void ComboBox::restorePreviousSelection()
@@ -897,6 +898,11 @@ int ComboBox::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kArrowWidth) == 0) { out = m_arrowWidth; return 1; }
     if (strcmp(prop, PropertyNames::kItemHeight) == 0) { out = m_itemHeight; return 1; }
     return ControlImpl::getFloatProperty(prop, out);
+}
+
+int ComboBox::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kSelectedValue) == 0) { out = m_text.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
 }
 
 int ComboBox::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {

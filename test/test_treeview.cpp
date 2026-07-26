@@ -26,7 +26,7 @@ int g_collapseCount = 0;
 string g_lastSelectedId;
 int g_clearNodeCount = 0;
 
-void onTreeSelect(const string& nodeId) {
+void onTreeSelect(shared_ptr<TreeView>, const string& nodeId) {
     g_selectCount++;
     g_lastSelectedId = nodeId;
     char buf[128];
@@ -35,17 +35,17 @@ void onTreeSelect(const string& nodeId) {
     cout << buf << endl;
 }
 
-void onTreeExpand(const string& nodeId) {
+void onTreeExpand(shared_ptr<TreeView>, const string& nodeId) {
     g_expandCount++;
     cout << "Expanded: " << nodeId << endl;
 }
 
-void onTreeCollapse(const string& nodeId) {
+void onTreeCollapse(shared_ptr<TreeView>, const string& nodeId) {
     g_collapseCount++;
     cout << "Collapsed: " << nodeId << endl;
 }
 
-void onTreeSelectData(const string& nodeId, void* userData) {
+void onTreeSelectData(shared_ptr<TreeView>, const string& nodeId, void* userData) {
     char buf[256];
     auto* s = static_cast<const string*>(userData);
     const char* data = s ? s->c_str() : "(null)";
@@ -54,7 +54,7 @@ void onTreeSelectData(const string& nodeId, void* userData) {
     cout << buf << endl;
 }
 
-void onClearNode(void* userData) {
+void onClearNode(shared_ptr<TreeView>, void* userData) {
     g_clearNodeCount++;
     const auto* s = static_cast<const string*>(userData);
     const char* data = s ? s->c_str() : "(null)";

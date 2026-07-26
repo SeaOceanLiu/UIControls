@@ -835,15 +835,19 @@ int ControlImpl::setCallbackProperty(const char* event, void (*cb)(void*, const 
     return 1;
 }
 
-void ControlImpl::fireCCallback(const char* eventName, int dataType, const void* data) {
+void ControlImpl::fireCCallback(const char* eventName, CCallbackData data, const void* ptr) {
     auto it = m_cCallbacks.find(eventName);
     if (it == m_cCallbacks.end() || !it->second.cb) return;
     UIEventData evt;
     memset(&evt, 0, sizeof(evt));
     evt.eventName = eventName;
-    if (dataType == 1 && data) evt.data.intVal = *static_cast<const int*>(data);
-    else if (dataType == 2 && data) evt.data.floatVal = *static_cast<const float*>(data);
-    else if (dataType == 3 && data) evt.data.strVal = static_cast<const char*>(data);
+    switch (data) {
+    case CCallbackData::Int:       if (ptr) evt.data.intVal = *static_cast<const int*>(ptr); break;
+    case CCallbackData::Float:     if (ptr) evt.data.floatVal = *static_cast<const float*>(ptr); break;
+    case CCallbackData::String:    if (ptr) evt.data.strVal = static_cast<const char*>(ptr); break;
+    case CCallbackData::Selection: if (ptr) { auto* s = static_cast<const SelectionPayload*>(ptr); evt.data.selection.idx = s->idx; evt.data.selection.val = s->val; } break;
+    default: break;
+    }
     it->second.cb(reinterpret_cast<UIControlHandle>(this), &evt, it->second.userData);
 }
 

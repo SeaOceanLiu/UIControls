@@ -206,7 +206,7 @@ void NumericUpDown::setValueInternal(double val, bool fireCallback) {
         if (m_onValueChanged && m_committedValue != oldCommitted)
             m_onValueChanged(std::static_pointer_cast<NumericUpDown>(shared_from_this()), m_committedValue);
         float fVal = static_cast<float>(m_value);
-        fireCCallback(PropertyNames::kEventValueChanged, 2, &fVal);
+        fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &fVal);
     }
 }
 

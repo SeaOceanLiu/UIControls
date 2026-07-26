@@ -149,7 +149,7 @@ void Slider::setValue(float value)
         updateValueLabel();
         if (m_onValueChanged)
             m_onValueChanged(std::static_pointer_cast<Slider>(shared_from_this()), m_committedValue);
-        fireCCallback(PropertyNames::kEventValueChanged, 2, &m_committedValue);
+        fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &m_committedValue);
     } else if (std::abs(snapped - m_value) > 0.001f) {
         m_value = snapped;
         updateValueLabel();
@@ -171,7 +171,7 @@ void Slider::commitValue()
         m_committedValue = snapped;
         if (m_onValueChanged)
             m_onValueChanged(std::static_pointer_cast<Slider>(shared_from_this()), m_committedValue);
-        fireCCallback(PropertyNames::kEventValueChanged, 2, &m_committedValue);
+        fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &m_committedValue);
     }
 }
 

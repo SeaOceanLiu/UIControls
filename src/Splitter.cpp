@@ -145,7 +145,7 @@ void Splitter::setSplitRatio(float ratio) {
     }
     if (m_onSplitterMoved && m_splitRatio != oldRatio)
         m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
-    fireCCallback(PropertyNames::kEventPositionChanged, 2, &m_splitRatio);
+        fireCCallback(PropertyNames::kEventPositionChanged, CCallbackData::Float, &m_splitRatio);
 }
 
 void Splitter::setColor(SColor n, SColor h, SColor d) { m_colorNormal = n; m_colorHover = h; m_colorDrag = d; }
@@ -278,7 +278,7 @@ void Splitter::endDrag() {
 
     if (m_onSplitterMoved)
         m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
-    fireCCallback(PropertyNames::kEventPositionChanged, 2, &m_splitRatio);
+        fireCCallback(PropertyNames::kEventPositionChanged, CCallbackData::Float, &m_splitRatio);
 
     // 不在此处 removeBeforeEventHandlingWatcher：
     // endDrag() 可能从 beforeEventHandlingWatcher 内部调用，

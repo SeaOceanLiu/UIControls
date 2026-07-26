@@ -32,8 +32,10 @@ void TreeView::syncStateColor() {
 }
 
 void TreeView::clearNodeRecursive(const shared_ptr<TreeNode>& node) {
+    shared_ptr<TreeView> self;
+    try { self = std::dynamic_pointer_cast<TreeView>(getThis()); } catch (...) {}
     if (m_onClearNode && node->userData)
-        m_onClearNode(node->userData);
+        m_onClearNode(self, node->userData);
     for (auto& child : node->children)
         clearNodeRecursive(child);
 }
@@ -402,7 +404,7 @@ bool TreeView::addChild(const string& parentId, shared_ptr<TreeNode> node) {
     parent->children.push_back(node);
     if (!parent->expanded) {
         parent->expanded = true;
-        if (m_onExpand) m_onExpand(parentId);
+        if (m_onExpand) m_onExpand(std::dynamic_pointer_cast<TreeView>(getThis()), parentId);
     }
     rebuildFlatRows();
     return true;
@@ -497,7 +499,7 @@ bool TreeView::expandNode(const string& id) {
     if (!node || node->expanded || node->children.empty()) return false;
     node->expanded = true;
     rebuildFlatRows();
-    if (m_onExpand) m_onExpand(id);
+    if (m_onExpand) m_onExpand(std::dynamic_pointer_cast<TreeView>(getThis()), id);
     return true;
 }
 
@@ -506,7 +508,7 @@ bool TreeView::collapseNode(const string& id) {
     if (!node || !node->expanded) return false;
     node->expanded = false;
     rebuildFlatRows();
-    if (m_onCollapse) m_onCollapse(id);
+    if (m_onCollapse) m_onCollapse(std::dynamic_pointer_cast<TreeView>(getThis()), id);
     return true;
 }
 
@@ -544,10 +546,10 @@ bool TreeView::selectNode(const string& id) {
     m_selectedId = id;
     rebuildFlatRows();
     ensureSelectedVisible();
-    if (m_onSelect) m_onSelect(id);
+    if (m_onSelect) m_onSelect(std::dynamic_pointer_cast<TreeView>(getThis()), id);
     if (m_onSelectData) {
         auto node = findNodeById(id);
-        m_onSelectData(id, node ? node->userData : nullptr);
+        m_onSelectData(std::dynamic_pointer_cast<TreeView>(getThis()), id, node ? node->userData : nullptr);
     }
     return true;
 }
