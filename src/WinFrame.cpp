@@ -15,6 +15,15 @@ WinFrame::WinFrame(Control* parent, SRect rect, float xScale, float yScale):
     m_edgeMargin(4.0f),
     m_resizable(true),
     m_lastEdgeFlags(0),
+    m_winFrameBg(SColor(0x30, 0x30, 0x30, 0xFF)),
+    m_winFrameBorderColor(SColor(0x60, 0x60, 0x60, 0xFF)),
+    m_titleBarBg(SColor(173, 216, 230, 255)),
+    m_titleTextColor(SColor(255, 255, 255, 255)),
+    m_closedTextColor(SColor(219, 219, 219, 255)),
+    m_closeOnClickOutside(false),
+    m_closeOnEsc(false),
+    m_confirmVisible(false),
+    m_closedFontSize(12.0f),
     m_cursorDefault(Cursor::getDefault()),
     m_cursorSizeWE(Cursor::createSystem(SystemCursorType::EW_Resize)),
     m_cursorSizeNS(Cursor::createSystem(SystemCursorType::NS_Resize)),
@@ -356,20 +365,24 @@ void WinFrame::hide(void) {
 }
 
 void WinFrame::setWinFrameBGColor(const SColor& color) {
+    m_winFrameBg = color;
     setNormalStateBGColor(color);
 }
 
 void WinFrame::setWinFrameBorderColor(const SColor& color) {
+    m_winFrameBorderColor = color;
     setBorderStateColor(StateColor(color, color, color, color));
 }
 
 void WinFrame::setTitleBarBGColor(const SColor& color) {
+    m_titleBarBg = color;
     if (m_titleBar) {
         m_titleBar->setNormalStateBGColor(color);
     }
 }
 
 void WinFrame::setTitleTextColor(const SColor& color) {
+    m_titleTextColor = color;
     if (m_titleLabel) {
         m_titleLabel->setTextNormalStateColor(color);
     }
@@ -411,6 +424,33 @@ int WinFrame::setFloatProperty(const char* prop, float value) {
 int WinFrame::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kTitle) == 0) { setTitle(value); return 1; }
     return Panel::setStringProperty(prop, value);
+}
+
+int WinFrame::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kWinFrameBG) == 0)     { out = m_winFrameBg;         return 1; }
+    if (strcmp(prop, PropertyNames::kWinFrameBorder) == 0) { out = m_winFrameBorderColor; return 1; }
+    if (strcmp(prop, PropertyNames::kTitleBarBG) == 0)     { out = m_titleBarBg;          return 1; }
+    if (strcmp(prop, PropertyNames::kTitleText) == 0)      { out = m_titleTextColor;      return 1; }
+    if (strcmp(prop, PropertyNames::kClosedText) == 0)     { out = m_closedTextColor;     return 1; }
+    return Panel::getColorProperty(prop, out);
+}
+
+int WinFrame::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kCloseOnClickOutside) == 0) { out = m_closeOnClickOutside ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kCloseOnEsc) == 0)          { out = m_closeOnEsc          ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kResizable) == 0)           { out = m_resizable           ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kConfirmVisible) == 0)      { out = m_confirmVisible      ? 1 : 0; return 1; }
+    return Panel::getBoolProperty(prop, out);
+}
+
+int WinFrame::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kClosedFontSize) == 0) { out = m_closedFontSize; return 1; }
+    return Panel::getFloatProperty(prop, out);
+}
+
+int WinFrame::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kTitle) == 0) { out = m_title.c_str(); return 1; }
+    return Panel::getStringProperty(prop, out);
 }
 
 // ==================== WinFrameBuilder ====================

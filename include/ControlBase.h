@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 #include <typeinfo>
+#include <unordered_map>
+#include <string>
 #include "SColor.h"
 #include "MainWindow.h"
 #include "Utility.h"
@@ -462,6 +464,12 @@ public:
     int setEnumProperty(const char* prop, const char* value) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
+    // 从子控件事件处理器中触发 C ABI 回调
+    // eventName: PropertyNames 中的事件常量
+    // dataType: 0=无数据, 1=int, 2=float, 3=string(kN), 4=color(kN)
+    // data: 指向数据的指针（int*/float*）
+    void fireCCallback(const char* eventName, int dataType, const void* data);
+
     int getColorProperty(const char* prop, SColor& out) override;
     int getStateColorProperty(const char* prop, StateColor& out) override;
     int getBoolProperty(const char* prop, int& out) override;
@@ -482,6 +490,13 @@ public:
 
     void triggerEvent(shared_ptr<Event> event);
     void inheritRenderer(void);
+
+    // ── C ABI 回调存储 ──
+    struct CCallbackEntry {
+        void (*cb)(void*, const void*, void*);
+        void* userData;
+    };
+    std::unordered_map<std::string, CCallbackEntry> m_cCallbacks;
 };
 
 /*主界面需要继承该类，以支持事件列队的处理入口eventLoopEntry*/

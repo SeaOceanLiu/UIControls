@@ -149,6 +149,7 @@ void Slider::setValue(float value)
         updateValueLabel();
         if (m_onValueChanged)
             m_onValueChanged(std::static_pointer_cast<Slider>(shared_from_this()), m_committedValue);
+        fireCCallback(PropertyNames::kEventValueChanged, 2, &m_committedValue);
     } else if (std::abs(snapped - m_value) > 0.001f) {
         m_value = snapped;
         updateValueLabel();
@@ -170,6 +171,7 @@ void Slider::commitValue()
         m_committedValue = snapped;
         if (m_onValueChanged)
             m_onValueChanged(std::static_pointer_cast<Slider>(shared_from_this()), m_committedValue);
+        fireCCallback(PropertyNames::kEventValueChanged, 2, &m_committedValue);
     }
 }
 
@@ -819,14 +821,69 @@ int Slider::setStringProperty(const char* prop, const char* value) {
 
 int Slider::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kSliderStyle) == 0) {
-        setStyle(SliderStyleFromString(value));
-        return 1;
+        if (_stricmp(value, "horizontal") == 0) { setStyle(SliderStyle::Horizontal); return 1; }
+        if (_stricmp(value, "vertical") == 0)   { setStyle(SliderStyle::Vertical);   return 1; }
+        return 0;
     }
     if (strcmp(prop, PropertyNames::kLabelFont) == 0) {
         setLabelFont(FontNameFromString(value));
         return 1;
     }
     return ControlImpl::setEnumProperty(prop, value);
+}
+
+int Slider::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kTrack) == 0)        { out = m_trackColor;        return 1; }
+    if (strcmp(prop, PropertyNames::kTrackFill) == 0)    { out = m_trackFillColor;    return 1; }
+    if (strcmp(prop, PropertyNames::kThumb) == 0)        { out = m_thumbColor;        return 1; }
+    if (strcmp(prop, PropertyNames::kThumbBorder) == 0)  { out = m_thumbBorderColor;  return 1; }
+    if (strcmp(prop, PropertyNames::kThumbHover) == 0)   { out = m_thumbHoverColor;   return 1; }
+    if (strcmp(prop, PropertyNames::kTick) == 0)         { out = m_tickColor;         return 1; }
+    if (strcmp(prop, PropertyNames::kLabelColor) == 0)   { out = m_labelColor;        return 1; }
+    return ControlImpl::getColorProperty(prop, out);
+}
+
+int Slider::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kReverse) == 0)        { out = m_reverse ? 1 : 0;         return 1; }
+    if (strcmp(prop, PropertyNames::kShowValueLabel) == 0) { out = m_showValueLabel ? 1 : 0;  return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+
+int Slider::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kStep) == 0)           { out = m_step;           return 1; }
+    if (strcmp(prop, PropertyNames::kTrackThickness) == 0) { out = m_trackThickness; return 1; }
+    if (strcmp(prop, PropertyNames::kThumbSize) == 0)      { out = m_thumbSize;      return 1; }
+    if (strcmp(prop, PropertyNames::kTickInterval) == 0)   { out = m_tickInterval;   return 1; }
+    if (strcmp(prop, PropertyNames::kTickLength) == 0)     { out = m_tickLength;     return 1; }
+    if (strcmp(prop, PropertyNames::kLabelGap) == 0)       { out = m_labelGap;       return 1; }
+    if (strcmp(prop, PropertyNames::kValue) == 0)          { out = m_value;          return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)       { out = m_minValue;       return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)       { out = m_maxValue;       return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int Slider::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kLabelFormat) == 0) { out = m_labelFormat.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+
+int Slider::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kSliderStyle) == 0) {
+        out = (m_style == SliderStyle::Horizontal) ? "horizontal" : "vertical";
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kLabelFont) == 0) {
+        out = FontNameToString(m_labelFont);
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+
+int Slider::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventValueChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 SliderBuilder& SliderBuilder::setTickInterval(float interval)

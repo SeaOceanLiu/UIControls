@@ -205,6 +205,8 @@ void NumericUpDown::setValueInternal(double val, bool fireCallback) {
         m_committedValue = m_value;
         if (m_onValueChanged && m_committedValue != oldCommitted)
             m_onValueChanged(std::static_pointer_cast<NumericUpDown>(shared_from_this()), m_committedValue);
+        float fVal = static_cast<float>(m_value);
+        fireCCallback(PropertyNames::kEventValueChanged, 2, &fVal);
     }
 }
 
@@ -299,6 +301,40 @@ int NumericUpDown::setFloatProperty(const char* prop, float value) {
 
 int NumericUpDown::setStringProperty(const char* prop, const char* value) {
     return EditBox::setStringProperty(prop, value);
+}
+
+int NumericUpDown::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kArrow) == 0)        { out = m_arrowColor;      return 1; }
+    if (strcmp(prop, PropertyNames::kArrowHover) == 0)   { out = m_arrowHoverColor; return 1; }
+    if (strcmp(prop, PropertyNames::kArrowPressed) == 0) { out = m_arrowPressColor; return 1; }
+    return EditBox::getColorProperty(prop, out);
+}
+
+int NumericUpDown::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kReadOnly) == 0) { out = m_readOnly ? 1 : 0; return 1; }
+    return EditBox::getBoolProperty(prop, out);
+}
+
+int NumericUpDown::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kDecimals) == 0) { out = m_decimals; return 1; }
+    return EditBox::getIntProperty(prop, out);
+}
+
+int NumericUpDown::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kValue) == 0)     { out = static_cast<float>(m_value);     return 1; }
+    if (strcmp(prop, PropertyNames::kStep) == 0)      { out = static_cast<float>(m_step);      return 1; }
+    if (strcmp(prop, PropertyNames::kPageStep) == 0)  { out = static_cast<float>(m_pageStep);  return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)  { out = static_cast<float>(m_minValue);  return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)  { out = static_cast<float>(m_maxValue);  return 1; }
+    if (strcmp(prop, PropertyNames::kButtonWidth) == 0){ out = m_buttonWidth;                   return 1; }
+    return EditBox::getFloatProperty(prop, out);
+}
+
+int NumericUpDown::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventValueChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 // ── Builder ──

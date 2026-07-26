@@ -145,6 +145,7 @@ void Splitter::setSplitRatio(float ratio) {
     }
     if (m_onSplitterMoved && m_splitRatio != oldRatio)
         m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
+    fireCCallback(PropertyNames::kEventPositionChanged, 2, &m_splitRatio);
 }
 
 void Splitter::setColor(SColor n, SColor h, SColor d) { m_colorNormal = n; m_colorHover = h; m_colorDrag = d; }
@@ -277,6 +278,7 @@ void Splitter::endDrag() {
 
     if (m_onSplitterMoved)
         m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
+    fireCCallback(PropertyNames::kEventPositionChanged, 2, &m_splitRatio);
 
     // 不在此处 removeBeforeEventHandlingWatcher：
     // endDrag() 可能从 beforeEventHandlingWatcher 内部调用，
@@ -367,6 +369,27 @@ int Splitter::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kThickness) == 0) { setThickness(value);  return 1; }
     if (strcmp(prop, PropertyNames::kEdgeMargin) == 0){ m_minFirst = value; m_minSecond = value; return 1; }
     return ControlImpl::setFloatProperty(prop, value);
+}
+
+int Splitter::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kLine) == 0)      { out = m_colorNormal; return 1; }
+    if (strcmp(prop, PropertyNames::kLineHover) == 0)  { out = m_colorHover;  return 1; }
+    if (strcmp(prop, PropertyNames::kLineDrag) == 0)   { out = m_colorDrag;   return 1; }
+    return ControlImpl::getColorProperty(prop, out);
+}
+
+int Splitter::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kValue) == 0)    { out = m_splitRatio; return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0) { out = m_minFirst;   return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0) { out = m_minSecond;  return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int Splitter::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventPositionChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 // ── Builder ──

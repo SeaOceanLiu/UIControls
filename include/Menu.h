@@ -168,11 +168,12 @@ public:
     float getBarHeight() const { return m_barHeight; }
 
     // 设置菜单项高度与字体大小的比例系数（范围 1.0 ~ 3.0）
-    static void setItemHeightRatio(float ratio);
+    void setItemHeightRatio(float ratio);
+    float getItemHeightRatio() const { return m_itemHeightRatio; }
 
     // 设置菜单字体大小
-    static void setFontSize(float size);
-    static float getFontSize();
+    void setFontSize(float size);
+    float getFontSize() const { return m_menuTextSize; }
 
     // 菜单模式
     bool isInMenuMode() const { return m_menuMode; }
@@ -200,10 +201,20 @@ private:
     SColor m_hoverTextColor;
     SColor m_activeBgColor;
 
+    float m_itemHeightRatio;
+    float m_menuTextSize;
+
     void layoutEntries();
     int hitTest(float x, float y);
     void openMenu(int index);
     void switchMenu(int index);
+public:
+    // ── Property system overrides ──
+    int setFloatProperty(const char* prop, float value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
+
+    int getFloatProperty(const char* prop, float& out) override;
+    int getEnumProperty(const char* prop, const char*& out) override;
 };
 
 // ==================== Builder模式 ====================

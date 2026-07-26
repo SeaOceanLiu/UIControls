@@ -23,6 +23,11 @@ private:
     float m_pageSize;
     float m_stepSize;
     float m_thickness;
+    SColor m_trackColor;
+    SColor m_thumbColor;
+    SColor m_thumbHoverColor;
+    SColor m_thumbPressedColor;
+
     float m_minThumbLength;
 
     bool m_thumbHovered;
@@ -72,6 +77,15 @@ public:
     ScrollBarOrientation getOrientation() const { return m_orientation; }
     bool isDragging() const { return m_dragging; }
     bool shouldShow() const;
+
+    // ── Property system overrides ──
+    int setColorProperty(const char* prop, SColor value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
+    int getColorProperty(const char* prop, SColor& out) override;
+    int getFloatProperty(const char* prop, float& out) override;
+    int getEnumProperty(const char* prop, const char*& out) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 };
 
 class ScrollBarBuilder {

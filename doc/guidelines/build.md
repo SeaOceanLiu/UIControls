@@ -26,7 +26,7 @@ cmake --build build/raylib_dll --target test_treeview_cabi  # → build/raylib_d
 
 **Available tests (标准)**: test_menu, test_label, test_editbox, test_checkbox, test_progressbar, test_layout, test_layout_advanced, test_winframe, test_graphtool, test_button, test_slider, test_colorpicker, test_combobox, test_dialog, test_handlecontrol, test_numericupdown, test_splitter, test_treeview
 
-**Available tests (DLL 模式 C ABI)**: test_fromsource_cabi, test_api, test_dialog_cabi, test_combobox_cabi, test_numericupdown_cabi, test_splitter_cabi, test_treeview_cabi
+**Available tests (DLL 模式 C ABI)**: test_fromsource_cabi, test_api, test_dialog_cabi, test_combobox_cabi, test_numericupdown_cabi, test_splitter_cabi, test_treeview_cabi, test_property_cabi
 
 ## Running Tests
 

@@ -1,6 +1,8 @@
 ﻿#include "ControlBase.h"
+#include "UICornerstoneAPI.h"
 #include "PlatformUtils.h"
 #include "MainWindow.h"
+#include <cstring>
 ControlImpl::ControlImpl(Control *parent, float xScale, float yScale):
     // m_weakThis(this),
     // m_sharedThis(nullptr),
@@ -828,7 +830,21 @@ int ControlImpl::setEnumProperty(const char* prop, const char* value) {
 }
 
 int ControlImpl::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
-    return 0;
+    if (!event || !cb) return 0;
+    m_cCallbacks[event] = {cb, userData};
+    return 1;
+}
+
+void ControlImpl::fireCCallback(const char* eventName, int dataType, const void* data) {
+    auto it = m_cCallbacks.find(eventName);
+    if (it == m_cCallbacks.end() || !it->second.cb) return;
+    UIEventData evt;
+    memset(&evt, 0, sizeof(evt));
+    evt.eventName = eventName;
+    if (dataType == 1 && data) evt.data.intVal = *static_cast<const int*>(data);
+    else if (dataType == 2 && data) evt.data.floatVal = *static_cast<const float*>(data);
+    else if (dataType == 3 && data) evt.data.strVal = static_cast<const char*>(data);
+    it->second.cb(reinterpret_cast<UIControlHandle>(this), &evt, it->second.userData);
 }
 
 int ControlImpl::getColorProperty(const char* prop, SColor& out) {

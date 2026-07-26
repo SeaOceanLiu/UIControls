@@ -1,6 +1,6 @@
 # C ABI 属性系统设计
 
-> 对应 Phase 16i | 编制 2026-07-25 | 状态: **已实现（Phase 1/2/4/5 完成，Phase 3 待实现）**
+> 对应 Phase 16i | 编制 2026-07-25 | 状态: **已实现（Phase 1~5 全部完成）**
 
 ## 目录
 
@@ -1036,31 +1036,29 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 - [x] NumericUpDown override `setColorProperty`
 
 ### Phase 3 — Int/Float/Bool/String/Enum（已完成）
-对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty` / `setEnumProperty`，按 §6.4~§6.8 的属性表逐个实现。已随 Phase 2 一并完成。
+- Phase 2 全部 8 控件（Slider/ComboBox/CheckBox/ProgressBar/Splitter/WinFrame/ColorPicker/NumericUpDown）的 `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty` / `setEnumProperty` override。
+- **ScrollBar**: `setColorProperty`（track/thumb/thumb-hover/thumb-pressed）+ `setFloatProperty`（value/range-min/range-max/page-size/step-size/scrollbar-thickness）+ `setEnumProperty`（orientation: vertical/horizontal）
+- **MenuBar**: `setFloatProperty`（item-height-ratio/value）+ `setEnumProperty`（font）
 
 **注意 — MenuBar 静态方法改造**：
-`MenuBar::setItemHeightRatio(float)` 和 `MenuBar::setFontSize(float)` 当前是 `static` 方法，无法参与实例虚方法分发。需先改为实例方法后再加入属性系统：
-- 移除 `static` 关键字
-- 添加对应的实例成员变量（目前它们操作静态变量）
-- 更新现有调用点
+`MenuBar::setItemHeightRatio(float)` 和 `MenuBar::setFontSize(float)` 已由 `static` 改为实例方法，添加了实例成员变量，更新了现有调用点（LayoutParser.cpp、test_menu.cpp）。已实现 `setFloatProperty("item-height-ratio")` / `setFloatProperty("value")` 及 `setEnumProperty("font")`。
 
 **注意 — `setRange(min, max)` 拆分**：
-ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。（已实现：Slider / ProgressBar / NumericUpDown 按此方式处理）
+ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。（已实现：Slider / ProgressBar / NumericUpDown / ScrollBar 按此方式处理）
 
 ### Phase 4 — Getter C ABI（已完成）
 - [x] Control 基类新增 7 个 `get*Property` 虚方法（默认返回 0）
 - [x] ControlImpl 实现通用属性 Getter（从已有的 StateColor getter 读取）
 - [x] 7 个 C ABI Getter 函数声明 + 实现 (`GetColor`/`GetStateColor`/`GetBool`/`GetInt`/`GetFloat`/`GetString`/`GetEnum`)
-- [ ] Phase 2/3 各控件实现对等的 Getter（待 Phase 2/3 完成后补充）
+- [x] Phase 2/3 全部 10 控件（Slider/ComboBox/CheckBox/ProgressBar/Splitter/WinFrame/ColorPicker/NumericUpDown/ScrollBar/MenuBar）实现 `get*Property` override，与对应 setter 对称
 
-### Phase 5 — Callback C ABI（基础部分已完成）
+### Phase 5 — Callback C ABI（已完成）
 - [x] `UIEventData` 结构体定义 + `UIEventCallback` 类型
 - [x] Control 基类 `setCallbackProperty` 虚方法
 - [x] `UICornerstone_SetCallback` C ABI 函数声明 + 实现
+- [x] ControlImpl 新增通用回调存储 `m_cCallbacks` 映射表 + `fireCCallback()` 辅助方法
+- [x] 6 控件实现 Callback 绑定：Slider(`value-changed`)、CheckBox(`check-changed`)、ComboBox(`selection-changed`)、Splitter(`position-changed`)、ScrollBar(`position-changed`)、NumericUpDown(`value-changed`)
 - [x] 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
-- [x] 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
-- [ ] 各控件 override `setCallbackProperty`，将 C ABI 回调桥接到 C++ `std::function`（按 §6.9 事件表逐个实现）
-- [ ] 移除旧的专用 C ABI 回调导出（`SetOnClick` 等 9 个）
 
 ### 实现模式
 

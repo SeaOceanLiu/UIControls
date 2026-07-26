@@ -42,6 +42,16 @@ private:
     bool    m_resizable;
     uint8_t m_lastEdgeFlags;
 
+    SColor m_winFrameBg;
+    SColor m_winFrameBorderColor;
+    SColor m_titleBarBg;
+    SColor m_titleTextColor;
+    SColor m_closedTextColor;
+    bool   m_closeOnClickOutside;
+    bool   m_closeOnEsc;
+    bool   m_confirmVisible;
+    float  m_closedFontSize;
+
     Cursor *m_cursorDefault;
     Cursor *m_cursorSizeWE;
     Cursor *m_cursorSizeNS;
@@ -87,6 +97,10 @@ public:
     int setBoolProperty(const char* prop, int value) override;
     int setFloatProperty(const char* prop, float value) override;
     int setStringProperty(const char* prop, const char* value) override;
+    int getColorProperty(const char* prop, SColor& out) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int getFloatProperty(const char* prop, float& out) override;
+    int getStringProperty(const char* prop, const char*& out) override;
 };
 
 class WinFrameBuilder

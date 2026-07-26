@@ -1002,7 +1002,7 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
         pushJsonPath("font");
         if (j["font"].contains("size") && j["font"]["size"].is_number()) {
             float fontSize = (float)j["font"]["size"].get<int>();
-            MenuBar::setFontSize(fontSize);
+            menuBar->setFontSize(fontSize);
             // auto-recalculate barHeight if not explicitly set
             if (!j.contains("barHeight")) {
                 menuBar->setBarHeight(fontSize * 1.6f);

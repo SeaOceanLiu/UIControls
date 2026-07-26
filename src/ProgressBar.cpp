@@ -327,6 +327,51 @@ int ProgressBar::setEnumProperty(const char* prop, const char* value) {
     return ControlImpl::setEnumProperty(prop, value);
 }
 
+// ── Getter property overrides ──
+
+int ProgressBar::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kProgress) == 0)    { out = m_progressColor;    return 1; }
+    if (strcmp(prop, PropertyNames::kBackground) == 0)  { out = m_backgroundColor;  return 1; }
+    if (strcmp(prop, PropertyNames::kText) == 0)         { out = m_textColor;        return 1; }
+    return ControlImpl::getColorProperty(prop, out);
+}
+
+int ProgressBar::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0) { out = m_fontSize; return 1; }
+    return ControlImpl::getIntProperty(prop, out);
+}
+
+int ProgressBar::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kValue) == 0)          { out = m_value;          return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)       { out = m_minValue;       return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)       { out = m_maxValue;       return 1; }
+    if (strcmp(prop, PropertyNames::kAnimationSpeed) == 0) { out = m_animationSpeed; return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int ProgressBar::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kCustomText) == 0) { out = m_customText.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+
+int ProgressBar::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kProgressBarStyle) == 0) {
+        out = (m_style == ProgressBarStyle::Horizontal) ? "horizontal" : "vertical";
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kTextMode) == 0) {
+        if (m_textMode == ProgressBarTextMode::None)    out = "none";
+        else if (m_textMode == ProgressBarTextMode::Percent) out = "percent";
+        else out = "custom";
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        out = FontNameToString(m_fontName);
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+
 ProgressBarBuilder& ProgressBarBuilder::setAnimationSpeed(float speed) {
     m_progressBar->setAnimationSpeed(speed);
     return *this;

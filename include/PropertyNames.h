@@ -14,6 +14,7 @@ inline constexpr const char* kTrackFill       = "track-fill";
 inline constexpr const char* kThumb           = "thumb";
 inline constexpr const char* kThumbBorder     = "thumb-border";
 inline constexpr const char* kThumbHover      = "thumb-hover";
+inline constexpr const char* kThumbPressed    = "thumb-pressed";
 inline constexpr const char* kTick            = "tick";
 inline constexpr const char* kLabelColor      = "label";
 inline constexpr const char* kArrow           = "arrow";

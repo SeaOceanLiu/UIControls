@@ -174,6 +174,12 @@ public:
     int setFloatProperty(const char* prop, float value) override;
     int setStringProperty(const char* prop, const char* value) override;
     int setEnumProperty(const char* prop, const char* value) override;
+    int getColorProperty(const char* prop, SColor& out) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int getFloatProperty(const char* prop, float& out) override;
+    int getStringProperty(const char* prop, const char*& out) override;
+    int getEnumProperty(const char* prop, const char*& out) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 };
 
 class SliderBuilder {

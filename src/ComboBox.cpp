@@ -459,6 +459,8 @@ void ComboBox::selectItem(int index)
     if (m_onSelectionChanged)
         m_onSelectionChanged(std::dynamic_pointer_cast<ComboBox>(getThis()),
                              index, m_items[index].value);
+
+    fireCCallback(PropertyNames::kEventSelectionChanged, 1, &m_selectedIndex);
 }
 
 void ComboBox::restorePreviousSelection()
@@ -867,6 +869,41 @@ int ComboBox::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kArrowWidth) == 0) { setArrowWidth(value); return 1; }
     if (strcmp(prop, PropertyNames::kItemHeight) == 0) { setItemHeight(value); return 1; }
     return ControlImpl::setFloatProperty(prop, value);
+}
+
+int ComboBox::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kArrow) == 0)          { out = m_arrowColor;      return 1; }
+    if (strcmp(prop, PropertyNames::kArrowHover) == 0)     { out = m_arrowHoverColor; return 1; }
+    if (strcmp(prop, PropertyNames::kItemSelected) == 0)   { out = m_itemSelectedColor; return 1; }
+    if (strcmp(prop, PropertyNames::kItemHover) == 0)      { out = m_itemHoverColor;  return 1; }
+    if (strcmp(prop, PropertyNames::kItemDisabled) == 0)   { out = m_itemDisabledColor; return 1; }
+    if (strcmp(prop, PropertyNames::kListBg) == 0)         { out = m_listBgColor;     return 1; }
+    if (strcmp(prop, PropertyNames::kListBorder) == 0)     { out = m_listBorderColor; return 1; }
+    return ControlImpl::getColorProperty(prop, out);
+}
+
+int ComboBox::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kCycleEnabled) == 0) { out = m_cycleEnabled ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+
+int ComboBox::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kMaxVisibleItems) == 0) { out = m_maxVisibleItems; return 1; }
+    if (strcmp(prop, PropertyNames::kSelectedIndex) == 0)   { out = m_selectedIndex;   return 1; }
+    return ControlImpl::getIntProperty(prop, out);
+}
+
+int ComboBox::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kArrowWidth) == 0) { out = m_arrowWidth; return 1; }
+    if (strcmp(prop, PropertyNames::kItemHeight) == 0) { out = m_itemHeight; return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int ComboBox::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventSelectionChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -71,6 +71,7 @@ enum class FontName {
 };
 
 FontName FontNameFromString(const char* s);
+const char* FontNameToString(FontName font);
 
 class ConstDef {
 public:

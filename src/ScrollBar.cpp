@@ -1,8 +1,10 @@
 ﻿// 由AI(MinMax V2.5)生成，可能不完整或有错误，请自行检查和修改
 #define NOMINMAX
 #include "ScrollBar.h"
+#include "PropertyNames.h"
 #include "MainWindow.h"
 #include <algorithm>
+#include <cstring>
 
 ScrollBar::ScrollBar(Control *parent, SRect rect, ScrollBarOrientation orientation, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
@@ -18,6 +20,10 @@ ScrollBar::ScrollBar(Control *parent, SRect rect, ScrollBarOrientation orientati
     , m_thumbPressed(false)
     , m_dragging(false)
     , m_dragOffset(0.0f)
+    , m_trackColor(ConstDef::SCROLLBAR_TRACK_COLOR)
+    , m_thumbColor(ConstDef::SCROLLBAR_THUMB_COLOR)
+    , m_thumbHoverColor(ConstDef::SCROLLBAR_THUMB_HOVER_COLOR)
+    , m_thumbPressedColor(ConstDef::SCROLLBAR_THUMB_PRESSED_COLOR)
 {
     m_id = 0;
     m_visible = true;
@@ -120,6 +126,7 @@ void ScrollBar::notifyPositionChanged(float oldValue) {
     if (m_onPositionChanged) {
         m_onPositionChanged(dynamic_pointer_cast<ScrollBar>(getThis()), oldValue, m_value, m_minValue, m_maxValue);
     }
+    fireCCallback(PropertyNames::kEventPositionChanged, 2, &m_value);
 }
 
 bool ScrollBar::shouldShow() const {
@@ -141,14 +148,14 @@ void ScrollBar::draw(void) {
 
     SRect drawRect = getDrawRect();
 
-    GET_RENDERDEVICE->setDrawColor(ConstDef::SCROLLBAR_TRACK_COLOR);
+    GET_RENDERDEVICE->setDrawColor(m_trackColor);
     GET_RENDERDEVICE->fillRect(drawRect);
 
-    SColor thumbColor = ConstDef::SCROLLBAR_THUMB_COLOR;
+    SColor thumbColor = m_thumbColor;
     if (m_dragging) {
-        thumbColor = ConstDef::SCROLLBAR_THUMB_PRESSED_COLOR;
+        thumbColor = m_thumbPressedColor;
     } else if (m_thumbHovered) {
-        thumbColor = ConstDef::SCROLLBAR_THUMB_HOVER_COLOR;
+        thumbColor = m_thumbHoverColor;
     }
 
     float scale = getScaleXX();
@@ -341,4 +348,66 @@ ScrollBarBuilder& ScrollBarBuilder::setId(int id) {
 shared_ptr<ScrollBar> ScrollBarBuilder::build(void) {
     m_scrollBar->create();
     return m_scrollBar;
+}
+
+// ── Property system overrides ──
+
+int ScrollBar::setColorProperty(const char* prop, SColor value) {
+    if (strcmp(prop, PropertyNames::kTrack) == 0)          { m_trackColor = value; return 1; }
+    if (strcmp(prop, PropertyNames::kThumb) == 0)          { m_thumbColor = value; return 1; }
+    if (strcmp(prop, PropertyNames::kThumbHover) == 0)     { m_thumbHoverColor = value; return 1; }
+    if (strcmp(prop, PropertyNames::kThumbPressed) == 0)   { m_thumbPressedColor = value; return 1; }
+    return ControlImpl::setColorProperty(prop, value);
+}
+
+int ScrollBar::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kValue) == 0)              { setValue(value);           return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)           { m_minValue = value; setValue(m_value); return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)           { m_maxValue = value; setValue(m_value); return 1; }
+    if (strcmp(prop, PropertyNames::kPageSize) == 0)           { setPageSize(value);        return 1; }
+    if (strcmp(prop, PropertyNames::kStepSize) == 0)           { setStepSize(value);        return 1; }
+    if (strcmp(prop, PropertyNames::kScrollbarThickness) == 0) { setThickness(value);       return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
+int ScrollBar::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kOrientation) == 0) {
+        if (strcmp(value, "vertical") == 0)   { setOrientation(ScrollBarOrientation::Vertical);   return 1; }
+        if (strcmp(value, "horizontal") == 0) { setOrientation(ScrollBarOrientation::Horizontal); return 1; }
+        return 0;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
+
+int ScrollBar::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kTrack) == 0)          { out = m_trackColor;          return 1; }
+    if (strcmp(prop, PropertyNames::kThumb) == 0)          { out = m_thumbColor;          return 1; }
+    if (strcmp(prop, PropertyNames::kThumbHover) == 0)     { out = m_thumbHoverColor;     return 1; }
+    if (strcmp(prop, PropertyNames::kThumbPressed) == 0)   { out = m_thumbPressedColor;   return 1; }
+    return ControlImpl::getColorProperty(prop, out);
+}
+
+int ScrollBar::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kValue) == 0)              { out = m_value;    return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMin) == 0)           { out = m_minValue; return 1; }
+    if (strcmp(prop, PropertyNames::kRangeMax) == 0)           { out = m_maxValue; return 1; }
+    if (strcmp(prop, PropertyNames::kPageSize) == 0)           { out = m_pageSize; return 1; }
+    if (strcmp(prop, PropertyNames::kStepSize) == 0)           { out = m_stepSize; return 1; }
+    if (strcmp(prop, PropertyNames::kScrollbarThickness) == 0) { out = m_thickness; return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int ScrollBar::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kOrientation) == 0) {
+        out = (m_orientation == ScrollBarOrientation::Horizontal) ? "horizontal" : "vertical";
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+
+int ScrollBar::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventPositionChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }

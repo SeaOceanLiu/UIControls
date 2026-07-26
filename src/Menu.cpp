@@ -2,6 +2,7 @@
 // Menu.cpp - VSCode风格菜单控件实现
 
 #include "Menu.h"
+#include "PropertyNames.h"
 
 // ==================== VSCode Dark主题颜色 ====================
 namespace MenuColors {
@@ -613,6 +614,8 @@ MenuBar::MenuBar(Control *parent, float xScale, float yScale)
     , m_hoverBgColor(MenuColors::BAR_HOVER_BG)
     , m_hoverTextColor(MenuColors::BAR_TEXT)
     , m_activeBgColor(MenuColors::BAR_ACTIVE_BG)
+    , m_itemHeightRatio(MenuColors::DEFAULT_HEIGHT_RATIO)
+    , m_menuTextSize(MenuColors::g_menuTextSize)
 {
     setRect(SRect(0, 0, 0, m_barHeight));
     setBorderVisible(false);
@@ -644,7 +647,7 @@ void MenuBar::addMenu(const string& caption, shared_ptr<MenuPanel> panel) {
     entry.label = LabelBuilder(this, {0, 0, 0, m_barHeight})
         .setFont(MenuColors::MENU_FONT)
         .setAlignmentMode(AlignmentMode::AM_CENTER)
-        .setFontSize((int)MenuColors::g_menuTextSize)
+        .setFontSize((int)m_menuTextSize)
         .setCaption(caption)
         .setTextStateColor(StateColor(StateColor::Type::Text)
             .setNormal(m_textColor)
@@ -750,15 +753,40 @@ void MenuBar::setBarHeight(float height) {
 void MenuBar::setItemHeightRatio(float ratio) {
     if (ratio < MenuColors::MIN_HEIGHT_RATIO) ratio = MenuColors::MIN_HEIGHT_RATIO;
     if (ratio > MenuColors::MAX_HEIGHT_RATIO) ratio = MenuColors::MAX_HEIGHT_RATIO;
+    m_itemHeightRatio = ratio;
     MenuColors::g_heightRatio = ratio;
 }
 
 void MenuBar::setFontSize(float size) {
+    m_menuTextSize = size;
     MenuColors::g_menuTextSize = size;
 }
 
-float MenuBar::getFontSize() {
-    return MenuColors::g_menuTextSize;
+int MenuBar::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kItemHeightRatio) == 0) { setItemHeightRatio(value); return 1; }
+    if (strcmp(prop, PropertyNames::kValue) == 0)           { setFontSize(value);        return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
+int MenuBar::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        // MenuBar uses global MenuColors::MENU_FONT; menu entry labels
+        // are created in addMenu() already using that font.
+        // Font changes after creation require recreating entries.
+        return 0;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
+
+int MenuBar::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kItemHeightRatio) == 0) { out = m_itemHeightRatio; return 1; }
+    if (strcmp(prop, PropertyNames::kValue) == 0)           { out = m_menuTextSize;    return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int MenuBar::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kFont) == 0) { out = FontNameToString(MenuColors::MENU_FONT); return 1; }
+    return ControlImpl::getEnumProperty(prop, out);
 }
 
 void MenuBar::draw() {

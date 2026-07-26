@@ -232,6 +232,8 @@ bool CheckBox::handleEvent(shared_ptr<Event> event) {
                 if (m_onCheckChanged) {
                     m_onCheckChanged(dynamic_pointer_cast<CheckBox>(getThis()), oldState, m_checkState);
                 }
+                int state = static_cast<int>(m_checkState);
+                fireCCallback(PropertyNames::kEventCheckChanged, 1, &state);
                 return true;
             }
             if (event->m_type == EventType::MouseMove) {
@@ -269,6 +271,8 @@ bool CheckBox::handleEvent(shared_ptr<Event> event) {
             if (m_onCheckChanged) {
                 m_onCheckChanged(dynamic_pointer_cast<CheckBox>(getThis()), oldState, m_checkState);
             }
+            int state = static_cast<int>(m_checkState);
+            fireCCallback(PropertyNames::kEventCheckChanged, 1, &state);
             return true;
         }
     }
@@ -659,6 +663,62 @@ int CheckBox::setEnumProperty(const char* prop, const char* value) {
         return 0;
     }
     return ControlImpl::setEnumProperty(prop, value);
+}
+
+int CheckBox::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kCheck) == 0)         { out = getCheckColor();         return 1; }
+    if (strcmp(prop, PropertyNames::kCross) == 0)         { out = getCrossColor();         return 1; }
+    if (strcmp(prop, PropertyNames::kIndeterminate) == 0) { out = getIndeterminateColor(); return 1; }
+    if (strcmp(prop, PropertyNames::kBoxBorder) == 0)     { out = getBoxBorderColor();     return 1; }
+    return ControlImpl::getColorProperty(prop, out);
+}
+
+int CheckBox::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kTriState) == 0) { out = m_triStateEnabled ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+
+int CheckBox::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kSizeRatio) == 0) { out = m_sizeRatio; return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int CheckBox::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kCheckBoxStyle) == 0) {
+        switch (m_style) {
+            case CheckBoxStyle::Classic: out = "classic"; return 1;
+            case CheckBoxStyle::Cross:   out = "cross";   return 1;
+            case CheckBoxStyle::Circle:  out = "circle";  return 1;
+        }
+    }
+    if (strcmp(prop, PropertyNames::kCheckState) == 0) {
+        switch (m_checkState) {
+            case CheckState::Unchecked:     out = "unchecked";     return 1;
+            case CheckState::Checked:       out = "checked";       return 1;
+            case CheckState::Indeterminate: out = "indeterminate"; return 1;
+        }
+    }
+    if (strcmp(prop, PropertyNames::kLayout) == 0) {
+        switch (m_layout) {
+            case CheckBoxLayout::TextRight: out = "text-right"; return 1;
+            case CheckBoxLayout::TextLeft:  out = "text-left";  return 1;
+        }
+    }
+    if (strcmp(prop, PropertyNames::kVerticalAlign) == 0) {
+        switch (m_verticalAlign) {
+            case CheckBoxVerticalAlign::Center: out = "center"; return 1;
+            case CheckBoxVerticalAlign::Top:    out = "top";    return 1;
+            case CheckBoxVerticalAlign::Bottom: out = "bottom"; return 1;
+        }
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+
+int CheckBox::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventCheckChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 CheckBoxBuilder& CheckBoxBuilder::setId(int id) {

@@ -620,6 +620,30 @@ int ColorPicker::setStringProperty(const char* prop, const char* value) {
     return Panel::setStringProperty(prop, value);
 }
 
+// ── Getter property system overrides ──
+
+int ColorPicker::getColorProperty(const char* prop, SColor& out) {
+    if (strcmp(prop, PropertyNames::kClosedText) == 0) { out = m_closedTextColor; return 1; }
+    if (strcmp(prop, PropertyNames::kPopupBG) == 0)    { out = m_popupBGColor;    return 1; }
+    return Panel::getColorProperty(prop, out);
+}
+
+int ColorPicker::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kPresetCols) == 0)     { out = m_presetCols;    return 1; }
+    if (strcmp(prop, PropertyNames::kPresetRows) == 0)     { out = m_presetRows;    return 1; }
+    if (strcmp(prop, PropertyNames::kClosedFontSize) == 0) { out = m_closedFontSize; return 1; }
+    return Panel::getIntProperty(prop, out);
+}
+
+int ColorPicker::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kClosedSwatchSize) == 0) { out = m_swatchSize; return 1; }
+    return Panel::getFloatProperty(prop, out);
+}
+
+int ColorPicker::getStringProperty(const char* prop, const char*& out) {
+    return Panel::getStringProperty(prop, out);
+}
+
 // ==================== ColorPickerBuilder ====================
 
 ColorPickerBuilder::ColorPickerBuilder(Control* parent, SRect rect,

@@ -271,3 +271,37 @@ const std::unordered_map<FontName, std::string> ConstDef::fontFiles = {
     {FontName::Muyao_Softbrush, "fonts/Muyao-Softbrush.ttf"},
     {FontName::Quando_Regular, "fonts/Quando-Regular.ttf"},
 };
+
+const char* FontNameToString(FontName font) {
+    switch (font) {
+        case FontName::Asul_Bold: return "asul-bold";
+        case FontName::Asul_Regular: return "asul-regular";
+        case FontName::HarmonyOS_Sans_Condensed_Regular: return "harmonyos-sans-condensed-regular";
+        case FontName::HarmonyOS_Sans_Condensed_Thin: return "harmonyos-sans-condensed-thin";
+        case FontName::HarmonyOS_Sans_SC_Black: return "harmonyos-sans-sc-black";
+        case FontName::HarmonyOS_Sans_SC_Bold: return "harmonyos-sans-sc-bold";
+        case FontName::HarmonyOS_Sans_SC_Light: return "harmonyos-sans-sc-light";
+        case FontName::HarmonyOS_Sans_SC_Medium: return "harmonyos-sans-sc-medium";
+        case FontName::HarmonyOS_Sans_SC_Regular: return "harmonyos-sans-sc-regular";
+        case FontName::HarmonyOS_Sans_SC_Thin: return "harmonyos-sans-sc-thin";
+        case FontName::MapleMono_NF_CN_Bold: return "maplemono-nf-cn-bold";
+        case FontName::MapleMono_NF_CN_BoldItalic: return "maplemono-nf-cn-bolditalic";
+        case FontName::MapleMono_NF_CN_ExtraBold: return "maplemono-nf-cn-extrabold";
+        case FontName::MapleMono_NF_CN_ExtraBoldItalic: return "maplemono-nf-cn-extrabolditalic";
+        case FontName::MapleMono_NF_CN_ExtraLight: return "maplemono-nf-cn-extralight";
+        case FontName::MapleMono_NF_CN_ExtraLightItalic: return "maplemono-nf-cn-extralightitalic";
+        case FontName::MapleMono_NF_CN_Italic: return "maplemono-nf-cn-italic";
+        case FontName::MapleMono_NF_CN_Light: return "maplemono-nf-cn-light";
+        case FontName::MapleMono_NF_CN_LightItalic: return "maplemono-nf-cn-lightitalic";
+        case FontName::MapleMono_NF_CN_Medium: return "maplemono-nf-cn-medium";
+        case FontName::MapleMono_NF_CN_MediumItalic: return "maplemono-nf-cn-mediumitalic";
+        case FontName::MapleMono_NF_CN_Regular: return "maplemono-nf-cn-regular";
+        case FontName::MapleMono_NF_CN_SemiBold: return "maplemono-nf-cn-semibold";
+        case FontName::MapleMono_NF_CN_SemiBoldItalic: return "maplemono-nf-cn-semibolditalic";
+        case FontName::MapleMono_NF_CN_Thin: return "maplemono-nf-cn-thin";
+        case FontName::MapleMono_NF_CN_ThinItalic: return "maplemono-nf-cn-thinitalic";
+        case FontName::Muyao_Softbrush: return "muyao-softbrush";
+        case FontName::Quando_Regular: return "quando-regular";
+    }
+    return "harmonyos-sans-sc-regular";
+}

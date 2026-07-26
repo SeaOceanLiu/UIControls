@@ -31,7 +31,6 @@ void testBenchInitialize(void) {
         .build();
     TestUtil::log("testBenchInitialize - item1 created OK");
 
-    MenuBar::setFontSize(16);
 
     TestUtil::log("testBenchInitialize - creating MenuPanelBuilder");
     g_filePanel = MenuPanelBuilder()
