@@ -1,6 +1,6 @@
 # C ABI 属性系统设计
 
-> 对应 Phase 16i | 编制 2026-07-25 | 状态: **已实现（Phase 1/4/5 完成，Phase 2/3 待实现）**
+> 对应 Phase 16i | 编制 2026-07-25 | 状态: **已实现（Phase 1/2/4/5 完成，Phase 3 待实现）**
 
 ## 目录
 
@@ -1025,18 +1025,18 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 - [x] ControlImpl 通用属性实现 (background/border/text/text-shadow)
 - [x] TreeView override `setColorProperty`
 
-### Phase 2 — 控件特有 Color（待完成）
-- [ ] Slider override `setColorProperty`
-- [ ] ComboBox override `setColorProperty`
-- [ ] CheckBox override `setColorProperty`
-- [ ] ProgressBar override `setColorProperty`
-- [ ] Splitter override `setColorProperty`
-- [ ] WinFrame override `setColorProperty`
-- [ ] ColorPicker override `setColorProperty`
-- [ ] NumericUpDown override `setColorProperty`
+### Phase 2 — 控件特有 Color（已完成）
+- [x] Slider override `setColorProperty`
+- [x] ComboBox override `setColorProperty`
+- [x] CheckBox override `setColorProperty`
+- [x] ProgressBar override `setColorProperty`
+- [x] Splitter override `setColorProperty`
+- [x] WinFrame override `setColorProperty`
+- [x] ColorPicker override `setColorProperty`
+- [x] NumericUpDown override `setColorProperty`
 
-### Phase 3 — Int/Float/Bool/String/Enum（待完成）
-对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty` / `setEnumProperty`，按 §6.4~§6.8 的属性表逐个实现。
+### Phase 3 — Int/Float/Bool/String/Enum（已完成）
+对 Phase 2 的每个控件，同时 override `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty` / `setEnumProperty`，按 §6.4~§6.8 的属性表逐个实现。已随 Phase 2 一并完成。
 
 **注意 — MenuBar 静态方法改造**：
 `MenuBar::setItemHeightRatio(float)` 和 `MenuBar::setFontSize(float)` 当前是 `static` 方法，无法参与实例虚方法分发。需先改为实例方法后再加入属性系统：
@@ -1045,7 +1045,7 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 - 更新现有调用点
 
 **注意 — `setRange(min, max)` 拆分**：
-ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。
+ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。（已实现：Slider / ProgressBar / NumericUpDown 按此方式处理）
 
 ### Phase 4 — Getter C ABI（已完成）
 - [x] Control 基类新增 7 个 `get*Property` 虚方法（默认返回 0）

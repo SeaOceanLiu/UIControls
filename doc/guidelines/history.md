@@ -1635,3 +1635,24 @@ Done, 180 frames                        # 帧循环正常完成
 - `include/ControlBase.h`: `ControlImpl` 类添加所有缺失的 Property override 声明
 - 修复: `SColor` 访问方法 (`redByte()` 代替 `getRed()`)、`StateColor` 构造函数最令人费解的解析、`UIEventCallback` 类型转换
 - 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
+
+### 2026-07-26: Phase 2/5 — 8 控件属性系统重载完成
+
+**Changes**:
+- `include/PropertyNames.h`: 新增 18 个控件特有颜色常量（track/track-fill/thumb/…/arrow/popup-bg 等）
+- `include/ConstDef.h` / `src/ConstDef.cpp`: 新增 `FontNameFromString`（28 个字体名 kebab-case 映射）
+- 8 个控件新增 `setColorProperty` 重载，全部使用 `PropertyNames::k*` 常量代替 raw string：
+  - `Slider` (track/track-fill/thumb/thumb-border/thumb-hover/tick/label)
+  - `ComboBox` (arrow/arrow-hover/item-selected/item-hover/item-disabled/list-bg/list-border)
+  - `CheckBox` (check/cross/indeterminate/box-border)
+  - `ProgressBar` (progress/background/text)
+  - `Splitter` (line/line-hover/line-drag)
+  - `WinFrame` (win-frame-bg/win-frame-border/title-bar-bg/title-text)
+  - `ColorPicker` (closed-text/popup-bg)
+  - `NumericUpDown` (arrow/arrow-hover/arrow-pressed)
+- 各控件同时实现 `setBoolProperty` / `setIntProperty` / `setFloatProperty` / `setStringProperty` / `setEnumProperty` 重载（按 §6.4~§6.8 属性表）
+- 新增 FromString 函数（与枚举定义同文件，方案 B）：
+  - `SliderStyleFromString`, `CheckBoxStyleFromString`, `CheckStateFromString`
+  - `ProgressBarStyleFromString`, `ProgressBarTextModeFromString`
+- `doc/CABI_Property_Design.md`: 新增 §5.10 枚举值字符串管理章节，更新 TOC
+- 3 后端编译通过，0 错误 0 警告
