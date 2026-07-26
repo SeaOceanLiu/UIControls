@@ -11,10 +11,12 @@
 5. [详细设计](#5-详细设计)
    - [5.7 Getter C ABI](#57-getter-c-abi)
    - [5.8 Callback C ABI](#58-callback-c-abi)
+   - [5.9 属性名注册表](#59-属性名注册表)
 6. [属性命名约定](#6-属性命名约定)
    - [6.8 Enum 属性表](#68-enum-属性表)
    - [6.9 Callback 事件表](#69-callback-事件表)
 7. [实施清单（待完成）](#7-实施清单待完成)
+   - [测试策略](#测试策略)
 8. [扩展指南](#8-扩展指南)
 
 ---
@@ -664,6 +666,87 @@ typedef struct {
 
 ---
 
+### 5.9 属性名注册表
+
+属性名字符串分散在各控件 `set*Property` 的 `strcmp` 链中，难以检索重复和冲突。统一管理方式：
+
+```cpp
+// include/PropertyNames.h
+
+#pragma once
+
+// 命名规范：k{PropertyName}，全小写 kebab-case 映射
+namespace PropertyNames {
+
+// ── 通用（全控件）──
+inline constexpr const char* kBackground      = "background";
+inline constexpr const char* kBorder          = "border";
+inline constexpr const char* kText            = "text";
+inline constexpr const char* kTextShadow      = "text-shadow";
+inline constexpr const char* kVisible         = "visible";
+inline constexpr const char* kEnabled         = "enabled";
+inline constexpr const char* kTransparent     = "transparent";
+inline constexpr const char* kBorderVisible   = "border-visible";
+
+// ── 数值 ──
+inline constexpr const char* kFontSize        = "font-size";
+inline constexpr const char* kLineHeight      = "line-height";
+inline constexpr const char* kScrollX         = "scroll-x";
+inline constexpr const char* kScrollY         = "scroll-y";
+inline constexpr const char* kStep            = "step";
+inline constexpr const char* kValue           = "value";
+inline constexpr const char* kDecimals        = "decimals";
+inline constexpr const char* kRangeMin        = "range-min";
+inline constexpr const char* kRangeMax        = "range-max";
+inline constexpr const char* kLabelFontSize   = "label-font-size";
+inline constexpr const char* kSelectedIndex   = "selected-index";
+inline constexpr const char* kButtonHeight    = "button-height";
+
+// ── 枚举 ──
+inline constexpr const char* kAlign           = "align";
+inline constexpr const char* kFont            = "font";
+inline constexpr const char* kStyle           = "style";
+inline constexpr const char* kOrientation     = "orientation";
+inline constexpr const char* kCheckState      = "check-state";
+
+// ── 事件 ──
+inline constexpr const char* kEventClick      = "click";
+inline constexpr const char* kEventValueChanged = "value-changed";
+inline constexpr const char* kEventTextChanged = "text-changed";
+
+} // namespace PropertyNames
+```
+
+#### 使用方式
+
+```cpp
+// 原：if (strcmp(prop, "font-size") == 0)
+// 改：if (strcmp(prop, PropertyNames::kFontSize) == 0)
+```
+
+#### 好处
+
+| 方面 | 说明 |
+|------|------|
+| **防 typo** | 编译期检查，拼错常量名报 undefined |
+| **IDE 补全** | 输入 `PropertyNames::k` 即可看到所有属性名 |
+| **查重** | `rg "k[A-Z]" include/PropertyNames.h` 一眼看出同名常量 |
+| **全局检索** | `rg "PropertyNames::kBackground"` 找到所有使用点 |
+| **文档同步** | 头文件本身就是属性名清单，可直接生成 §6 表格 |
+
+#### 冲突处理
+
+同名属性用于不同控件时，在常量名上加控件前缀：
+
+```cpp
+inline constexpr const char* kCheckBoxStyle   = "style";   // CheckBox: classic/cross/circle
+inline constexpr const char* kProgressBarStyle = "style";   // ProgressBar: horizontal/vertical
+```
+
+`kCheckBoxStyle` 和 `kProgressBarStyle` 值相同但名字不同，IDE 检索 `"style"` 仍能发现两条定义，做冲突判断。
+
+---
+
 ## 6. 属性命名约定
 
 ### 6.1 命名规则
@@ -969,6 +1052,91 @@ int Slider::setFloatProperty(const char* prop, float value) {
     return ControlImpl::setFloatProperty(prop, value);
 }
 ```
+
+---
+
+### 测试策略
+
+属性系统覆盖 UI 层全部控件的全部属性，需要一个独立的测试体系。设计原则：
+
+| 原则 | 说明 |
+|------|------|
+| **C ABI 集成测试** | 测试以 `test_*_cabi.cpp` 形式通过 DLL 编译，LoadLibrary + GetProcAddress 调用 C ABI 函数，模拟真实使用场景 |
+| **Set/Get 对称性** | 对每个属性 Set 后立即 Get，验证返回值一致 |
+| **非侵入** | 不创建视觉窗口，纯逻辑验证（初版用视觉窗口+人工验，回归后改为无窗口断言） |
+
+#### 测试用例设计
+
+```
+test_property_cabi.cpp          ← 通用属性系统测试
+  ├─ Null/invalid 边界
+  │   ├─ SetColor(NULL, "x", val)       → 0
+  │   ├─ GetColor(ctl, NULL, &out)      → 0
+  │   └─ GetColor(ctl, "unknown", &out) → 0
+  ├─ Set/Get 对称（ControlImpl 通用属性）
+  │   ├─ SetStateColor(ctl, "background", rgba)  → 1
+  │   ├─ GetStateColor(ctl, "background", &out)  → 1, out == rgba
+  │   ├─ SetBool(ctl, "visible", 0)              → 1
+  │   ├─ GetBool(ctl, "visible", &out)           → 1, out == 0
+  │   ├─ SetInt(ctl, "font-size", 16)            → 1
+  │   ├─ GetInt(ctl, "font-size", &out)          → 1, out == 16
+  │   ├─ SetFloat(ctl, "step", 1.0f)             → 1
+  │   ├─ GetFloat(ctl, "step", &out)             → 1, out ≈ 1.0f
+  │   ├─ SetString(ctl, "caption", "hello")      → 1
+  │   ├─ GetString(ctl, "caption", buf, 64)      → 1, buf == "hello"
+  │   ├─ SetEnum(ctl, "style", "horizontal")     → 1
+  │   └─ GetEnum(ctl, "style", buf, 64)          → 1, buf == "horizontal"
+  ├─ 控件特有属性
+  │   ├─ SetColor(ctl, "selected", red)         → 1  (TreeView)
+  │   └─ SetColor(ctl, "track", blue)           → 1  (Slider)
+  └─ 回调
+      └─ SetCallback(ctl, "click", handler, ud) → 1
+
+test_combobox_cabi.cpp          ← 已有，扩展 Set/Get 属性验证
+test_numericupdown_cabi.cpp     ← 已有，扩展 Set/Get 属性验证
+test_splitter_cabi.cpp          ← 已有，扩展 Set/Get 属性验证
+test_treeview_cabi.cpp          ← 已有，扩展 SetColor/SetString 验证
+```
+
+#### 自动验证（无窗口模式）
+
+对回调和数据驱动的属性（非视觉依赖），无需创建窗口：
+
+```cpp
+void* ctl = uiFindControl("myTree");
+int ok;
+
+// --- Color ---
+ok = UICornerstone_SetColor(ctl, "selected", (UIColor){255,0,0,255});
+assert(ok == 1);
+UIColor c;
+ok = UICornerstone_GetColor(ctl, "selected", &c);
+assert(ok == 1 && c.r == 255 && c.g == 0 && c.b == 255);
+
+// --- Bool ---
+ok = UICornerstone_SetBool(ctl, "cycle-navigation", 1);
+assert(ok == 1);
+int b;
+ok = UICornerstone_GetBool(ctl, "cycle-navigation", &b);
+assert(ok == 1 && b == 1);
+
+// --- String ---
+ok = UICornerstone_SetString(ctl, "caption", "hello");
+assert(ok == 1);
+char buf[64];
+ok = UICornerstone_GetString(ctl, "caption", buf, sizeof(buf));
+assert(ok == 1 && strcmp(buf, "hello") == 0);
+```
+
+#### 视觉验证（窗口模式）
+
+颜色、布局等视觉属性仍需窗口观察。策略：创建一个包含多个控件的布局，程序化逐一 Set 属性，人工目视验证。回归后在 CI 中用截图对比自动化。
+
+#### 测试清单
+
+- [ ] `test_property_cabi.cpp` — 通用属性 + Set/Get 对称 + 边界条件
+- [ ] 扩展现有 `test_*_cabi.cpp` — 各控件特有属性验证
+- [ ] 程序化布局（非 JSON）— `UICornerstone_CreateControl` + 属性设置（若已有则复用）
 
 ---
 
