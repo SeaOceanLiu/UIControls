@@ -28,15 +28,10 @@ typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
 
-// ── NumericUpDown ──
-typedef void   (*UISetNumericUpDownValueFn)(void*, double);
-typedef double (*UIGetNumericUpDownValueFn)(void*);
-typedef void   (*UISetNumericUpDownRangeFn)(void*, double, double);
-typedef void   (*UISetNumericUpDownStepFn)(void*, double);
-typedef void   (*UISetNumericUpDownPageStepFn)(void*, double);
-typedef void   (*UISetNumericUpDownDecimalsFn)(void*, int);
-typedef void   (*UISetNumericUpDownReadOnlyFn)(void*, int);
-typedef void   (*UISetOnNumericUpDownValueChangedFn)(void*, void (*)(void*, double), void*);
+// ── Property-based C ABI ──
+typedef int  (*UISetFloatFn)(void*, const char*, float);
+typedef int  (*UIGetFloatFn)(void*, const char*, float*);
+typedef int  (*UISetCallbackFn)(void*, const char*, void (*)(void*, const void*, void*), void*);
 
 static UIInitFn                        uiInit                      = nullptr;
 static UISetViewportFn                 uiSetViewport               = nullptr;
@@ -51,14 +46,9 @@ static UILoadLayoutFn                  uiLoadLayout                = nullptr;
 static UIFindControlFn                 uiFindControl               = nullptr;
 static UIRegisterActionFn              uiRegisterAction            = nullptr;
 
-static UISetNumericUpDownValueFn       uiSetNumericUpDownValue     = nullptr;
-static UIGetNumericUpDownValueFn       uiGetNumericUpDownValue     = nullptr;
-static UISetNumericUpDownRangeFn       uiSetNumericUpDownRange     = nullptr;
-static UISetNumericUpDownStepFn        uiSetNumericUpDownStep      = nullptr;
-static UISetNumericUpDownPageStepFn    uiSetNumericUpDownPageStep  = nullptr;
-static UISetNumericUpDownDecimalsFn    uiSetNumericUpDownDecimals  = nullptr;
-static UISetNumericUpDownReadOnlyFn    uiSetNumericUpDownReadOnly  = nullptr;
-static UISetOnNumericUpDownValueChangedFn uiSetOnNumericUpDownValueChanged = nullptr;
+static UISetFloatFn    uiSetFloat    = nullptr;
+static UIGetFloatFn    uiGetFloat    = nullptr;
+static UISetCallbackFn uiSetCallback = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 
@@ -79,14 +69,9 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
 
-    RESOLVE(SetNumericUpDownValue);
-    RESOLVE(GetNumericUpDownValue);
-    RESOLVE(SetNumericUpDownRange);
-    RESOLVE(SetNumericUpDownStep);
-    RESOLVE(SetNumericUpDownPageStep);
-    RESOLVE(SetNumericUpDownDecimals);
-    RESOLVE(SetNumericUpDownReadOnly);
-    RESOLVE(SetOnNumericUpDownValueChanged);
+    RESOLVE(SetFloat);
+    RESOLVE(GetFloat);
+    RESOLVE(SetCallback);
 #undef RESOLVE
 }
 
@@ -229,26 +214,29 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: layout loaded (5 NumericUpDown + labels)\n");
 
     // 通过 C ABI 设置回调（比 JSON 事件更精确，能传递 double 值）
-    if (uiSetOnNumericUpDownValueChanged) {
+    if (uiSetCallback) {
         void* nudInt = uiFindControl("nudInteger");
         if (nudInt) {
-            uiSetOnNumericUpDownValueChanged(nudInt, [](void*, double v) {
+            uiSetCallback(nudInt, "value-changed", [](void* ctl, const void* evt, void* user) {
+                double v = ((const UIEventData*)evt)->data.doubleVal;
                 printf("Value: %.2f\n", v);
+                (void)ctl; (void)user;
             }, nullptr);
         }
     }
 
     // ── 运行时通过 C ABI 修改属性 ──
     void* nudFloat = uiFindControl("nudFloat");
-    if (nudFloat && uiSetNumericUpDownValue) {
-        uiSetNumericUpDownValue(nudFloat, 0.8);
-        double v = uiGetNumericUpDownValue(nudFloat);
-        printf("OK: nudFloat set to %.2f, get=%.2f\n", 0.8, v);
+    if (nudFloat && uiSetFloat) {
+        uiSetFloat(nudFloat, "value", 0.8f);
+        float v = 0.0f;
+        uiGetFloat(nudFloat, "value", &v);
+        printf("OK: nudFloat set to %.2f, get=%.2f\n", 0.8, (double)v);
     }
 
     void* nudPageStep = uiFindControl("nudPageStep");
-    if (nudPageStep && uiSetNumericUpDownPageStep) {
-        uiSetNumericUpDownPageStep(nudPageStep, 50.0);
+    if (nudPageStep && uiSetFloat) {
+        uiSetFloat(nudPageStep, "page-step", 50.0f);
         printf("OK: nudPageStep pageStep set to 50\n");
     }
 

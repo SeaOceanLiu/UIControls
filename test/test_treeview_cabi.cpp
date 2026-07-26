@@ -27,7 +27,7 @@ typedef void  (*UIShutdownFn)(void);
 typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*, void(*)(void*,void*), void*);
-typedef void  (*UISetTextFn)(void*, const char*);
+typedef int   (*UISetStringFn)(void*, const char*, const char*);
 typedef const char* (*UIGetSelectedIdFn)(void*);
 typedef const char* (*UIGetSelectedUserDataFn)(void*);
 
@@ -43,7 +43,7 @@ static UIShutdownFn           uiShutdown           = nullptr;
 static UILoadLayoutFn         uiLoadLayout         = nullptr;
 static UIFindControlFn        uiFindControl        = nullptr;
 static UIRegisterActionFn     uiRegisterAction     = nullptr;
-static UISetTextFn            uiSetText            = nullptr;
+static UISetStringFn          uiSetString          = nullptr;
 static UIGetSelectedIdFn      uiTreeGetSelId       = nullptr;
 static UIGetSelectedUserDataFn uiTreeGetSelUserData = nullptr;
 static void*                  g_labelHandle        = nullptr;
@@ -134,7 +134,7 @@ static void onTreeNodeSelected(void* ctl, void* userData) {
     else
         _snprintf_s(buf, sizeof(buf), _TRUNCATE, "(deselected)");
 
-    uiSetText(g_labelHandle, buf);
+    uiSetString(g_labelHandle, "text", buf);
 }
 
 static void loadFunctions() {
@@ -150,7 +150,7 @@ static void loadFunctions() {
     uiLoadLayout     = (UILoadLayoutFn)       GetProcAddress(g_uiDll, "UICornerstone_LoadLayout");
     uiFindControl    = (UIFindControlFn)      GetProcAddress(g_uiDll, "UICornerstone_FindControl");
     uiRegisterAction = (UIRegisterActionFn)   GetProcAddress(g_uiDll, "UICornerstone_RegisterAction");
-    uiSetText        = (UISetTextFn)          GetProcAddress(g_uiDll, "UICornerstone_SetText");
+    uiSetString      = (UISetStringFn)        GetProcAddress(g_uiDll, "UICornerstone_SetString");
     uiTreeGetSelId   = (UIGetSelectedIdFn)    GetProcAddress(g_uiDll, "UICornerstone_TreeViewGetSelectedId");
     uiTreeGetSelUserData = (UIGetSelectedUserDataFn) GetProcAddress(g_uiDll, "UICornerstone_TreeViewGetSelectedUserData");
 }
@@ -162,7 +162,7 @@ int main() {
     if (!g_uiDll) { printf("FAIL: LoadLibrary\n"); return 1; }
 
     loadFunctions();
-    if (!uiInit || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetText || !uiIsQuit) {
+    if (!uiInit || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetString || !uiIsQuit) {
         printf("FAIL: GetProcAddress\n");
         FreeLibrary(g_uiDll);
         return 1;

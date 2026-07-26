@@ -27,11 +27,10 @@ typedef void  (*UIShutdownFn)(void);
 typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef void  (*UISetTextFn)(void*,const char*);
-typedef const char*   (*UIGetTextFn)(void*);
-typedef void          (*UISetComboItemsFn)(void*,const char*);
-typedef int           (*UIGetSelectedIndexFn)(void*);
-typedef const char*   (*UIGetSelectedLabelFn)(void*);
+typedef int  (*UISetStringFn)(void*, const char*, const char*);
+typedef int  (*UIGetStringFn)(void*, const char*, char*, int);
+typedef int  (*UIGetIntFn)(void*, const char*, int*);
+typedef void (*UISetComboItemsFn)(void*,const char*);
 
 static UIInitFn             uiInit                 = nullptr;
 static UISetViewportFn      uiSetViewport          = nullptr;
@@ -45,11 +44,10 @@ static UIShutdownFn         uiShutdown             = nullptr;
 static UILoadLayoutFn       uiLoadLayout           = nullptr;
 static UIFindControlFn      uiFindControl          = nullptr;
 static UIRegisterActionFn   uiRegisterAction       = nullptr;
-static UISetTextFn          uiSetText              = nullptr;
-static UIGetTextFn          uiGetText              = nullptr;
-static UISetComboItemsFn    uiSetComboItems        = nullptr;
-static UIGetSelectedIndexFn uiGetSelectedIndex     = nullptr;
-static UIGetSelectedLabelFn uiGetSelectedLabel     = nullptr;
+static UISetStringFn       uiSetString            = nullptr;
+static UIGetStringFn       uiGetString            = nullptr;
+static UIGetIntFn          uiGetInt               = nullptr;
+static UISetComboItemsFn   uiSetComboItems        = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 
@@ -58,11 +56,14 @@ static char g_selectionInfo[128] = "Selected: (none)";
 
 static void onSelectionChanged(void* ctl, void* user) {
     (void)ctl; (void)user;
-    int idx = uiGetSelectedIndex(uiFindControl("comboMain"));
-    const char* label = uiGetSelectedLabel(uiFindControl("comboMain"));
+    int idx = -1;
+    uiGetInt(uiFindControl("comboMain"), "selected-index", &idx);
+    char labelBuf[256] = "";
+    uiGetString(uiFindControl("comboMain"), "selected-value", labelBuf, sizeof(labelBuf));
+    const char* label = labelBuf;
     snprintf(g_selectionInfo, sizeof(g_selectionInfo), "Selected: #%d = %s", idx, label ? label : "(null)");
     void* lbl = uiFindControl("lblStatus");
-    if (lbl) uiSetText(lbl, g_selectionInfo);
+    if (lbl) uiSetString(lbl, "text", g_selectionInfo);
     printf("%s\n", g_selectionInfo);
 }
 
@@ -82,11 +83,10 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
-    RESOLVE(SetText);
-    RESOLVE(GetText);
+    RESOLVE(SetString);
+    RESOLVE(GetString);
+    RESOLVE(GetInt);
     RESOLVE(SetComboItems);
-    RESOLVE(GetSelectedIndex);
-    RESOLVE(GetSelectedLabel);
 #undef RESOLVE
 }
 

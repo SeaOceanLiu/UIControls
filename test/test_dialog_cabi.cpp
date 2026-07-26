@@ -27,13 +27,13 @@ typedef void  (*UIShutdownFn)(void);
 typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef void          (*UISetTextFn)(void*,const char*);
-typedef const char*   (*UIGetTextFn)(void*);
+typedef int   (*UISetStringFn)(void*, const char*, const char*);
+typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
+typedef int   (*UISetColorFn)(void*, const char*, UIColor);
 typedef void  (*UIShowFn)(void*);
 typedef void  (*UICloseFn)(void*);
-typedef void  (*UISetBGColorFn)(void*,uint8_t,uint8_t,uint8_t,uint8_t);
-typedef float         (*UIGetSliderValueFn)(void*);
-typedef void          (*UISetSliderValueFn)(void*,float);
+typedef int   (*UISetFloatFn)(void*, const char*, float);
+typedef int   (*UIGetFloatFn)(void*, const char*, float*);
 typedef const char*   (*UIGetControlIdFn)(void*);
 typedef void  (*UISetDialogPositionFn)(void*,float,float,float,float);
 
@@ -49,13 +49,13 @@ static UIShutdownFn         uiShutdown             = nullptr;
 static UILoadLayoutFn       uiLoadLayout           = nullptr;
 static UIFindControlFn      uiFindControl          = nullptr;
 static UIRegisterActionFn   uiRegisterAction       = nullptr;
-static UISetTextFn          uiSetText              = nullptr;
-static UIGetTextFn          uiGetText              = nullptr;
+static UISetStringFn        uiSetString            = nullptr;
+static UIGetStringFn        uiGetString            = nullptr;
+static UISetColorFn         uiSetColor             = nullptr;
 static UIShowFn             uiShow                 = nullptr;
 static UICloseFn            uiClose                = nullptr;
-static UISetBGColorFn       uiSetBGColor           = nullptr;
-static UIGetSliderValueFn       uiGetSliderValue       = nullptr;
-static UISetSliderValueFn       uiSetSliderValue       = nullptr;
+static UISetFloatFn         uiSetFloat             = nullptr;
+static UIGetFloatFn         uiGetFloat             = nullptr;
 static UISetDialogPositionFn    uiSetDialogPosition    = nullptr;
 static UIGetControlIdFn         uiGetControlId         = nullptr;
 
@@ -79,7 +79,7 @@ static const uint32_t kPresetColors[] = {
 // ===== 工具函数：设置色块颜色 =====
 static void setSwatchColor(const char* swatchId, int r, int g, int b, int a = 255) {
     void* sw = uiFindControl(swatchId);
-    if (sw) uiSetBGColor(sw, (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a);
+    if (sw) uiSetColor(sw, "background", UIColor{(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a});
 }
 
 // ===== 更新 hex 输入框文本 =====
@@ -89,7 +89,7 @@ static void updateHexInput(int r, int g, int b, int a) {
     char buf[16];
     snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", r, g, b, a);
     g_updatingHex = true;
-    uiSetText(hexEb, buf);
+    uiSetString(hexEb, "text", buf);
     g_updatingHex = false;
 }
 
@@ -106,10 +106,10 @@ static void setColorFromPreset(uint32_t color) {
     g_g = (int)((color >> 8) & 0xFF);
     g_b = (int)(color & 0xFF);
     g_a = 255;
-    uiSetSliderValue(uiFindControl("rSlider"), (float)g_r);
-    uiSetSliderValue(uiFindControl("gSlider"), (float)g_g);
-    uiSetSliderValue(uiFindControl("bSlider"), (float)g_b);
-    uiSetSliderValue(uiFindControl("aSlider"), (float)g_a);
+    uiSetFloat(uiFindControl("rSlider"), "value", (float)g_r);
+    uiSetFloat(uiFindControl("gSlider"), "value", (float)g_g);
+    uiSetFloat(uiFindControl("bSlider"), "value", (float)g_b);
+    uiSetFloat(uiFindControl("aSlider"), "value", (float)g_a);
     syncColorToAll(g_r, g_g, g_b, g_a);
 }
 
@@ -135,10 +135,12 @@ static void onColorChange(void* ctl, void* user) {
     void* bS = uiFindControl("bSlider");
     void* aS = uiFindControl("aSlider");
     if (!rS || !gS || !bS || !aS) return;
-    int r = (int)uiGetSliderValue(rS);
-    int g = (int)uiGetSliderValue(gS);
-    int b = (int)uiGetSliderValue(bS);
-    int a = (int)uiGetSliderValue(aS);
+    float rv, gv, bv, av;
+    uiGetFloat(rS, "value", &rv);
+    uiGetFloat(gS, "value", &gv);
+    uiGetFloat(bS, "value", &bv);
+    uiGetFloat(aS, "value", &av);
+    int r = (int)rv, g = (int)gv, b = (int)bv, a = (int)av;
     setSwatchColor("dlgSwatch", r, g, b);
     setSwatchColor("btnSwatch", r, g, b);
     updateHexInput(r, g, b, a);
@@ -152,15 +154,17 @@ static void onColorConfirmed(void* ctl, void* user) {
     void* bS = uiFindControl("bSlider");
     void* aS = uiFindControl("aSlider");
     if (!rS || !gS || !bS || !aS) return;
-    g_r = (int)uiGetSliderValue(rS);
-    g_g = (int)uiGetSliderValue(gS);
-    g_b = (int)uiGetSliderValue(bS);
-    g_a = (int)uiGetSliderValue(aS);
+    float rv, gv, bv, av;
+    uiGetFloat(rS, "value", &rv);
+    uiGetFloat(gS, "value", &gv);
+    uiGetFloat(bS, "value", &bv);
+    uiGetFloat(aS, "value", &av);
+    g_r = (int)rv; g_g = (int)gv; g_b = (int)bv; g_a = (int)av;
     g_savedR = g_r; g_savedG = g_g; g_savedB = g_b; g_savedA = g_a;
     char buf[32];
     snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", g_r, g_g, g_b, g_a);
     void* lbl = uiFindControl("lblColor");
-    if (lbl) uiSetText(lbl, buf);
+    if (lbl) uiSetString(lbl, "text", buf);
 }
 
 // ===== 解析 Hex 字符串 → 更新滑块 + swatch =====
@@ -176,27 +180,29 @@ static void parseHexAndApply(const char* hex) {
     }
     if (r<0||g<0||b<0) return;
     g_r = r; g_g = g; g_b = b; g_a = a;
-    uiSetSliderValue(uiFindControl("rSlider"), (float)r);
-    uiSetSliderValue(uiFindControl("gSlider"), (float)g);
-    uiSetSliderValue(uiFindControl("bSlider"), (float)b);
-    uiSetSliderValue(uiFindControl("aSlider"), (float)a);
+    uiSetFloat(uiFindControl("rSlider"), "value", (float)r);
+    uiSetFloat(uiFindControl("gSlider"), "value", (float)g);
+    uiSetFloat(uiFindControl("bSlider"), "value", (float)b);
+    uiSetFloat(uiFindControl("aSlider"), "value", (float)a);
     syncColorToAll(r, g, b, a);
 }
 
 static void onHexChanged(void* ctl, void* user) {
     (void)ctl; (void)user;
     if (g_updatingHex) return;
-    const char* text = uiGetText(ctl);
+    char textBuf[256] = "";
+    uiGetString(ctl, "text", textBuf, sizeof(textBuf));
+    const char* text = textBuf;
     if (text) parseHexAndApply(text);
 }
 
 // ===== 打开 Dialog → 保存当前色 + 同步控件 + 锚定 =====
 static void showColorDlg(void*, void*) {
     g_savedR = g_r; g_savedG = g_g; g_savedB = g_b; g_savedA = g_a;
-    uiSetSliderValue(uiFindControl("rSlider"), (float)g_r);
-    uiSetSliderValue(uiFindControl("gSlider"), (float)g_g);
-    uiSetSliderValue(uiFindControl("bSlider"), (float)g_b);
-    uiSetSliderValue(uiFindControl("aSlider"), (float)g_a);
+    uiSetFloat(uiFindControl("rSlider"), "value", (float)g_r);
+    uiSetFloat(uiFindControl("gSlider"), "value", (float)g_g);
+    uiSetFloat(uiFindControl("bSlider"), "value", (float)g_b);
+    uiSetFloat(uiFindControl("aSlider"), "value", (float)g_a);
     syncColorToAll(g_r, g_g, g_b, g_a);
     void* dlg = uiFindControl("colorDlg");
     if (!dlg) return;
@@ -210,7 +216,7 @@ static void restoreFromSaved() {
     char buf[32];
     snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", g_r, g_g, g_b, g_a);
     void* lbl = uiFindControl("lblColor");
-    if (lbl) uiSetText(lbl, buf);
+    if (lbl) uiSetString(lbl, "text", buf);
 }
 
 static void onColorCancelled(void*, void*) { restoreFromSaved(); }
@@ -232,13 +238,13 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
-    RESOLVE(SetText);
-    RESOLVE(GetText);
+    RESOLVE(SetString);
+    RESOLVE(GetString);
+    RESOLVE(SetColor);
     RESOLVE(Show);
     RESOLVE(Close);
-    RESOLVE(SetBGColor);
-    RESOLVE(GetSliderValue);
-    RESOLVE(SetSliderValue);
+    RESOLVE(SetFloat);
+    RESOLVE(GetFloat);
     RESOLVE(SetDialogPosition);
     RESOLVE(GetControlId);
 #undef RESOLVE

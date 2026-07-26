@@ -210,48 +210,27 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateTextArea(
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateWinFrame(
     const char* title, float x, float y, float w, float h);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenu(void);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateColorPicker(
+    float x, float y, float w, float h, const char* color);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateNumericUpDown(
+    float x, float y, float w, float h);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateComboBox(
+    float x, float y, float w, float h);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateSplitter(
+    float x, float y, float w, float h, int orientation);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(
+    const char* normalImage,
+    const char* hoverImage,
+    const char* pressedImage,
+    float x, float y, float w, float h);
 
 /* ============ 控件通用操作 ============ */
 UICORNERSTONE_API void UICornerstone_SetRect(UIControlHandle ctl, float x, float y, float w, float h);
 UICORNERSTONE_API void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, float* h);
-UICORNERSTONE_API void UICornerstone_SetVisible(UIControlHandle ctl, int visible);
-UICORNERSTONE_API void UICornerstone_SetEnabled(UIControlHandle ctl, int enabled);
-UICORNERSTONE_API void UICornerstone_SetText(UIControlHandle ctl, const char* text);
 UICORNERSTONE_API void UICornerstone_AddChild(UIControlHandle parent, UIControlHandle child);
-UICORNERSTONE_API void UICornerstone_SetOnClick(UIControlHandle ctl, UIActionCallback cb, void* userData);
-UICORNERSTONE_API void UICornerstone_SetBGColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-UICORNERSTONE_API void UICornerstone_SetProgress(UIControlHandle ctl, float value);
-UICORNERSTONE_API void UICornerstone_SetChecked(UIControlHandle ctl, int checked);
 UICORNERSTONE_API void UICornerstone_DestroyControl(UIControlHandle ctl);
-UICORNERSTONE_API const char* UICornerstone_GetText(UIControlHandle ctl);
 UICORNERSTONE_API const char* UICornerstone_GetControlId(UIControlHandle ctl);
-UICORNERSTONE_API int UICornerstone_GetChecked(UIControlHandle ctl);
-UICORNERSTONE_API float UICornerstone_GetProgress(UIControlHandle ctl);
 UICORNERSTONE_API void UICornerstone_WinFrameSetClientText(UIControlHandle wf, const char* text);
-
-/* ============ Slider ============ */
-UICORNERSTONE_API float UICornerstone_GetSliderValue(UIControlHandle ctl);
-UICORNERSTONE_API void UICornerstone_SetSliderValue(UIControlHandle ctl, float value);
-UICORNERSTONE_API void UICornerstone_SetOnSliderChanged(UIControlHandle ctl, UIActionCallback cb, void* userData);
-
-/* ============ ColorPicker ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateColorPicker(
-    float x, float y, float w, float h, const char* color);
-UICORNERSTONE_API void UICornerstone_GetColorPickerColor(UIControlHandle ctl, char* hexOut, int maxLen);
-UICORNERSTONE_API void UICornerstone_SetOnColorChanged(UIControlHandle ctl, UIActionCallback cb, void* userData);
-UICORNERSTONE_API void UICornerstone_SetClosedSwatchSize(UIControlHandle ctl, float size);
-UICORNERSTONE_API void UICornerstone_SetClosedFontSize(UIControlHandle ctl, int size);
-UICORNERSTONE_API void UICornerstone_SetClosedTextColor(UIControlHandle ctl, const char* hex);
-UICORNERSTONE_API void UICornerstone_SetPopupBGColor(UIControlHandle ctl, const char* hex);
-
-/* ============ ComboBox ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateComboBox(
-    float x, float y, float w, float h);
-UICORNERSTONE_API void UICornerstone_SetComboItems(UIControlHandle ctl, const char* jsonItems);
-UICORNERSTONE_API void UICornerstone_SetSelectedIndex(UIControlHandle ctl, int index);
-UICORNERSTONE_API int  UICornerstone_GetSelectedIndex(UIControlHandle ctl);
-UICORNERSTONE_API const char* UICornerstone_GetSelectedLabel(UIControlHandle ctl);
-UICORNERSTONE_API void UICornerstone_SetOnSelectionChanged(UIControlHandle ctl, UIActionCallback cb, void* userData);
 
 /* ============ Dialog/Popup ============ */
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(
@@ -267,47 +246,6 @@ UICORNERSTONE_API void UICornerstone_SetOnCancel(UIControlHandle ctl, UIActionCa
 UICORNERSTONE_API void UICornerstone_SetOnClose(UIControlHandle ctl, UIActionCallback cb, void* userData);
 UICORNERSTONE_API void UICornerstone_SetConfirmButtonText(UIControlHandle ctl, const char* text);
 UICORNERSTONE_API void UICornerstone_SetCancelButtonText(UIControlHandle ctl, const char* text);
-
-/* ============ NumericUpDown ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateNumericUpDown(
-    float x, float y, float w, float h);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownValue(UIControlHandle ctl, double val);
-UICORNERSTONE_API double UICornerstone_GetNumericUpDownValue(UIControlHandle ctl);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownRange(UIControlHandle ctl, double min, double max);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownStep(UIControlHandle ctl, double step);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownPageStep(UIControlHandle ctl, double ps);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownDecimals(UIControlHandle ctl, int decimals);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownPlaceholder(UIControlHandle ctl, const char* placeholder);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownReadOnly(UIControlHandle ctl, int readOnly);
-UICORNERSTONE_API void   UICornerstone_SetNumericUpDownButtonWidth(UIControlHandle ctl, float width);
-UICORNERSTONE_API void   UICornerstone_SetOnNumericUpDownValueChanged(
-    UIControlHandle ctl, void (*callback)(void* userData, double newValue), void* userData);
-
-/* ============ Splitter ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateSplitter(
-    float x, float y, float w, float h, int orientation);
-UICORNERSTONE_API void   UICornerstone_SetSplitterLinkedControls(
-    UIControlHandle ctl, UIControlHandle first, UIControlHandle second);
-UICORNERSTONE_API void   UICornerstone_SetSplitterMinSize(
-    UIControlHandle ctl, float firstMin, float secondMin);
-UICORNERSTONE_API void   UICornerstone_SetSplitterThickness(UIControlHandle ctl, float thickness);
-UICORNERSTONE_API void   UICornerstone_SetSplitterRatio(UIControlHandle ctl, float ratio);
-UICORNERSTONE_API float  UICornerstone_GetSplitterRatio(UIControlHandle ctl);
-UICORNERSTONE_API void   UICornerstone_SetSplitterColor(
-    UIControlHandle ctl, const char* normalHex, const char* hoverHex, const char* dragHex);
-UICORNERSTONE_API void   UICornerstone_SetOnSplitterMoved(
-    UIControlHandle ctl, void (*callback)(void* userData, float ratio), void* userData);
-
-/* ============ 图片/动画按钮 ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(
-    const char* normalImage,
-    const char* hoverImage,
-    const char* pressedImage,
-    float x, float y, float w, float h);
-
-UICORNERSTONE_API void UICornerstone_SetButtonAnimation(
-    UIControlHandle btn,
-    const char* jsoncPath);
 
 /* ============ 属性系统 (统一字符串名 + 多类型入口) ============ */
 
@@ -361,25 +299,13 @@ typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, v
 // 绑定事件回调。event 为事件名，如 "click"、"value-changed"
 UICORNERSTONE_API int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData);
 
-// ============================================================
-// TreeView
-// ============================================================
+// TreeView — actions/queries (color/font/layout properties use the unified property system)
 UICORNERSTONE_API const char* UICornerstone_TreeViewGetSelectedId(UIControlHandle ctl);
 UICORNERSTONE_API const char* UICornerstone_TreeViewGetSelectedUserData(UIControlHandle ctl);
 UICORNERSTONE_API int   UICornerstone_TreeViewExpandNode(UIControlHandle ctl, const char* nodeId);
 UICORNERSTONE_API int   UICornerstone_TreeViewCollapseNode(UIControlHandle ctl, const char* nodeId);
 UICORNERSTONE_API void  UICornerstone_TreeViewExpandAll(UIControlHandle ctl);
 UICORNERSTONE_API void  UICornerstone_TreeViewCollapseAll(UIControlHandle ctl);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetBgColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetBorderColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetSelectedColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetHoverColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetTextColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetFontSize(UIControlHandle ctl, int size);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetIndentWidth(UIControlHandle ctl, float px);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetRowHeight(UIControlHandle ctl, float px);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetLineSpacing(UIControlHandle ctl, float px);
-UICORNERSTONE_API void  UICornerstone_TreeViewSetArrowGap(UIControlHandle ctl, float px);
 
 #ifdef __cplusplus
 }

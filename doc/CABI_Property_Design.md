@@ -1,6 +1,6 @@
 # C ABI 属性系统设计
 
-> 对应 Phase 16i | 编制 2026-07-25 | 状态: **已实现（Phase 1~5 全部完成）**
+> 对应 Phase 16i | 编制 2026-07-26 | 状态: **已实现（Phase 1~6 全部完成，旧版专用导出已移除）**
 
 ## 目录
 
@@ -1059,6 +1059,14 @@ ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"r
 - [x] ControlImpl 新增通用回调存储 `m_cCallbacks` 映射表 + `fireCCallback()` 辅助方法
 - [x] 6 控件实现 Callback 绑定：Slider(`value-changed`)、CheckBox(`check-changed`)、ComboBox(`selection-changed`)、Splitter(`position-changed`)、ScrollBar(`position-changed`)、NumericUpDown(`value-changed`)
 - [x] 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
+
+### Phase 6 — 移除旧版专用 C ABI 导出（已完成）
+- [x] 将 48 个旧专用导出（`SetBGColor`/`SetText`/`SetOnClick`/`GetSliderValue`/`SetNumericUpDownValue` 等）替换为统一的属性系统 API (`SetColor`/`SetString`/`SetCallback`/`GetFloat` 等)
+- [x] 保留 16 个非属性可映射的导出（`Show`/`Close`/`ExpandNode`/`SetComboItems`/`SetSplitterLinkedControls` 等）
+- [x] 更新 6 个测试文件（`test_fromsource_cabi`/`test_dialog_cabi`/`test_combobox_cabi`/`test_splitter_cabi`/`test_numericupdown_cabi`/`test_treeview_cabi`）使用新 API
+- [x] 从 `UICornerstoneAPI.h` 移除旧导出声明
+- [x] 从 `UICornerstoneAPI.cpp` 移除旧导出实现
+- [x] 3 后端 × 8 C ABI 测试目标 = 24 构建全部通过，0 错误
 
 ### 实现模式
 

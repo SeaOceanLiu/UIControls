@@ -27,8 +27,8 @@ typedef void  (*UIShutdownFn)(void);
 typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef void  (*UISetTextFn)(void*,const char*);
-typedef float (*UIGetSplitterRatioFn)(void*);
+typedef int  (*UISetStringFn)(void*, const char*, const char*);
+typedef int  (*UIGetFloatFn)(void*, const char*, float*);
 
 static UIInitFn             uiInit                 = nullptr;
 static UISetViewportFn      uiSetViewport          = nullptr;
@@ -42,8 +42,8 @@ static UIShutdownFn         uiShutdown             = nullptr;
 static UILoadLayoutFn       uiLoadLayout           = nullptr;
 static UIFindControlFn      uiFindControl          = nullptr;
 static UIRegisterActionFn   uiRegisterAction       = nullptr;
-static UISetTextFn          uiSetText              = nullptr;
-static UIGetSplitterRatioFn uiGetSplitterRatio     = nullptr;
+static UISetStringFn uiSetString = nullptr;
+static UIGetFloatFn  uiGetFloat  = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 
@@ -51,10 +51,11 @@ static char g_ratioInfo[128] = "Ratio: 0.400";
 
 static void onSplitterMoved(void* ctl, void* user) {
     (void)ctl; (void)user;
-    float r = uiGetSplitterRatio(uiFindControl("mySplitter"));
+    float r = 0.0f;
+    uiGetFloat(uiFindControl("mySplitter"), "ratio", &r);
     snprintf(g_ratioInfo, sizeof(g_ratioInfo), "Ratio: %.3f", r);
     void* lbl = uiFindControl("lblStatus");
-    if (lbl) uiSetText(lbl, g_ratioInfo);
+    if (lbl) uiSetString(lbl, "text", g_ratioInfo);
     printf("%s\n", g_ratioInfo);
 }
 
@@ -74,8 +75,8 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
-    RESOLVE(SetText);
-    RESOLVE(GetSplitterRatio);
+    RESOLVE(SetString);
+    RESOLVE(GetFloat);
 #undef RESOLVE
 }
 
@@ -186,7 +187,9 @@ static int runTest(const char* shortName, const char* displayName) {
 
     void* sp = uiFindControl("mySplitter");
     if (!sp) { printf("FAIL: FindControl(mySplitter)\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
-    printf("OK: Splitter found, initial ratio=%.3f\n", uiGetSplitterRatio(sp));
+    float r0 = 0.0f;
+    uiGetFloat(sp, "ratio", &r0);
+    printf("OK: Splitter found, initial ratio=%.3f\n", r0);
 
     printf("Frame loop... (interact with the Splitter or close the window)\n");
     while (!uiIsQuitRequested()) {

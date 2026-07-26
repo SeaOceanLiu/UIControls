@@ -567,29 +567,6 @@ void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, fl
     if (h) *h = r.height;
 }
 
-void UICornerstone_SetVisible(UIControlHandle ctl, int visible) {
-    if (ctl) static_cast<Control*>(ctl)->setVisible(visible != 0);
-}
-
-void UICornerstone_SetEnabled(UIControlHandle ctl, int enabled) {
-    if (ctl) static_cast<Control*>(ctl)->setEnable(enabled != 0);
-}
-
-void UICornerstone_SetText(UIControlHandle ctl, const char* text) {
-    if (!ctl) return;
-    const std::string s = text ? text : "";
-    if (auto* btn = dynamic_cast<Button*>(static_cast<Control*>(ctl))) {
-        btn->setCaption(s);
-    } else if (auto* lbl = dynamic_cast<Label*>(static_cast<Control*>(ctl))) {
-        lbl->setCaption(s);
-    } else if (auto* cb = dynamic_cast<CheckBox*>(static_cast<Control*>(ctl))) {
-        auto caption = cb->getCaption();
-        if (caption) caption->setCaption(s);
-    } else if (auto* eb = dynamic_cast<EditBox*>(static_cast<Control*>(ctl))) {
-        eb->setText(s);
-    }
-}
-
 void UICornerstone_AddChild(UIControlHandle parent, UIControlHandle child) {
     if (!parent || !child) return;
     auto* ctlImpl = dynamic_cast<ControlImpl*>(static_cast<Control*>(child));
@@ -598,54 +575,6 @@ void UICornerstone_AddChild(UIControlHandle parent, UIControlHandle child) {
     auto sp = ctlImpl->shared_from_this();
     BENCH->removeControl(sp);
     panel->addControl(sp);
-}
-
-void UICornerstone_SetOnClick(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* btn = dynamic_cast<Button*>(static_cast<Control*>(ctl));
-    if (btn) {
-        btn->setOnClick([cb, userData](std::shared_ptr<Button>) {
-            if (cb) cb(nullptr, userData);
-        });
-    }
-}
-
-void UICornerstone_SetBGColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    if (!ctl) return;
-    SColor normal((int)r, (int)g, (int)b, (int)a);
-    static_cast<Control*>(ctl)->setNormalStateBGColor(normal);
-    static_cast<Control*>(ctl)->setHoverStateBGColor(normal.brighter(0.3f));
-    static_cast<Control*>(ctl)->setPressedStateBGColor(normal.darker(0.3f));
-}
-
-void UICornerstone_SetProgress(UIControlHandle ctl, float value) {
-    if (!ctl) return;
-    auto* pb = dynamic_cast<ProgressBar*>(static_cast<Control*>(ctl));
-    if (pb) pb->setValue(value);
-}
-
-void UICornerstone_SetChecked(UIControlHandle ctl, int checked) {
-    if (!ctl) return;
-    auto* cb = dynamic_cast<CheckBox*>(static_cast<Control*>(ctl));
-    if (cb) cb->setCheckState(checked ? CheckState::Checked : CheckState::Unchecked);
-}
-
-static char g_getTextBuf[4096];
-
-const char* UICornerstone_GetText(UIControlHandle ctl) {
-    if (!ctl) return "";
-    Control* c = static_cast<Control*>(ctl);
-    if (auto* btn = dynamic_cast<Button*>(c)) {
-        strncpy(g_getTextBuf, btn->getCaption().c_str(), sizeof(g_getTextBuf) - 1);
-    } else if (auto* lbl = dynamic_cast<Label*>(c)) {
-        strncpy(g_getTextBuf, lbl->getCaption().c_str(), sizeof(g_getTextBuf) - 1);
-    } else if (auto* eb = dynamic_cast<EditBox*>(c)) {
-        strncpy(g_getTextBuf, eb->getText().c_str(), sizeof(g_getTextBuf) - 1);
-    } else {
-        g_getTextBuf[0] = '\0';
-    }
-    g_getTextBuf[sizeof(g_getTextBuf) - 1] = '\0';
-    return g_getTextBuf;
 }
 
 const char* UICornerstone_GetControlId(UIControlHandle ctl) {
@@ -662,22 +591,47 @@ const char* UICornerstone_GetControlId(UIControlHandle ctl) {
     return buf;
 }
 
-int UICornerstone_GetChecked(UIControlHandle ctl) {
-    if (!ctl) return 0;
-    auto* cb = dynamic_cast<CheckBox*>(static_cast<Control*>(ctl));
-    if (!cb) return 0;
-    switch (cb->getCheckState()) {
-        case CheckState::Unchecked: return 0;
-        case CheckState::Checked:   return 1;
-        case CheckState::Indeterminate: return 2;
-    }
-    return 0;
+void UICornerstone_DestroyControl(UIControlHandle ctl) {
+    if (!ctl) return;
+    auto* ctrl = dynamic_cast<ControlImpl*>(static_cast<Control*>(ctl));
+    if (!ctrl) return;
+    try {
+        auto sp = ctrl->shared_from_this();
+        Control* parent = ctrl->getParent();
+        if (parent && parent != BENCH) {
+            parent->removeControl(sp);
+        } else {
+            BENCH->removeControl(sp);
+        }
+    } catch (...) {}
 }
 
-float UICornerstone_GetProgress(UIControlHandle ctl) {
-    if (!ctl) return 0.0f;
-    auto* pb = dynamic_cast<ProgressBar*>(static_cast<Control*>(ctl));
-    return pb ? pb->getValue() : 0.0f;
+void UICornerstone_WinFrameSetClientText(UIControlHandle wf, const char* text) {
+    if (!wf) return;
+    auto* winFrame = dynamic_cast<WinFrame*>(static_cast<Control*>(wf));
+    if (!winFrame) return;
+    auto client = winFrame->getClientPanel();
+    if (!client) return;
+
+    // 移除 client panel 中已有的所有子控件
+    auto children = client->getChildren();
+    for (auto& child : children) {
+        client->removeControl(child);
+    }
+
+    // 创建新的 Label 显示文本
+    SRect cr = client->getRect();
+    SRect labelRect(0, 0, cr.width, cr.height);
+    auto label = std::make_shared<Label>(client.get(), labelRect);
+    label->setCaption(text ? text : "");
+    label->setFont(FontName::HarmonyOS_Sans_SC_Regular);
+    label->setFontSize(14);
+    label->setAlignmentMode(AlignmentMode::AM_MID_LEFT);
+    label->setTextNormalStateColor(SColor(220, 220, 220, 255));
+    label->setEnableExpand(false);
+    client->addControl(label);
+    label->create();
+    label->setVisible(true);
 }
 
 // ============================================================
@@ -692,60 +646,6 @@ UIControlHandle UICornerstone_CreateColorPicker(
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
-}
-
-void UICornerstone_GetColorPickerColor(UIControlHandle ctl, char* hexOut, int maxLen) {
-    if (!ctl || !hexOut || maxLen <= 0) return;
-    auto* cp = dynamic_cast<ColorPicker*>(static_cast<Control*>(ctl));
-    if (cp) {
-        std::string hex = cp->getColorHex();
-        strncpy(hexOut, hex.c_str(), (size_t)maxLen - 1);
-        hexOut[maxLen - 1] = '\0';
-    } else {
-        hexOut[0] = '\0';
-    }
-}
-
-void UICornerstone_SetOnColorChanged(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* cp = dynamic_cast<ColorPicker*>(static_cast<Control*>(ctl));
-    if (cp) {
-        cp->setOnColorChanged([cb, userData](std::shared_ptr<ColorPicker>, const SColor&) {
-            if (cb) cb(nullptr, userData);
-        });
-    }
-}
-
-void UICornerstone_SetClosedSwatchSize(UIControlHandle ctl, float size) {
-    if (!ctl) return;
-    auto* cp = dynamic_cast<ColorPicker*>(static_cast<Control*>(ctl));
-    if (cp) cp->setClosedSwatchSize(size);
-}
-
-void UICornerstone_SetClosedFontSize(UIControlHandle ctl, int size) {
-    if (!ctl) return;
-    auto* cp = dynamic_cast<ColorPicker*>(static_cast<Control*>(ctl));
-    if (cp) cp->setClosedFontSize(size);
-}
-
-void UICornerstone_SetClosedTextColor(UIControlHandle ctl, const char* hex) {
-    if (!ctl || !hex) return;
-    auto* cp = dynamic_cast<ColorPicker*>(static_cast<Control*>(ctl));
-    if (cp) {
-        SColor c;
-        if (SColor::fromHex(hex, c))
-            cp->setClosedTextColor(c);
-    }
-}
-
-void UICornerstone_SetPopupBGColor(UIControlHandle ctl, const char* hex) {
-    if (!ctl || !hex) return;
-    auto* cp = dynamic_cast<ColorPicker*>(static_cast<Control*>(ctl));
-    if (cp) {
-        SColor c;
-        if (SColor::fromHex(hex, c))
-            cp->setPopupBGColor(c);
-    }
 }
 
 // ============================================================
@@ -777,39 +677,6 @@ void UICornerstone_SetComboItems(UIControlHandle ctl, const char* jsonItems) {
         }
         combo->setItems(items);
     } catch (...) {}
-}
-
-void UICornerstone_SetSelectedIndex(UIControlHandle ctl, int index) {
-    if (!ctl) return;
-    auto* combo = dynamic_cast<ComboBox*>(static_cast<Control*>(ctl));
-    if (combo) combo->setSelectedIndex(index);
-}
-
-int UICornerstone_GetSelectedIndex(UIControlHandle ctl) {
-    if (!ctl) return -1;
-    auto* combo = dynamic_cast<ComboBox*>(static_cast<Control*>(ctl));
-    return combo ? combo->getSelectedIndex() : -1;
-}
-
-const char* UICornerstone_GetSelectedLabel(UIControlHandle ctl) {
-    if (!ctl) return "";
-    auto* combo = dynamic_cast<ComboBox*>(static_cast<Control*>(ctl));
-    if (!combo) return "";
-    static char buf[256];
-    string label = combo->getSelectedLabel();
-    strncpy(buf, label.c_str(), sizeof(buf) - 1);
-    buf[sizeof(buf) - 1] = '\0';
-    return buf;
-}
-
-void UICornerstone_SetOnSelectionChanged(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* combo = dynamic_cast<ComboBox*>(static_cast<Control*>(ctl));
-    if (combo) {
-        combo->setOnSelectionChanged([cb, userData](std::shared_ptr<ComboBox>, int, const string&) {
-            if (cb) cb(nullptr, userData);
-        });
-    }
 }
 
 // ============================================================
@@ -943,28 +810,6 @@ void UICornerstone_SetCancelButtonText(UIControlHandle ctl, const char* text) {
     if (dlg) dlg->setCancelButtonText(text);
 }
 
-float UICornerstone_GetSliderValue(UIControlHandle ctl) {
-    if (!ctl) return 0.0f;
-    auto* sl = dynamic_cast<Slider*>(static_cast<Control*>(ctl));
-    return sl ? sl->getValue() : 0.0f;
-}
-
-void UICornerstone_SetSliderValue(UIControlHandle ctl, float value) {
-    if (!ctl) return;
-    auto* sl = dynamic_cast<Slider*>(static_cast<Control*>(ctl));
-    if (sl) sl->setValue(value);
-}
-
-void UICornerstone_SetOnSliderChanged(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* sl = dynamic_cast<Slider*>(static_cast<Control*>(ctl));
-    if (sl) {
-        sl->setOnValueChanged([cb, userData](std::shared_ptr<Slider>, float) {
-            if (cb) cb(nullptr, userData);
-        });
-    }
-}
-
 // ── NumericUpDown C ABI ──
 
 UIControlHandle UICornerstone_CreateNumericUpDown(float x, float y, float w, float h) {
@@ -973,74 +818,6 @@ UIControlHandle UICornerstone_CreateNumericUpDown(float x, float y, float w, flo
     nud->create();
     nud->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(nud.get()));
-}
-
-void UICornerstone_SetNumericUpDownValue(UIControlHandle ctl, double val) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setValue(val);
-}
-
-double UICornerstone_GetNumericUpDownValue(UIControlHandle ctl) {
-    if (!ctl) return 0.0;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    return nud ? nud->getValue() : 0.0;
-}
-
-void UICornerstone_SetNumericUpDownRange(UIControlHandle ctl, double min, double max) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setRange(min, max);
-}
-
-void UICornerstone_SetNumericUpDownStep(UIControlHandle ctl, double step) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setStep(step);
-}
-
-void UICornerstone_SetNumericUpDownPageStep(UIControlHandle ctl, double ps) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setPageStep(ps);
-}
-
-void UICornerstone_SetNumericUpDownDecimals(UIControlHandle ctl, int decimals) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setDecimals(decimals);
-}
-
-void UICornerstone_SetNumericUpDownPlaceholder(UIControlHandle ctl, const char* placeholder) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setPlaceholder(placeholder ? string(placeholder) : "");
-}
-
-void UICornerstone_SetNumericUpDownReadOnly(UIControlHandle ctl, int readOnly) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setReadOnly(readOnly != 0);
-}
-
-void UICornerstone_SetNumericUpDownButtonWidth(UIControlHandle ctl, float width) {
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) nud->setButtonWidth(width);
-}
-
-void UICornerstone_SetOnNumericUpDownValueChanged(
-    UIControlHandle ctl,
-    void (*callback)(void* userData, double newValue),
-    void* userData)
-{
-    if (!ctl) return;
-    auto* nud = dynamic_cast<NumericUpDown*>(static_cast<Control*>(ctl));
-    if (nud) {
-        nud->setOnValueChanged([callback, userData](shared_ptr<Control>, double v) {
-            if (callback) callback(userData, v);
-        });
-    }
 }
 
 // ── Splitter C ABI ──
@@ -1075,93 +852,6 @@ void UICornerstone_SetSplitterMinSize(UIControlHandle ctl, float firstMin, float
     if (!ctl) return;
     auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
     if (sp) sp->setMinSize(firstMin, secondMin);
-}
-
-void UICornerstone_SetSplitterThickness(UIControlHandle ctl, float thickness) {
-    if (!ctl) return;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    if (sp) sp->setThickness(thickness);
-}
-
-void UICornerstone_SetSplitterRatio(UIControlHandle ctl, float ratio) {
-    if (!ctl) return;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    if (sp) sp->setSplitRatio(ratio);
-}
-
-float UICornerstone_GetSplitterRatio(UIControlHandle ctl) {
-    if (!ctl) return 0.0f;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    return sp ? sp->getSplitRatio() : 0.0f;
-}
-
-void UICornerstone_SetSplitterColor(UIControlHandle ctl, const char* normalHex, const char* hoverHex, const char* dragHex) {
-    if (!ctl) return;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    if (sp) {
-        SColor n, h, d;
-        if (normalHex) SColor::fromHex(normalHex, n);
-        if (hoverHex) SColor::fromHex(hoverHex, h);
-        if (dragHex) SColor::fromHex(dragHex, d);
-        sp->setColor(n, h, d);
-    }
-}
-
-void UICornerstone_SetOnSplitterMoved(
-    UIControlHandle ctl,
-    void (*callback)(void* userData, float ratio),
-    void* userData)
-{
-    if (!ctl) return;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    if (sp) {
-        sp->setOnSplitterMoved([callback, userData](shared_ptr<Control>, float r) {
-            if (callback) callback(userData, r);
-        });
-    }
-}
-
-void UICornerstone_DestroyControl(UIControlHandle ctl) {
-    if (!ctl) return;
-    auto* ctrl = dynamic_cast<ControlImpl*>(static_cast<Control*>(ctl));
-    if (!ctrl) return;
-    try {
-        auto sp = ctrl->shared_from_this();
-        Control* parent = ctrl->getParent();
-        if (parent && parent != BENCH) {
-            parent->removeControl(sp);
-        } else {
-            BENCH->removeControl(sp);
-        }
-    } catch (...) {}
-}
-
-void UICornerstone_WinFrameSetClientText(UIControlHandle wf, const char* text) {
-    if (!wf) return;
-    auto* winFrame = dynamic_cast<WinFrame*>(static_cast<Control*>(wf));
-    if (!winFrame) return;
-    auto client = winFrame->getClientPanel();
-    if (!client) return;
-
-    // 移除 client panel 中已有的所有子控件
-    auto children = client->getChildren();
-    for (auto& child : children) {
-        client->removeControl(child);
-    }
-
-    // 创建新的 Label 显示文本
-    SRect cr = client->getRect();
-    SRect labelRect(0, 0, cr.width, cr.height);
-    auto label = std::make_shared<Label>(client.get(), labelRect);
-    label->setCaption(text ? text : "");
-    label->setFont(FontName::HarmonyOS_Sans_SC_Regular);
-    label->setFontSize(14);
-    label->setAlignmentMode(AlignmentMode::AM_MID_LEFT);
-    label->setTextNormalStateColor(SColor(220, 220, 220, 255));
-    label->setEnableExpand(false);
-    client->addControl(label);
-    label->create();
-    label->setVisible(true);
 }
 
 // ============================================================
@@ -1325,55 +1015,5 @@ void UICornerstone_TreeViewExpandAll(UIControlHandle ctl) {
 void UICornerstone_TreeViewCollapseAll(UIControlHandle ctl) {
     auto* tv = toTreeView(ctl);
     if (tv) tv->collapseAll();
-}
-
-void UICornerstone_TreeViewSetBgColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setBgColor(SColor(r, g, b, a));
-}
-
-void UICornerstone_TreeViewSetBorderColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setBorderColor(SColor(r, g, b, a));
-}
-
-void UICornerstone_TreeViewSetSelectedColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setSelectedColor(SColor(r, g, b, a));
-}
-
-void UICornerstone_TreeViewSetHoverColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setHoverColor(SColor(r, g, b, a));
-}
-
-void UICornerstone_TreeViewSetTextColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setTextColor(SColor(r, g, b, a));
-}
-
-void UICornerstone_TreeViewSetFontSize(UIControlHandle ctl, int size) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setFontSize(size);
-}
-
-void UICornerstone_TreeViewSetIndentWidth(UIControlHandle ctl, float px) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setIndentWidth(px);
-}
-
-void UICornerstone_TreeViewSetRowHeight(UIControlHandle ctl, float px) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setRowHeight(px);
-}
-
-void UICornerstone_TreeViewSetLineSpacing(UIControlHandle ctl, float px) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setLineSpacing(px);
-}
-
-void UICornerstone_TreeViewSetArrowGap(UIControlHandle ctl, float px) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->setArrowGap(px);
 }
 
