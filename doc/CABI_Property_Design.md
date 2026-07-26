@@ -1,6 +1,6 @@
 # C ABI 属性系统设计
 
-> 对应 Phase 16i | 编制 2026-07-25 | 状态: **设计中**
+> 对应 Phase 16i | 编制 2026-07-25 | 状态: **已实现（Phase 1/4/5 完成，Phase 2/3 待实现）**
 
 ## 目录
 
@@ -15,7 +15,7 @@
 6. [属性命名约定](#6-属性命名约定)
    - [6.8 Enum 属性表](#68-enum-属性表)
    - [6.9 Callback 事件表](#69-callback-事件表)
-7. [实施清单（待完成）](#7-实施清单待完成)
+7. [实施清单](#7-实施清单)
    - [测试策略](#测试策略)
 8. [扩展指南](#8-扩展指南)
 
@@ -993,14 +993,14 @@ inline constexpr const char* kProgressBarStyle = "style";   // ProgressBar: hori
 
 ---
 
-## 7. 实施清单（待完成）
+## 7. 实施清单
 
-### Phase 1 — Color（已完成）
-- [x] Control 基类虚方法
-- [x] ControlImpl 通用属性
+### Phase 1 — Color 基类（已完成）
+- [x] Control 基类 `setColorProperty` / `setStateColorProperty` 虚方法
+- [x] ControlImpl 通用属性实现 (background/border/text/text-shadow)
 - [x] TreeView override `setColorProperty`
 
-### Phase 2 — Color（待完成）
+### Phase 2 — 控件特有 Color（待完成）
 - [ ] Slider override `setColorProperty`
 - [ ] ComboBox override `setColorProperty`
 - [ ] CheckBox override `setColorProperty`
@@ -1022,20 +1022,19 @@ inline constexpr const char* kProgressBarStyle = "style";   // ProgressBar: hori
 **注意 — `setRange(min, max)` 拆分**：
 ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。
 
-### Phase 4 — Getter C ABI（待完成）
-为属性系统添加对称的读取能力：
-- [ ] Control 基类新增 6 个 `get*Property` 虚方法（默认返回 0）
-- [ ] ControlImpl 实现通用属性 Getter（从已有的 getter 方法读取）
-- [ ] TreeView 实现控件特有属性 Getter
-- [ ] Phase 2/3 各控件实现对等的 Getter
-- [ ] 6 个 C ABI Getter 函数声明 + 实现
+### Phase 4 — Getter C ABI（已完成）
+- [x] Control 基类新增 7 个 `get*Property` 虚方法（默认返回 0）
+- [x] ControlImpl 实现通用属性 Getter（从已有的 StateColor getter 读取）
+- [x] 7 个 C ABI Getter 函数声明 + 实现 (`GetColor`/`GetStateColor`/`GetBool`/`GetInt`/`GetFloat`/`GetString`/`GetEnum`)
+- [ ] Phase 2/3 各控件实现对等的 Getter（待 Phase 2/3 完成后补充）
 
-### Phase 5 — Callback C ABI（待完成）
-统一事件回调系统，替换现有的 9 个专用回调导出：
-- [ ] `UIEventData` 结构体定义 + `UIEventCallback` 类型
-- [ ] Control 基类 `setCallbackProperty` 虚方法
-- [ ] 各控件 override，将 C ABI 回调桥接到 C++ `std::function`（按 §6.9 事件表逐个实现）
-- [ ] `UICornerstone_SetCallback` C ABI 函数声明 + 实现
+### Phase 5 — Callback C ABI（基础部分已完成）
+- [x] `UIEventData` 结构体定义 + `UIEventCallback` 类型
+- [x] Control 基类 `setCallbackProperty` 虚方法
+- [x] `UICornerstone_SetCallback` C ABI 函数声明 + 实现
+- [x] 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
+- [x] 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
+- [ ] 各控件 override `setCallbackProperty`，将 C ABI 回调桥接到 C++ `std::function`（按 §6.9 事件表逐个实现）
 - [ ] 移除旧的专用 C ABI 回调导出（`SetOnClick` 等 9 个）
 
 ### 实现模式
