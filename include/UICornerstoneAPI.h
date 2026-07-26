@@ -310,12 +310,17 @@ UICORNERSTONE_API void UICornerstone_SetButtonAnimation(
     const char* jsoncPath);
 
 /* ============ 属性系统 (统一字符串名 + 多类型入口) ============ */
+
+/* ── Setter ── */
 // 设置单色属性。prop 是属性名，如 "selected"、"hover"、"background"
 // 返回 1 成功，0 不识别的属性
 UICORNERSTONE_API int UICornerstone_SetColor(   UIControlHandle ctl, const char* prop, UIColor       value);
 
 // 设置 4 态颜色属性。prop 如 "background"、"border"、"text"
 UICORNERSTONE_API int UICornerstone_SetStateColor( UIControlHandle ctl, const char* prop, UIStateColor  value);
+
+// 设置布尔属性。prop 如 "visible"、"enabled"，value: 0=假, 非0=真
+UICORNERSTONE_API int UICornerstone_SetBool(     UIControlHandle ctl, const char* prop, int           value);
 
 // 设置整数属性。prop 如 "font-size"
 UICORNERSTONE_API int UICornerstone_SetInt(     UIControlHandle ctl, const char* prop, int           value);
@@ -325,6 +330,36 @@ UICORNERSTONE_API int UICornerstone_SetFloat(   UIControlHandle ctl, const char*
 
 // 设置字符串属性。prop 如 "text"、"font"
 UICORNERSTONE_API int UICornerstone_SetString(  UIControlHandle ctl, const char* prop, const char*   value);
+
+// 设置枚举属性。value 为枚举值名称字符串，如 "vertical"、"checked"
+UICORNERSTONE_API int UICornerstone_SetEnum(    UIControlHandle ctl, const char* prop, const char*   value);
+
+/* ── Getter ── */
+// 读取属性值。返回 1 成功，0 属性不识别
+UICORNERSTONE_API int UICornerstone_GetColor(   UIControlHandle ctl, const char* prop, UIColor*       out);
+UICORNERSTONE_API int UICornerstone_GetStateColor( UIControlHandle ctl, const char* prop, UIStateColor*  out);
+UICORNERSTONE_API int UICornerstone_GetBool(     UIControlHandle ctl, const char* prop, int*           out);
+UICORNERSTONE_API int UICornerstone_GetInt(     UIControlHandle ctl, const char* prop, int*           out);
+UICORNERSTONE_API int UICornerstone_GetFloat(   UIControlHandle ctl, const char* prop, float*         out);
+UICORNERSTONE_API int UICornerstone_GetString(  UIControlHandle ctl, const char* prop, char* out, int maxLen);
+UICORNERSTONE_API int UICornerstone_GetEnum(    UIControlHandle ctl, const char* prop, char* out, int maxLen);
+
+/* ── Callback ── */
+typedef struct {
+    const char* eventName;
+    union {
+        float           floatVal;
+        double          doubleVal;
+        int             intVal;
+        const char*     strVal;
+        struct { int idx; const char* val; } selection;
+    } data;
+} UIEventData;
+
+typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, void* userData);
+
+// 绑定事件回调。event 为事件名，如 "click"、"value-changed"
+UICORNERSTONE_API int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData);
 
 // ============================================================
 // TreeView

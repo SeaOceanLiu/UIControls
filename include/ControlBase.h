@@ -243,9 +243,24 @@ public:
     // ── Property system (string-based, multi-type) ──
     virtual int setColorProperty(const char* prop, SColor color) { return 0; }
     virtual int setStateColorProperty(const char* prop, StateColor stateColor) { return 0; }
+    virtual int setBoolProperty(const char* prop, int value) { return 0; }
     virtual int setIntProperty(const char* prop, int value) { return 0; }
     virtual int setFloatProperty(const char* prop, float value) { return 0; }
     virtual int setStringProperty(const char* prop, const char* value) { return 0; }
+    virtual int setEnumProperty(const char* prop, const char* value) { return 0; }
+
+    // ── Getter Property system ──
+    virtual int getColorProperty(const char* prop, SColor& out) { return 0; }
+    virtual int getStateColorProperty(const char* prop, StateColor& out) { return 0; }
+    virtual int getBoolProperty(const char* prop, int& out) { return 0; }
+    virtual int getIntProperty(const char* prop, int& out) { return 0; }
+    virtual int getFloatProperty(const char* prop, float& out) { return 0; }
+    virtual int getStringProperty(const char* prop, const char*& out) { return 0; }
+    virtual int getEnumProperty(const char* prop, const char*& out) { return 0; }
+
+    // ── Callback system ──
+    // event: event name (e.g. "click", "value-changed"), not "on" prefixed
+    virtual int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) { return 0; }
 };
 
 class ControlImpl: virtual public Control, public enable_shared_from_this<ControlImpl>{
@@ -440,9 +455,20 @@ public:
     // ── Property system overrides ──
     int setColorProperty(const char* prop, SColor color) override;
     int setStateColorProperty(const char* prop, StateColor stateColor) override;
+    int setBoolProperty(const char* prop, int value) override;
     int setIntProperty(const char* prop, int value) override;
     int setFloatProperty(const char* prop, float value) override;
     int setStringProperty(const char* prop, const char* value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
+
+    int getColorProperty(const char* prop, SColor& out) override;
+    int getStateColorProperty(const char* prop, StateColor& out) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int getIntProperty(const char* prop, int& out) override;
+    int getFloatProperty(const char* prop, float& out) override;
+    int getStringProperty(const char* prop, const char*& out) override;
+    int getEnumProperty(const char* prop, const char*& out) override;
 
     // 根据控件状态绘制背景
     void drawBackground(const SRect *pDrawRect);

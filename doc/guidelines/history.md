@@ -1626,3 +1626,12 @@ Done, 180 frames                        # 帧循环正常完成
 - `doc/EventSystem_Design.md`: 更新 §3.4 `eventLoopEntry` 含 consumed 检查；§3.6 补充 `weak_ptr` 实现细节
 - `doc/UICornerstone_DLL_Design.md`: 版本历史 v1.16
 - `doc/guidelines/history.md`: 本次记录
+
+### 2026-07-26: Phase 4 — Getter/Setter/Callback C ABI 实现完成
+
+**Changes**:
+- `src/UICornerstoneAPI.cpp`: 新增 `SetBool`、`SetEnum`、`SetCallback`、`GetColor`、`GetStateColor`、`GetBool`、`GetInt`、`GetFloat`、`GetString`、`GetEnum` C ABI 函数
+- `src/ControlBase.cpp`: 新增 `setBoolProperty`、`setEnumProperty`、`setCallbackProperty` 及 7 个 `get*Property` 默认实现，覆盖颜色/状态颜色/可见性/启用等通用属性
+- `include/ControlBase.h`: `ControlImpl` 类添加所有缺失的 Property override 声明
+- 修复: `SColor` 访问方法 (`redByte()` 代替 `getRed()`)、`StateColor` 构造函数最令人费解的解析、`UIEventCallback` 类型转换
+- 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告

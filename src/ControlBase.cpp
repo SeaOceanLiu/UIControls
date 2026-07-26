@@ -813,3 +813,73 @@ int ControlImpl::setFloatProperty(const char* prop, float value) {
 int ControlImpl::setStringProperty(const char* prop, const char* value) {
     return 0;
 }
+
+int ControlImpl::setBoolProperty(const char* prop, int value) {
+    bool b = value != 0;
+    if (strcmp(prop, "visible") == 0)         { setVisible(b); return 1; }
+    if (strcmp(prop, "enabled") == 0)         { setEnable(b);  return 1; }
+    if (strcmp(prop, "transparent") == 0)     { setTransparent(b); return 1; }
+    if (strcmp(prop, "border-visible") == 0)  { setBorderVisible(b); return 1; }
+    return 0;
+}
+
+int ControlImpl::setEnumProperty(const char* prop, const char* value) {
+    return 0;
+}
+
+int ControlImpl::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    return 0;
+}
+
+int ControlImpl::getColorProperty(const char* prop, SColor& out) {
+    StateColor bg = getBackgroundStateColor();
+    StateColor bd = getBorderStateColor();
+    StateColor txt = getTextStateColor();
+    StateColor shd = getTextShadowStateColor();
+    if (strcmp(prop, "background") == 0)          { out = bg.getNormal();  return 1; }
+    if (strcmp(prop, "background.hover") == 0)    { out = bg.getHover();   return 1; }
+    if (strcmp(prop, "background.pressed") == 0)  { out = bg.getPressed(); return 1; }
+    if (strcmp(prop, "background.disabled") == 0) { out = bg.getDisabled();return 1; }
+    if (strcmp(prop, "border") == 0)              { out = bd.getNormal();  return 1; }
+    if (strcmp(prop, "border.hover") == 0)        { out = bd.getHover();   return 1; }
+    if (strcmp(prop, "border.pressed") == 0)      { out = bd.getPressed(); return 1; }
+    if (strcmp(prop, "border.disabled") == 0)     { out = bd.getDisabled();return 1; }
+    if (strcmp(prop, "text") == 0)                { out = txt.getNormal();  return 1; }
+    if (strcmp(prop, "text.hover") == 0)          { out = txt.getHover();   return 1; }
+    if (strcmp(prop, "text.pressed") == 0)        { out = txt.getPressed(); return 1; }
+    if (strcmp(prop, "text.disabled") == 0)       { out = txt.getDisabled();return 1; }
+    if (strcmp(prop, "text-shadow") == 0)         { out = shd.getNormal();  return 1; }
+    return 0;
+}
+
+int ControlImpl::getStateColorProperty(const char* prop, StateColor& out) {
+    if (strcmp(prop, "background") == 0) { out = getBackgroundStateColor(); return 1; }
+    if (strcmp(prop, "border") == 0)     { out = getBorderStateColor();     return 1; }
+    if (strcmp(prop, "text") == 0)       { out = getTextStateColor();       return 1; }
+    if (strcmp(prop, "text-shadow") == 0){ out = getTextShadowStateColor(); return 1; }
+    return 0;
+}
+
+int ControlImpl::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, "visible") == 0)         { out = getVisible() ? 1 : 0; return 1; }
+    if (strcmp(prop, "enabled") == 0)         { out = getEnable()  ? 1 : 0; return 1; }
+    if (strcmp(prop, "transparent") == 0)     { out = getTransparent() ? 1 : 0; return 1; }
+    if (strcmp(prop, "border-visible") == 0)  { out = getBorderVisible() ? 1 : 0; return 1; }
+    return 0;
+}
+
+int ControlImpl::getIntProperty(const char* prop, int& out) {
+    return 0;
+}
+
+int ControlImpl::getFloatProperty(const char* prop, float& out) {
+    return 0;
+}
+
+int ControlImpl::getStringProperty(const char* prop, const char*& out) {
+    return 0;
+}
+
+int ControlImpl::getEnumProperty(const char* prop, const char*& out) {
+    return 0;
+}

@@ -1,0 +1,21 @@
+BackendManager: using "sdl3" backend
+Loading resources.....................................
+Loading finished, waiting user starting game................................
+testNumericUpDownInitialize
+NumericUpDown test controls created
+[TEST] nUD1 focused=1 value=50
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] Fallthrough type=5 focused=0
+[NUD] KeyDown keycode=258 focused=1
+Value #1 = 51.00

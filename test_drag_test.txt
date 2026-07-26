@@ -1,0 +1,4 @@
+[TEST] pre-drag m_rect.left=197.6
+[TEST] after MouseDown m_rect.left=247.0
+[TEST] after +30px m_rect.left=326.4
+[TEST] after another +20px m_rect.left=395.8

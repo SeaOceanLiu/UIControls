@@ -1,0 +1,13 @@
+=== test_numericupdown_cabi: UICornerstone.dll + SDL3 ===
+OK: loaded UICornerstone.dll
+SDL3: GetUIBackendCallbacks ready
+BackendManager: initialized from callback table
+Loading resources.....................................
+Loading finished, waiting user starting game................................
+OK: initialized
+UICornerstone: LoadLayout OK (13 control ids, 0 menu bars, 0 dialogs)
+OK: layout loaded (5 NumericUpDown + labels)
+ValueChanged: ctl=0000000000000000 value=0.00
+OK: nudFloat set to 0.80, get=0.80
+OK: nudPageStep pageStep set to 50
+Frame loop... (interact with NumericUpDown controls or close the window)

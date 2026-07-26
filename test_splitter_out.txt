@@ -1,0 +1,6 @@
+BackendManager: using "sdl3" backend
+Loading resources.....................................
+Loading finished, waiting user starting game................................
+testSplitterInitialize
+Splitter test controls created
+Split ratio: 0.500

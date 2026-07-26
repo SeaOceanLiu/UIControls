@@ -1204,6 +1204,83 @@ int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* v
     return c->setStringProperty(prop, value);
 }
 
+int UICornerstone_SetBool(UIControlHandle ctl, const char* prop, int value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setBoolProperty(prop, value);
+}
+
+int UICornerstone_SetEnum(UIControlHandle ctl, const char* prop, const char* value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !value) return 0;
+    return c->setEnumProperty(prop, value);
+}
+
+int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !event) return 0;
+    return c->setCallbackProperty(event, reinterpret_cast<void(*)(void*, const void*, void*)>(cb), userData);
+}
+
+int UICornerstone_GetColor(UIControlHandle ctl, const char* prop, UIColor* out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    SColor s;
+    if (!c->getColorProperty(prop, s)) return 0;
+    out->r = s.redByte(); out->g = s.greenByte();
+    out->b = s.blueByte(); out->a = s.alphaByte();
+    return 1;
+}
+
+int UICornerstone_GetStateColor(UIControlHandle ctl, const char* prop, UIStateColor* out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    SColor def = SColor();
+    StateColor sc{def, def, def, def};
+    if (!c->getStateColorProperty(prop, sc)) return 0;
+    out->normal   = { sc.getNormal().redByte(),   sc.getNormal().greenByte(),   sc.getNormal().blueByte(),   sc.getNormal().alphaByte() };
+    out->hover    = { sc.getHover().redByte(),    sc.getHover().greenByte(),    sc.getHover().blueByte(),    sc.getHover().alphaByte() };
+    out->pressed  = { sc.getPressed().redByte(),  sc.getPressed().greenByte(),  sc.getPressed().blueByte(),  sc.getPressed().alphaByte() };
+    out->disabled = { sc.getDisabled().redByte(), sc.getDisabled().greenByte(), sc.getDisabled().blueByte(), sc.getDisabled().alphaByte() };
+    return 1;
+}
+
+int UICornerstone_GetBool(UIControlHandle ctl, const char* prop, int* out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    return c->getBoolProperty(prop, *out);
+}
+
+int UICornerstone_GetInt(UIControlHandle ctl, const char* prop, int* out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    return c->getIntProperty(prop, *out);
+}
+
+int UICornerstone_GetFloat(UIControlHandle ctl, const char* prop, float* out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    return c->getFloatProperty(prop, *out);
+}
+
+int UICornerstone_GetString(UIControlHandle ctl, const char* prop, char* out, int maxLen) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out || maxLen <= 0) return 0;
+    const char* s = nullptr;
+    if (!c->getStringProperty(prop, s) || !s) return 0;
+    strncpy_s(out, maxLen, s, _TRUNCATE);
+    return 1;
+}
+
+int UICornerstone_GetEnum(UIControlHandle ctl, const char* prop, char* out, int maxLen) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out || maxLen <= 0) return 0;
+    const char* s = nullptr;
+    if (!c->getEnumProperty(prop, s) || !s) return 0;
+    strncpy_s(out, maxLen, s, _TRUNCATE);
+    return 1;
+}
+
 // ============================================================
 // TreeView C ABI
 // ============================================================

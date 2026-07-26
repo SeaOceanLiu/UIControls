@@ -1,0 +1,6 @@
+=== test_numericupdown_cabi: UICornerstone.dll + SDL3 ===
+OK: loaded UICornerstone.dll
+SDL3: GetUIBackendCallbacks ready
+BackendManager: initialized from callback table
+Loading resources.....................................
+Loading finished, waiting user starting game................................
