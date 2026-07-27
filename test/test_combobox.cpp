@@ -19,7 +19,7 @@ shared_ptr<ComboBox> g_combo5;
 shared_ptr<ComboBox> g_combo6_2x;
 shared_ptr<Label> g_statusLabel;
 
-void testComboBoxInitialize(void) {
+void testComboBoxInitialize(shared_ptr<Bench>) {
     TestUtil::log("testComboBoxInitialize");
 
     const float CX = 50;

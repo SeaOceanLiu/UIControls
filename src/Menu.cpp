@@ -228,6 +228,7 @@ bool MenuItem::handleEvent(shared_ptr<Event> event) {
                 if (m_type == MenuItemType::Normal && m_onClick) {
                     closeMenuChain();
                     m_onClick(dynamic_pointer_cast<MenuItem>(getThis()));
+                    fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
                 }
                 return true;
             }
@@ -583,6 +584,7 @@ bool MenuPanel::handleEvent(shared_ptr<Event> event) {
                     if (item->getType() == MenuItemType::Normal && item->m_onClick) {
                         item->closeMenuChain();
                         item->m_onClick(dynamic_pointer_cast<MenuItem>(item->getThis()));
+                        fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
                         return true;
                     }
                 }

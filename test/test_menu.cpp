@@ -19,7 +19,7 @@ shared_ptr<MenuPanel> g_editPanel;
 shared_ptr<Button> g_Button;
 shared_ptr<GraphTool::DrawingContext> g_dc;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testBenchInitialize - START");
 
     TestUtil::log("testBenchInitialize - creating item1");

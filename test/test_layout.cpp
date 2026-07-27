@@ -80,7 +80,7 @@ void onMenuAbout(shared_ptr<Control> c) {
     TestUtil::log("Menu: About");
 }
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testLayoutInitialize");
 
     g_parser.registerHandler("onSubmitClick", onSubmitClicked);

@@ -52,7 +52,7 @@ void onMenuUndo(shared_ptr<Control> c) { TestUtil::log("Menu: Undo"); }
 void onMenuRedo(shared_ptr<Control> c) { TestUtil::log("Menu: Redo"); }
 void onMenuAbout(shared_ptr<Control> c) { TestUtil::log("Menu: About"); }
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testLayoutAdvancedInitialize");
 
     g_parser.registerHandler("onScaleTypeBtnClick", onScaleTypeBtnClick);

@@ -29,7 +29,7 @@ shared_ptr<Button> g_button4;
 shared_ptr<Button> g_button5;
 shared_ptr<Button> g_button6;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testButtonInitialize");
 
     StateColor redBorder(StateColor::Type::Border);

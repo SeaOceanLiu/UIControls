@@ -465,7 +465,9 @@ public:
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
     struct SelectionPayload { int idx; const char* val; };
-    enum class CCallbackData { None, Int, Float, String, Selection };
+    struct TreeNodePayload { const char* id; void* userData; };
+    struct ColorPayload { uint8_t r,g,b,a; };
+    enum class CCallbackData { None, Int, Float, String, Selection, Ptr, TreeNode, Color };
 
     // 从子控件事件处理器中触发 C ABI 回调
     // eventName: PropertyNames 中的事件常量

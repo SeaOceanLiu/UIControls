@@ -2,6 +2,7 @@
 #include "Dialog.h"
 #include "Bench.h"
 #include "FocusManager.h"
+#include "PropertyNames.h"
 #include <algorithm>
 
 // ==================== Popup ====================
@@ -121,6 +122,8 @@ void Popup::close(DialogResult result) {
     // EventQueue 静态析构时会自动清理。
     if (m_onClose)
         m_onClose(std::dynamic_pointer_cast<Popup>(getThis()), result);
+    int r = static_cast<int>(result);
+    fireCCallback(PropertyNames::kEventClose, CCallbackData::Int, &r);
 }
 
 void Popup::setContent(shared_ptr<ControlImpl> content) {
@@ -274,6 +277,7 @@ void ConfirmPopup::onEscPressed() {
 void ConfirmPopup::onConfirmAction() {
     if (m_onConfirm)
         m_onConfirm(std::dynamic_pointer_cast<ConfirmPopup>(getThis()));
+    fireCCallback(PropertyNames::kEventConfirm, CCallbackData::None, nullptr);
     close(DialogResult::Confirmed);
 }
 
@@ -353,6 +357,7 @@ void Dialog::onEscPressed() {
 void Dialog::onCancelAction() {
     if (m_onCancel)
         m_onCancel(std::dynamic_pointer_cast<Dialog>(getThis()));
+    fireCCallback(PropertyNames::kEventCancel, CCallbackData::None, nullptr);
     close(DialogResult::Cancelled);
 }
 

@@ -176,6 +176,8 @@ public:
 
     // Property system override
     int setColorProperty(const char* prop, SColor color) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
+    int getStringProperty(const char* prop, const char*& out) override;
 
     static constexpr float LEFT_PADDING = 4.0f;
     static constexpr float RIGHT_GAP = 4.0f;

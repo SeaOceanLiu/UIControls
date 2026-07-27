@@ -4,6 +4,7 @@
 #include <iostream>
 #include "MainWindow.h"
 #include "EventQueue.h"
+#include "PropertyNames.h"
 #include <algorithm>
 #include <cstdint>
 
@@ -204,6 +205,7 @@ void EditBox::insertText(const std::string& text) {
     if (m_onTextChanged) {
         m_onTextChanged(getThis(), m_text);
     }
+    fireCCallback(PropertyNames::kEventTextChanged, CCallbackData::String, m_text.c_str());
 }
 
 void EditBox::deleteSelectedText() {
@@ -398,6 +400,7 @@ bool EditBox::handleEvent(shared_ptr<Event> event) {
                     if (m_onTextChanged) {
                         m_onTextChanged(getThis(), m_text);
                     }
+                    fireCCallback(PropertyNames::kEventTextChanged, CCallbackData::String, m_text.c_str());
                 }
             }
             return true;
@@ -415,6 +418,7 @@ bool EditBox::handleEvent(shared_ptr<Event> event) {
                     if (m_onTextChanged) {
                         m_onTextChanged(getThis(), m_text);
                     }
+                    fireCCallback(PropertyNames::kEventTextChanged, CCallbackData::String, m_text.c_str());
                 }
             }
             return true;
@@ -482,6 +486,7 @@ bool EditBox::handleEvent(shared_ptr<Event> event) {
             if (m_onEnter) {
                 m_onEnter(getThis());
             }
+            fireCCallback(PropertyNames::kEventEnter, CCallbackData::None, nullptr);
             return true;
         }
     }

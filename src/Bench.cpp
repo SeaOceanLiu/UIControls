@@ -1,4 +1,5 @@
 ﻿#include "Bench.h"
+#include "PropertyNames.h"
 #include "PlatformUtils.h"
 #include "EventTypes.h"
 
@@ -10,8 +11,9 @@ void Bench::initial(void){
     m_isInitialed = true;
     Platform::Log("Loading finished, waiting user starting game................................");
     if (m_onInitial != nullptr){
-        m_onInitial();
+        m_onInitial(shared_ptr<Bench>(this, [](Bench*){}));
     }
+    fireCCallback(PropertyNames::kEventInitial, CCallbackData::None, nullptr);
 }
 
 Bench::Bench(Control *parent, SRect rect, float xScale, float yScale):
@@ -102,7 +104,7 @@ int Bench::isExiting(void) {
 
 void Bench::setOnInitial(OnInitialHandler handler) {
     if (m_isInitialed) {
-        handler();
+        handler(shared_ptr<Bench>(this, [](Bench*){}));
     } else {
         m_onInitial = handler;
     }

@@ -31,7 +31,7 @@ void onColorPicked(shared_ptr<ColorPicker>, const SColor& color) {
     cout << "Color changed to: " << color.toHex(false) << endl;
 }
 
-void testColorPickerInitialize() {
+void testColorPickerInitialize(shared_ptr<Bench>) {
     TestUtil::log("testColorPickerInitialize");
 
     const float X1 = 50;

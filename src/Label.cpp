@@ -1,4 +1,5 @@
 ﻿#include "Label.h"
+#include "PropertyNames.h"
 #include "Utility.h"
 #include "PlatformUtils.h"
 
@@ -81,6 +82,7 @@ void Label::recreate() {
             }
             m_reentryCounter--;
         }
+        fireCCallback(PropertyNames::kEventPropertyChanged, CCallbackData::None, nullptr);
     }
 }
 void Label::create(void) {
@@ -402,6 +404,7 @@ bool Label::handleEvent(shared_ptr<Event> event){
                 if (m_onClick != nullptr){
                     m_onClick(dynamic_pointer_cast<Label>(this->getThis()));
                 }
+                fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
                 setState(ControlState::Pressed);
                 return true;
             }
@@ -416,6 +419,7 @@ bool Label::handleEvent(shared_ptr<Event> event){
                 if (m_onClick != nullptr && m_state == ControlState::Pressed){
                     m_onClick(dynamic_pointer_cast<Label>(this->getThis()));
                 }
+                fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
                 setState(ControlState::Hover);
                 if(m_hoverCursor != nullptr){
                     Cursor::setCurrent(m_hoverCursor);

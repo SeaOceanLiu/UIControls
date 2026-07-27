@@ -22,7 +22,7 @@ shared_ptr<TextArea> g_textAreaBuilder2x;
 shared_ptr<Button> g_clearButton;
 shared_ptr<Button> g_addTextButton;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testEditBoxInitialize");
 
     g_editBox1 = make_shared<EditBox>(nullptr, SRect(50, 50, 300, 40));

@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include <memory>
 #include "Button.h"
 #include "Label.h"
 #include "MainWindow.h"
@@ -16,7 +17,7 @@ shared_ptr<Button> g_btnSwitch;
 shared_ptr<Label>  g_lblStatus;
 shared_ptr<HandleControl> g_handle;
 
-void testBenchInitialize() {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("test_handlecontrol: creating controls");
 
     // 目标按钮 1 —— 手柄附加到此按钮

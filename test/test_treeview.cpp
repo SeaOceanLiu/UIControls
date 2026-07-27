@@ -152,7 +152,7 @@ void initTestStyled() {
     g_treeViewStyled->setItems(items);
 }
 
-void testAppInitialize() {
+void testAppInitialize(shared_ptr<Bench>) {
     TestUtil::log("testTreeViewInitialize");
 
     g_rootPanel = make_shared<Panel>(nullptr, SRect(10, 10, 780, 560));

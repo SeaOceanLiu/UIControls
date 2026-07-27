@@ -43,6 +43,7 @@ bool ColorPicker::PresetCell::handleEvent(shared_ptr<Event> event) {
         if (isContainsPoint(mp.x, mp.y)) {
             if (m_onClick)
                 m_onClick(getThis());
+            fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
             return true;
         }
     }
@@ -50,6 +51,7 @@ bool ColorPicker::PresetCell::handleEvent(shared_ptr<Event> event) {
         (event->keyEvent.keycode == KeyCode::Return || event->keyEvent.keycode == KeyCode::Space)) {
         if (m_onClick)
             m_onClick(getThis());
+        fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
         return true;
     }
     return false;
@@ -588,6 +590,9 @@ void ColorPicker::onOK() {
     m_committedColor = m_color;
     if (m_onColorChanged)
         m_onColorChanged(std::dynamic_pointer_cast<ColorPicker>(getThis()), m_committedColor);
+    ColorPayload cp = { m_committedColor.redByte(), m_committedColor.greenByte(),
+                        m_committedColor.blueByte(), m_committedColor.alphaByte() };
+    fireCCallback(PropertyNames::kEventColorChanged, CCallbackData::Color, &cp);
 }
 
 void ColorPicker::onCancel() {
@@ -642,6 +647,12 @@ int ColorPicker::getFloatProperty(const char* prop, float& out) {
 
 int ColorPicker::getStringProperty(const char* prop, const char*& out) {
     return Panel::getStringProperty(prop, out);
+}
+
+int ColorPicker::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventColorChanged) == 0)
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 // ==================== ColorPickerBuilder ====================

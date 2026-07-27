@@ -46,7 +46,7 @@ static shared_ptr<Label> makeLabel(float x, float y, const string& text) {
     return lbl;
 }
 
-void testNumericUpDownInitialize() {
+void testNumericUpDownInitialize(shared_ptr<Bench>) {
     TestUtil::log("testNumericUpDownInitialize");
 
     const float X1 = 50;

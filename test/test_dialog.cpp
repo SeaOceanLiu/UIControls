@@ -610,7 +610,7 @@ void createConfirm4Demo() {
 
 // ==================== Init ====================
 
-void testDialogInitialize() {
+void testDialogInitialize(shared_ptr<Bench>) {
     TestUtil::log("testDialogInitialize");
 
     createPopup1Demo();

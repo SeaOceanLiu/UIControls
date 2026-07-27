@@ -28,7 +28,7 @@ shared_ptr<Slider> g_hReverse;
 shared_ptr<Slider> g_vReverse;
 shared_ptr<Label> g_statusLabel;
 
-void testSliderInitialize(void) {
+void testSliderInitialize(shared_ptr<Bench>) {
     TestUtil::log("testSliderInitialize");
 
     // ===== Layout Overview =====

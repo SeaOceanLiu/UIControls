@@ -93,6 +93,7 @@ void ProgressBar::setValue(float value) {
     if (oldValue != m_value && m_onValueChanged) {
         m_onValueChanged(dynamic_pointer_cast<ProgressBar>(getThis()), oldValue, m_value);
     }
+    fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &m_value);
 }
 
 float ProgressBar::getValue() const {

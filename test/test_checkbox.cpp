@@ -32,7 +32,7 @@ shared_ptr<CheckBox> g_checkbox14;
 shared_ptr<CheckBox> g_checkbox15;
 shared_ptr<CheckBox> g_checkbox16;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testCheckBoxInitialize");
 
     uint64_t t0 = Platform::GetTicks();

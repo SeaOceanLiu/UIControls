@@ -290,7 +290,10 @@ typedef struct {
         double          doubleVal;
         int             intVal;
         const char*     strVal;
+        void*           ptrVal;
         struct { int idx; const char* val; } selection;
+        struct { const char* id; void* userData; } treeNode;
+        struct { uint8_t r,g,b,a; } color;
     } data;
 } UIEventData;
 

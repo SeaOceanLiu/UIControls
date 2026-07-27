@@ -1,5 +1,6 @@
 ﻿#define NOMINMAX
 #include "TreeView.h"
+#include "PropertyNames.h"
 #include "PlatformUtils.h"
 #include "EventQueue.h"
 #include <algorithm>
@@ -36,6 +37,8 @@ void TreeView::clearNodeRecursive(const shared_ptr<TreeNode>& node) {
     try { self = std::dynamic_pointer_cast<TreeView>(getThis()); } catch (...) {}
     if (m_onClearNode && node->userData)
         m_onClearNode(self, node->userData);
+    TreeNodePayload tn = { node->id.c_str(), node->userData };
+    fireCCallback(PropertyNames::kEventNodeRemoved, CCallbackData::TreeNode, &tn);
     for (auto& child : node->children)
         clearNodeRecursive(child);
 }
@@ -405,6 +408,7 @@ bool TreeView::addChild(const string& parentId, shared_ptr<TreeNode> node) {
     if (!parent->expanded) {
         parent->expanded = true;
         if (m_onExpand) m_onExpand(std::dynamic_pointer_cast<TreeView>(getThis()), parentId);
+        fireCCallback(PropertyNames::kEventExpand, CCallbackData::String, parentId.c_str());
     }
     rebuildFlatRows();
     return true;
@@ -500,6 +504,7 @@ bool TreeView::expandNode(const string& id) {
     node->expanded = true;
     rebuildFlatRows();
     if (m_onExpand) m_onExpand(std::dynamic_pointer_cast<TreeView>(getThis()), id);
+    fireCCallback(PropertyNames::kEventExpand, CCallbackData::String, id.c_str());
     return true;
 }
 
@@ -509,6 +514,7 @@ bool TreeView::collapseNode(const string& id) {
     node->expanded = false;
     rebuildFlatRows();
     if (m_onCollapse) m_onCollapse(std::dynamic_pointer_cast<TreeView>(getThis()), id);
+    fireCCallback(PropertyNames::kEventCollapse, CCallbackData::String, id.c_str());
     return true;
 }
 
@@ -550,6 +556,11 @@ bool TreeView::selectNode(const string& id) {
     if (m_onSelectData) {
         auto node = findNodeById(id);
         m_onSelectData(std::dynamic_pointer_cast<TreeView>(getThis()), id, node ? node->userData : nullptr);
+    }
+    {
+        auto node = findNodeById(id);
+        TreeNodePayload tn = { id.c_str(), node ? node->userData : nullptr };
+        fireCCallback(PropertyNames::kEventSelect, CCallbackData::TreeNode, &tn);
     }
     return true;
 }
@@ -663,4 +674,18 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
     if (strcmp(prop, "border") == 0)    { setBorderColor(color);   return 1; }
     if (strcmp(prop, "text") == 0)      { setTextColor(color);     return 1; }
     return ControlImpl::setColorProperty(prop, color); // fallback
+}
+
+int TreeView::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventSelect) == 0 ||
+        strcmp(event, PropertyNames::kEventExpand) == 0 ||
+        strcmp(event, PropertyNames::kEventCollapse) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
+}
+
+int TreeView::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, "selected-id") == 0) { out = m_selectedId.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
 }

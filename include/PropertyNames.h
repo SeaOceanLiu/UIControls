@@ -158,5 +158,8 @@ inline constexpr const char* kEventColorChanged     = "color-changed";
 inline constexpr const char* kEventSelect           = "select";
 inline constexpr const char* kEventExpand           = "expand";
 inline constexpr const char* kEventCollapse         = "collapse";
+inline constexpr const char* kEventInitial          = "initial";
+inline constexpr const char* kEventPropertyChanged  = "property-changed";
+inline constexpr const char* kEventNodeRemoved       = "node-removed";
 
 } // namespace PropertyNames

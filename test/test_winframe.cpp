@@ -16,7 +16,7 @@ shared_ptr<WinFrame> g_winFrame2;
 shared_ptr<Button> g_btn1;
 shared_ptr<Button> g_btn2;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testWinFrameInitialize");
 
     StateColor defaultBtnBG(StateColor::Type::Background);

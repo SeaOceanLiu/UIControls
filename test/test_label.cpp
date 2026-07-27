@@ -30,7 +30,7 @@ shared_ptr<Label> g_label17;
 shared_ptr<Label> g_label18;
 shared_ptr<Label> g_label19;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testLabelInitialize");
 
     StateColor redBorder(StateColor::Type::Border);

@@ -39,7 +39,7 @@ void on2xSplitterMoved(shared_ptr<Splitter> sp, float ratio);
 void testHorizontalSplitterInitialize();
 void test2xSplitterInitialize();
 
-void testSplitterInitialize() {
+void testSplitterInitialize(shared_ptr<Bench>) {
     TestUtil::log("testSplitterInitialize");
 
     // ▸ Vertical Splitter (left/right panels)

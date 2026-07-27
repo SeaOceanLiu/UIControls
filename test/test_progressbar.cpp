@@ -42,7 +42,7 @@ shared_ptr<ProgressBar> g_progressbar12;
 uint64_t g_startTime = 0;
 bool g_animationStarted = false;
 
-void testBenchInitialize(void) {
+void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testProgressBarInitialize");
 
     g_label1 = make_shared<Label>(nullptr, SRect(50, 20, 300, 25));

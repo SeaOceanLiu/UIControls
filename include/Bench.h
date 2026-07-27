@@ -10,7 +10,7 @@
 
 class Bench: public Panel, public TopControl
 {
-    using OnInitialHandler = std::function<void (void)>;
+    using OnInitialHandler = std::function<void (shared_ptr<Bench>)>;
 protected:
 private:
     bool m_isLoading;

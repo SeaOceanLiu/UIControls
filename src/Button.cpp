@@ -1,4 +1,5 @@
 ﻿#include "Button.h"
+#include "PropertyNames.h"
 Button::Button(Control *parent, SRect rect, float xScale, float yScale):
     ControlImpl(parent, xScale, yScale),
     m_onClick(nullptr),
@@ -120,6 +121,7 @@ bool Button::handleEvent(shared_ptr<Event> event){
                 if (m_onClick != nullptr){
                     m_onClick(dynamic_pointer_cast<Button>(this->getThis()));
                 }
+                fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
                 setState(ControlState::Pressed);
                 return true;
             }
@@ -135,6 +137,7 @@ bool Button::handleEvent(shared_ptr<Event> event){
                 if (m_onClick != nullptr && m_state == ControlState::Pressed){
                     m_onClick(dynamic_pointer_cast<Button>(this->getThis()));
                 }
+                fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
                 setState(ControlState::Normal);
                 return true;
             }
@@ -154,6 +157,7 @@ bool Button::handleEvent(shared_ptr<Event> event){
             setState(ControlState::Pressed);
             if (m_onClick)
                 m_onClick(dynamic_pointer_cast<Button>(this->getThis()));
+            fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
             return true;
         }
     }
