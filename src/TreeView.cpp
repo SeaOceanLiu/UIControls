@@ -689,3 +689,50 @@ int TreeView::getStringProperty(const char* prop, const char*& out) {
     if (strcmp(prop, "selected-id") == 0) { out = m_selectedId.c_str(); return 1; }
     return ControlImpl::getStringProperty(prop, out);
 }
+
+int TreeView::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kCycleNavigation) == 0) { setCycleNavigation(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kDefaultExpand) == 0)   { setDefaultExpand(value != 0);   return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+int TreeView::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0) { setFontSize(value); return 1; }
+    return ControlImpl::setIntProperty(prop, value);
+}
+int TreeView::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kIndentWidth) == 0) { setIndentWidth(value);  return 1; }
+    if (strcmp(prop, PropertyNames::kRowHeight) == 0)   { setRowHeight(value);    return 1; }
+    if (strcmp(prop, PropertyNames::kLineSpacing) == 0) { setLineSpacing(value);  return 1; }
+    if (strcmp(prop, PropertyNames::kArrowGap) == 0)    { setArrowGap(value);     return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+int TreeView::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        setFont(FontNameFromString(value));
+        return 1;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
+int TreeView::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kCycleNavigation) == 0) { out = m_cycleNavigation ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kDefaultExpand) == 0)   { out = m_defaultExpand ? 1 : 0;   return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+int TreeView::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0) { out = m_fontSize; return 1; }
+    return ControlImpl::getIntProperty(prop, out);
+}
+int TreeView::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kIndentWidth) == 0) { out = m_indentWidth; return 1; }
+    if (strcmp(prop, PropertyNames::kRowHeight) == 0)   { out = m_rowHeight;   return 1; }
+    if (strcmp(prop, PropertyNames::kLineSpacing) == 0) { out = m_lineSpacing; return 1; }
+    if (strcmp(prop, PropertyNames::kArrowGap) == 0)    { out = m_arrowGap;    return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+int TreeView::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        out = FontNameToString(m_fontName);
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}

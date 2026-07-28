@@ -64,6 +64,13 @@ public:
     // 关闭整个菜单链
     void closeMenuChain();
 
+    // ── Property system overrides ──
+    int setBoolProperty(const char* prop, int value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int getStringProperty(const char* prop, const char*& out) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
+
 private:
     MenuItemType m_type;
     string m_caption;
@@ -120,6 +127,10 @@ public:
 
     int getHoveredIndex() const { return m_hoveredIndex; }
     void setHoveredIndex(int index);
+
+    // 属性系统
+    int setIntProperty(const char* prop, int value) override;
+    int getIntProperty(const char* prop, int& out) override;
 
 private:
     vector<shared_ptr<MenuItem>> m_items;

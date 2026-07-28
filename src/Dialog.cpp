@@ -371,6 +371,63 @@ void Dialog::recreateButtons() {
     layoutContent();
 }
 
+// ── Popup property system ──
+int Popup::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kCloseOnClickOutside) == 0) { setCloseOnClickOutside(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kCloseOnEsc) == 0) { setCloseOnEsc(value != 0); return 1; }
+    return Panel::setBoolProperty(prop, value);
+}
+int Popup::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kCloseOnClickOutside) == 0) { out = m_closeOnClickOutside ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kCloseOnEsc) == 0) { out = m_closeOnEsc ? 1 : 0; return 1; }
+    return Panel::getBoolProperty(prop, out);
+}
+int Popup::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventClose) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return Panel::setCallbackProperty(event, cb, userData);
+}
+
+// ── Dialog property system ──
+int Dialog::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kButtonHeight) == 0) { setButtonHeight(value); return 1; }
+    if (strcmp(prop, PropertyNames::kButtonGap) == 0)    { setButtonGap(value);    return 1; }
+    if (strcmp(prop, PropertyNames::kPadding) == 0)      { setPadding(value);      return 1; }
+    return Popup::setFloatProperty(prop, value);
+}
+int Dialog::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kButtonHeight) == 0) { out = m_buttonHeight; return 1; }
+    if (strcmp(prop, PropertyNames::kButtonGap) == 0)    { out = m_buttonGap;    return 1; }
+    if (strcmp(prop, PropertyNames::kPadding) == 0)      { out = m_padding;      return 1; }
+    return Popup::getFloatProperty(prop, out);
+}
+int Dialog::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kConfirmVisible) == 0) { setConfirmButtonVisible(value != 0); return 1; }
+    return Popup::setBoolProperty(prop, value);
+}
+int Dialog::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kConfirmText) == 0) { setConfirmButtonText(value); return 1; }
+    if (strcmp(prop, PropertyNames::kCancelText) == 0)  { setCancelButtonText(value);  return 1; }
+    return Popup::setStringProperty(prop, value);
+}
+int Dialog::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kConfirmVisible) == 0) { out = m_showConfirmButton ? 1 : 0; return 1; }
+    return Popup::getBoolProperty(prop, out);
+}
+int Dialog::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kConfirmText) == 0) { out = m_btnConfirmText.c_str(); return 1; }
+    if (strcmp(prop, PropertyNames::kCancelText) == 0)  { out = m_btnCancelText.c_str();  return 1; }
+    return Popup::getStringProperty(prop, out);
+}
+int Dialog::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventConfirm) == 0 ||
+        strcmp(event, PropertyNames::kEventCancel) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return Popup::setCallbackProperty(event, cb, userData);
+}
+
 // ==================== PopupBuilder ====================
 
 PopupBuilder::PopupBuilder(Control* parent, SRect rect,

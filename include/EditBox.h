@@ -107,6 +107,17 @@ public:
 
     void setMargin(const Margin& margin);
     Margin getMargin() const { return m_margin; }
+
+    // ── Property system overrides ──
+    int setBoolProperty(const char* prop, int value) override;
+    int setIntProperty(const char* prop, int value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int getIntProperty(const char* prop, int& out) override;
+    int getStringProperty(const char* prop, const char*& out) override;
+    int getEnumProperty(const char* prop, const char*& out) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 };
 
 class EditBoxBuilder {

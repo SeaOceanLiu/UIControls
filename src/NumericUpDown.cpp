@@ -203,10 +203,12 @@ void NumericUpDown::setValueInternal(double val, bool fireCallback) {
     EditBox::setText(formatValue(m_value));
     if (fireCallback) {
         m_committedValue = m_value;
-        if (m_onValueChanged && m_committedValue != oldCommitted)
-            m_onValueChanged(std::static_pointer_cast<NumericUpDown>(shared_from_this()), m_committedValue);
-        float fVal = static_cast<float>(m_value);
-        fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &fVal);
+        if (m_committedValue != oldCommitted) {
+            if (m_onValueChanged)
+                m_onValueChanged(std::static_pointer_cast<NumericUpDown>(shared_from_this()), m_committedValue);
+            float fVal = static_cast<float>(m_committedValue);
+            fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &fVal);
+        }
     }
 }
 

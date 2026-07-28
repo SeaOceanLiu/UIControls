@@ -71,6 +71,11 @@ public:
 
     void setOnClose(OnCloseHandler handler) { m_onClose = handler; }
 
+    // ── Property system overrides ──
+    int setBoolProperty(const char* prop, int value) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
+
     bool handleEvent(shared_ptr<Event> event) override;
     bool beforeEventHandlingWatcher(shared_ptr<Event> event) override;
 };
@@ -148,6 +153,15 @@ public:
 
     void recreateButtons();
     void setOnCancel(OnCancelHandler handler) { m_onCancel = handler; }
+
+    // ── Property system overrides ──
+    int setBoolProperty(const char* prop, int value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int getBoolProperty(const char* prop, int& out) override;
+    int getFloatProperty(const char* prop, float& out) override;
+    int getStringProperty(const char* prop, const char*& out) override;
+    int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
     bool handleEvent(shared_ptr<Event> event) override;
 };

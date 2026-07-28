@@ -471,6 +471,16 @@ void MenuPanel::setHoveredIndex(int index) {
     }
 }
 
+int MenuPanel::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kHoveredIndex) == 0) { setHoveredIndex(value); return 1; }
+    return ControlImpl::setIntProperty(prop, value);
+}
+
+int MenuPanel::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kHoveredIndex) == 0) { out = m_hoveredIndex; return 1; }
+    return ControlImpl::getIntProperty(prop, out);
+}
+
 void MenuPanel::closeWithChildren() {
     if (m_openSubMenu) {
         m_openSubMenu->closeWithChildren();
@@ -767,6 +777,7 @@ void MenuBar::setFontSize(float size) {
 int MenuBar::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kItemHeightRatio) == 0) { setItemHeightRatio(value); return 1; }
     if (strcmp(prop, PropertyNames::kValue) == 0)           { setFontSize(value);        return 1; }
+    if (strcmp(prop, PropertyNames::kBarHeight) == 0)       { setBarHeight(value);       return 1; }
     return ControlImpl::setFloatProperty(prop, value);
 }
 
@@ -783,6 +794,7 @@ int MenuBar::setEnumProperty(const char* prop, const char* value) {
 int MenuBar::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kItemHeightRatio) == 0) { out = m_itemHeightRatio; return 1; }
     if (strcmp(prop, PropertyNames::kValue) == 0)           { out = m_menuTextSize;    return 1; }
+    if (strcmp(prop, PropertyNames::kBarHeight) == 0)       { out = m_barHeight;       return 1; }
     return ControlImpl::getFloatProperty(prop, out);
 }
 
@@ -898,6 +910,32 @@ bool MenuBar::isContainsPoint(float x, float y) {
         if (m_entries[m_activeIndex].panel->isContainsPoint(x, y)) return true;
     }
     return false;
+}
+
+// ── MenuItem property system ──
+int MenuItem::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kChecked) == 0) { setChecked(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+int MenuItem::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kCaption) == 0)  { setCaption(value);  return 1; }
+    if (strcmp(prop, PropertyNames::kShortcut) == 0) { setShortcut(value); return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+int MenuItem::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kChecked) == 0) { out = m_checked ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+int MenuItem::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kCaption) == 0)  { out = m_caption.c_str();  return 1; }
+    if (strcmp(prop, PropertyNames::kShortcut) == 0) { out = m_shortcut.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+int MenuItem::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventClick) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 // ==================== Builder实现 ====================

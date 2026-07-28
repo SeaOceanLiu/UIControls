@@ -143,9 +143,11 @@ void Splitter::setSplitRatio(float ratio) {
             }
         }
     }
-    if (m_onSplitterMoved && m_splitRatio != oldRatio)
-        m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
-        fireCCallback(PropertyNames::kEventPositionChanged, CCallbackData::Float, &m_splitRatio);
+    if (m_splitRatio != oldRatio) {
+        if (m_onSplitterMoved)
+            m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
+        fireCCallback(PropertyNames::kEventMoved, CCallbackData::Float, &m_splitRatio);
+    }
 }
 
 void Splitter::setColor(SColor n, SColor h, SColor d) { m_colorNormal = n; m_colorHover = h; m_colorDrag = d; }
@@ -273,12 +275,15 @@ void Splitter::endDrag() {
         m_second->setRect({m_second->getRect().left, m_rect.top + m_thickness, m_second->getRect().width, secondSize});
     }
 
+    float oldRatio = m_splitRatio;
     if (p && parentTotal > 0)
         m_splitRatio = std::clamp(firstSize / parentTotal, 0.0f, 1.0f);
 
-    if (m_onSplitterMoved)
-        m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
-        fireCCallback(PropertyNames::kEventPositionChanged, CCallbackData::Float, &m_splitRatio);
+    if (m_splitRatio != oldRatio) {
+        if (m_onSplitterMoved)
+            m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), m_splitRatio);
+        fireCCallback(PropertyNames::kEventMoved, CCallbackData::Float, &m_splitRatio);
+    }
 
     // 不在此处 removeBeforeEventHandlingWatcher：
     // endDrag() 可能从 beforeEventHandlingWatcher 内部调用，
@@ -386,10 +391,20 @@ int Splitter::getFloatProperty(const char* prop, float& out) {
 }
 
 int Splitter::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
-    if (strcmp(event, PropertyNames::kEventPositionChanged) == 0) {
-        return ControlImpl::setCallbackProperty(event, cb, userData);
+    if (strcmp(event, PropertyNames::kEventMoved) == 0 ||
+        strcmp(event, PropertyNames::kEventPositionChanged) == 0) {
+        return ControlImpl::setCallbackProperty(PropertyNames::kEventMoved, cb, userData);
     }
     return ControlImpl::setCallbackProperty(event, cb, userData);
+}
+
+int Splitter::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kHorizontal) == 0) { setOrientation(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+int Splitter::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kHorizontal) == 0) { out = m_orientation ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
 }
 
 // ── Builder ──

@@ -312,6 +312,16 @@ void Button::setOnClick(OnClickHandler onClick){
     m_onClick = onClick;
 }
 
+// ── Property system overrides ──
+int Button::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kTextShadowEnable) == 0) { setTextShadowEnable(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+int Button::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kCaption) == 0) { setCaption(value); return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+
 ButtonBuilder::ButtonBuilder(Control *parent, SRect rect, float xScale, float yScale):
     m_button(nullptr)
 {

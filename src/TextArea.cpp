@@ -2,6 +2,7 @@
 #define NOMINMAX
 #include "TextArea.h"
 #include "MainWindow.h"
+#include "PropertyNames.h"
 #include <algorithm>
 
 TextArea::TextArea(Control *parent, SRect rect, float xScale, float yScale)
@@ -659,6 +660,7 @@ bool TextArea::handleEvent(shared_ptr<Event> event) {
                 if (m_onTextChanged) {
                     m_onTextChanged(getThis(), m_text);
                 }
+                fireCCallback(PropertyNames::kEventTextChanged, CCallbackData::String, m_text.c_str());
                 return true;
             }
         }
@@ -1169,6 +1171,7 @@ void TextArea::deleteSelectedText() {
     if (m_onTextChanged) {
         m_onTextChanged(getThis(), m_text);
     }
+    fireCCallback(PropertyNames::kEventTextChanged, CCallbackData::String, m_text.c_str());
 }
 
 void TextArea::setScrollY(int y) {
@@ -1415,6 +1418,42 @@ float TextArea::getScrollBarThickness() const {
 
 void TextArea::setOnTextChangedHandler(OnTextChangedHandler handler) {
     m_onTextChanged = handler;
+}
+
+// ── Property system overrides ──
+int TextArea::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kWordWrap) == 0) { setWordWrap(value != 0); return 1; }
+    return EditBox::setBoolProperty(prop, value);
+}
+int TextArea::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kLineHeight) == 0) { setLineHeight(value); return 1; }
+    if (strcmp(prop, PropertyNames::kScrollX) == 0)    { setScrollX(value);    return 1; }
+    if (strcmp(prop, PropertyNames::kScrollY) == 0)    { setScrollY(value);    return 1; }
+    return EditBox::setIntProperty(prop, value);
+}
+int TextArea::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kScrollbarThickness) == 0) { setScrollBarThickness(value); return 1; }
+    return EditBox::setFloatProperty(prop, value);
+}
+int TextArea::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kWordWrap) == 0) { out = m_wordWrap ? 1 : 0; return 1; }
+    return EditBox::getBoolProperty(prop, out);
+}
+int TextArea::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kLineHeight) == 0) { out = m_lineHeight; return 1; }
+    if (strcmp(prop, PropertyNames::kScrollX) == 0)    { out = m_scrollX;    return 1; }
+    if (strcmp(prop, PropertyNames::kScrollY) == 0)    { out = m_scrollY;    return 1; }
+    return EditBox::getIntProperty(prop, out);
+}
+int TextArea::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kScrollbarThickness) == 0) { out = getScrollBarThickness(); return 1; }
+    return EditBox::getFloatProperty(prop, out);
+}
+int TextArea::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventTextChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return EditBox::setCallbackProperty(event, cb, userData);
 }
 
 TextAreaBuilder::TextAreaBuilder(Control *parent, SRect rect, float xScale, float yScale)

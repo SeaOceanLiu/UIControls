@@ -82,8 +82,10 @@ public:
 
     // ── Property system overrides ──
     int setColorProperty(const char* prop, SColor color) override;
+    int setBoolProperty(const char* prop, int value) override;
     int setFloatProperty(const char* prop, float value) override;
     int getColorProperty(const char* prop, SColor& out) override;
+    int getBoolProperty(const char* prop, int& out) override;
     int getFloatProperty(const char* prop, float& out) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 

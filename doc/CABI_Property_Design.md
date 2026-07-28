@@ -1,6 +1,6 @@
 # C ABI 属性系统设计
 
-> 对应 Phase 16i | 编制 2026-07-26 | 状态: **已实现（Phase 1~6 全部完成，旧版专用导出已移除）**
+> 对应 Phase 16i | 编制 2026-07-26 | 状态: **已实现（Phase 1~6 全部完成；Phase 3 扩展：Button/Label/EditBox/TextArea/Dialog/TreeView/MenuItem 的 setBool/Int/Float/String/Enum 桥接；Phase 5 扩展：全控件 fireCCallback 桥接；旧版专用导出已移除）**
 
 ## 目录
 
@@ -26,13 +26,14 @@
 
 C ABI 层最初为每个控件的颜色属性暴露独立的导出函数（如 `UICornerstone_SetBGColor`、`UICornerstone_TreeViewSetSelectedColor`），每个自定义颜色需要写一个函数声明 + 一个实现。随着控件数量增加，这种方式导致大量重复代码：
 
-| 控件 | 特有颜色属性数 | 函数数 |
-|------|--------------|--------|
-| TreeView | 5 个 (bg/border/hover/selected/text) | 5 |
-| Slider | 7 个 (track/trackFill/thumb/thumbBorder/thumbHover/tick/label) | 7 |
-| ComboBox | 7 个 (arrow/arrowHover/itemSelected/itemHover/itemDisabled/listBg/listBorder) | 7 |
-| CheckBox | 4 个 (check/cross/indeterminate/boxBorder) | 4 |
-| 累计 | ~23 个 | ~23 |
+
+| 控件     | 特有颜色属性数                                                                | 函数数 |
+| -------- | ----------------------------------------------------------------------------- | ------ |
+| TreeView | 5 个 (bg/border/hover/selected/text)                                          | 5      |
+| Slider   | 7 个 (track/trackFill/thumb/thumbBorder/thumbHover/tick/label)                | 7      |
+| ComboBox | 7 个 (arrow/arrowHover/itemSelected/itemHover/itemDisabled/listBg/listBorder) | 7      |
+| CheckBox | 4 个 (check/cross/indeterminate/boxBorder)                                    | 4      |
+| 累计     | ~23 个                                                                        | ~23    |
 
 **目标**：提供一个统一、可扩展的 C ABI 入口，减少导出函数数量，同时支持任意控件的任意属性。
 
@@ -44,19 +45,21 @@ C ABI 层最初为每个控件的颜色属性暴露独立的导出函数（如 `
 
 代码库中存在两套并行的颜色存储机制：
 
-| 机制 | 基类 | 存放位置 | 特点 |
-|------|------|---------|------|
-| **StateColor** | `ControlImpl` | `m_bgColor` / `m_borderColor` / `m_textColor` / `m_textShadowColor` | 4 态 (Normal/Hover/Pressed/Disabled)，通过虚方法设置 |
-| **简单 SColor** | 各控件独立 | 控件自定义成员（如 `TreeView::m_selectedColor`） | 单态，通过控件特有方法设置 |
+
+| 机制            | 基类          | 存放位置                                                            | 特点                                                 |
+| --------------- | ------------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
+| **StateColor**  | `ControlImpl` | `m_bgColor` / `m_borderColor` / `m_textColor` / `m_textShadowColor` | 4 态 (Normal/Hover/Pressed/Disabled)，通过虚方法设置 |
+| **简单 SColor** | 各控件独立    | 控件自定义成员（如`TreeView::m_selectedColor`）                     | 单态，通过控件特有方法设置                           |
 
 ### 2.2 现有的 C ABI 颜色函数
 
-| 函数 | 范围 | 类型 |
-|------|------|------|
-| `UICornerstone_SetBGColor(ctl, r,g,b,a)` | 全控件 | StateColor（仅 Normal 态） |
-| `UICornerstone_TreeViewSetBgColor(ctl, r,g,b,a)` | 仅 TreeView | SColor |
-| `UICornerstone_TreeViewSetSelectedColor(ctl, r,g,b,a)` | 仅 TreeView | SColor |
-| ... | 仅某控件 | SColor |
+
+| 函数                                                   | 范围        | 类型                       |
+| ------------------------------------------------------ | ----------- | -------------------------- |
+| `UICornerstone_SetBGColor(ctl, r,g,b,a)`               | 全控件      | StateColor（仅 Normal 态） |
+| `UICornerstone_TreeViewSetBgColor(ctl, r,g,b,a)`       | 仅 TreeView | SColor                     |
+| `UICornerstone_TreeViewSetSelectedColor(ctl, r,g,b,a)` | 仅 TreeView | SColor                     |
+| ...                                                    | 仅某控件    | SColor                     |
 
 ### 2.3 关键数据
 
@@ -87,13 +90,14 @@ typedef enum {
 void UICornerstone_SetColor(UIControlHandle ctl, UIColorProp prop, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 ```
 
-| 维度 | 评价 |
-|------|------|
-| 入口数 | **1 个** |
-| 枚举膨胀 | 必须包含所有控件特有属性 → 30+ 枚举值，成为大杂烩 |
-| 语义模糊 | `HOVER` 在 TreeView 是"行悬停色"，在 ComboBox 是"箭头悬停色"，含义不同 |
-| StateColor 不兼容 | 基类用 4 态，但枚举方案只能表达单色 |
-| 二进制稳定性 | 枚举值不可重排/插入，新值只能 append，否则破坏 ABI |
+
+| 维度              | 评价                                                                   |
+| ----------------- | ---------------------------------------------------------------------- |
+| 入口数            | **1 个**                                                               |
+| 枚举膨胀          | 必须包含所有控件特有属性 → 30+ 枚举值，成为大杂烩                     |
+| 语义模糊          | `HOVER` 在 TreeView 是"行悬停色"，在 ComboBox 是"箭头悬停色"，含义不同 |
+| StateColor 不兼容 | 基类用 4 态，但枚举方案只能表达单色                                    |
+| 二进制稳定性      | 枚举值不可重排/插入，新值只能 append，否则破坏 ABI                     |
 
 ### 3.2 方案 B：每控件独立导出
 
@@ -103,13 +107,14 @@ void UICornerstone_ComboBoxSetItemSelectedColor(UIControlHandle ctl, uint8_t r, 
 // ... 每个属性一个函数
 ```
 
-| 维度 | 评价 |
-|------|------|
-| 入口数 | **~28 个** |
-| 自文档 | 函数名即文档，含义精确 |
-| 签名灵活 | Splitter 的 3 色同设可用独立签名 |
+
+| 维度       | 评价                                       |
+| ---------- | ------------------------------------------ |
+| 入口数     | **~28 个**                                 |
+| 自文档     | 函数名即文档，含义精确                     |
+| 签名灵活   | Splitter 的 3 色同设可用独立签名           |
 | 扩展成本高 | 每新增属性 = 1 个新导出函数（声明 + 实现） |
-| 无枚举耦合 | 互不影响 |
+| 无枚举耦合 | 互不影响                                   |
 
 ### 3.3 方案 C：每控件聚合枚举 + 单入口
 
@@ -118,11 +123,12 @@ typedef enum { UIC_TREEVIEW_COLOR_SELECTED, UIC_TREEVIEW_COLOR_HOVER, ... } UIC_
 void UICornerstone_TreeViewSetColor(UIControlHandle ctl, UIC_TreeViewColorProp prop, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 ```
 
-| 维度 | 评价 |
-|------|------|
-| 入口数 | **~6 个**（每控件 1 个） |
-| 枚举域化 | 不互相污染 |
-| TreeView bg/border 歧义 | 同时存在通用 `SetBGColor`（StateColor 路径）+ TreeView 自身 `SetColor(..., BG)`（SColor 路径），效果不同 |
+
+| 维度                    | 评价                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| 入口数                  | **~6 个**（每控件 1 个）                                                                                |
+| 枚举域化                | 不互相污染                                                                                              |
+| TreeView bg/border 歧义 | 同时存在通用`SetBGColor`（StateColor 路径）+ TreeView 自身 `SetColor(..., BG)`（SColor 路径），效果不同 |
 
 ### 3.4 方案 D：全局字符串 + 虚方法分发
 
@@ -152,12 +158,13 @@ int TreeView::setColorProperty(const char* prop, SColor color) {
 }
 ```
 
-| 维度 | 评价 |
-|------|------|
-| 入口数 | **1 个**（仅颜色） |
-| 虚方法分发 | 零 dynamic_cast，纯虚函数，性能开销可忽略 |
-| 字符串运行时错误 | 拼错属性名 → 返回 0，需调用方检查返回值 |
-| StateColor 4 态 | 无法表达，字符串只能设 Normal 态 |
+
+| 维度             | 评价                                      |
+| ---------------- | ----------------------------------------- |
+| 入口数           | **1 个**（仅颜色）                        |
+| 虚方法分发       | 零 dynamic_cast，纯虚函数，性能开销可忽略 |
+| 字符串运行时错误 | 拼错属性名 → 返回 0，需调用方检查返回值  |
+| StateColor 4 态  | 无法表达，字符串只能设 Normal 态          |
 
 ### 3.5 方案 E：变参 + 字符串
 
@@ -174,12 +181,13 @@ UICornerstone_SetProperty(ctl, "background", "state", 200,200,200,255, 180,180,1
 UICornerstone_SetProperty(ctl, "font-size", "int", 16);
 ```
 
-| 问题 | 表现 |
-|------|------|
-| C 变参提升 | `uint8_t` 自动提升为 `int`，易出错 |
-| StateColor 爆炸 | 4 态 × 4 通道 = 16 个 int 参数，不可维护 |
-| 无类型安全 | `"color"` 拼成 `"colo"` → 静默乱解析 → 运行时崩溃 |
-| 无 IDE 提示 | 16 个参数，无法记住顺序 |
+
+| 问题            | 表现                                                |
+| --------------- | --------------------------------------------------- |
+| C 变参提升      | `uint8_t` 自动提升为 `int`，易出错                  |
+| StateColor 爆炸 | 4 态 × 4 通道 = 16 个 int 参数，不可维护           |
+| 无类型安全      | `"color"` 拼成 `"colo"` → 静默乱解析 → 运行时崩溃 |
+| 无 IDE 提示     | 16 个参数，无法记住顺序                             |
 
 ### 3.6 方案 F（最终）：结构化多态
 
@@ -201,13 +209,14 @@ int UICornerstone_SetFloat(     UIControlHandle ctl, const char* prop, float    
 int UICornerstone_SetString(    UIControlHandle ctl, const char* prop, const char*   value);
 ```
 
-| 维度 | 评价 |
-|------|------|
-| 入口数 | **6 个**（覆盖所有值类型） |
-| 类型安全 | struct 成员名自解释，无变参 |
-| StateColor 友好 | 原生结构体支持，命名成员无歧义 |
-| 扩展性 | 新属性加一行 `strcmp`，不改变 ABI |
-| IDE 可发现 | struct 成员在 VS 等 IDE 中有补全 |
+
+| 维度            | 评价                             |
+| --------------- | -------------------------------- |
+| 入口数          | **6 个**（覆盖所有值类型）       |
+| 类型安全        | struct 成员名自解释，无变参      |
+| StateColor 友好 | 原生结构体支持，命名成员无歧义   |
+| 扩展性          | 新属性加一行`strcmp`，不改变 ABI |
+| IDE 可发现      | struct 成员在 VS 等 IDE 中有补全 |
 
 ---
 
@@ -229,11 +238,12 @@ UICornerstone_SetProp(ctl, "selected",  (UPropValue){.color = {255,0,0,255}});
 UICornerstone_SetProp(ctl, "font-size", (UPropValue){.i     = 16});
 ```
 
-| 问题 | 表现 |
-|------|------|
+
+| 问题                     | 表现                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | **union 不携带类型信息** | 实现层无法判断该读哪个成员。try-all 有崩溃风险：`const char*` 占 8 字节，读 float 的 4 字节当成指针 → 非法地址 |
-| **加 type tag 则更啰嗦** | `SetProp(ctl, "x", {TYPE_COLOR, {.color=...}})` — 类型写了 2 次，不如独立函数简洁 |
-| **入口数** | 1 个，但代价是安全性或冗余度 |
+| **加 type tag 则更啰嗦** | `SetProp(ctl, "x", {TYPE_COLOR, {.color=...}})` — 类型写了 2 次，不如独立函数简洁                              |
+| **入口数**               | 1 个，但代价是安全性或冗余度                                                                                    |
 
 ### 3.8 方案 H：Struct 泛化入口
 
@@ -244,12 +254,13 @@ UIRange range = {0.0f, 100.0f};
 UICornerstone_SetStruct(ctl, "range", &range, sizeof(range));
 ```
 
-| 问题 | 表现 |
-|------|------|
-| **void* 绕过类型系统** | 编译期零检查，运行期靠 size 校验，不足 |
-| **struct 对齐风险** | `#pragma pack` 不一致导致跨 ABI 边界崩溃 |
-| **受益面极窄** | 仅 7 个复合属性（`setRange`、`setPresetLayout`、`setMinSize` 等），占总属性数 < 10% |
-| **拆分方案已足够** | 多调 1-3 次 C ABI 函数在初始化路径上无感知 |
+
+| 问题                   | 表现                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| **void* 绕过类型系统** | 编译期零检查，运行期靠 size 校验，不足                                              |
+| **struct 对齐风险**    | `#pragma pack` 不一致导致跨 ABI 边界崩溃                                            |
+| **受益面极窄**         | 仅 7 个复合属性（`setRange`、`setPresetLayout`、`setMinSize` 等），占总属性数 < 10% |
+| **拆分方案已足够**     | 多调 1-3 次 C ABI 函数在初始化路径上无感知                                          |
 
 **结论**：Union 和 Struct 都为少数场景引入了不成正比的风险和复杂度，不采纳。
 
@@ -267,16 +278,17 @@ UICornerstone_SetStruct(ctl, "range", &range, sizeof(range));
 
 ### 4.2 对比总结
 
-| 维度 | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串 | E:变参 | F:Union | G:Struct | **H:结构化(选)** |
-|------|-----------|-----------|-----------|---------|-------|---------|---------|-----------------|
-| 函数数 | 1 | 28+ | ~6 | 1 | 1 | 1 | 1 | **6** |
-| 类型安全 | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
-| StateColor 4态 | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** |
-| Bool 支持 | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | **✅** |
-| 无枚举耦合 | — | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | **✅** |
-| 签名灵活 | ❌ | ✅ | ❌ | ✅ | ⚠️ | ⚠️ | ⚠️ | **✅** |
-| IDE 补全 | ✅ | ✅ | ✅ | ❌(字符串) | ❌ | ⚠️(struct) | ❌(void*) | **⚠️(struct)** |
-| 新属性扩展 | 改枚举 | 加函数 | 改枚举 | 加strcmp | 加strcmp | 加strcmp | 加strcmp | **加strcmp** |
+
+| 维度           | A:全局枚举 | B:独立函数 | C:控件枚举 | D:字符串   | E:变参   | **F:结构化(选)** | G:Union      | H:Struct  |
+| -------------- | ---------- | ---------- | ---------- | ---------- | -------- | ---------------- | ------------ | --------- |
+| 函数数         | 1          | 28+        | ~6         | 1          | 1        | **6**            | 1            | 1         |
+| 类型安全       | ✅         | ✅         | ✅         | ⚠️       | ❌       | **✅**           | ❌           | ❌        |
+| StateColor 4态 | ❌         | ✅         | ❌         | ❌         | ❌       | **✅**           | ❌           | ❌        |
+| Bool 支持      | ❌         | ✅         | ❌         | ⚠️       | ❌       | **✅**           | ❌           | ❌        |
+| 无枚举耦合     | —         | ✅         | ⚠️       | ✅         | ✅       | **✅**           | ✅           | ✅        |
+| 签名灵活       | ❌         | ✅         | ❌         | ✅         | ⚠️     | **✅**           | ⚠️         | ⚠️      |
+| IDE 补全       | ✅         | ✅         | ✅         | ❌(字符串) | ❌       | **⚠️(struct)** | ⚠️(struct) | ❌(void*) |
+| 新属性扩展     | 改枚举     | 加函数     | 改枚举     | 加strcmp   | 加strcmp | **加strcmp**     | 加strcmp     | 加strcmp  |
 
 ---
 
@@ -625,13 +637,14 @@ void myHandler(UIControlHandle ctl, const UIEventData* event, void* userData) {
 
 #### 设计要点
 
-| 点 | 说明 |
-|----|------|
-| 一个回调函数处理所有事件 | 通过 `event->eventName` 区分，避免每个事件一个导出函数 |
-| 不丢失事件数据 | `UIEventData` 的 union 覆盖所有回调参数类型 |
-| 字符串参数为临时指针 | `strVal` 指向 C++ 侧临时 buffer，回调返回后失效，必须立即使用或拷贝 |
-| 事件名字典 | 事件名统一 kebab-case，不加 "on" 前缀：`"click"`、`"value-changed"`、`"text-changed"`、`"selection-changed"`、`"check-changed"`、`"confirm"`、`"cancel"`、`"close"`、`"enter"`、`"select"`、`"expand"`、`"collapse"` 等 |
-| 替换范围 | 替换现有的 `UICornerstone_SetOnClick` 等 7 个 `UIActionCallback` 导出和 2 个带数据回调导出 |
+
+| 点                       | 说明                                                                                                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 一个回调函数处理所有事件 | 通过`event->eventName` 区分，避免每个事件一个导出函数                                                                                                                                                                   |
+| 不丢失事件数据           | `UIEventData` 的 union 覆盖所有回调参数类型                                                                                                                                                                             |
+| 字符串参数为临时指针     | `strVal` 指向 C++ 侧临时 buffer，回调返回后失效，必须立即使用或拷贝                                                                                                                                                     |
+| 事件名字典               | 事件名统一 kebab-case，不加 "on" 前缀：`"click"`、`"value-changed"`、`"text-changed"`、`"selection-changed"`、`"check-changed"`、`"confirm"`、`"cancel"`、`"close"`、`"enter"`、`"select"`、`"expand"`、`"collapse"` 等 |
+| 替换范围                 | 替换现有的`UICornerstone_SetOnClick` 等 7 个 `UIActionCallback` 导出和 2 个带数据回调导出                                                                                                                               |
 
 #### 性能分析
 
@@ -650,6 +663,21 @@ void myValueChangedHandler(UIControlHandle ctl, const UIEventData* event, void* 
 `eventName` 字段仅用于通用路由器（一个回调注册多个事件时做分发）或调试日志，非通用路由器场景下 C 方忽略即可。
 
 对比：专有导出方案在触发时同样是直接调用 C 函数指针，零 strcmp。统一 `SetCallback` 的最坏路径（通用路由器 + 20 个事件）每次触发 1 次 strcmp，实测 < 100ns，60fps 下 6μs/秒，无感。
+
+#### 字符串比较 vs Hash Map 的选择
+
+`set*Property` 和 `setCallbackProperty` 均使用线性 `strcmp` 链进行属性名匹配。Hash Map（`std::unordered_map`）方案曾被考虑但未采用：
+
+
+| 维度              | strcmp 线性链                       | Hash Map                                    |
+| ----------------- | ----------------------------------- | ------------------------------------------- |
+| **注册/调用耗时** | 最坏 O(n)（n < 16），实测 <200ns    | O(1) 均摊，但哈希计算 + 表查找 ≈ 50-100ns  |
+| **无初始化开销**  | ✅ 零额外内存，零构造               | ❌ 需构造 map，分配内存                     |
+| **调用点可读性**  | ✅ 同一函数内连续 if-else，一目了然 | ❌ 字符串藏在远处理论表中，调用点只看到 map |
+| **调试友好**      | ✅ 断点打在 strcmp 即可拦截任意属性 | ❌ 需在 map 查找回调中加断点                |
+| **分支预测**      | ❌ 线性链对 CPU 分支预测不友好      | ✅ 哈希跳转更可预测                         |
+
+**决策**：对于属性解析路径——一次 setup 调用，非热循环——线性 strcmp 链的绝对耗时（<200ns）远低于人类感知阈值。Hash Map 的内存开销和抽象泄漏得不偿失。若未来 profiler 证明某条解析路径成为帧循环热点，再局部替换为 `unordered_map`。
 
 #### 未来优化（profile-driven）
 
@@ -727,13 +755,14 @@ inline constexpr const char* kEventTextChanged = "text-changed";
 
 #### 好处
 
-| 方面 | 说明 |
-|------|------|
-| **防 typo** | 编译期检查，拼错常量名报 undefined |
-| **IDE 补全** | 输入 `PropertyNames::k` 即可看到所有属性名 |
-| **查重** | `rg "k[A-Z]" include/PropertyNames.h` 一眼看出同名常量 |
-| **全局检索** | `rg "PropertyNames::kBackground"` 找到所有使用点 |
-| **文档同步** | 头文件本身就是属性名清单，可直接生成 §6 表格 |
+
+| 方面         | 说明                                                   |
+| ------------ | ------------------------------------------------------ |
+| **防 typo**  | 编译期检查，拼错常量名报 undefined                     |
+| **IDE 补全** | 输入`PropertyNames::k` 即可看到所有属性名              |
+| **查重**     | `rg "k[A-Z]" include/PropertyNames.h` 一眼看出同名常量 |
+| **全局检索** | `rg "PropertyNames::kBackground"` 找到所有使用点       |
+| **文档同步** | 头文件本身就是属性名清单，可直接生成 §6 表格          |
 
 #### 冲突处理
 
@@ -761,12 +790,13 @@ inline SliderStyle SliderStyleFromString(const char* s) {
 }
 ```
 
-| 角度 | 评价 |
-|------|------|
-| **职责归位** | 属性名常量归 `PropertyNames.h`，枚举值映射归枚举所在文件，两个维度不耦合 |
-| **改不漏** | 增删枚举值，顺手更新同文件的 FromString 函数，不担心跨文件遗漏 |
-| **查询方便** | `rg "SliderStyleFromString"` 即可找到所有调用点 |
-| **命名统一** | `{EnumName}FromString` 模式，IDE 输入 `FromString` 即得补全 |
+
+| 角度         | 评价                                                                    |
+| ------------ | ----------------------------------------------------------------------- |
+| **职责归位** | 属性名常量归`PropertyNames.h`，枚举值映射归枚举所在文件，两个维度不耦合 |
+| **改不漏**   | 增删枚举值，顺手更新同文件的 FromString 函数，不担心跨文件遗漏          |
+| **查询方便** | `rg "SliderStyleFromString"` 即可找到所有调用点                         |
+| **命名统一** | `{EnumName}FromString` 模式，IDE 输入 `FromString` 即得补全             |
 
 FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 
@@ -789,253 +819,270 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 
 ### 6.2 通用属性表
 
-| 属性名 | 值类型 | C ABI 入口 | 范围 |
-|--------|-------|-----------|------|
-| `"background"` | StateColor | `SetStateColor` | 全控件 |
-| `"background"` | Color | `SetColor` → Normal 态 | 全控件 |
-| `"background.hover"` | Color | `SetColor` | 全控件 |
-| `"background.pressed"` | Color | `SetColor` | 全控件 |
-| `"background.disabled"` | Color | `SetColor` | 全控件 |
-| `"border"` | StateColor | `SetStateColor` | 全控件 |
-| `"border"` | Color | `SetColor` → Normal 态 | 全控件 |
-| `"border.hover"` | Color | `SetColor` | 全控件 |
-| `"border.pressed"` | Color | `SetColor` | 全控件 |
-| `"border.disabled"` | Color | `SetColor` | 全控件 |
-| `"text"` | StateColor | `SetStateColor` | 全控件 |
-| `"text"` | Color | `SetColor` → Normal 态 | 全控件 |
-| `"text.hover"` | Color | `SetColor` | 全控件 |
-| `"text.pressed"` | Color | `SetColor` | 全控件 |
-| `"text.disabled"` | Color | `SetColor` | 全控件 |
-| `"text-shadow"` | StateColor | `SetStateColor` | 全控件 |
-| `"text-shadow"` | Color | `SetColor` → Normal 态 | 全控件 |
+
+| 属性名                  | 值类型     | C ABI 入口              | 范围   |
+| ----------------------- | ---------- | ----------------------- | ------ |
+| `"background"`          | StateColor | `SetStateColor`         | 全控件 |
+| `"background"`          | Color      | `SetColor` → Normal 态 | 全控件 |
+| `"background.hover"`    | Color      | `SetColor`              | 全控件 |
+| `"background.pressed"`  | Color      | `SetColor`              | 全控件 |
+| `"background.disabled"` | Color      | `SetColor`              | 全控件 |
+| `"border"`              | StateColor | `SetStateColor`         | 全控件 |
+| `"border"`              | Color      | `SetColor` → Normal 态 | 全控件 |
+| `"border.hover"`        | Color      | `SetColor`              | 全控件 |
+| `"border.pressed"`      | Color      | `SetColor`              | 全控件 |
+| `"border.disabled"`     | Color      | `SetColor`              | 全控件 |
+| `"text"`                | StateColor | `SetStateColor`         | 全控件 |
+| `"text"`                | Color      | `SetColor` → Normal 态 | 全控件 |
+| `"text.hover"`          | Color      | `SetColor`              | 全控件 |
+| `"text.pressed"`        | Color      | `SetColor`              | 全控件 |
+| `"text.disabled"`       | Color      | `SetColor`              | 全控件 |
+| `"text-shadow"`         | StateColor | `SetStateColor`         | 全控件 |
+| `"text-shadow"`         | Color      | `SetColor` → Normal 态 | 全控件 |
 
 ### 6.3 控件特有属性表
 
-| 控件 | 属性名 | 值类型 | 说明 |
-|------|--------|-------|------|
-| TreeView | `"selected"` | Color | 选中行背景色 |
-| TreeView | `"hover"` | Color | 悬停行背景色 |
-| Slider | `"track"` | Color | 轨道色 |
-| Slider | `"track-fill"` | Color | 轨道填充色 |
-| Slider | `"thumb"` | Color | 滑块色 |
-| Slider | `"thumb-border"` | Color | 滑块边框色 |
-| Slider | `"thumb-hover"` | Color | 滑块悬停色 |
-| Slider | `"tick"` | Color | 刻度线色 |
-| Slider | `"label"` | Color | 标签色 |
-| ComboBox | `"arrow"` | Color | 箭头色 |
-| ComboBox | `"arrow-hover"` | Color | 箭头悬停色 |
-| ComboBox | `"item-selected"` | Color | 列表选中项色 |
-| ComboBox | `"item-hover"` | Color | 列表悬停项色 |
-| ComboBox | `"item-disabled"` | Color | 列表禁选项色 |
-| ComboBox | `"list-bg"` | Color | 列表背景色 |
-| ComboBox | `"list-border"` | Color | 列表边框色 |
-| CheckBox | `"check"` | Color | 勾选标记色 |
-| CheckBox | `"cross"` | Color | 叉号标记色 |
-| CheckBox | `"indeterminate"` | Color | 不确定态标记色 |
-| CheckBox | `"box-border"` | Color | 复选框边框色 |
-| ProgressBar | `"progress"` | Color | 进度条填充色 |
-| Splitter | `"line"` | Color | 分割线色（Normal） |
-| Splitter | `"line-hover"` | Color | 分割线悬停色 |
-| Splitter | `"line-drag"` | Color | 分割线拖拽色 |
-| ColorPicker | `"closed-text"` | Color | 关闭态文字色 |
-| ColorPicker | `"popup-bg"` | Color | 弹窗背景色 |
-| WinFrame | `"win-frame-bg"` | Color | WinFrame 背景色 |
-| WinFrame | `"win-frame-border"` | Color | WinFrame 边框色 |
-| WinFrame | `"title-bar-bg"` | Color | 标题栏背景色 |
-| WinFrame | `"title-text"` | Color | 标题栏文字色 |
-| NumericUpDown | `"arrow"` | Color | 箭头色（Normal） |
-| NumericUpDown | `"arrow-hover"` | Color | 箭头悬停色 |
-| NumericUpDown | `"arrow-pressed"` | Color | 箭头按下色 |
+
+| 控件          | 属性名               | 值类型 | 说明               |
+| ------------- | -------------------- | ------ | ------------------ |
+| TreeView      | `"selected"`         | Color  | 选中行背景色       |
+| TreeView      | `"hover"`            | Color  | 悬停行背景色       |
+| Slider        | `"track"`            | Color  | 轨道色             |
+| Slider        | `"track-fill"`       | Color  | 轨道填充色         |
+| Slider        | `"thumb"`            | Color  | 滑块色             |
+| Slider        | `"thumb-border"`     | Color  | 滑块边框色         |
+| Slider        | `"thumb-hover"`      | Color  | 滑块悬停色         |
+| Slider        | `"tick"`             | Color  | 刻度线色           |
+| Slider        | `"label"`            | Color  | 标签色             |
+| ComboBox      | `"arrow"`            | Color  | 箭头色             |
+| ComboBox      | `"arrow-hover"`      | Color  | 箭头悬停色         |
+| ComboBox      | `"item-selected"`    | Color  | 列表选中项色       |
+| ComboBox      | `"item-hover"`       | Color  | 列表悬停项色       |
+| ComboBox      | `"item-disabled"`    | Color  | 列表禁选项色       |
+| ComboBox      | `"list-bg"`          | Color  | 列表背景色         |
+| ComboBox      | `"list-border"`      | Color  | 列表边框色         |
+| CheckBox      | `"check"`            | Color  | 勾选标记色         |
+| CheckBox      | `"cross"`            | Color  | 叉号标记色         |
+| CheckBox      | `"indeterminate"`    | Color  | 不确定态标记色     |
+| CheckBox      | `"box-border"`       | Color  | 复选框边框色       |
+| ProgressBar   | `"progress"`         | Color  | 进度条填充色       |
+| Splitter      | `"line"`             | Color  | 分割线色（Normal） |
+| Splitter      | `"line-hover"`       | Color  | 分割线悬停色       |
+| Splitter      | `"line-drag"`        | Color  | 分割线拖拽色       |
+| ColorPicker   | `"closed-text"`      | Color  | 关闭态文字色       |
+| ColorPicker   | `"popup-bg"`         | Color  | 弹窗背景色         |
+| WinFrame      | `"win-frame-bg"`     | Color  | WinFrame 背景色    |
+| WinFrame      | `"win-frame-border"` | Color  | WinFrame 边框色    |
+| WinFrame      | `"title-bar-bg"`     | Color  | 标题栏背景色       |
+| WinFrame      | `"title-text"`       | Color  | 标题栏文字色       |
+| NumericUpDown | `"arrow"`            | Color  | 箭头色（Normal）   |
+| NumericUpDown | `"arrow-hover"`      | Color  | 箭头悬停色         |
+| NumericUpDown | `"arrow-pressed"`    | Color  | 箭头按下色         |
 
 ### 6.4 Bool 属性表
 
-| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
-|------|--------|-----------|---------------|
-| 全控件 | `"visible"` | `setVisible(bool)` | ✅ `SetVisible` |
-| 全控件 | `"enabled"` | `setEnable(bool)` | ✅ `SetEnabled` |
-| 全控件 | `"transparent"` | `setTransparent(bool)` | ❌ |
-| 全控件 | `"border-visible"` | `setBorderVisible(bool)` | ❌ |
-| Button | `"text-shadow-enable"` | `setTextShadowEnable(bool)` | ❌ |
-| Label | `"shadow"` | `setShadow(bool)` | ❌ |
-| Label | `"expand"` | `setEnableExpand(bool)` | ❌ |
-| Label | `"clickable"` | `setClickable(bool)` | ❌ |
-| EditBox | `"password-mode"` | `setPasswordMode(bool)` | ❌ |
-| TextArea | `"word-wrap"` | `setWordWrap(bool)` | ❌ |
-| CheckBox | `"tri-state"` | `setTriStateEnabled(bool)` | ❌ |
-| Slider | `"reverse"` | `setReverse(bool)` | ❌ |
-| Slider | `"show-value-label"` | `setShowValueLabel(bool)` | ❌ |
-| ComboBox | `"cycle-enabled"` | `setCycleEnabled(bool)` | ❌ |
-| TreeView | `"cycle-navigation"` | `setCycleNavigation(bool)` | ❌ |
-| TreeView | `"default-expand"` | `setDefaultExpand(bool)` | ❌ |
-| WinFrame | `"resizable"` | `setResizable(bool)` | ❌ |
-| Splitter | `"horizontal"` | `setOrientation(bool)` — true=水平, false=垂直 | ❌ |
-| Dialog | `"close-on-click-outside"` | `setCloseOnClickOutside(bool)` | ❌ |
-| Dialog | `"close-on-esc"` | `setCloseOnEsc(bool)` | ❌ |
-| ConfirmPopup | `"confirm-visible"` | `setConfirmButtonVisible(bool)` | ❌ |
-| NumericUpDown | `"read-only"` | `setReadOnly(bool)` | ✅ `SetNumericUpDownReadOnly` |
-| MenuItem | `"checked"` | `setChecked(bool)` | ❌ |
+> `setBoolProperty` 桥接状态：`✅` = 已通过 C ABI `SetBool` 可用，`❌` = 仅有 C++ setter，未桥接
+>
+>
+> | 控件          | 属性名                     | setter/说明                                     | setBoolProperty  | getBoolProperty |
+> | ------------- | -------------------------- | ----------------------------------------------- | --------------- |--------|
+> | 全控件        | `"visible"`                | `setVisible(bool)`                              | ✅              | ✅ |
+> | 全控件        | `"enabled"`                | `setEnable(bool)`                               | ✅              | ✅ |
+> | 全控件        | `"transparent"`            | `setTransparent(bool)`                          | ✅              | ✅ |
+> | 全控件        | `"border-visible"`         | `setBorderVisible(bool)`                        | ✅              | ✅ |
+> | Button        | `"text-shadow-enable"`     | `setTextShadowEnable(bool)`                     | ✅                 | ❌ |
+> | Label         | `"shadow"`                 | `setShadow(bool)`                               | ✅                 | ✅ |
+> | Label         | `"expand"`                 | `setEnableExpand(bool)`                         | ✅                 | ✅ |
+> | Label         | `"clickable"`              | `setClickable(bool)`                            | ✅                 | ✅ |
+> | EditBox       | `"password-mode"`          | `setPasswordMode(bool)`                         | ✅                 | ✅ |
+> | TextArea      | `"word-wrap"`              | `setWordWrap(bool)`                             | ✅                 | ✅ |
+> | CheckBox      | `"tri-state"`              | `setTriStateEnabled(bool)`                      | ✅                 | ✅ |
+> | Slider        | `"reverse"`                | `setReverse(bool)`                              | ✅                 | ✅ |
+> | Slider        | `"show-value-label"`       | `setShowValueLabel(bool)`                       | ✅                 | ✅ |
+> | ComboBox      | `"cycle-enabled"`          | `setCycleEnabled(bool)`                         | ✅                 | ✅ |
+> | TreeView      | `"cycle-navigation"`       | `setCycleNavigation(bool)`                      | ✅                 | ✅ |
+> | TreeView      | `"default-expand"`         | `setDefaultExpand(bool)`                        | ✅                 | ✅ |
+> | WinFrame      | `"resizable"`              | `setResizable(bool)`                            | ✅                 | ✅ |
+> | Splitter      | `"horizontal"`             | `setOrientation(bool) — true=水平, false=垂直` | ✅                 | ✅ |
+> | Dialog        | `"close-on-click-outside"` | `setCloseOnClickOutside(bool)`                  | ✅                 | ✅ |
+> | Dialog        | `"close-on-esc"`           | `setCloseOnEsc(bool)`                           | ✅                 | ✅ |
+> | ConfirmPopup  | `"confirm-visible"`        | `setConfirmButtonVisible(bool)`                 | ✅                 | ❌ |
+> | NumericUpDown | `"read-only"`              | `setReadOnly(bool)`                             | ✅                 | ✅ |
+> | MenuItem      | `"checked"`                | `setChecked(bool)`                              | ✅                 | ✅ |
 
 ### 6.5 Int 属性表
 
-| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
-|------|--------|-----------|---------------|
-| Label | `"font-size"` | `setFontSize(int)` | ❌ |
-| Label | `"line-height"` | `setLineHeight(int)` | ❌ |
-| EditBox | `"font-size"` | `setFontSize(int)` | ❌ |
-| TextArea | `"line-height"` | `setLineHeight(int)` | ❌ |
-| TextArea | `"scroll-x"` | `setScrollX(int)` | ❌ |
-| TextArea | `"scroll-y"` | `setScrollY(int)` | ❌ |
-| ProgressBar | `"font-size"` | `setFontSize(int)` | ❌ |
-| Slider | `"label-font-size"` | `setLabelFontSize(int)` | ❌ |
-| ColorPicker | `"preset-cols"` | `setPresetLayout(cols, rows)` | ❌ |
-| ColorPicker | `"preset-rows"` | `setPresetLayout(cols, rows)` | ❌ |
-| ColorPicker | `"closed-font-size"` | `setClosedFontSize(int)` | ❌ |
-| ComboBox | `"max-visible-items"` | `setMaxVisibleItems(int)` | ❌ |
-| ComboBox | `"selected-index"` | `setSelectedIndex(int)` | ❌ |
-| MenuPanel | `"hovered-index"` | `setHoveredIndex(int)` | ❌ |
-| NumericUpDown | `"decimals"` | `setDecimals(int)` | ✅ `SetNumericUpDownDecimals` |
-| TreeView | `"font-size"` | `setFontSize(int)` | ✅ `TreeViewSetFontSize` |
+> `setIntProperty` 桥接状态：`✅` = 已通过 C ABI `SetInt` 可用，`❌` = 仅有 C++ setter，未桥接
+>
+>
+> | 控件          | 属性名                | setter/说明                   | setIntProperty  | getIntProperty |
+> | ------------- | --------------------- | ----------------------------- | -------------- |--------|
+> | Label         | `"font-size"`         | `setFontSize(int)`            | ✅                | ✅ |
+> | Label         | `"line-height"`       | `setLineHeight(int)`          | ✅                | ✅ |
+> | EditBox       | `"font-size"`         | `setFontSize(int)`            | ✅                | ✅ |
+> | TextArea      | `"line-height"`       | `setLineHeight(int)`          | ✅                | ✅ |
+> | TextArea      | `"scroll-x"`          | `setScrollX(int)`             | ✅                | ✅ |
+> | TextArea      | `"scroll-y"`          | `setScrollY(int)`             | ✅                | ✅ |
+> | ProgressBar   | `"font-size"`         | `setFontSize(int)`            | ✅                | ✅ |
+> | Slider        | `"label-font-size"`   | `setLabelFontSize(int)`       | ✅                | ✅ |
+> | ColorPicker   | `"preset-cols"`       | `setPresetLayout(cols, rows)` | ✅                | ✅ |
+> | ColorPicker   | `"preset-rows"`       | `setPresetLayout(cols, rows)` | ✅                | ✅ |
+> | ColorPicker   | `"closed-font-size"`  | `setClosedFontSize(int)`      | ✅                | ✅ |
+> | ComboBox      | `"max-visible-items"` | `setMaxVisibleItems(int)`     | ✅                | ✅ |
+> | ComboBox      | `"selected-index"`    | `setSelectedIndex(int)`       | ✅                | ✅ |
+> | MenuPanel     | `"hovered-index"`     | `setHoveredIndex(int)`        | ✅                | ✅ |
+> | NumericUpDown | `"decimals"`          | `setDecimals(int)`            | ✅                | ✅ |
+> | TreeView      | `"font-size"`         | `setFontSize(int)`            | ✅                | ✅ |
 
 ### 6.6 Float 属性表
 
-| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
-|------|--------|-----------|---------------|
-| Label | `"line-spacing-ratio"` | `setLineSpacingRatio(float)` | ❌ |
-| CheckBox | `"size-ratio"` | `setSizeRatio(float)` | ❌ |
-| Slider | `"step"` | `setStep(float)` | ❌ |
-| Slider | `"value"` | `setValue(float)` | ❌ |
-| Slider | `"track-thickness"` | `setTrackThickness(float)` | ❌ |
-| Slider | `"thumb-size"` | `setThumbSize(float)` | ❌ |
-| Slider | `"tick-interval"` | `setTickInterval(float)` | ❌ |
-| Slider | `"tick-length"` | `setTickLength(float)` | ❌ |
-| Slider | `"label-gap"` | `setLabelGap(float)` | ❌ |
-| Slider | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
-| Slider | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
-| ProgressBar | `"animation-speed"` | `setAnimationSpeed(float)` | ❌ |
-| ProgressBar | `"value"` | `setValue(float)` | ❌ |
-| ProgressBar | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
-| ProgressBar | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
-| TextArea | `"scrollbar-thickness"` | `setScrollBarThickness(float)` | ❌ |
-| ScrollBar | `"value"` | `setValue(float)` | ❌ |
-| ScrollBar | `"page-size"` | `setPageSize(float)` | ❌ |
-| ScrollBar | `"step-size"` | `setStepSize(float)` | ❌ |
-| ScrollBar | `"thickness"` | `setThickness(float)` | ❌ |
-| ScrollBar | `"range-min"` | `setRange(min, max)` — 拆自双参 | ❌ |
-| ScrollBar | `"range-max"` | `setRange(min, max)` — 拆自双参 | ❌ |
-| WinFrame | `"edge-margin"` | `setEdgeMargin(float)` | ❌ |
-| MenuBar | `"bar-height"` | `setBarHeight(float)` | ❌ |
-| MenuBar | `"item-height-ratio"` | `setItemHeightRatio(float)` — 需改为实例方法 | ❌ |
-| MenuBar | `"font-size"` | `setFontSize(float)` — 需改为实例方法 | ❌ |
-| ComboBox | `"arrow-width"` | `setArrowWidth(float)` | ❌ |
-| ComboBox | `"item-height"` | `setItemHeight(float)` | ❌ |
-| Dialog | `"button-height"` | `setButtonHeight(float)` | ❌ |
-| Dialog | `"button-gap"` | `setButtonGap(float)` | ❌ |
-| Dialog | `"padding"` | `setPadding(float)` | ❌ |
-| TreeView | `"indent-width"` | `setIndentWidth(float)` | ✅ `TreeViewSetIndentWidth` |
-| TreeView | `"row-height"` | `setRowHeight(float)` | ✅ `TreeViewSetRowHeight` |
-| TreeView | `"line-spacing"` | `setLineSpacing(float)` | ✅ `TreeViewSetLineSpacing` |
-| TreeView | `"arrow-gap"` | `setArrowGap(float)` | ✅ `TreeViewSetArrowGap` |
-| Splitter | `"thickness"` | `setThickness(float)` | ✅ `SetSplitterThickness` |
-| Splitter | `"ratio"` | `setSplitRatio(float)` | ✅ `SetSplitterRatio` |
-| ColorPicker | `"closed-swatch-size"` | `setClosedSwatchSize(float)` | ✅ `SetClosedSwatchSize` |
-| NumericUpDown | `"value"` | `setValue(double)` | ✅ `SetNumericUpDownValue` |
-| NumericUpDown | `"step"` | `setStep(double)` | ✅ `SetNumericUpDownStep` |
-| NumericUpDown | `"page-step"` | `setPageStep(double)` | ✅ `SetNumericUpDownPageStep` |
-| NumericUpDown | `"button-width"` | `setButtonWidth(float)` | ✅ `SetNumericUpDownButtonWidth` |
-| NumericUpDown | `"range-min"` | `setRange(min, max)` — 拆自双参 | ✅ `SetNumericUpDownRange` |
-| NumericUpDown | `"range-max"` | `setRange(min, max)` — 拆自双参 | ✅ `SetNumericUpDownRange` |
+> `setFloatProperty` 桥接状态：`✅` = 已通过 C ABI `SetFloat` 可用，`❌` = 仅有 C++ setter，未桥接
+>
+>
+> | 控件          | 属性名                  | setter/说明                      | setFloatProperty  | getFloatProperty |
+> | ------------- | ----------------------- | -------------------------------- | ---------------- |--------|
+> | Label         | `"line-spacing-ratio"`  | `setLineSpacingRatio(float)`     | ✅                  | ✅ |
+> | CheckBox      | `"size-ratio"`          | `setSizeRatio(float)`            | ✅                  | ✅ |
+> | Slider        | `"step"`                | `setStep(float)`                 | ✅                  | ✅ |
+> | Slider        | `"value"`               | `setValue(float)`                | ✅                  | ✅ |
+> | Slider        | `"track-thickness"`     | `setTrackThickness(float)`       | ✅                  | ✅ |
+> | Slider        | `"thumb-size"`          | `setThumbSize(float)`            | ✅                  | ✅ |
+> | Slider        | `"tick-interval"`       | `setTickInterval(float)`         | ✅                  | ✅ |
+> | Slider        | `"tick-length"`         | `setTickLength(float)`           | ✅                  | ✅ |
+> | Slider        | `"label-gap"`           | `setLabelGap(float)`             | ✅                  | ✅ |
+> | Slider        | `"range-min"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | Slider        | `"range-max"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | ProgressBar   | `"animation-speed"`     | `setAnimationSpeed(float)`       | ✅                  | ✅ |
+> | ProgressBar   | `"value"`               | `setValue(float)`                | ✅                  | ✅ |
+> | ProgressBar   | `"range-min"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | ProgressBar   | `"range-max"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | TextArea      | `"scrollbar-thickness"` | `setScrollBarThickness(float)`   | ✅                  | ✅ |
+> | ScrollBar     | `"value"`               | `setValue(float)`                | ✅                  | ✅ |
+> | ScrollBar     | `"page-size"`           | `setPageSize(float)`             | ✅                  | ✅ |
+> | ScrollBar     | `"step-size"`           | `setStepSize(float)`             | ✅                  | ✅ |
+> | ScrollBar     | `"thickness"`           | `setThickness(float)`            | ✅                  | ✅ |
+> | ScrollBar     | `"range-min"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | ScrollBar     | `"range-max"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | WinFrame      | `"edge-margin"`         | `setEdgeMargin(float)`           | ✅                  | ✅ |
+> | MenuBar       | `"bar-height"`          | `setBarHeight(float)`            | ✅                  | ✅ |
+> | MenuBar       | `"item-height-ratio"`   | `setItemHeightRatio(float)`      | ✅                  | ✅ |
+> | MenuBar       | `"font-size"`           | `setFontSize(float)`             | ✅                  | ✅ |
+> | ComboBox      | `"arrow-width"`         | `setArrowWidth(float)`           | ✅                  | ✅ |
+> | ComboBox      | `"item-height"`         | `setItemHeight(float)`           | ✅                  | ✅ |
+> | Dialog        | `"button-height"`       | `setButtonHeight(float)`         | ✅                  | ✅ |
+> | Dialog        | `"button-gap"`          | `setButtonGap(float)`            | ✅                  | ✅ |
+> | Dialog        | `"padding"`             | `setPadding(float)`              | ✅                  | ✅ |
+> | TreeView      | `"indent-width"`        | `setIndentWidth(float)`          | ✅                  | ✅ |
+> | TreeView      | `"row-height"`          | `setRowHeight(float)`            | ✅                  | ✅ |
+> | TreeView      | `"line-spacing"`        | `setLineSpacing(float)`          | ✅                  | ✅ |
+> | TreeView      | `"arrow-gap"`           | `setArrowGap(float)`             | ✅                  | ✅ |
+> | Splitter      | `"thickness"`           | `setThickness(float)`            | ✅                  | ✅ |
+> | Splitter      | `"ratio"`               | `setSplitRatio(float)`           | ✅                  | ✅ |
+> | ColorPicker   | `"closed-swatch-size"`  | `setClosedSwatchSize(float)`     | ✅                  | ✅ |
+> | NumericUpDown | `"value"`               | `setValue(double)`               | ✅                  | ✅ |
+> | NumericUpDown | `"step"`                | `setStep(double)`                | ✅                  | ✅ |
+> | NumericUpDown | `"page-step"`           | `setPageStep(double)`            | ✅                  | ✅ |
+> | NumericUpDown | `"button-width"`        | `setButtonWidth(float)`          | ✅                  | ✅ |
+> | NumericUpDown | `"range-min"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
+> | NumericUpDown | `"range-max"`           | `setRange(min, max) — 拆自双参` | ✅                  | ✅ |
 
 ### 6.7 String 属性表
 
-| 控件 | 属性名 | setter/说明 | 已有专用 C ABI |
-|------|--------|-----------|---------------|
-| Button | `"caption"` | `setCaption(string)` | ❌ |
-| Label | `"caption"` | `setCaption(string)` | ❌ |
-| EditBox | `"text"` | `setText(string)` | ❌ |
-| EditBox | `"placeholder"` | `setPlaceholder(string)` | ❌ |
-| ComboBox | `"placeholder"` | `setPlaceholder(string)` | ❌ |
-| ComboBox | `"selected-value"` | `setSelectedValue(string)` | ❌ |
-| ProgressBar | `"custom-text"` | `setCustomText(string)` | ❌ |
-| Slider | `"label-format"` | `setLabelFormat(string)` | ❌ |
-| MenuItem | `"caption"` | `setCaption(string)` | ❌ |
-| MenuItem | `"shortcut"` | `setShortcut(string)` | ❌ |
-| WinFrame | `"title"` | `setTitle(const string&)` | ❌ |
-| Dialog | `"confirm-text"` | `setConfirmButtonText(string)` | ✅ `SetConfirmButtonText` |
-| Dialog | `"cancel-text"` | `setCancelButtonText(string)` | ✅ `SetCancelButtonText` |
-| ColorPicker | `"color"` | `setColor(string)` — hex | ❌ |
-
----
+> `setStringProperty` 桥接状态：`✅` = 已通过 C ABI `SetString` 可用，`❌` = 仅有 C++ setter，未桥接
+>
+>
+> | 控件        | 属性名             | setter/说明                    | setStringProperty               | getStringProperty |
+> | ----------- | ------------------ | ------------------------------ | ------------------------------ |--------|
+> | Button      | `"caption"`        | `setCaption(string)`           | ✅                                | ❌ |
+> | Label       | `"caption"`        | `setCaption(string)`           | ✅                                | ✅ |
+> | EditBox     | `"text"`           | `setText(string)`              | ✅                                | ✅ |
+> | EditBox     | `"placeholder"`    | `setPlaceholder(string)`       | ✅                                | ✅ |
+> | ComboBox    | `"placeholder"`    | `setPlaceholder(string)`       | ✅(继承自 EditBox)                | ❌ |
+> | ComboBox    | `"selected-value"` | `setSelectedValue(string)`     | ❌                                | ✅ |
+> | ProgressBar | `"custom-text"`    | `setCustomText(string)`        | ✅                                | ✅ |
+> | Slider      | `"label-format"`   | `setLabelFormat(string)`       | ✅                                | ✅ |
+> | MenuItem    | `"caption"`        | `setCaption(string)`           | ✅                                | ✅ |
+> | MenuItem    | `"shortcut"`       | `setShortcut(string)`          | ✅                                | ✅ |
+> | WinFrame    | `"title"`          | `setTitle(const string&)`      | ✅                                | ❌ |
+> | Dialog      | `"confirm-text"`   | `setConfirmButtonText(string)` | ✅(通过`SetConfirmButtonText`)    | ✅ |
+> | Dialog      | `"cancel-text"`    | `setCancelButtonText(string)`  | ✅(通过`SetCancelButtonText`)     | ✅ |
+> | ColorPicker | `"color"`          | `setColor(string) — hex`      | ✅                                | ❌ |
 
 ### 6.8 Enum 属性表
 
-> 使用 `SetEnum` 接口，传枚举值名称字符串，不区分大小写。
-
-| 控件 | 事件名 | setter/说明 | 枚举值 |
-|------|--------|-----------|-------|
-| Label | `"align"` | 对齐模式 | `am-top-left`, `am-mid-left`, `am-bottom-left`, `am-top-right`, `am-mid-right`, `am-bottom-right`, `am-top-center`, `am-center`, `am-bottom-center` |
-| EditBox | `"align"` | 对齐模式 | 同上 |
-| ProgressBar | `"align"` | 对齐模式 | 同上 |
-| CheckBox | `"check-state"` | 勾选状态 | `unchecked`, `checked`, `indeterminate` |
-| CheckBox | `"style"` | 复选框样式 | `classic`, `cross`, `circle` |
-| CheckBox | `"layout"` | 文字布局 | `text-right`, `text-left` |
-| CheckBox | `"vertical-align"` | 垂直对齐 | `center`, `top`, `bottom` |
-| ProgressBar | `"style"` | 进度条方向 | `horizontal`, `vertical` |
-| ProgressBar | `"text-mode"` | 文字模式 | `none`, `percent`, `custom` |
-| Slider | `"style"` | 滑块方向 | `horizontal`, `vertical` |
-| ScrollBar | `"orientation"` | 滚动条方向 | `vertical`, `horizontal` |
-| Label | `"font"` | 字体名 | `asul-bold`, `asul-regular`, `harmonyos-sans-sc-regular`, ...（共 28 个，kebab-case 全小写） |
-| EditBox | `"font"` | 字体名 | 同上 |
-| ProgressBar | `"font"` | 字体名 | 同上 |
-| Slider | `"label-font"` | 标签字体名 | 同上 |
-| TreeView | `"font"` | 字体名 | 同上 |
+> 使用 `SetEnum` 接口，传枚举值名称字符串，不区分大小写。`setEnumProperty` 桥接状态：`✅` = 已通过 C ABI `SetEnum` 可用，`❌` = 仅有 C++ setter，未桥接
+>
+>
+> | 控件        | 属性名             | setter/说明 | setEnumProperty | 枚举值                                                                                                                                               | getEnumProperty |
+> | ----------- | ------------------ | ----------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------  | -------- |
+> | Label       | `"align"`          | 对齐模式    | ✅              | `am-top-left`, `am-mid-left`, `am-bottom-left`, `am-top-right`, `am-mid-right`, `am-bottom-right`, `am-top-center`, `am-center`, `am-bottom-center` | ✅ |
+> | EditBox     | `"align"`          | 对齐模式    | ✅              | 同上 | ✅ |
+> | ProgressBar | `"align"`          | 对齐模式    | ✅              | 同上 | ✅ |
+> | CheckBox    | `"check-state"`    | 勾选状态    | ✅              | `unchecked`, `checked`, `indeterminate` | ✅ |
+> | CheckBox    | `"style"`          | 复选框样式  | ✅              | `classic`, `cross`, `circle` | ✅ |
+> | CheckBox    | `"layout"`         | 文字布局    | ✅              | `text-right`, `text-left` | ✅ |
+> | CheckBox    | `"vertical-align"` | 垂直对齐    | ✅              | `center`, `top`, `bottom` | ✅ |
+> | ProgressBar | `"style"`          | 进度条方向  | ✅              | `horizontal`, `vertical` | ✅ |
+> | ProgressBar | `"text-mode"`      | 文字模式    | ✅              | `none`, `percent`, `custom` | ✅ |
+> | ProgressBar | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
+> | Slider      | `"style"`          | 滑块方向    | ✅              | `horizontal`, `vertical` | ✅ |
+> | Slider      | `"label-font"`     | 标签字体名  | ✅              | 28 字体 | ✅ |
+> | ScrollBar   | `"orientation"`    | 滚动条方向  | ✅              | `vertical`, `horizontal` | ✅ |
+> | Label       | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
+> | EditBox     | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
+> | TreeView    | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
 
 ### 6.9 Callback 事件表
 
 > 使用 `SetCallback` 接口，事件名不加 "on" 前缀。
 
-| 控件 | 事件名 | C++ 回调签名 | 事件数据 |
-|------|--------|-------------|---------|
-| Button | `"click"` | `void(shared_ptr<Button>)` | 无 |
-| Label | `"click"` | `void(shared_ptr<Label>)` | 无 |
-| EditBox | `"enter"` | `void(shared_ptr<Control>)` | 无 |
-| EditBox | `"text-changed"` | `void(shared_ptr<Control>, string)` | `.data.strVal` |
-| TextArea | `"text-changed"` | `void(shared_ptr<Control>, string)` | `.data.strVal` |
-| Popup | `"close"` | `void(shared_ptr<Popup>, DialogResult)` | `.data.intVal`（DialogResult 映射） |
-| ConfirmPopup | `"confirm"` | `void(shared_ptr<ConfirmPopup>)` | 无 |
-| Dialog | `"cancel"` | `void(shared_ptr<Dialog>)` | 无 |
-| CheckBox | `"check-changed"` | `void(shared_ptr<CheckBox>, CheckState, CheckState)` | `.data.intVal`（新 CheckState） |
-| Slider | `"value-changed"` | `void(shared_ptr<Slider>, float)` | `.data.floatVal` |
-| ProgressBar | `"value-changed"` | `void(shared_ptr<ProgressBar>, float, float)` | `.data.floatVal` |
-| ScrollBar | `"position-changed"` | `void(shared_ptr<ScrollBar>, float, float, float, float)` | `.data.floatVal` |
-| ComboBox | `"selection-changed"` | `void(shared_ptr<ComboBox>, int, const string&)` | `.data.selection`（`.idx` + `.val`） |
-| NumericUpDown | `"value-changed"` | `void(shared_ptr<NumericUpDown>, double)` | `.data.doubleVal` |
-| Splitter | `"moved"` | `void(shared_ptr<Splitter>, float)` | `.data.floatVal` |
-| ColorPicker | `"color-changed"` | `void(shared_ptr<ColorPicker>, const SColor&)` | （颜色暂不通过 C ABI 回调传回，用 `GetColor` 轮询） |
-| TreeView | `"select"` | `void(const string&)` | `.data.strVal`（节点 id） |
-| TreeView | `"expand"` | `void(const string&)` | `.data.strVal` |
-| TreeView | `"collapse"` | `void(const string&)` | `.data.strVal` |
-| MenuItem | `"click"` | `void(shared_ptr<MenuItem>)` | 无 |
+
+| 控件          | 事件名                | C++ 回调签名                                              | 事件数据                                           |
+| ------------- | --------------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| Button        | `"click"`             | `void(shared_ptr<Button>)`                                | 无                                                 |
+| Label         | `"click"`             | `void(shared_ptr<Label>)`                                 | 无                                                 |
+| EditBox       | `"enter"`             | `void(shared_ptr<Control>)`                               | 无                                                 |
+| EditBox       | `"text-changed"`      | `void(shared_ptr<Control>, string)`                       | `.data.strVal`                                     |
+| TextArea      | `"text-changed"`      | `void(shared_ptr<Control>, string)`                       | `.data.strVal`                                     |
+| Popup         | `"close"`             | `void(shared_ptr<Popup>, DialogResult)`                   | `.data.intVal`（DialogResult 映射）                |
+| ConfirmPopup  | `"confirm"`           | `void(shared_ptr<ConfirmPopup>)`                          | 无                                                 |
+| Dialog        | `"cancel"`            | `void(shared_ptr<Dialog>)`                                | 无                                                 |
+| CheckBox      | `"check-changed"`     | `void(shared_ptr<CheckBox>, CheckState, CheckState)`      | `.data.intVal`（新 CheckState）                    |
+| Slider        | `"value-changed"`     | `void(shared_ptr<Slider>, float)`                         | `.data.floatVal`                                   |
+| ProgressBar   | `"value-changed"`     | `void(shared_ptr<ProgressBar>, float, float)`             | `.data.floatVal`                                   |
+| ScrollBar     | `"position-changed"`  | `void(shared_ptr<ScrollBar>, float, float, float, float)` | `.data.floatVal`                                   |
+| ComboBox      | `"selection-changed"` | `void(shared_ptr<ComboBox>, int, const string&)`          | `.data.selection`（`.idx` + `.val`）               |
+| NumericUpDown | `"value-changed"`     | `void(shared_ptr<NumericUpDown>, double)`                 | `.data.doubleVal`                                  |
+| Splitter      | `"moved"`             | `void(shared_ptr<Splitter>, float)`                       | `.data.floatVal`                                   |
+| ColorPicker   | `"color-changed"`     | `void(shared_ptr<ColorPicker>, const SColor&)`            | （颜色暂不通过 C ABI 回调传回，用`GetColor` 轮询） |
+| TreeView      | `"select"`            | `void(const string&)`                                     | `.data.strVal`（节点 id）                          |
+| TreeView      | `"expand"`            | `void(const string&)`                                     | `.data.strVal`                                     |
+| TreeView      | `"collapse"`          | `void(const string&)`                                     | `.data.strVal`                                     |
+| MenuItem      | `"click"`             | `void(shared_ptr<MenuItem>)`                              | 无                                                 |
 
 ---
 
 ## 7. 实施清单
 
 ### Phase 1 — Color 基类（已完成）
-- [x] Control 基类 `setColorProperty` / `setStateColorProperty` 虚方法
-- [x] ControlImpl 通用属性实现 (background/border/text/text-shadow)
-- [x] TreeView override `setColorProperty`
+
+- [X]  Control 基类 `setColorProperty` / `setStateColorProperty` 虚方法
+- [X]  ControlImpl 通用属性实现 (background/border/text/text-shadow)
+- [X]  TreeView override `setColorProperty`
 
 ### Phase 2 — 控件特有 Color（已完成）
-- [x] Slider override `setColorProperty`
-- [x] ComboBox override `setColorProperty`
-- [x] CheckBox override `setColorProperty`
-- [x] ProgressBar override `setColorProperty`
-- [x] Splitter override `setColorProperty`
-- [x] WinFrame override `setColorProperty`
-- [x] ColorPicker override `setColorProperty`
-- [x] NumericUpDown override `setColorProperty`
+
+- [X]  Slider override `setColorProperty`
+- [X]  ComboBox override `setColorProperty`
+- [X]  CheckBox override `setColorProperty`
+- [X]  ProgressBar override `setColorProperty`
+- [X]  Splitter override `setColorProperty`
+- [X]  WinFrame override `setColorProperty`
+- [X]  ColorPicker override `setColorProperty`
+- [X]  NumericUpDown override `setColorProperty`
 
 ### Phase 3 — Int/Float/Bool/String/Enum（已完成）
+
 - Phase 2 全部 8 控件（Slider/ComboBox/CheckBox/ProgressBar/Splitter/WinFrame/ColorPicker/NumericUpDown）的 `setIntProperty` / `setFloatProperty` / `setBoolProperty` / `setStringProperty` / `setEnumProperty` override。
 - **ScrollBar**: `setColorProperty`（track/thumb/thumb-hover/thumb-pressed）+ `setFloatProperty`（value/range-min/range-max/page-size/step-size/scrollbar-thickness）+ `setEnumProperty`（orientation: vertical/horizontal）
 - **MenuBar**: `setFloatProperty`（item-height-ratio/value）+ `setEnumProperty`（font）
@@ -1046,27 +1093,32 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 **注意 — `setRange(min, max)` 拆分**：
 ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"range-min"` 和 `"range-max"` 两个属性，每个属性只设一个值。（已实现：Slider / ProgressBar / NumericUpDown / ScrollBar 按此方式处理）
 
+- **Phase 3 扩展 — 全控件覆盖**：`Button`（bool/string）、`Label`（bool/int/float/string/enum）、`EditBox`（bool/int/string/enum）、`TextArea`（bool/int/float）、`Dialog`（bool/float/string）、`TreeView`（bool/int/float/enum）、`MenuItem`（bool/string）、`ProgressBar`（align enum 补加）— 所有通用型属性桥接完成
+
 ### Phase 4 — Getter C ABI（已完成）
-- [x] Control 基类新增 7 个 `get*Property` 虚方法（默认返回 0）
-- [x] ControlImpl 实现通用属性 Getter（从已有的 StateColor getter 读取）
-- [x] 7 个 C ABI Getter 函数声明 + 实现 (`GetColor`/`GetStateColor`/`GetBool`/`GetInt`/`GetFloat`/`GetString`/`GetEnum`)
-- [x] Phase 2/3 全部 10 控件（Slider/ComboBox/CheckBox/ProgressBar/Splitter/WinFrame/ColorPicker/NumericUpDown/ScrollBar/MenuBar）实现 `get*Property` override，与对应 setter 对称
+
+- [X]  Control 基类新增 7 个 `get*Property` 虚方法（默认返回 0）
+- [X]  ControlImpl 实现通用属性 Getter（从已有的 StateColor getter 读取）
+- [X]  7 个 C ABI Getter 函数声明 + 实现 (`GetColor`/`GetStateColor`/`GetBool`/`GetInt`/`GetFloat`/`GetString`/`GetEnum`)
+- [X]  Phase 2/3 全部 10 控件（Slider/ComboBox/CheckBox/ProgressBar/Splitter/WinFrame/ColorPicker/NumericUpDown/ScrollBar/MenuBar）实现 `get*Property` override，与对应 setter 对称
 
 ### Phase 5 — Callback C ABI（已完成）
-- [x] `UIEventData` 结构体定义 + `UIEventCallback` 类型
-- [x] Control 基类 `setCallbackProperty` 虚方法
-- [x] `UICornerstone_SetCallback` C ABI 函数声明 + 实现
-- [x] ControlImpl 新增通用回调存储 `m_cCallbacks` 映射表 + `fireCCallback()` 辅助方法
-- [x] 6 控件实现 Callback 绑定：Slider(`value-changed`)、CheckBox(`check-changed`)、ComboBox(`selection-changed`)、Splitter(`position-changed`)、ScrollBar(`position-changed`)、NumericUpDown(`value-changed`)
-- [x] 3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
+
+- [X]  `UIEventData` 结构体定义 + `UIEventCallback` 类型
+- [X]  Control 基类 `setCallbackProperty` 虚方法
+- [X]  `UICornerstone_SetCallback` C ABI 函数声明 + 实现
+- [X]  ControlImpl 新增通用回调存储 `m_cCallbacks` 映射表 + `fireCCallback()` 辅助方法
+- [X]  6 控件实现 Callback 绑定：Slider(`value-changed`)、CheckBox(`check-changed`)、ComboBox(`selection-changed`)、Splitter(`position-changed`)、ScrollBar(`position-changed`)、NumericUpDown(`value-changed`)
+- [X]  3 后端 (SDL3/SFML/Raylib) 全部编译通过，0 错误 0 警告
 
 ### Phase 6 — 移除旧版专用 C ABI 导出（已完成）
-- [x] 将 48 个旧专用导出（`SetBGColor`/`SetText`/`SetOnClick`/`GetSliderValue`/`SetNumericUpDownValue` 等）替换为统一的属性系统 API (`SetColor`/`SetString`/`SetCallback`/`GetFloat` 等)
-- [x] 保留 16 个非属性可映射的导出（`Show`/`Close`/`ExpandNode`/`SetComboItems`/`SetSplitterLinkedControls` 等）
-- [x] 更新 6 个测试文件（`test_fromsource_cabi`/`test_dialog_cabi`/`test_combobox_cabi`/`test_splitter_cabi`/`test_numericupdown_cabi`/`test_treeview_cabi`）使用新 API
-- [x] 从 `UICornerstoneAPI.h` 移除旧导出声明
-- [x] 从 `UICornerstoneAPI.cpp` 移除旧导出实现
-- [x] 3 后端 × 8 C ABI 测试目标 = 24 构建全部通过，0 错误
+
+- [X]  将 48 个旧专用导出（`SetBGColor`/`SetText`/`SetOnClick`/`GetSliderValue`/`SetNumericUpDownValue` 等）替换为统一的属性系统 API (`SetColor`/`SetString`/`SetCallback`/`GetFloat` 等)
+- [X]  保留 16 个非属性可映射的导出（`Show`/`Close`/`ExpandNode`/`SetComboItems`/`SetSplitterLinkedControls` 等）
+- [X]  更新 6 个测试文件（`test_fromsource_cabi`/`test_dialog_cabi`/`test_combobox_cabi`/`test_splitter_cabi`/`test_numericupdown_cabi`/`test_treeview_cabi`）使用新 API
+- [X]  从 `UICornerstoneAPI.h` 移除旧导出声明
+- [X]  从 `UICornerstoneAPI.cpp` 移除旧导出实现
+- [X]  3 后端 × 8 C ABI 测试目标 = 24 构建全部通过，0 错误
 
 ### 实现模式
 
@@ -1089,11 +1141,12 @@ int Slider::setFloatProperty(const char* prop, float value) {
 
 属性系统覆盖 UI 层全部控件的全部属性，需要一个独立的测试体系。设计原则：
 
-| 原则 | 说明 |
-|------|------|
-| **C ABI 集成测试** | 测试以 `test_*_cabi.cpp` 形式通过 DLL 编译，LoadLibrary + GetProcAddress 调用 C ABI 函数，模拟真实使用场景 |
-| **Set/Get 对称性** | 对每个属性 Set 后立即 Get，验证返回值一致 |
-| **非侵入** | 不创建视觉窗口，纯逻辑验证（初版用视觉窗口+人工验，回归后改为无窗口断言） |
+
+| 原则               | 说明                                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| **C ABI 集成测试** | 测试以`test_*_cabi.cpp` 形式通过 DLL 编译，LoadLibrary + GetProcAddress 调用 C ABI 函数，模拟真实使用场景 |
+| **Set/Get 对称性** | 对每个属性 Set 后立即 Get，验证返回值一致                                                                 |
+| **非侵入**         | 不创建视觉窗口，纯逻辑验证（初版用视觉窗口+人工验，回归后改为无窗口断言）                                 |
 
 #### 测试用例设计
 
@@ -1164,9 +1217,9 @@ assert(ok == 1 && strcmp(buf, "hello") == 0);
 
 #### 测试清单
 
-- [ ] `test_property_cabi.cpp` — 通用属性 + Set/Get 对称 + 边界条件
-- [ ] 扩展现有 `test_*_cabi.cpp` — 各控件特有属性验证
-- [ ] 程序化布局（非 JSON）— `UICornerstone_CreateControl` + 属性设置（若已有则复用）
+- [ ]  `test_property_cabi.cpp` — 通用属性 + Set/Get 对称 + 边界条件
+- [ ]  扩展现有 `test_*_cabi.cpp` — 各控件特有属性验证
+- [ ]  程序化布局（非 JSON）— `UICornerstone_CreateControl` + 属性设置（若已有则复用）
 
 ---
 
@@ -1190,25 +1243,26 @@ assert(ok == 1 && strcmp(buf, "hello") == 0);
 
 ## 附录：控件颜色属性分布
 
-| 控件 | bg | border | text | textShadow | 特有颜色 |
-|------|----|--------|------|-----------|---------|
-| Button | 4态 | 4态 | 4态* | 4态* | — |
-| Label | 4态 | 4态 | 4态 | 4态 | — |
-| EditBox | 4态 | 4态 | 4态 | — | — |
-| TextArea | 4态 | 4态 | 4态 | — | — |
-| CheckBox | 4态 | 4态 | 4态 | — | check, cross, indeterminate, boxBorder |
-| ProgressBar | 4态 | 4态 | 4态 | — | progress |
-| Slider | 4态 | 4态 | — | — | track, trackFill, thumb, thumbBorder, thumbHover, tick, label |
-| ScrollBar | 4态 | 4态 | — | — | — |
-| Splitter | 4态 | 4态 | — | — | line(normal+hover+drag) |
-| Panel | 4态 | 4态 | — | — | — |
-| WinFrame | 4态 | 4态 | — | — | winFrameBG, winFrameBorder, titleBarBG, titleText |
-| ColorPicker | 4态 | 4态 | — | — | closedText, popupBG |
-| ComboBox | 4态 | 4态 | 4态 | — | arrow, arrowHover, itemSelected, itemHover, itemDisabled, listBg, listBorder |
-| NumericUpDown | 4态 | 4态 | 4态 | — | arrow(normal+hover+press) |
-| MenuItem | 4态 | — | 4态 | — | — |
-| MenuBar | 4态 | — | 4态 | — | — |
-| TreeView | 4态+SColor | 4态+SColor | SColor | — | selected, hover |
+
+| 控件          | bg         | border     | text   | textShadow | 特有颜色                                                                     |
+| ------------- | ---------- | ---------- | ------ | ---------- | ---------------------------------------------------------------------------- |
+| Button        | 4态        | 4态        | 4态*   | 4态*       | —                                                                           |
+| Label         | 4态        | 4态        | 4态    | 4态        | —                                                                           |
+| EditBox       | 4态        | 4态        | 4态    | —         | —                                                                           |
+| TextArea      | 4态        | 4态        | 4态    | —         | —                                                                           |
+| CheckBox      | 4态        | 4态        | 4态    | —         | check, cross, indeterminate, boxBorder                                       |
+| ProgressBar   | 4态        | 4态        | 4态    | —         | progress                                                                     |
+| Slider        | 4态        | 4态        | —     | —         | track, trackFill, thumb, thumbBorder, thumbHover, tick, label                |
+| ScrollBar     | 4态        | 4态        | —     | —         | —                                                                           |
+| Splitter      | 4态        | 4态        | —     | —         | line(normal+hover+drag)                                                      |
+| Panel         | 4态        | 4态        | —     | —         | —                                                                           |
+| WinFrame      | 4态        | 4态        | —     | —         | winFrameBG, winFrameBorder, titleBarBG, titleText                            |
+| ColorPicker   | 4态        | 4态        | —     | —         | closedText, popupBG                                                          |
+| ComboBox      | 4态        | 4态        | 4态    | —         | arrow, arrowHover, itemSelected, itemHover, itemDisabled, listBg, listBorder |
+| NumericUpDown | 4态        | 4态        | 4态    | —         | arrow(normal+hover+press)                                                    |
+| MenuItem      | 4态        | —         | 4态    | —         | —                                                                           |
+| MenuBar       | 4态        | —         | 4态    | —         | —                                                                           |
+| TreeView      | 4态+SColor | 4态+SColor | SColor | —         | selected, hover                                                              |
 
 > `*` = Button 重写了 `setTextStateColor` / `setTextShadowStateColor` 以同步到内部 caption Label。
 > `4态` = StateColor (Normal/Hover/Pressed/Disabled)，`SColor` = 简单单色。

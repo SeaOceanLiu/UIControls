@@ -90,10 +90,11 @@ void ProgressBar::setRect(SRect rect) {
 void ProgressBar::setValue(float value) {
     float oldValue = m_value;
     m_value = std::max(m_minValue, std::min(m_maxValue, value));
-    if (oldValue != m_value && m_onValueChanged) {
-        m_onValueChanged(dynamic_pointer_cast<ProgressBar>(getThis()), oldValue, m_value);
+    if (oldValue != m_value) {
+        if (m_onValueChanged)
+            m_onValueChanged(dynamic_pointer_cast<ProgressBar>(getThis()), oldValue, m_value);
+        fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &m_value);
     }
-    fireCCallback(PropertyNames::kEventValueChanged, CCallbackData::Float, &m_value);
 }
 
 float ProgressBar::getValue() const {
@@ -325,6 +326,18 @@ int ProgressBar::setEnumProperty(const char* prop, const char* value) {
         setFont(FontNameFromString(value));
         return 1;
     }
+    if (strcmp(prop, PropertyNames::kAlign) == 0) {
+        if (_stricmp(value, "top-left") == 0)      { setAlignmentMode(AlignmentMode::AM_TOP_LEFT);      return 1; }
+        if (_stricmp(value, "mid-left") == 0)      { setAlignmentMode(AlignmentMode::AM_MID_LEFT);      return 1; }
+        if (_stricmp(value, "bottom-left") == 0)   { setAlignmentMode(AlignmentMode::AM_BOTTOM_LEFT);   return 1; }
+        if (_stricmp(value, "top-right") == 0)     { setAlignmentMode(AlignmentMode::AM_TOP_RIGHT);     return 1; }
+        if (_stricmp(value, "mid-right") == 0)     { setAlignmentMode(AlignmentMode::AM_MID_RIGHT);     return 1; }
+        if (_stricmp(value, "bottom-right") == 0)  { setAlignmentMode(AlignmentMode::AM_BOTTOM_RIGHT);  return 1; }
+        if (_stricmp(value, "top-center") == 0)    { setAlignmentMode(AlignmentMode::AM_TOP_CENTER);    return 1; }
+        if (_stricmp(value, "center") == 0)        { setAlignmentMode(AlignmentMode::AM_CENTER);        return 1; }
+        if (_stricmp(value, "bottom-center") == 0) { setAlignmentMode(AlignmentMode::AM_BOTTOM_CENTER); return 1; }
+        return 0;
+    }
     return ControlImpl::setEnumProperty(prop, value);
 }
 
@@ -368,6 +381,21 @@ int ProgressBar::getEnumProperty(const char* prop, const char*& out) {
     }
     if (strcmp(prop, PropertyNames::kFont) == 0) {
         out = FontNameToString(m_fontName);
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kAlign) == 0) {
+        switch (m_alignmentMode) {
+            case AlignmentMode::AM_TOP_LEFT:      out = "top-left";      break;
+            case AlignmentMode::AM_MID_LEFT:      out = "mid-left";      break;
+            case AlignmentMode::AM_BOTTOM_LEFT:   out = "bottom-left";   break;
+            case AlignmentMode::AM_TOP_RIGHT:     out = "top-right";     break;
+            case AlignmentMode::AM_MID_RIGHT:     out = "mid-right";     break;
+            case AlignmentMode::AM_BOTTOM_RIGHT:  out = "bottom-right";  break;
+            case AlignmentMode::AM_TOP_CENTER:    out = "top-center";    break;
+            case AlignmentMode::AM_CENTER:        out = "center";        break;
+            case AlignmentMode::AM_BOTTOM_CENTER: out = "bottom-center"; break;
+            default: out = "center"; break;
+        }
         return 1;
     }
     return ControlImpl::getEnumProperty(prop, out);

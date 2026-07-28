@@ -2,6 +2,7 @@
 #include "PropertyNames.h"
 #include "Utility.h"
 #include "PlatformUtils.h"
+#include <cstring>
 
 Label::Label(Control *parent, SRect rect, float xScale, float yScale):
     ControlImpl(parent, xScale, yScale)
@@ -562,6 +563,94 @@ bool Label::getEnableExpand() const{
 
 void Label::setClickable(bool clickable){
     m_clickable = clickable;
+}
+
+// ── Property system overrides ──
+int Label::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kShadow) == 0)    { setShadow(value != 0);      return 1; }
+    if (strcmp(prop, PropertyNames::kExpand) == 0)    { setEnableExpand(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kClickable) == 0)  { setClickable(value != 0);   return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+int Label::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0)   { setFontSize(value);   return 1; }
+    if (strcmp(prop, PropertyNames::kLineHeight) == 0) { setLineHeight(value); return 1; }
+    return ControlImpl::setIntProperty(prop, value);
+}
+int Label::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kLineSpacingRatio) == 0) { setLineSpacingRatio(value); return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+int Label::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kCaption) == 0) { setCaption(value); return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+int Label::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kAlign) == 0) {
+        if (_stricmp(value, "top-left") == 0)      { setAlignmentMode(AlignmentMode::AM_TOP_LEFT);      return 1; }
+        if (_stricmp(value, "mid-left") == 0)      { setAlignmentMode(AlignmentMode::AM_MID_LEFT);      return 1; }
+        if (_stricmp(value, "bottom-left") == 0)   { setAlignmentMode(AlignmentMode::AM_BOTTOM_LEFT);   return 1; }
+        if (_stricmp(value, "top-right") == 0)     { setAlignmentMode(AlignmentMode::AM_TOP_RIGHT);     return 1; }
+        if (_stricmp(value, "mid-right") == 0)     { setAlignmentMode(AlignmentMode::AM_MID_RIGHT);     return 1; }
+        if (_stricmp(value, "bottom-right") == 0)  { setAlignmentMode(AlignmentMode::AM_BOTTOM_RIGHT);  return 1; }
+        if (_stricmp(value, "top-center") == 0)    { setAlignmentMode(AlignmentMode::AM_TOP_CENTER);    return 1; }
+        if (_stricmp(value, "center") == 0)        { setAlignmentMode(AlignmentMode::AM_CENTER);        return 1; }
+        if (_stricmp(value, "bottom-center") == 0) { setAlignmentMode(AlignmentMode::AM_BOTTOM_CENTER); return 1; }
+        return 0;
+    }
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        setFont(FontNameFromString(value));
+        return 1;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
+int Label::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kShadow) == 0)    { out = m_shadowEnabled ? 1 : 0;      return 1; }
+    if (strcmp(prop, PropertyNames::kExpand) == 0)    { out = m_enableExpand ? 1 : 0;       return 1; }
+    if (strcmp(prop, PropertyNames::kClickable) == 0)  { out = m_clickable ? 1 : 0;          return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+int Label::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0)   { out = m_fontSize;   return 1; }
+    if (strcmp(prop, PropertyNames::kLineHeight) == 0) { out = getLineHeight(); return 1; }
+    return ControlImpl::getIntProperty(prop, out);
+}
+int Label::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kLineSpacingRatio) == 0) { out = m_defaultLineSpacingRatio; return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+int Label::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kCaption) == 0) { out = m_caption.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+int Label::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kAlign) == 0) {
+        switch (m_AlignmentMode) {
+            case AlignmentMode::AM_TOP_LEFT:      out = "top-left";      break;
+            case AlignmentMode::AM_MID_LEFT:      out = "mid-left";      break;
+            case AlignmentMode::AM_BOTTOM_LEFT:   out = "bottom-left";   break;
+            case AlignmentMode::AM_TOP_RIGHT:     out = "top-right";     break;
+            case AlignmentMode::AM_MID_RIGHT:     out = "mid-right";     break;
+            case AlignmentMode::AM_BOTTOM_RIGHT:  out = "bottom-right";  break;
+            case AlignmentMode::AM_TOP_CENTER:    out = "top-center";    break;
+            case AlignmentMode::AM_CENTER:        out = "center";        break;
+            case AlignmentMode::AM_BOTTOM_CENTER: out = "bottom-center"; break;
+            default: out = "center"; break;
+        }
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        out = FontNameToString(m_fontName);
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+int Label::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventClick) == 0 ||
+        strcmp(event, PropertyNames::kEventPropertyChanged) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 LabelBuilder::LabelBuilder(Control *parent, SRect rect, float xScale, float yScale):

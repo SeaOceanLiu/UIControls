@@ -7,6 +7,7 @@
 #include "PropertyNames.h"
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 EditBox::EditBox(Control *parent, SRect rect, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
@@ -669,6 +670,82 @@ bool EditBox::beforeEventHandlingWatcher(shared_ptr<Event> event) {
         }
     }
     return false;
+}
+
+// ── Property system overrides ──
+int EditBox::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kPasswordMode) == 0) { setPasswordMode(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+int EditBox::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0) { setFontSize(value); return 1; }
+    return ControlImpl::setIntProperty(prop, value);
+}
+int EditBox::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kTextContent) == 0)  { setText(value);      return 1; }
+    if (strcmp(prop, PropertyNames::kPlaceholder) == 0)  { setPlaceholder(value); return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+int EditBox::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kAlign) == 0) {
+        if (_stricmp(value, "top-left") == 0)      { setAlignmentMode(AlignmentMode::AM_TOP_LEFT);      return 1; }
+        if (_stricmp(value, "mid-left") == 0)      { setAlignmentMode(AlignmentMode::AM_MID_LEFT);      return 1; }
+        if (_stricmp(value, "bottom-left") == 0)   { setAlignmentMode(AlignmentMode::AM_BOTTOM_LEFT);   return 1; }
+        if (_stricmp(value, "top-right") == 0)     { setAlignmentMode(AlignmentMode::AM_TOP_RIGHT);     return 1; }
+        if (_stricmp(value, "mid-right") == 0)     { setAlignmentMode(AlignmentMode::AM_MID_RIGHT);     return 1; }
+        if (_stricmp(value, "bottom-right") == 0)  { setAlignmentMode(AlignmentMode::AM_BOTTOM_RIGHT);  return 1; }
+        if (_stricmp(value, "top-center") == 0)    { setAlignmentMode(AlignmentMode::AM_TOP_CENTER);    return 1; }
+        if (_stricmp(value, "center") == 0)        { setAlignmentMode(AlignmentMode::AM_CENTER);        return 1; }
+        if (_stricmp(value, "bottom-center") == 0) { setAlignmentMode(AlignmentMode::AM_BOTTOM_CENTER); return 1; }
+        return 0;
+    }
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        setFont(FontNameFromString(value));
+        return 1;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
+int EditBox::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kPasswordMode) == 0) { out = m_passwordMode ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+int EditBox::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kFontSize) == 0) { out = m_fontSize; return 1; }
+    return ControlImpl::getIntProperty(prop, out);
+}
+int EditBox::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kTextContent) == 0)  { out = m_text.c_str();         return 1; }
+    if (strcmp(prop, PropertyNames::kPlaceholder) == 0)  { out = m_placeholderText.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+int EditBox::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kAlign) == 0) {
+        switch (m_AlignmentMode) {
+            case AlignmentMode::AM_TOP_LEFT:      out = "top-left";      break;
+            case AlignmentMode::AM_MID_LEFT:      out = "mid-left";      break;
+            case AlignmentMode::AM_BOTTOM_LEFT:   out = "bottom-left";   break;
+            case AlignmentMode::AM_TOP_RIGHT:     out = "top-right";     break;
+            case AlignmentMode::AM_MID_RIGHT:     out = "mid-right";     break;
+            case AlignmentMode::AM_BOTTOM_RIGHT:  out = "bottom-right";  break;
+            case AlignmentMode::AM_TOP_CENTER:    out = "top-center";    break;
+            case AlignmentMode::AM_CENTER:        out = "center";        break;
+            case AlignmentMode::AM_BOTTOM_CENTER: out = "bottom-center"; break;
+            default: out = "mid-left"; break;
+        }
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        out = FontNameToString(m_fontName);
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+int EditBox::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
+    if (strcmp(event, PropertyNames::kEventTextChanged) == 0 ||
+        strcmp(event, PropertyNames::kEventEnter) == 0) {
+        return ControlImpl::setCallbackProperty(event, cb, userData);
+    }
+    return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 
 EditBoxBuilder::EditBoxBuilder(Control *parent, SRect rect, float xScale, float yScale)
