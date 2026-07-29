@@ -906,6 +906,18 @@ int UICornerstone_SetEnum(UIControlHandle ctl, const char* prop, const char* val
     return c->setEnumProperty(prop, value);
 }
 
+int UICornerstone_SetPtr(UIControlHandle ctl, const char* prop, void* value) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop) return 0;
+    return c->setPtrProperty(prop, value);
+}
+
+int UICornerstone_GetPtr(UIControlHandle ctl, const char* prop, void** out) {
+    auto* c = static_cast<Control*>(ctl);
+    if (!c || !prop || !out) return 0;
+    return c->getPtrProperty(prop, *out);
+}
+
 int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
     auto* c = static_cast<Control*>(ctl);
     if (!c || !event) return 0;

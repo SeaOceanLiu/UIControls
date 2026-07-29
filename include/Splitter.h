@@ -59,6 +59,8 @@ public:
     bool  isHorizontal() const { return m_orientation; }
 
     void  setLinkedControls(shared_ptr<Control> first, shared_ptr<Control> second);
+    void  setFirstControl(shared_ptr<Control> first);
+    void  setSecondControl(shared_ptr<Control> second);
     Control* getFirstControl() const { return m_first; }
     Control* getSecondControl() const { return m_second; }
     void  clearLinkedControls();
@@ -84,6 +86,7 @@ public:
     int setColorProperty(const char* prop, SColor color) override;
     int setBoolProperty(const char* prop, int value) override;
     int setFloatProperty(const char* prop, float value) override;
+    int setPtrProperty(const char* prop, void* value) override;
     int getColorProperty(const char* prop, SColor& out) override;
     int getBoolProperty(const char* prop, int& out) override;
     int getFloatProperty(const char* prop, float& out) override;

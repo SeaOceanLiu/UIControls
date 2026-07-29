@@ -179,6 +179,8 @@ public:
     int setBoolProperty(const char* prop, int value) override;
     int setIntProperty(const char* prop, int value) override;
     int setFloatProperty(const char* prop, float value) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int setPtrProperty(const char* prop, void* value) override;
     int setEnumProperty(const char* prop, const char* value) override;
     int getBoolProperty(const char* prop, int& out) override;
     int getIntProperty(const char* prop, int& out) override;
@@ -186,6 +188,7 @@ public:
     int getEnumProperty(const char* prop, const char*& out) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
     int getStringProperty(const char* prop, const char*& out) override;
+    int getPtrProperty(const char* prop, void*& out) override;
 
     static constexpr float LEFT_PADDING = 4.0f;
     static constexpr float RIGHT_GAP = 4.0f;

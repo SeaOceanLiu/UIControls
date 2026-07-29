@@ -120,6 +120,15 @@ void Splitter::clearLinkedControls() {
     m_first = nullptr; m_second = nullptr;
 }
 
+void Splitter::setFirstControl(shared_ptr<Control> first) {
+    m_firstWeak = first; m_first = first.get();
+}
+
+void Splitter::setSecondControl(shared_ptr<Control> second) {
+    m_secondWeak = second; m_second = second.get();
+    if (m_first && m_second) applySplitRatio(m_splitRatio);
+}
+
 void Splitter::setMinSize(float a, float b) { m_minFirst = a; m_minSecond = b; }
 void Splitter::setThickness(float px) { m_thickness = px; }
 
@@ -373,6 +382,8 @@ int Splitter::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kRatio) == 0)     { setSplitRatio(value); return 1; }
     if (strcmp(prop, PropertyNames::kThickness) == 0) { setThickness(value);  return 1; }
     if (strcmp(prop, PropertyNames::kEdgeMargin) == 0){ m_minFirst = value; m_minSecond = value; return 1; }
+    if (strcmp(prop, "first-min") == 0)               { m_minFirst = value; return 1; }
+    if (strcmp(prop, "second-min") == 0)              { m_minSecond = value; return 1; }
     return ControlImpl::setFloatProperty(prop, value);
 }
 
@@ -387,6 +398,8 @@ int Splitter::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kValue) == 0)    { out = m_splitRatio; return 1; }
     if (strcmp(prop, PropertyNames::kRangeMin) == 0) { out = m_minFirst;   return 1; }
     if (strcmp(prop, PropertyNames::kRangeMax) == 0) { out = m_minSecond;  return 1; }
+    if (strcmp(prop, "first-min") == 0)              { out = m_minFirst;   return 1; }
+    if (strcmp(prop, "second-min") == 0)             { out = m_minSecond;  return 1; }
     return ControlImpl::getFloatProperty(prop, out);
 }
 
@@ -405,6 +418,20 @@ int Splitter::setBoolProperty(const char* prop, int value) {
 int Splitter::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kHorizontal) == 0) { out = m_orientation ? 1 : 0; return 1; }
     return ControlImpl::getBoolProperty(prop, out);
+}
+
+int Splitter::setPtrProperty(const char* prop, void* value) {
+    if (strcmp(prop, "first-linked") == 0) {
+        auto* impl = dynamic_cast<ControlImpl*>(static_cast<Control*>(value));
+        if (impl) setFirstControl(impl->shared_from_this());
+        return 1;
+    }
+    if (strcmp(prop, "second-linked") == 0) {
+        auto* impl = dynamic_cast<ControlImpl*>(static_cast<Control*>(value));
+        if (impl) setSecondControl(impl->shared_from_this());
+        return 1;
+    }
+    return ControlImpl::setPtrProperty(prop, value);
 }
 
 // ── Builder ──

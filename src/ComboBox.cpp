@@ -4,6 +4,7 @@
 #include "MainWindow.h"
 #include "EventQueue.h"
 #include "PropertyNames.h"
+#include "nlohmann/json.hpp"
 #include <algorithm>
 
 // ═══════════════════════════════════════════════════════════════
@@ -870,6 +871,26 @@ int ComboBox::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kArrowWidth) == 0) { setArrowWidth(value); return 1; }
     if (strcmp(prop, PropertyNames::kItemHeight) == 0) { setItemHeight(value); return 1; }
     return ControlImpl::setFloatProperty(prop, value);
+}
+
+int ComboBox::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, "items") == 0) {
+        if (!value) return 0;
+        try {
+            auto j = nlohmann::json::parse(value);
+            vector<ComboBoxItem> items;
+            for (auto& jitem : j) {
+                ComboBoxItem item;
+                item.label = jitem.value("label", "");
+                item.value = jitem.value("value", item.label);
+                item.disabled = jitem.value("disabled", false);
+                items.push_back(item);
+            }
+            setItems(items);
+            return 1;
+        } catch (...) { return 0; }
+    }
+    return ControlImpl::setStringProperty(prop, value);
 }
 
 int ComboBox::getColorProperty(const char* prop, SColor& out) {

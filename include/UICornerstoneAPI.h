@@ -272,6 +272,9 @@ UICORNERSTONE_API int UICornerstone_SetString(  UIControlHandle ctl, const char*
 // 设置枚举属性。value 为枚举值名称字符串，如 "vertical"、"checked"
 UICORNERSTONE_API int UICornerstone_SetEnum(    UIControlHandle ctl, const char* prop, const char*   value);
 
+// 设置指针属性。prop 如 "content"、"first-linked"，value 为 UIControlHandle
+UICORNERSTONE_API int UICornerstone_SetPtr(     UIControlHandle ctl, const char* prop, void*         value);
+
 /* ── Getter ── */
 // 读取属性值。返回 1 成功，0 属性不识别
 UICORNERSTONE_API int UICornerstone_GetColor(   UIControlHandle ctl, const char* prop, UIColor*       out);
@@ -281,6 +284,9 @@ UICORNERSTONE_API int UICornerstone_GetInt(     UIControlHandle ctl, const char*
 UICORNERSTONE_API int UICornerstone_GetFloat(   UIControlHandle ctl, const char* prop, float*         out);
 UICORNERSTONE_API int UICornerstone_GetString(  UIControlHandle ctl, const char* prop, char* out, int maxLen);
 UICORNERSTONE_API int UICornerstone_GetEnum(    UIControlHandle ctl, const char* prop, char* out, int maxLen);
+
+// 读取指针属性。out 返回属性值。返回 1 成功，0 属性不识别
+UICORNERSTONE_API int UICornerstone_GetPtr(     UIControlHandle ctl, const char* prop, void**        out);
 
 /* ── Callback ── */
 typedef struct {

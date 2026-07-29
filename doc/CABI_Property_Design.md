@@ -1,6 +1,6 @@
 # C ABI 属性系统设计
 
-> 对应 Phase 16i | 编制 2026-07-26 | 状态: **已实现（Phase 1~6 全部完成；Phase 3 扩展：Button/Label/EditBox/TextArea/Dialog/TreeView/MenuItem 的 setBool/Int/Float/String/Enum 桥接；Phase 5 扩展：全控件 fireCCallback 桥接；旧版专用导出已移除）**
+> 对应 Phase 16i | 编制 2026-07-26 | 状态: **已实现（Phases 1-6 完成；Phase 7 — Ptr 属性类型 + 控件特有 Ptr/Float/String/Enum/Bool 扩展已完成）**
 
 ## 目录
 
@@ -297,16 +297,16 @@ UICornerstone_SetStruct(ctl, "range", &range, sizeof(range));
 ### 5.1 架构
 
 ```
-Setter C ABI (8 入口)                  Getter C ABI (7 入口)
+Setter C ABI (9 入口)                  Getter C ABI (8 入口)
     │                                        │
     ▼                                        ▼
 Control::set*Property(prop, val)      Control::get*Property(prop, &out)
     │                                        │
-    ├─ Property（颜色/数值/文本/枚举）        ├─ Property 读取
+    ├─ Property（颜色/数值/文本/枚举/指针）    ├─ Property 读取
     └─ Callback（事件绑定）
 
-值类型: Color | StateColor | Int | Float | Bool | String | Enum | Callback
-                                                    └── 新增，字符串传枚举名
+值类型: Color | StateColor | Int | Float | Bool | String | Enum | Ptr | Callback
+                                                    └── Ptr：指针属性（void*）
 ```
 
 ### 5.2 C ABI 类型定义
@@ -352,6 +352,16 @@ int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* v
 // 不区分大小写
 int UICornerstone_SetEnum(UIControlHandle ctl, const char* prop, const char* value);
 
+// 设置指针属性（例如 Popup 的 "content"、Splitter 的 "first-linked"/"second-linked"）
+// value 为 UIControlHandle（即 Control*），调用方保证生命周期
+int UICornerstone_SetPtr(UIControlHandle ctl, const char* prop, void* value);
+
+/* ── Getter ── */
+// ...（GetColor/GetStateColor/GetBool/GetInt/GetFloat/GetString/GetEnum）
+
+// 读取指针属性。out 返回属性值，返回 1 成功，0 不识别
+int UICornerstone_GetPtr(UIControlHandle ctl, const char* prop, void** out);
+
 /* ============ 回调系统 ============ */
 typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, void* userData);
 
@@ -383,6 +393,7 @@ virtual int setIntProperty(const char* prop, int value) { return 0; }
 virtual int setFloatProperty(const char* prop, float value) { return 0; }
 virtual int setStringProperty(const char* prop, const char* value) { return 0; }
 virtual int setEnumProperty(const char* prop, const char* value) { return 0; }
+virtual int setPtrProperty(const char* prop, void* value) { return 0; }
 
 // 回调绑定：event 事件名（不包含 "on" 前缀），如 "click"、"value-changed"
 // cb C 回调函数指针，userData 透传给 cb
@@ -502,6 +513,7 @@ virtual int getIntProperty(const char* prop, int& out) { return 0; }
 virtual int getFloatProperty(const char* prop, float& out) { return 0; }
 virtual int getStringProperty(const char* prop, const char*& out) { return 0; }
 virtual int getEnumProperty(const char* prop, const char*& out) { return 0; }
+virtual int getPtrProperty(const char* prop, void*& out) { return 0; }
 ```
 
 #### C ABI 函数
@@ -516,6 +528,7 @@ int UICornerstone_GetInt(UIControlHandle ctl, const char* prop, int* out);
 int UICornerstone_GetFloat(UIControlHandle ctl, const char* prop, float* out);
 int UICornerstone_GetString(UIControlHandle ctl, const char* prop, char* out, int maxLen);
 int UICornerstone_GetEnum(UIControlHandle ctl, const char* prop, char* out, int maxLen);
+int UICornerstone_GetPtr(UIControlHandle ctl, const char* prop, void** out);
 ```
 
 String 使用 `char* out + maxLen` 模式，避免静态 buffer 或 malloc 生命周期问题。
@@ -902,6 +915,8 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | ComboBox      | `"cycle-enabled"`          | `setCycleEnabled(bool)`                         | ✅                 | ✅ |
 > | TreeView      | `"cycle-navigation"`       | `setCycleNavigation(bool)`                      | ✅                 | ✅ |
 > | TreeView      | `"default-expand"`         | `setDefaultExpand(bool)`                        | ✅                 | ✅ |
+> | TreeView      | `"expand-all"`             | 展开全部节点，忽略 value                        | ✅                 | ❌ |
+> | TreeView      | `"collapse-all"`           | 折叠全部节点，忽略 value                        | ✅                 | ❌ |
 > | WinFrame      | `"resizable"`              | `setResizable(bool)`                            | ✅                 | ✅ |
 > | Splitter      | `"horizontal"`             | `setOrientation(bool) — true=水平, false=垂直` | ✅                 | ✅ |
 > | Dialog        | `"close-on-click-outside"` | `setCloseOnClickOutside(bool)`                  | ✅                 | ✅ |
@@ -978,6 +993,8 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | TreeView      | `"arrow-gap"`           | `setArrowGap(float)`             | ✅                  | ✅ |
 > | Splitter      | `"thickness"`           | `setThickness(float)`            | ✅                  | ✅ |
 > | Splitter      | `"ratio"`               | `setSplitRatio(float)`           | ✅                  | ✅ |
+> | Splitter      | `"first-min"`           | `m_minFirst`（SetFloat 直接设） | ✅                  | ✅ |
+> | Splitter      | `"second-min"`          | `m_minSecond`（SetFloat 直接设）| ✅                  | ✅ |
 > | ColorPicker   | `"closed-swatch-size"`  | `setClosedSwatchSize(float)`     | ✅                  | ✅ |
 > | NumericUpDown | `"value"`               | `setValue(double)`               | ✅                  | ✅ |
 > | NumericUpDown | `"step"`                | `setStep(double)`                | ✅                  | ✅ |
@@ -994,14 +1011,18 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | 控件        | 属性名             | setter/说明                    | setStringProperty               | getStringProperty |
 > | ----------- | ------------------ | ------------------------------ | ------------------------------ |--------|
 > | Button      | `"caption"`        | `setCaption(string)`           | ✅                                | ❌ |
+> | Button      | `"animation"`      | JSONC 动画文件路径，加载 LuotiAni 并播放 | ✅ | ❌ |
 > | Label       | `"caption"`        | `setCaption(string)`           | ✅                                | ✅ |
 > | EditBox     | `"text"`           | `setText(string)`              | ✅                                | ✅ |
 > | EditBox     | `"placeholder"`    | `setPlaceholder(string)`       | ✅                                | ✅ |
 > | ComboBox    | `"placeholder"`    | `setPlaceholder(string)`       | ✅(继承自 EditBox)                | ❌ |
 > | ComboBox    | `"selected-value"` | `setSelectedValue(string)`     | ❌                                | ✅ |
+> | ComboBox    | `"items"`          | JSON 字符串格式：`[{"label":"..","value":".."}]` | ✅ | ❌ |
 > | ProgressBar | `"custom-text"`    | `setCustomText(string)`        | ✅                                | ✅ |
 > | Slider      | `"label-format"`   | `setLabelFormat(string)`       | ✅                                | ✅ |
 > | MenuItem    | `"caption"`        | `setCaption(string)`           | ✅                                | ✅ |
+> | TreeView    | `"expand"`         | 按 nodeId 展开单个节点         | ✅                                | ❌ |
+> | TreeView    | `"collapse"`       | 按 nodeId 折叠单个节点         | ✅                                | ❌ |
 > | MenuItem    | `"shortcut"`       | `setShortcut(string)`          | ✅                                | ✅ |
 > | WinFrame    | `"title"`          | `setTitle(const string&)`      | ✅                                | ❌ |
 > | Dialog      | `"confirm-text"`   | `setConfirmButtonText(string)` | ✅(通过`SetConfirmButtonText`)    | ✅ |
@@ -1031,6 +1052,7 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | Label       | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
 > | EditBox     | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
 > | TreeView    | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
+> | Popup       | `"centered-mode"`  | 弹窗定位模式 | ✅ | `centered` | ❌ |
 
 ### 6.9 Callback 事件表
 
@@ -1059,6 +1081,19 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 | TreeView      | `"expand"`            | `void(const string&)`                                     | `.data.strVal`                                     |
 | TreeView      | `"collapse"`          | `void(const string&)`                                     | `.data.strVal`                                     |
 | MenuItem      | `"click"`             | `void(shared_ptr<MenuItem>)`                              | 无                                                 |
+
+### 6.10 Ptr 属性表
+
+> `setPtrProperty` / `getPtrProperty` 桥接状态：`✅` = 已通过 C ABI `SetPtr` / `GetPtr` 可用
+>
+> value 类型为 `void*`，实际为 `UIControlHandle`（即 `Control*`）。调用方保证指针在控件生命周期内有效。
+>
+> | 控件        | 属性名                  | setter/说明                                   | `setPtrProperty` | `getPtrProperty` |
+> | ----------- | ----------------------- | --------------------------------------------- | ---------------- | ---------------- |
+> | Popup       | `"content"`             | `setContent(shared_ptr<ControlImpl>)`         | ✅               | ❌ |
+> | Splitter    | `"first-linked"`        | 设置首个关联控件（与 second-linked 配套）     | ✅               | ❌ |
+> | Splitter    | `"second-linked"`       | 设置第二个关联控件                            | ✅               | ❌ |
+> | TreeView    | `"selected-user-data"`  | 读写当前选中节点的 `userData` 指针           | ✅               | ✅ |
 
 ---
 
@@ -1119,6 +1154,22 @@ ProgressBar / Slider / ScrollBar 的 `setRange(min, max)` 双参方法拆为 `"r
 - [X]  从 `UICornerstoneAPI.h` 移除旧导出声明
 - [X]  从 `UICornerstoneAPI.cpp` 移除旧导出实现
 - [X]  3 后端 × 8 C ABI 测试目标 = 24 构建全部通过，0 错误
+
+### Phase 7 — Ptr 属性类型 + 控件特有属性扩展（已完成）
+
+- [X]  Control 基类新增 `setPtrProperty` / `getPtrProperty` 虚方法（默认返回 0）
+- [X]  ControlImpl 默认实现（返回 0）
+- [X]  C ABI `SetPtr` / `GetPtr` 函数声明（`UICornerstoneAPI.h`）+ 实现（`UICornerstoneAPI.cpp`）
+- [X]  Popup override `setPtrProperty("content")` — 将 UIControlHandle 转为 shared_ptr\<ControlImpl\> 后调用 `setContent`
+- [X]  Popup override `setEnumProperty("centered-mode")` — 支持 `"centered"` 模式
+- [X]  Splitter override `setPtrProperty("first-linked"/"second-linked")` + 新增 `setFirstControl`/`setSecondControl` 方法，支持逐个设置关联控件
+- [X]  Splitter 扩展 `setFloatProperty("first-min"/"second-min")` + getter — 替代旧 `SetSplitterMinSize`
+- [X]  TreeView override `setStringProperty("expand"/"collapse")` — 委托给 `expandNode`/`collapseNode`
+- [X]  TreeView 扩展 `setBoolProperty("expand-all"/"collapse-all")` — 委托给 `expandAll`/`collapseAll`
+- [X]  TreeView override `getPtrProperty("selected-user-data")` — 返回选中节点 `userData` 指针
+- [X]  ComboBox override `setStringProperty("items")` — JSON 解析后调用 `setItems`
+- [X]  Button 扩展 `setStringProperty("animation")` — 加载 JSONC 动画文件并播放
+- [X]  全库编译通过，`test_property_cabi` 76/76 测试通过
 
 ### 实现模式
 

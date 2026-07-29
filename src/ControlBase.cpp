@@ -829,6 +829,14 @@ int ControlImpl::setEnumProperty(const char* prop, const char* value) {
     return 0;
 }
 
+int ControlImpl::setPtrProperty(const char* prop, void* value) {
+    return 0;
+}
+
+int ControlImpl::getPtrProperty(const char* prop, void*& out) {
+    return 0;
+}
+
 int ControlImpl::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
     if (!event || !cb) return 0;
     m_cCallbacks[event] = {cb, userData};

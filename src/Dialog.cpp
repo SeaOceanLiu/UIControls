@@ -382,6 +382,21 @@ int Popup::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kCloseOnEsc) == 0) { out = m_closeOnEsc ? 1 : 0; return 1; }
     return Panel::getBoolProperty(prop, out);
 }
+int Popup::setPtrProperty(const char* prop, void* value) {
+    if (strcmp(prop, "content") == 0) {
+        auto* impl = dynamic_cast<ControlImpl*>(static_cast<Control*>(value));
+        if (impl) setContent(impl->shared_from_this());
+        return 1;
+    }
+    return Panel::setPtrProperty(prop, value);
+}
+int Popup::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, "centered-mode") == 0) {
+        if (strcmp(value, "centered") == 0) { setCentered(); return 1; }
+        return 0;
+    }
+    return Panel::setEnumProperty(prop, value);
+}
 int Popup::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
     if (strcmp(event, PropertyNames::kEventClose) == 0) {
         return ControlImpl::setCallbackProperty(event, cb, userData);

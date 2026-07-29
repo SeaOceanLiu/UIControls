@@ -250,6 +250,7 @@ public:
     virtual int setFloatProperty(const char* prop, float value) { return 0; }
     virtual int setStringProperty(const char* prop, const char* value) { return 0; }
     virtual int setEnumProperty(const char* prop, const char* value) { return 0; }
+    virtual int setPtrProperty(const char* prop, void* value) { return 0; }
 
     // ── Getter Property system ──
     virtual int getColorProperty(const char* prop, SColor& out) { return 0; }
@@ -259,6 +260,7 @@ public:
     virtual int getFloatProperty(const char* prop, float& out) { return 0; }
     virtual int getStringProperty(const char* prop, const char*& out) { return 0; }
     virtual int getEnumProperty(const char* prop, const char*& out) { return 0; }
+    virtual int getPtrProperty(const char* prop, void*& out) { return 0; }
 
     // ── Callback system ──
     // event: event name (e.g. "click", "value-changed"), not "on" prefixed
@@ -462,6 +464,7 @@ public:
     int setFloatProperty(const char* prop, float value) override;
     int setStringProperty(const char* prop, const char* value) override;
     int setEnumProperty(const char* prop, const char* value) override;
+    int setPtrProperty(const char* prop, void* value) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
     struct SelectionPayload { int idx; const char* val; };
@@ -481,6 +484,7 @@ public:
     int getFloatProperty(const char* prop, float& out) override;
     int getStringProperty(const char* prop, const char*& out) override;
     int getEnumProperty(const char* prop, const char*& out) override;
+    int getPtrProperty(const char* prop, void*& out) override;
 
     // 根据控件状态绘制背景
     void drawBackground(const SRect *pDrawRect);

@@ -74,6 +74,8 @@ public:
     // ── Property system overrides ──
     int setBoolProperty(const char* prop, int value) override;
     int getBoolProperty(const char* prop, int& out) override;
+    int setPtrProperty(const char* prop, void* value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
     bool handleEvent(shared_ptr<Event> event) override;
