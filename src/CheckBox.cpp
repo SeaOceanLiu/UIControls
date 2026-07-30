@@ -634,6 +634,7 @@ int CheckBox::setColorProperty(const char* prop, SColor color) {
 
 int CheckBox::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kTriState) == 0) { setTriStateEnabled(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kChecked) == 0)  { setCheckState(value ? CheckState::Checked : CheckState::Unchecked); return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 
@@ -675,6 +676,7 @@ int CheckBox::getColorProperty(const char* prop, SColor& out) {
 
 int CheckBox::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kTriState) == 0) { out = m_triStateEnabled ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kChecked) == 0)  { out = (m_checkState == CheckState::Checked) ? 1 : 0; return 1; }
     return ControlImpl::getBoolProperty(prop, out);
 }
 

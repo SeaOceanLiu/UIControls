@@ -386,6 +386,7 @@ public:
     }
 
     void setClipRect(const SRect& rect) override {
+        m_clipStack.clear();
         if (m_scissorActive) EndScissorMode();
         BeginScissorMode(
             static_cast<int>(rect.left),
@@ -396,9 +397,39 @@ public:
     }
 
     void clearClipRect() override {
+        m_clipStack.clear();
         if (m_scissorActive) {
             EndScissorMode();
             m_scissorActive = false;
+        }
+    }
+
+    void pushClipRect(const SRect& rect) override {
+        m_clipStack.push_back(rect);
+        if (m_scissorActive) EndScissorMode();
+        BeginScissorMode(
+            static_cast<int>(rect.left),
+            static_cast<int>(rect.top),
+            static_cast<int>(rect.width),
+            static_cast<int>(rect.height));
+        m_scissorActive = true;
+    }
+
+    void popClipRect() override {
+        if (!m_clipStack.empty())
+            m_clipStack.pop_back();
+        if (m_scissorActive)
+            EndScissorMode();
+        if (m_clipStack.empty()) {
+            m_scissorActive = false;
+        } else {
+            const SRect& r = m_clipStack.back();
+            BeginScissorMode(
+                static_cast<int>(r.left),
+                static_cast<int>(r.top),
+                static_cast<int>(r.width),
+                static_cast<int>(r.height));
+            m_scissorActive = true;
         }
     }
 
@@ -679,6 +710,7 @@ private:
     bool m_frameActive;
     bool m_targetActive;
     bool m_scissorActive = false;
+    std::vector<SRect> m_clipStack;
     double m_lastPresentTime = 0.0;
 };
 

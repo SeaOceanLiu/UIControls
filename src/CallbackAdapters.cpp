@@ -85,7 +85,22 @@ void CallbackRenderDevice::setClipRect(const SRect& rect) {
     if (m_cbs->setClipRect) m_cbs->setClipRect(m_handle, rect.left, rect.top, rect.width, rect.height);
 }
 void CallbackRenderDevice::clearClipRect() {
+    m_clipStack.clear();
     if (m_cbs->clearClipRect) m_cbs->clearClipRect(m_handle);
+}
+void CallbackRenderDevice::pushClipRect(const SRect& rect) {
+    if (m_cbs->setClipRect) m_cbs->setClipRect(m_handle, rect.left, rect.top, rect.width, rect.height);
+    m_clipStack.push_back(rect);
+}
+void CallbackRenderDevice::popClipRect() {
+    if (!m_clipStack.empty())
+        m_clipStack.pop_back();
+    if (m_clipStack.empty()) {
+        if (m_cbs->clearClipRect) m_cbs->clearClipRect(m_handle);
+    } else {
+        const SRect& r = m_clipStack.back();
+        if (m_cbs->setClipRect) m_cbs->setClipRect(m_handle, r.left, r.top, r.width, r.height);
+    }
 }
 void CallbackRenderDevice::fillRect(const SRect& rect) {
     m_cbs->fillRect(m_handle, rect.left, rect.top, rect.width, rect.height);

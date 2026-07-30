@@ -1,4 +1,4 @@
-// =========================================================================
+﻿// =========================================================================
 // test_numericupdown_cabi.cpp -- single fromsource C ABI test for NumericUpDown (all backends)
 // Backend name provided via -DBACKEND_SHORT_NAME / -DBACKEND_DISPLAY_NAME
 // =========================================================================
@@ -28,9 +28,9 @@ typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
 
-// ── Property-based C ABI ──
 typedef int  (*UISetFloatFn)(void*, const char*, float);
 typedef int  (*UIGetFloatFn)(void*, const char*, float*);
+typedef int  (*UISetStringFn)(void*, const char*, const char*);
 typedef int  (*UISetCallbackFn)(void*, const char*, void (*)(void*, const void*, void*), void*);
 
 static UIInitFn                        uiInit                      = nullptr;
@@ -48,6 +48,7 @@ static UIRegisterActionFn              uiRegisterAction            = nullptr;
 
 static UISetFloatFn    uiSetFloat    = nullptr;
 static UIGetFloatFn    uiGetFloat    = nullptr;
+static UISetStringFn   uiSetString   = nullptr;
 static UISetCallbackFn uiSetCallback = nullptr;
 
 static HMODULE g_uiDll = nullptr;
@@ -71,8 +72,25 @@ static void loadAllProcs(HMODULE dll) {
 
     RESOLVE(SetFloat);
     RESOLVE(GetFloat);
+    RESOLVE(SetString);
     RESOLVE(SetCallback);
 #undef RESOLVE
+}
+
+static void onNudValueChanged(void*, const void* evt, void* user) {
+    float v = ((const UIEventData*)evt)->data.floatVal;
+    printf("%s = %.2f\n", (const char*)user, (double)v);
+    void* status = uiFindControl("lblStatus");
+    if (!status) return;
+    char buf[128];
+    float vi=0,vf=0,vo=0,vb=0,vp=0;
+    uiGetFloat(uiFindControl("nudInteger"), "value", &vi);
+    uiGetFloat(uiFindControl("nudFloat"), "value", &vf);
+    uiGetFloat(uiFindControl("nudReadOnly"), "value", &vo);
+    uiGetFloat(uiFindControl("nudBigStep"), "value", &vb);
+    uiGetFloat(uiFindControl("nudPageStep"), "value", &vp);
+    snprintf(buf, sizeof(buf), "int=%.0f  float=%.2f  ro=%.0f  big=%.0f  page=%.0f", vi, vf, vo, vb, vp);
+    uiSetString(status, "caption", buf);
 }
 
 static int runTest(const char* shortName, const char* displayName) {
@@ -213,19 +231,12 @@ static int runTest(const char* shortName, const char* displayName) {
     }
     printf("OK: layout loaded (5 NumericUpDown + labels)\n");
 
-    // 通过 C ABI 设置回调（比 JSON 事件更精确，能传递 double 值）
-    if (uiSetCallback) {
-        void* nudInt = uiFindControl("nudInteger");
-        if (nudInt) {
-            uiSetCallback(nudInt, "value-changed", [](void* ctl, const void* evt, void* user) {
-                double v = ((const UIEventData*)evt)->data.doubleVal;
-                printf("Value: %.2f\n", v);
-                (void)ctl; (void)user;
-            }, nullptr);
-        }
+    static const char* nudIds[] = {"nudInteger","nudFloat","nudReadOnly","nudBigStep","nudPageStep"};
+    for (int i = 0; i < 5; i++) {
+        void* ctl = uiFindControl(nudIds[i]);
+        if (ctl) uiSetCallback(ctl, "value-changed", onNudValueChanged, (void*)nudIds[i]);
     }
 
-    // ── 运行时通过 C ABI 修改属性 ──
     void* nudFloat = uiFindControl("nudFloat");
     if (nudFloat && uiSetFloat) {
         uiSetFloat(nudFloat, "value", 0.8f);

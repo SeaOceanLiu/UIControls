@@ -133,7 +133,7 @@ void TreeView::draw() {
     SRect cr = m_frameDrawRect;
     cr.width -= vSb;
     cr.height -= hSb;
-    dev->setClipRect(cr);
+    dev->pushClipRect(cr);
 
     if (!m_flatRows.empty()) {
         float stride = getStride();
@@ -177,7 +177,7 @@ void TreeView::draw() {
         }
     }
 
-    dev->clearClipRect();
+    dev->popClipRect();
 
     for (auto& child : m_children) {
         child->draw();
@@ -668,12 +668,12 @@ void TreeView::updateScrollBar() {
 
 // Property system
 int TreeView::setColorProperty(const char* prop, SColor color) {
-    if (strcmp(prop, "selected") == 0)  { setSelectedColor(color); return 1; }
-    if (strcmp(prop, "hover") == 0)     { setHoverColor(color);    return 1; }
-    if (strcmp(prop, "background") == 0){ setBgColor(color);       return 1; }
-    if (strcmp(prop, "border") == 0)    { setBorderColor(color);   return 1; }
-    if (strcmp(prop, "text") == 0)      { setTextColor(color);     return 1; }
-    return ControlImpl::setColorProperty(prop, color); // fallback
+    if (strcmp(prop, PropertyNames::kTreeSelected) == 0) { setSelectedColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeHover) == 0)    { setHoverColor(color);    return 1; }
+    if (strcmp(prop, PropertyNames::kBackground) == 0)   { setBgColor(color);       return 1; }
+    if (strcmp(prop, PropertyNames::kBorder) == 0)       { setBorderColor(color);   return 1; }
+    if (strcmp(prop, PropertyNames::kText) == 0)         { setTextColor(color);     return 1; }
+    return ControlImpl::setColorProperty(prop, color);
 }
 
 int TreeView::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
@@ -686,8 +686,8 @@ int TreeView::setCallbackProperty(const char* event, void (*cb)(void*, const voi
 }
 
 int TreeView::setStringProperty(const char* prop, const char* value) {
-    if (strcmp(prop, "expand") == 0)   { return value && expandNode(value) ? 1 : 0; }
-    if (strcmp(prop, "collapse") == 0) { return value && collapseNode(value) ? 1 : 0; }
+    if (strcmp(prop, PropertyNames::kTreeExpand) == 0)   { return value && expandNode(value) ? 1 : 0; }
+    if (strcmp(prop, PropertyNames::kTreeCollapse) == 0) { return value && collapseNode(value) ? 1 : 0; }
     return ControlImpl::setStringProperty(prop, value);
 }
 
@@ -697,7 +697,7 @@ int TreeView::getStringProperty(const char* prop, const char*& out) {
 }
 
 int TreeView::setPtrProperty(const char* prop, void* value) {
-    if (strcmp(prop, "selected-user-data") == 0) {
+    if (strcmp(prop, PropertyNames::kSelectedUserData) == 0) {
         auto node = findNodeById(m_selectedId);
         if (node) { node->userData = value; return 1; }
         return 0;
@@ -706,7 +706,7 @@ int TreeView::setPtrProperty(const char* prop, void* value) {
 }
 
 int TreeView::getPtrProperty(const char* prop, void*& out) {
-    if (strcmp(prop, "selected-user-data") == 0) {
+    if (strcmp(prop, PropertyNames::kSelectedUserData) == 0) {
         auto node = findNodeById(m_selectedId);
         if (node) { out = node->userData; return 1; }
         return 0;
@@ -717,8 +717,8 @@ int TreeView::getPtrProperty(const char* prop, void*& out) {
 int TreeView::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kCycleNavigation) == 0) { setCycleNavigation(value != 0); return 1; }
     if (strcmp(prop, PropertyNames::kDefaultExpand) == 0)   { setDefaultExpand(value != 0);   return 1; }
-    if (strcmp(prop, "expand-all") == 0)    { expandAll(); return 1; }
-    if (strcmp(prop, "collapse-all") == 0)  { collapseAll(); return 1; }
+    if (strcmp(prop, PropertyNames::kExpandAll) == 0)       { expandAll(); return 1; }
+    if (strcmp(prop, PropertyNames::kCollapseAll) == 0)     { collapseAll(); return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 int TreeView::setIntProperty(const char* prop, int value) {

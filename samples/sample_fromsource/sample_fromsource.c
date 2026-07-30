@@ -33,6 +33,7 @@
 // =========================================================================
 
 #include "UICornerstoneAPI.h"
+#include "PropertyNames.h"
 #include <stdio.h>
 
 // ======== 后端函数声明（编译进 exe，不来自 DLL） ========
@@ -53,29 +54,18 @@ extern UIBackendCallbacks* GetUIBackendCallbacks(void);
 static int g_clickCount = 0;
 static UIControlHandle g_statusLabel = NULL;
 
-static void onBtnClick(UIControlHandle ctl, void* user) {
-    (void)ctl; (void)user;
+static void onBtnClick(UIControlHandle ctl, const UIEventData* evt, void* user) {
+    (void)ctl; (void)evt; (void)user;
     g_clickCount++;
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
-    if (g_statusLabel) UICornerstone_SetText(g_statusLabel, buf);
+    if (g_statusLabel) UICornerstone_SetString(g_statusLabel, "caption", buf);
 }
 
 // ======== main ========
 
 int main(void) {
     // ── 初始化（混合集成模式） ──────────────────────────────────
-    //
-    // 与 InitFromPlugin 的区别：
-    //   InitFromPlugin → 内部自动获取后端回调
-    //   Init(callbacks) → 调用者显式传入回调表
-    //
-    // Init 调用后，DLL 内部会：
-    //   ① callbacks->createWindow(...) 创建窗口（后端实现，在本 exe 内）
-    //   ② callbacks->createRenderDevice(...) 创建渲染设备
-    //   ③ callbacks->createTextRenderer(...) 创建字体引擎
-    //   ④ callbacks->createInputBackend(...) 创建输入后端
-    //   ⑤ callbacks->createResourceProvider(...) 创建资源加载器
 
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) return 1;
@@ -84,30 +74,24 @@ int main(void) {
     UICornerstone_SetViewport(0, 0, 800, 480);
 
     // ── 创建控件（C ABI 工厂函数，与静态模式完全一样） ──────────
-    //
-    // 函数实现位于 UICornerstone.dll 中，通过 ILT 调用。
-    // 若 GetUIBackendCallbacks 或 Init 失败，请检查：
-    //   - UICornerstone.dll 是否在 exe 同目录？
-    //   - assets/ 字体和资源目录是否存在？
-    //   - 后端 DLL 是否齐全？（SDL3.dll + SDL3_ttf.dll + SDL3_image.dll）
 
     UIControlHandle root = UICornerstone_CreatePanel(0, 0, 800, 480);
 
     UIControlHandle title = UICornerstone_CreateLabel(
         "UICornerstone Sample (Hybrid)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChild(root, title);
+    UICornerstone_AddChildControl(root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton("Click Me",
         20, 60, 200, 80);
-    UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
-    UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChild(root, btn);
+    UICornerstone_SetColor(btn, kBackground, (UIColor){74, 144, 217, 255});
+    UICornerstone_SetCallback(btn, kEventClick, onBtnClick, NULL);
+    UICornerstone_AddChildControl(root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
         "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChild(root, g_statusLabel);
+    UICornerstone_AddChildControl(root, g_statusLabel);
 
     // ── 帧循环（与静态模式完全相同） ──────────────────────────
     //

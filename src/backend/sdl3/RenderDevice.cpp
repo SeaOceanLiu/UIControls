@@ -86,13 +86,27 @@ public:
     }
 
     void setClipRect(const SRect& rect) override {
-        SDL_Rect sdlRect = { static_cast<int>(rect.left), static_cast<int>(rect.top),
-                             static_cast<int>(rect.width), static_cast<int>(rect.height) };
-        SDL_SetRenderClipRect(m_renderer, &sdlRect);
+        m_clipStack.clear();
+        applyClipRect(rect);
     }
 
     void clearClipRect() override {
+        m_clipStack.clear();
         SDL_SetRenderClipRect(m_renderer, nullptr);
+    }
+
+    void pushClipRect(const SRect& rect) override {
+        m_clipStack.push_back(rect);
+        applyClipRect(rect);
+    }
+
+    void popClipRect() override {
+        if (!m_clipStack.empty())
+            m_clipStack.pop_back();
+        if (m_clipStack.empty())
+            SDL_SetRenderClipRect(m_renderer, nullptr);
+        else
+            applyClipRect(m_clipStack.back());
     }
 
     // === 基础图元 ===
@@ -272,7 +286,14 @@ public:
     SDL_Renderer* getSDL3Renderer() const { return m_renderer; }
 
 private:
+    void applyClipRect(const SRect& rect) {
+        SDL_Rect sdlRect = { static_cast<int>(rect.left), static_cast<int>(rect.top),
+                             static_cast<int>(rect.width), static_cast<int>(rect.height) };
+        SDL_SetRenderClipRect(m_renderer, &sdlRect);
+    }
+
     SDL_Renderer* m_renderer;
+    std::vector<SRect> m_clipStack;
 };
 
 // ============================================================

@@ -909,7 +909,8 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | Label         | `"clickable"`              | `setClickable(bool)`                            | ✅                 | ✅ |
 > | EditBox       | `"password-mode"`          | `setPasswordMode(bool)`                         | ✅                 | ✅ |
 > | TextArea      | `"word-wrap"`              | `setWordWrap(bool)`                             | ✅                 | ✅ |
-> | CheckBox      | `"tri-state"`              | `setTriStateEnabled(bool)`                      | ✅                 | ✅ |
+> | CheckBox      | `"checked"`                | `setCheckState(Checked/Unchecked)`              | ✅                 | ✅ |
+| CheckBox      | `"tri-state"`              | `setTriStateEnabled(bool)`                      | ✅                 | ✅ |
 > | Slider        | `"reverse"`                | `setReverse(bool)`                              | ✅                 | ✅ |
 > | Slider        | `"show-value-label"`       | `setShowValueLabel(bool)`                       | ✅                 | ✅ |
 > | ComboBox      | `"cycle-enabled"`          | `setCycleEnabled(bool)`                         | ✅                 | ✅ |

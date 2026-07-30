@@ -245,7 +245,7 @@ void EditBox::draw(void) {
     float marginBottom = m_margin.bottom * scale;
     SRect clipRect(drawRect.left + marginX, drawRect.top + marginY,
                    drawRect.width - marginX - marginRight, drawRect.height - marginY - marginBottom);
-    GET_RENDERDEVICE->setClipRect(clipRect);
+    GET_RENDERDEVICE->pushClipRect(clipRect);
 
     if (hasSelection() && m_focused) {
         int selStart = std::min(m_selectionStart, m_selectionEnd);
@@ -274,7 +274,7 @@ void EditBox::draw(void) {
             drawRect.left + m_textOffsetX, drawRect.top + m_textOffsetY, placeholderColor);
     }
 
-    GET_RENDERDEVICE->clearClipRect();
+    GET_RENDERDEVICE->popClipRect();
 
     if (m_focused && m_cursorVisible && m_selectionStart == m_selectionEnd) {
         float cursorX = getCursorX(m_cursorPosition);

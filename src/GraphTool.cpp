@@ -953,19 +953,13 @@ void DrawingContext::drawImage(const ::SRect& destRect, Texture* texture, const 
 // pushClipRect
 void DrawingContext::pushClipRect(const ::SRect& rect) {
     if (!m_renderDevice) return;
-    m_renderDevice->setClipRect(rect);
-    m_clipStack.push_back(rect);
+    m_renderDevice->pushClipRect(rect);
 }
 
 // popClipRect
 void DrawingContext::popClipRect() {
-    if (!m_renderDevice || m_clipStack.empty()) return;
-    m_clipStack.pop_back();
-    if (m_clipStack.empty()) {
-        m_renderDevice->clearClipRect();
-    } else {
-        m_renderDevice->setClipRect(m_clipStack.back());
-    }
+    if (!m_renderDevice) return;
+    m_renderDevice->popClipRect();
 }
 
 // pushTransform

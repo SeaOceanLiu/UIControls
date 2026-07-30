@@ -317,9 +317,9 @@ void UICornerstone_Update(double deltaTime) {
 
 void UICornerstone_Render(void) {
     if (!g_renderDevice) return;
-    g_renderDevice->setClipRect(g_viewport);
+    g_renderDevice->pushClipRect(g_viewport);
     BENCH->draw();
-    g_renderDevice->clearClipRect();
+    g_renderDevice->popClipRect();
 }
 
 void UICornerstone_Clear(void) {
@@ -532,25 +532,6 @@ UIControlHandle UICornerstone_CreateImageButton(
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-void UICornerstone_SetButtonAnimation(UIControlHandle btn, const char* jsoncPath) {
-    if (!btn || !jsoncPath) return;
-    auto* b = dynamic_cast<Button*>(static_cast<Control*>(btn));
-    if (!b) {
-        printf("UICornerstone_SetButtonAnimation: handle is not a Button\n");
-        return;
-    }
-    fs::path p(jsoncPath);
-    if (p.is_relative()) {
-        p = fs::path(Platform::GetBasePath()) / p;
-    }
-    auto luotiAni = std::make_shared<LuotiAni>(b);
-    luotiAni->loadFromFile(p);
-    b->setLuotiAni(luotiAni);
-    luotiAni->prepare();
-    luotiAni->play();
-    printf("UICornerstone_SetButtonAnimation: OK\n");
-}
-
 // ============================================================
 // 控件通用操作
 // ============================================================
@@ -567,7 +548,7 @@ void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, fl
     if (h) *h = r.height;
 }
 
-void UICornerstone_AddChild(UIControlHandle parent, UIControlHandle child) {
+void UICornerstone_AddChildControl(UIControlHandle parent, UIControlHandle child) {
     if (!parent || !child) return;
     auto* ctlImpl = dynamic_cast<ControlImpl*>(static_cast<Control*>(child));
     auto* panel = dynamic_cast<Panel*>(static_cast<Control*>(parent));
@@ -606,34 +587,6 @@ void UICornerstone_DestroyControl(UIControlHandle ctl) {
     } catch (...) {}
 }
 
-void UICornerstone_WinFrameSetClientText(UIControlHandle wf, const char* text) {
-    if (!wf) return;
-    auto* winFrame = dynamic_cast<WinFrame*>(static_cast<Control*>(wf));
-    if (!winFrame) return;
-    auto client = winFrame->getClientPanel();
-    if (!client) return;
-
-    // 移除 client panel 中已有的所有子控件
-    auto children = client->getChildren();
-    for (auto& child : children) {
-        client->removeControl(child);
-    }
-
-    // 创建新的 Label 显示文本
-    SRect cr = client->getRect();
-    SRect labelRect(0, 0, cr.width, cr.height);
-    auto label = std::make_shared<Label>(client.get(), labelRect);
-    label->setCaption(text ? text : "");
-    label->setFont(FontName::HarmonyOS_Sans_SC_Regular);
-    label->setFontSize(14);
-    label->setAlignmentMode(AlignmentMode::AM_MID_LEFT);
-    label->setTextNormalStateColor(SColor(220, 220, 220, 255));
-    label->setEnableExpand(false);
-    client->addControl(label);
-    label->create();
-    label->setVisible(true);
-}
-
 // ============================================================
 // ColorPicker
 // ============================================================
@@ -661,24 +614,6 @@ UIControlHandle UICornerstone_CreateComboBox(
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-void UICornerstone_SetComboItems(UIControlHandle ctl, const char* jsonItems) {
-    if (!ctl || !jsonItems) return;
-    auto* combo = dynamic_cast<ComboBox*>(static_cast<Control*>(ctl));
-    if (!combo) return;
-    try {
-        auto j = nlohmann::json::parse(jsonItems);
-        vector<ComboBoxItem> items;
-        for (auto& jitem : j) {
-            ComboBoxItem item;
-            item.label = jitem.value("label", "");
-            item.value = jitem.value("value", item.label);
-            item.disabled = jitem.value("disabled", false);
-            items.push_back(item);
-        }
-        combo->setItems(items);
-    } catch (...) {}
-}
-
 // ============================================================
 // Dialog / Popup
 // ============================================================
@@ -696,118 +631,6 @@ UIControlHandle UICornerstone_CreateDialog(
     g_popupPool.push_back(ctl);
 
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
-}
-
-void UICornerstone_Show(UIControlHandle ctl) {
-    if (!ctl) return;
-    auto* dlg = dynamic_cast<Dialog*>(static_cast<Control*>(ctl));
-    if (dlg) { dlg->open(); return; }
-    auto* cp = dynamic_cast<ConfirmPopup*>(static_cast<Control*>(ctl));
-    if (cp) { cp->open(); return; }
-    auto* pop = dynamic_cast<Popup*>(static_cast<Control*>(ctl));
-    if (pop) { pop->open(); }
-}
-
-void UICornerstone_Close(UIControlHandle ctl) {
-    if (!ctl) return;
-    auto* pop = dynamic_cast<Popup*>(static_cast<Control*>(ctl));
-    if (pop) {
-        // 清理 pool（如果 close() 触发 m_onClose，也会在 SetOnClose 的包装器中清理）
-        auto& pool = g_popupPool;
-        auto it = std::find_if(pool.begin(), pool.end(),
-            [pop](const std::shared_ptr<Popup>& p) { return p.get() == pop; });
-        if (it != pool.end()) pool.erase(it);
-        pop->close();
-    }
-}
-
-void UICornerstone_SetDialogCentered(UIControlHandle ctl, int centered) {
-    if (!ctl || !centered) return;
-    auto* dlg = dynamic_cast<Dialog*>(static_cast<Control*>(ctl));
-    if (dlg) { dlg->setCentered(); return; }
-    auto* cp = dynamic_cast<ConfirmPopup*>(static_cast<Control*>(ctl));
-    if (cp) { cp->setCentered(); return; }
-    auto* pop = dynamic_cast<Popup*>(static_cast<Control*>(ctl));
-    if (pop) { pop->setCentered(); }
-}
-
-void UICornerstone_SetDialogPosition(UIControlHandle ctl, float x, float y, float w, float h) {
-    if (!ctl) return;
-    auto* pop = dynamic_cast<Popup*>(static_cast<Control*>(ctl));
-    if (pop) pop->setAbsolute(SRect(x, y, w, h));
-}
-
-void UICornerstone_SetContent(UIControlHandle dlg, UIControlHandle content) {
-    if (!dlg || !content) return;
-    auto* pop = dynamic_cast<Popup*>(static_cast<Control*>(dlg));
-    if (!pop) return;
-    auto* contentCtrl = dynamic_cast<ControlImpl*>(static_cast<Control*>(content));
-    if (!contentCtrl) return;
-    try {
-        auto sp = contentCtrl->shared_from_this();
-        Control* parent = contentCtrl->getParent();
-        if (parent && parent != BENCH) {
-            parent->removeControl(sp);
-        } else {
-            BENCH->removeControl(sp);
-        }
-        pop->setContent(std::dynamic_pointer_cast<ControlImpl>(sp));
-    } catch (...) {}
-}
-
-void UICornerstone_SetOnConfirm(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* dlg = dynamic_cast<Dialog*>(static_cast<Control*>(ctl));
-    if (dlg) {
-        dlg->setOnConfirm([cb, userData](std::shared_ptr<ConfirmPopup>) {
-            if (cb) cb(nullptr, userData);
-        });
-        return;
-    }
-    auto* cp = dynamic_cast<ConfirmPopup*>(static_cast<Control*>(ctl));
-    if (cp) {
-        cp->setOnConfirm([cb, userData](std::shared_ptr<ConfirmPopup>) {
-            if (cb) cb(nullptr, userData);
-        });
-    }
-}
-
-void UICornerstone_SetOnCancel(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* dlg = dynamic_cast<Dialog*>(static_cast<Control*>(ctl));
-    if (dlg) {
-        dlg->setOnCancel([cb, userData](std::shared_ptr<Dialog>) {
-            if (cb) cb(nullptr, userData);
-        });
-    }
-}
-
-void UICornerstone_SetOnClose(UIControlHandle ctl, UIActionCallback cb, void* userData) {
-    if (!ctl) return;
-    auto* pop = dynamic_cast<Popup*>(static_cast<Control*>(ctl));
-    if (pop) {
-        pop->setOnClose([cb, userData](std::shared_ptr<Popup> p, DialogResult r) {
-            if (cb) cb(nullptr, userData);
-            // 清理 pool
-            auto& pool = g_popupPool;
-            auto it = std::find(pool.begin(), pool.end(), p);
-            if (it != pool.end()) pool.erase(it);
-        });
-    }
-}
-
-void UICornerstone_SetConfirmButtonText(UIControlHandle ctl, const char* text) {
-    if (!ctl || !text) return;
-    auto* dlg = dynamic_cast<Dialog*>(static_cast<Control*>(ctl));
-    if (dlg) { dlg->setConfirmButtonText(text); return; }
-    auto* cp = dynamic_cast<ConfirmPopup*>(static_cast<Control*>(ctl));
-    if (cp) cp->setConfirmButtonText(text);
-}
-
-void UICornerstone_SetCancelButtonText(UIControlHandle ctl, const char* text) {
-    if (!ctl || !text) return;
-    auto* dlg = dynamic_cast<Dialog*>(static_cast<Control*>(ctl));
-    if (dlg) dlg->setCancelButtonText(text);
 }
 
 // ── NumericUpDown C ABI ──
@@ -829,29 +652,6 @@ UIControlHandle UICornerstone_CreateSplitter(float x, float y, float w, float h,
     sp->create();
     sp->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sp.get()));
-}
-
-void UICornerstone_SetSplitterLinkedControls(UIControlHandle ctl, UIControlHandle first, UIControlHandle second) {
-    if (!ctl || !first || !second) return;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    auto* fImpl = dynamic_cast<ControlImpl*>(static_cast<Control*>(first));
-    auto* sImpl = dynamic_cast<ControlImpl*>(static_cast<Control*>(second));
-    if (sp && fImpl && sImpl) {
-        sp->setLinkedControls(fImpl->shared_from_this(), sImpl->shared_from_this());
-        // Auto-position splitter between linked panels
-        SRect fr = fImpl->getRect();
-        if (sp->isHorizontal()) {
-            sp->setRect({fr.left + fr.width, fr.top, sp->getThickness(), fr.height});
-        } else {
-            sp->setRect({fr.left, fr.top + fr.height, fr.width, sp->getThickness()});
-        }
-    }
-}
-
-void UICornerstone_SetSplitterMinSize(UIControlHandle ctl, float firstMin, float secondMin) {
-    if (!ctl) return;
-    auto* sp = dynamic_cast<Splitter*>(static_cast<Control*>(ctl));
-    if (sp) sp->setMinSize(firstMin, secondMin);
 }
 
 // ============================================================
@@ -983,49 +783,5 @@ int UICornerstone_GetEnum(UIControlHandle ctl, const char* prop, char* out, int 
     return 1;
 }
 
-// ============================================================
-// TreeView C ABI
-// ============================================================
-static TreeView* toTreeView(UIControlHandle ctl) {
-    return ctl ? dynamic_cast<TreeView*>(static_cast<Control*>(ctl)) : nullptr;
-}
 
-const char* UICornerstone_TreeViewGetSelectedId(UIControlHandle ctl) {
-    auto* tv = toTreeView(ctl);
-    if (!tv) return nullptr;
-    static std::string s_id;
-    s_id = tv->getSelectedId();
-    return s_id.c_str();
-}
-
-const char* UICornerstone_TreeViewGetSelectedUserData(UIControlHandle ctl) {
-    auto* tv = toTreeView(ctl);
-    if (!tv) return nullptr;
-    auto node = tv->findNodeById(tv->getSelectedId());
-    if (!node || !node->userData) return nullptr;
-    static std::string s_userData;
-    auto* s = static_cast<std::string*>(node->userData);
-    s_userData = *s;
-    return s_userData.c_str();
-}
-
-int UICornerstone_TreeViewExpandNode(UIControlHandle ctl, const char* nodeId) {
-    auto* tv = toTreeView(ctl);
-    return (tv && nodeId && tv->expandNode(nodeId)) ? 1 : 0;
-}
-
-int UICornerstone_TreeViewCollapseNode(UIControlHandle ctl, const char* nodeId) {
-    auto* tv = toTreeView(ctl);
-    return (tv && nodeId && tv->collapseNode(nodeId)) ? 1 : 0;
-}
-
-void UICornerstone_TreeViewExpandAll(UIControlHandle ctl) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->expandAll();
-}
-
-void UICornerstone_TreeViewCollapseAll(UIControlHandle ctl) {
-    auto* tv = toTreeView(ctl);
-    if (tv) tv->collapseAll();
-}
 

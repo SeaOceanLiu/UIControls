@@ -1656,3 +1656,30 @@ Done, 180 frames                        # 帧循环正常完成
   - `ProgressBarStyleFromString`, `ProgressBarTextModeFromString`
 - `doc/CABI_Property_Design.md`: 新增 §5.10 枚举值字符串管理章节，更新 TOC
 - 3 后端编译通过，0 错误 0 警告
+
+### 2026-07-30: C ABI 测试问题修复
+
+**问题发现与修复**：
+
+- `Splitter::getFloatProperty` 缺失 `"ratio"` 分支：`setFloatProperty` 有但 getter 无，导致 C ABI 读 ratio 始终 0。已在 `getFloatProperty` 补上 `PropertyNames::kRatio`。
+- `CheckBox` 的 `setBoolProperty` / `getBoolProperty` 均不处理 `"checked"`：`uiSetBool(handle, "checked", 1)` 和 `uiGetBool(handle, "checked", &st)` 静默失败。已补上读写 `m_checkState`。
+- 测试代码中 Label 使用 `"text"` 而非 `"caption"`：`Label::setStringProperty` 只识别 `"caption"`，`uiSetString(lbl, "text", ...)` 失败。已在 `test_splitter_cabi`、`test_treeview_cabi`、`test_fromsource_cabi` 中修正为 `"caption"`。
+- WinFrame 标题使用 `"caption"` 而非 `"title"`：WinFrame 的 `setStringProperty` 只处理 `"title"`（`PropertyNames::kTitle`）。已在 `test_fromsource_cabi` 中修正。
+- TreeView `"selected-user-data"` 通过 `GetPtr` 而非 `GetString`：JSON 加载将 `userData` 存为 `new std::string` → `void*`，需用 `GetPtr` 获取指针再转回 `std::string*`。已在 `test_treeview_cabi` 中修正。
+- Label 遮挡关闭按钮：`test_fromsource_cabi` 中 WinFrame 内 Label 位于 (10, 10, 480, 260) 覆盖了关闭按钮区域，`ControlImpl::handleEvent` 的遮挡检查导致关闭按钮收不到点击。已下移至 (10, 35) 避开标题栏。
+- 视口裁剪导致底部控件不可见：`UICornerstone_Render` 推 `g_viewport` 裁剪矩形后，位于 y=470、高度 30~32 的 Slider/NUD/ColorPicker 超出 480 视口被裁剪。已增大 `test_fromsource_cabi` 视口至 550。
+
+**涉及文件**：`src/Splitter.cpp`、`src/CheckBox.cpp`、`test/test_fromsource_cabi.cpp`、`test/test_splitter_cabi.cpp`、`test/test_treeview_cabi.cpp`
+
+**文档更新**：`doc/CABI_Property_Design.md`（Bool 属性表补 CheckBox `"checked"`）、`doc/guidelines/testing.md`（新增 C ABI 测试常见陷阱章节）
+
+**修复示例程序**：
+- `test_numericupdown_cabi`：回调中读取 `evt->data.floatVal` 而非 `doubleVal`（NumericUpDown 用 `CCallbackData::Float` 发送，`doubleVal` 始终为 0）
+- `hello_uicornerstone.c`：状态标签更新用 `"caption"` 代替 `kTextContent`（`"text"`），Label 只认 `"caption"`
+- `sample_fromsource.c` / `sample_programmatic.c`：回调签名补 `const UIEventData* evt` 参数以匹配 `UIEventCallback`；状态标签用 `"caption"` 代替 `kTextContent`
+- `sample_loadlibrary.cpp`：`UICornerstone_SetOnClick`/`SetText`/`SetBGColor` 早已被移除（Phase 6），替换为 `SetCallback("click",…)`/`SetString("caption",…)`/`SetColor("background",…)`；回调签名匹配新的函数指针类型
+
+**涉及文件**：`samples/hello_uicornerstone.c`、`samples/sample_fromsource/sample_fromsource.c`、`samples/sample_programmatic/sample_programmatic.c`、`samples/sample_loadlibrary/sample_loadlibrary.cpp`、`test/test_numericupdown_cabi.cpp`
+
+**关键修正 —— `sample_loadlibrary` 结构体参数 ABI 不匹配**：
+- `UISetColorFn` 错误地将 `UIColor`（4 字节结构体）拆为 4 个 `uint8_t` 参数。MSVC x64 调用约定中，4 字节结构体通过单寄存器传递，而 4 个独立 `uint8_t` 占用 4 个不同的参数位置（寄存器+栈），导致 `UICornerstone_SetColor` 读取到乱值。修复为 `typedef int (*UISetColorFn)(void*, const char*, UIColor)` 并在调用处构造 `UIColor` 临时变量。

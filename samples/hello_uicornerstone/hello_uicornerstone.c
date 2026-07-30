@@ -23,15 +23,16 @@
 // =========================================================================
 
 #include "UICornerstoneAPI.h"
+#include "PropertyNames.h"
 #include <stdio.h>
 
 // ======== 回调函数 ========
 //
-// UICornerstone_SetOnClick / RegisterAction 的回调签名：
+// UICornerstone_SetCallback / RegisterAction 的回调签名：
 //   void callback(UIControlHandle ctl, void* userData);
 //
 // 在 JSON 布局中，通过 "events":{"onClick":"函数名"} 绑定。
-// 在代码中，通过 UICornerstone_SetOnClick(handle, fn, userData) 绑定。
+// 在代码中，通过 UICornerstone_SetCallback(handle, "click", fn, userData) 绑定。
 
 static int g_clickCount = 0;
 
@@ -44,7 +45,7 @@ static void onBtnClick(UIControlHandle ctl, void* user) {
 
     // FindControl 通过 id 在全局控件注册表中查找控件句柄
     UIControlHandle status = UICornerstone_FindControl("status");
-    if (status) UICornerstone_SetText(status, buf);
+    if (status) UICornerstone_SetString(status, "caption", buf);
 }
 
 // ======== JSON 布局（声明式 UI） ========

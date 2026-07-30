@@ -227,25 +227,14 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(
 /* ============ 控件通用操作 ============ */
 UICORNERSTONE_API void UICornerstone_SetRect(UIControlHandle ctl, float x, float y, float w, float h);
 UICORNERSTONE_API void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, float* h);
-UICORNERSTONE_API void UICornerstone_AddChild(UIControlHandle parent, UIControlHandle child);
+UICORNERSTONE_API void UICornerstone_AddChildControl(UIControlHandle parent, UIControlHandle child);
 UICORNERSTONE_API void UICornerstone_DestroyControl(UIControlHandle ctl);
 UICORNERSTONE_API const char* UICornerstone_GetControlId(UIControlHandle ctl);
-UICORNERSTONE_API void UICornerstone_WinFrameSetClientText(UIControlHandle wf, const char* text);
 
 /* ============ Dialog/Popup ============ */
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(
     const char* confirmText, const char* cancelText,
     float x, float y, float w, float h);
-UICORNERSTONE_API void UICornerstone_Show(UIControlHandle ctl);
-UICORNERSTONE_API void UICornerstone_Close(UIControlHandle ctl);
-UICORNERSTONE_API void UICornerstone_SetDialogCentered(UIControlHandle ctl, int centered);
-UICORNERSTONE_API void UICornerstone_SetDialogPosition(UIControlHandle ctl, float x, float y, float w, float h);
-UICORNERSTONE_API void UICornerstone_SetContent(UIControlHandle dlg, UIControlHandle content);
-UICORNERSTONE_API void UICornerstone_SetOnConfirm(UIControlHandle ctl, UIActionCallback cb, void* userData);
-UICORNERSTONE_API void UICornerstone_SetOnCancel(UIControlHandle ctl, UIActionCallback cb, void* userData);
-UICORNERSTONE_API void UICornerstone_SetOnClose(UIControlHandle ctl, UIActionCallback cb, void* userData);
-UICORNERSTONE_API void UICornerstone_SetConfirmButtonText(UIControlHandle ctl, const char* text);
-UICORNERSTONE_API void UICornerstone_SetCancelButtonText(UIControlHandle ctl, const char* text);
 
 /* ============ 属性系统 (统一字符串名 + 多类型入口) ============ */
 
@@ -307,14 +296,6 @@ typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, v
 
 // 绑定事件回调。event 为事件名，如 "click"、"value-changed"
 UICORNERSTONE_API int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData);
-
-// TreeView — actions/queries (color/font/layout properties use the unified property system)
-UICORNERSTONE_API const char* UICornerstone_TreeViewGetSelectedId(UIControlHandle ctl);
-UICORNERSTONE_API const char* UICornerstone_TreeViewGetSelectedUserData(UIControlHandle ctl);
-UICORNERSTONE_API int   UICornerstone_TreeViewExpandNode(UIControlHandle ctl, const char* nodeId);
-UICORNERSTONE_API int   UICornerstone_TreeViewCollapseNode(UIControlHandle ctl, const char* nodeId);
-UICORNERSTONE_API void  UICornerstone_TreeViewExpandAll(UIControlHandle ctl);
-UICORNERSTONE_API void  UICornerstone_TreeViewCollapseAll(UIControlHandle ctl);
 
 #ifdef __cplusplus
 }

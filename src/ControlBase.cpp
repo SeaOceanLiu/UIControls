@@ -2,6 +2,7 @@
 #include "UICornerstoneAPI.h"
 #include "PlatformUtils.h"
 #include "MainWindow.h"
+#include "PropertyNames.h"
 #include <cstring>
 ControlImpl::ControlImpl(Control *parent, float xScale, float yScale):
     // m_weakThis(this),
@@ -777,30 +778,30 @@ void ControlImpl::inheritRenderer(void) {
 
 // ── Property system ──
 int ControlImpl::setColorProperty(const char* prop, SColor color) {
-    if (strcmp(prop, "background") == 0)           { setNormalStateBGColor(color);   return 1; }
-    if (strcmp(prop, "background.hover") == 0)     { setHoverStateBGColor(color);    return 1; }
-    if (strcmp(prop, "background.pressed") == 0)   { setPressedStateBGColor(color);  return 1; }
-    if (strcmp(prop, "background.disabled") == 0)  { setDisabledStateBGColor(color); return 1; }
-    if (strcmp(prop, "border") == 0)               { setNormalStateBDColor(color);   return 1; }
-    if (strcmp(prop, "border.hover") == 0)         { setHoverStateBDColor(color);    return 1; }
-    if (strcmp(prop, "border.pressed") == 0)       { setPressedStateBDColor(color);  return 1; }
-    if (strcmp(prop, "border.disabled") == 0)      { setDisabledStateBDColor(color); return 1; }
-    if (strcmp(prop, "text") == 0)                 { setTextNormalStateColor(color); return 1; }
-    if (strcmp(prop, "text.hover") == 0)           { setTextHoverStateColor(color);  return 1; }
-    if (strcmp(prop, "text.pressed") == 0)         { setTextPressedStateColor(color);return 1; }
-    if (strcmp(prop, "text.disabled") == 0)        { setTextDisabledStateColor(color);return 1; }
-    if (strcmp(prop, "text-shadow") == 0)          { setTextShadowNormalStateColor(color);return 1; }
-    if (strcmp(prop, "text-shadow.hover") == 0)    { setTextShadowHoverStateColor(color);return 1; }
-    if (strcmp(prop, "text-shadow.pressed") == 0)  { setTextShadowPressedStateColor(color);return 1; }
-    if (strcmp(prop, "text-shadow.disabled") == 0) { setTextShadowDisabledStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kBackground) == 0)           { setNormalStateBGColor(color);   return 1; }
+    if (strcmp(prop, PropertyNames::kStateHover) == 0)          { setHoverStateBGColor(color);    return 1; }
+    if (strcmp(prop, PropertyNames::kStatePressed) == 0)        { setPressedStateBGColor(color);  return 1; }
+    if (strcmp(prop, PropertyNames::kStateDisabled) == 0)       { setDisabledStateBGColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kBorder) == 0)               { setNormalStateBDColor(color);   return 1; }
+    if (strcmp(prop, PropertyNames::kBorderHover) == 0)         { setHoverStateBDColor(color);    return 1; }
+    if (strcmp(prop, PropertyNames::kBorderPressed) == 0)       { setPressedStateBDColor(color);  return 1; }
+    if (strcmp(prop, PropertyNames::kBorderDisabled) == 0)      { setDisabledStateBDColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kText) == 0)                 { setTextNormalStateColor(color); return 1; }
+    if (strcmp(prop, PropertyNames::kTextHover) == 0)           { setTextHoverStateColor(color);  return 1; }
+    if (strcmp(prop, PropertyNames::kTextPressed) == 0)         { setTextPressedStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kTextDisabled) == 0)        { setTextDisabledStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadow) == 0)          { setTextShadowNormalStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadowHover) == 0)    { setTextShadowHoverStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadowPressed) == 0)  { setTextShadowPressedStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadowDisabled) == 0) { setTextShadowDisabledStateColor(color);return 1; }
     return 0;
 }
 
 int ControlImpl::setStateColorProperty(const char* prop, StateColor sc) {
-    if (strcmp(prop, "background") == 0)   { setBackgroundStateColor(sc); return 1; }
-    if (strcmp(prop, "border") == 0)       { setBorderStateColor(sc);     return 1; }
-    if (strcmp(prop, "text") == 0)         { setTextStateColor(sc);       return 1; }
-    if (strcmp(prop, "text-shadow") == 0)  { setTextShadowStateColor(sc); return 1; }
+    if (strcmp(prop, PropertyNames::kBackground) == 0)  { setBackgroundStateColor(sc); return 1; }
+    if (strcmp(prop, PropertyNames::kBorder) == 0)      { setBorderStateColor(sc);     return 1; }
+    if (strcmp(prop, PropertyNames::kText) == 0)        { setTextStateColor(sc);       return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadow) == 0)  { setTextShadowStateColor(sc); return 1; }
     return 0;
 }
 
@@ -818,10 +819,10 @@ int ControlImpl::setStringProperty(const char* prop, const char* value) {
 
 int ControlImpl::setBoolProperty(const char* prop, int value) {
     bool b = value != 0;
-    if (strcmp(prop, "visible") == 0)         { setVisible(b); return 1; }
-    if (strcmp(prop, "enabled") == 0)         { setEnable(b);  return 1; }
-    if (strcmp(prop, "transparent") == 0)     { setTransparent(b); return 1; }
-    if (strcmp(prop, "border-visible") == 0)  { setBorderVisible(b); return 1; }
+    if (strcmp(prop, PropertyNames::kVisible) == 0)         { setVisible(b); return 1; }
+    if (strcmp(prop, PropertyNames::kEnabled) == 0)         { setEnable(b);  return 1; }
+    if (strcmp(prop, PropertyNames::kTransparent) == 0)     { setTransparent(b); return 1; }
+    if (strcmp(prop, PropertyNames::kBorderVisible) == 0)  { setBorderVisible(b); return 1; }
     return 0;
 }
 

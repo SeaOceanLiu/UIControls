@@ -320,7 +320,7 @@ int Button::setBoolProperty(const char* prop, int value) {
 }
 int Button::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kCaption) == 0) { setCaption(value); return 1; }
-    if (strcmp(prop, "animation") == 0) {
+    if (strcmp(prop, PropertyNames::kAnimation) == 0) {
         if (!value) return 0;
         fs::path p(value);
         if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;

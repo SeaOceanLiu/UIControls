@@ -460,7 +460,7 @@ void TextArea::draw(void) {
     }
     SRect clipRect(drawRect.left + marginX, drawRect.top + marginY,
                    (float)(clipWidth - (int)(marginX + marginRight)), (float)clipHeight);
-    GET_RENDERDEVICE->setClipRect(clipRect);
+    GET_RENDERDEVICE->pushClipRect(clipRect);
 
     int startLine = 0;
     int endLine = getTotalLines();
@@ -602,7 +602,7 @@ void TextArea::draw(void) {
         GET_RENDERDEVICE->fillRect(cursorRect);
     }
 
-    GET_RENDERDEVICE->clearClipRect();
+    GET_RENDERDEVICE->popClipRect();
 
     afterDraw();
 }

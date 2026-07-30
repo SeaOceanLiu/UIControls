@@ -59,6 +59,8 @@ public:
     bool isPopupVisible() { return getVisible() && m_result == DialogResult::None; }
     DialogResult getResult() const { return m_result; }
 
+    void setRect(SRect rect) override;
+
     void setContent(shared_ptr<ControlImpl> content);
     shared_ptr<ControlImpl> getContent() const { return m_content; }
 

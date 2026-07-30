@@ -763,7 +763,7 @@ void ComboBoxListPanel::draw()
         if (needScroll) {
             SRect textClip(dr.left, dr.top + itemY,
                            textClipRight - dr.left, itemH);
-            device->setClipRect(textClip);
+            device->pushClipRect(textClip);
         }
 
         SColor textColor = items[i].disabled
@@ -779,7 +779,7 @@ void ComboBoxListPanel::draw()
             dr.left + ConstDef::COMBOBOX_LIST_PADDING * sx, textY, textColor);
 
         if (needScroll) {
-            device->clearClipRect();
+            device->popClipRect();
         }
     }
 
@@ -874,7 +874,7 @@ int ComboBox::setFloatProperty(const char* prop, float value) {
 }
 
 int ComboBox::setStringProperty(const char* prop, const char* value) {
-    if (strcmp(prop, "items") == 0) {
+    if (strcmp(prop, PropertyNames::kItems) == 0) {
         if (!value) return 0;
         try {
             auto j = nlohmann::json::parse(value);

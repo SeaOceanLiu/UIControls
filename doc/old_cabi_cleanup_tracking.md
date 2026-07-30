@@ -1,6 +1,6 @@
 # 旧 C ABI 清理计划
 
-**状态：属性扩展全部完成，待删除旧函数 + 更新示例。**
+**状态：属性扩展全部完成，测试文件与示例已迁移，待删除 .h/.cpp 中的旧函数声明。**
 
 | 动作 | 状态 | 新增 CAPI / 属性扩展 | 替代的旧函数 |
 |------|------|---------------------|-------------|
@@ -10,8 +10,9 @@
 | | ✅ 已实现 | `SetFloat(ctl, "first-min"/"second-min")` | `SetSplitterMinSize` |
 | | ✅ 已实现 | `SetEnum(ctl, "centered-mode", ...)` | `SetDialogCentered` |
 | | ✅ 已实现 | `SetString("expand"/"collapse")` / `SetBool("expand-all"/"collapse-all")` | `TreeViewExpandNode` / `CollapseNode` / `ExpandAll` / `CollapseAll` |
-| **删除旧函数** | 🔲 待做 | — | 见 §7 清单 |
-| **示例迁移** | 🔲 待做 | 改用新属性系统 API | `sample_fromsource.c`, `sample_programmatic.c`, `hello_uicornerstone.c` |
+| **删除旧函数** | 🔲 待做（.h/.cpp 声明待删） | — | 见 §7 清单 |
+| **测试文件迁移** | ✅ 已完成 | 改用新属性系统 API | 5 个 test_*_cabi.cpp 文件 |
+| **示例迁移** | ✅ 已完成 | 改用新属性系统 API | `sample_fromsource.c`, `sample_programmatic.c`, `hello_uicornerstone.c` |
 
 ---
 
@@ -28,7 +29,7 @@
 |------|------|------|
 | `UICornerstone_SetRect` | KEEP | 便捷函数，保留 |
 | `UICornerstone_GetRect` | KEEP | 便捷函数，保留 |
-| `UICornerstone_AddChild` | KEEP | 树操作，非属性 |
+| `UICornerstone_AddChildControl` | KEEP | 树操作，非属性 |
 | `UICornerstone_DestroyControl` | KEEP | 生命周期，非属性 |
 | `UICornerstone_GetControlId` | KEEP | 只读查询，非属性 |
 | `UICornerstone_WinFrameSetClientText` | DELETE | `SetString(ctl, "caption", text)` |
@@ -69,17 +70,17 @@
 | `UICornerstone_SetSplitterLinkedControls` | DELETE | `SetPtr(ctl, "first-linked", first) + SetPtr(ctl, "second-linked", second)` |
 | `UICornerstone_SetSplitterMinSize` | DELETE | `SetFloat(ctl, "first-min", min1) + SetFloat(ctl, "second-min", min2)` |
 
-## 5. 示例需要更新
+## 5. 示例已更新 ✅
 
-这些函数已在 .h/.cpp 中删除，但示例 `.c` 仍调用：
+以下旧函数已在 3 个示例 `.c` 文件中替换：
 
-| 函数 | 替代方案 |
-|------|----------|
+| 旧函数 | 替代方案 |
+|--------|----------|
 | `UICornerstone_SetBGColor(r,g,b,a)` | `SetColor(ctl, "background", (UIColor){r,g,b,a})` |
 | `UICornerstone_SetText(ctl, text)` | `SetString(ctl, "text"/"caption", text)` |
 | `UICornerstone_SetOnClick(cb, ud)` | `SetCallback(ctl, "click", cb, ud)` |
 
-**受影响文件：**
+**已更新文件：**
 - `samples/sample_programmatic/sample_programmatic.c`
 - `samples/sample_fromsource/sample_fromsource.c`
 - `samples/hello_uicornerstone/hello_uicornerstone.c`
@@ -109,7 +110,7 @@
 |---|------|-------|---------|------|------|
 | 33 | `UICornerstone_SetRect` | 228 | 557 | CONVENIENCE | 保留 |
 | 34 | `UICornerstone_GetRect` | 229 | 561 | CONVENIENCE | 保留 |
-| 35 | `UICornerstone_AddChild` | 230 | 570 | CONTROL | 保留 |
+| 35 | `UICornerstone_AddChildControl` | 230 | 570 | CONTROL | 保留 |
 | 36 | `UICornerstone_DestroyControl` | 231 | 594 | CONTROL | 保留 |
 | 37 | `UICornerstone_GetControlId` | 232 | 580 | CONTROL | 保留 |
 | 38 | `UICornerstone_WinFrameSetClientText` | 233 | 609 | **DELETE** | `SetString(ctl, "caption", text)` |
@@ -171,10 +172,10 @@
 | 74 | `UICornerstone_SetSplitterLinkedControls` | 834 | **DELETE** | `SetPtr(ctl, "first-linked", f) + SetPtr(ctl, "second-linked", s)` |
 | 75 | `UICornerstone_SetSplitterMinSize` | 851 | **DELETE** | `SetFloat(ctl, "first-min", f) + SetFloat(ctl, "second-min", s)` |
 
-### 7.11 示例中已删除 / 待迁移
+### 7.11 示例已迁移 ✅
 
-| # | 函数 | 被调用于 | 替代方案 |
-|---|------|---------|----------|
+| # | 旧函数 | 已替换于 | 替代方案 |
+|---|--------|---------|----------|
 | 76 | `UICornerstone_SetBGColor` | sample_fromsource.c, sample_programmatic.c | `SetColor(ctl, "background", ...)` |
 | 77 | `UICornerstone_SetText` | sample_fromsource.c, sample_programmatic.c, hello_uicornerstone.c | `SetString(ctl, "text"/"caption", ...)` |
 | 78 | `UICornerstone_SetOnClick` | sample_fromsource.c, sample_programmatic.c | `SetCallback(ctl, "click", ...)` |
@@ -191,8 +192,8 @@
 | **CONVENIENCE** (保留) | 2 | SetRect, GetRect |
 | **CONTROL** (保留) | 3 | AddChild, DestroyControl, GetControlId |
 | **DELETE** (待删除) | 19 | WinFrameSetClientText, Show, Close, SetDialogCentered, SetDialogPosition, SetContent, SetOnConfirm/Cancel/Close, SetConfirmButtonText/CancelButtonText, TreeViewGetSelectedId/UserData, TreeViewExpandNode/CollapseNode, TreeViewExpandAll/CollapseAll, SetButtonAnimation, SetComboItems, SetSplitterLinkedControls, SetSplitterMinSize |
-| **示例需迁移** | 3 文件 | sample_fromsource.c, sample_programmatic.c, hello_uicornerstone.c |
+| **测试已迁移** | 5 文件 | 所有 test_*_cabi.cpp ✅ |
+| **示例已迁移** | 3 文件 | sample_fromsource.c, sample_programmatic.c, hello_uicornerstone.c ✅ |
 
 **剩余工作：**
 1. 从 `UICornerstoneAPI.h` 和 `UICornerstoneAPI.cpp` 中 DELETE 标记的 19 个旧函数
-2. 更新 3 个示例文件

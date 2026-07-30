@@ -32,25 +32,22 @@ typedef void* (*UICreateProgressBarFn)(float,float,float,float);
 typedef void* (*UICreatePanelFn)(float,float,float,float);
 typedef void* (*UICreateTextAreaFn)(float,float,float,float);
 typedef void* (*UICreateWinFrameFn)(const char*,float,float,float,float);
-typedef void  (*UIAddChildFn)(void*,void*);
+typedef void  (*UIAddChildControlFn)(void*,void*);
 typedef void  (*UIPushUIEventFn)(const void*);
 typedef void  (*UIDestroyControlFn)(void*);
-typedef void  (*UIWinFrameSetClientTextFn)(void*, const char*);
 typedef void* (*UICreateImageButtonFn)(const char*,const char*,const char*,float,float,float,float);
-typedef void  (*UISetButtonAnimationFn)(void*, const char*);
 typedef void* (*UICreateSliderFn)(float,float,float,float,float,float,float);
 typedef void* (*UICreateColorPickerFn)(float,float,float,float,const char*);
 typedef void* (*UICreateNumericUpDownFn)(float,float,float,float);
 typedef void* (*UICreateSplitterFn)(float,float,float,float,int);
-typedef void  (*UISetSplitterLinkedControlsFn)(void*,void*,void*);
-typedef void  (*UISetSplitterMinSizeFn)(void*,float,float);
 
-// New property API function pointer types
+// Property API function pointer types
 typedef int   (*UISetColorFn)(void*, const char*, UIColor);
 typedef int   (*UISetBoolFn)(void*, const char*, int);
 typedef int   (*UISetFloatFn)(void*, const char*, float);
 typedef int   (*UISetIntFn)(void*, const char*, int);
 typedef int   (*UISetStringFn)(void*, const char*, const char*);
+typedef int   (*UISetPtrFn)(void*, const char*, void*);
 typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
 typedef int   (*UIGetFloatFn)(void*, const char*, float*);
 typedef int   (*UIGetBoolFn)(void*, const char*, int*);
@@ -74,19 +71,14 @@ static UICreateProgressBarFn uiCreateProgressBar = nullptr;
 static UICreatePanelFn      uiCreatePanel      = nullptr;
 static UICreateTextAreaFn   uiCreateTextArea   = nullptr;
 static UICreateWinFrameFn   uiCreateWinFrame   = nullptr;
-static UIAddChildFn         uiAddChild         = nullptr;
+static UIAddChildControlFn  uiAddChildControl  = nullptr;
 static UIPushUIEventFn      uiPushUIEvent      = nullptr;
 static UIDestroyControlFn   uiDestroyControl   = nullptr;
-static UIWinFrameSetClientTextFn uiSetWinFrameClientText = nullptr;
 static UICreateImageButtonFn    uiCreateImageButton  = nullptr;
-static UISetButtonAnimationFn   uiSetButtonAnimation = nullptr;
 static UICreateSliderFn         uiCreateSlider       = nullptr;
 static UICreateColorPickerFn    uiCreateColorPicker    = nullptr;
 static UICreateNumericUpDownFn  uiCreateNumericUpDown  = nullptr;
 static UICreateSplitterFn           uiCreateSplitter           = nullptr;
-static UISetSplitterLinkedControlsFn uiSetSplitterLinkedControls = nullptr;
-static UISetSplitterMinSizeFn       uiSetSplitterMinSize       = nullptr;
-
 // New property API function pointers
 static UISetColorFn    uiSetColor    = nullptr;
 static UISetBoolFn     uiSetBool     = nullptr;
@@ -97,6 +89,7 @@ static UIGetStringFn   uiGetString   = nullptr;
 static UIGetFloatFn    uiGetFloat    = nullptr;
 static UIGetBoolFn     uiGetBool     = nullptr;
 static UISetCallbackFn uiSetCallback = nullptr;
+static UISetPtrFn      uiSetPtr      = nullptr;
 
 // ===== Control handle globals =====
 static void* g_btnHandle      = nullptr;
@@ -117,6 +110,7 @@ static void* g_nudHandle      = nullptr;
 static void* g_splitterHandle = nullptr;
 static void* g_spFirstPanel   = nullptr;
 static void* g_spSecondPanel  = nullptr;
+static void* g_winFrameLabel  = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 static bool    g_uiInitialized = false;
@@ -139,14 +133,16 @@ static void onButtonClick(void* ctl, const UIEventData* evt, void* userData) {
             printf("FAIL: creating WinFrame\n"); fflush(stdout);
             return;
         }
-        printf("OK: created WinFrame\n"); fflush(stdout);
-    } else if (uiSetBool) {
-        uiSetBool(g_winFrameHandle, "visible", 1);
+        g_winFrameLabel = uiCreateLabel(text, 14.0f, 10, 35, 480, 240);
+        if (g_winFrameLabel) uiAddChildControl(g_winFrameHandle, g_winFrameLabel);
+        printf("OK: created WinFrame with Label\n"); fflush(stdout);
+    } else {
+        if (uiSetBool) uiSetBool(g_winFrameHandle, "visible", 1);
+        if (g_winFrameLabel && uiSetString)
+            uiSetString(g_winFrameLabel, "caption", text);
     }
-
-    if (uiSetWinFrameClientText) {
-        uiSetWinFrameClientText(g_winFrameHandle, text);
-        printf("OK: updated WinFrame content from TextArea\n"); fflush(stdout);
+    if (uiSetString) {
+        uiSetString(g_winFrameHandle, "title", text);
     }
 }
 
@@ -178,24 +174,21 @@ static bool loadAllProcs(HMODULE dll) {
     uiCreatePanel      = (UICreatePanelFn)GetProcAddress(dll, "UICornerstone_CreatePanel");
     uiCreateTextArea   = (UICreateTextAreaFn)GetProcAddress(dll, "UICornerstone_CreateTextArea");
     uiCreateWinFrame   = (UICreateWinFrameFn)GetProcAddress(dll, "UICornerstone_CreateWinFrame");
-    uiAddChild         = (UIAddChildFn)GetProcAddress(dll, "UICornerstone_AddChild");
+    uiAddChildControl  = (UIAddChildControlFn)GetProcAddress(dll, "UICornerstone_AddChildControl");
     uiPushUIEvent      = (UIPushUIEventFn)GetProcAddress(dll, "UICornerstone_PushUIEvent");
     uiDestroyControl   = (UIDestroyControlFn)GetProcAddress(dll, "UICornerstone_DestroyControl");
-    uiSetWinFrameClientText = (UIWinFrameSetClientTextFn)GetProcAddress(dll, "UICornerstone_WinFrameSetClientText");
     uiCreateImageButton  = (UICreateImageButtonFn)GetProcAddress(dll, "UICornerstone_CreateImageButton");
-    uiSetButtonAnimation = (UISetButtonAnimationFn)GetProcAddress(dll, "UICornerstone_SetButtonAnimation");
     uiCreateSlider       = (UICreateSliderFn)GetProcAddress(dll, "UICornerstone_CreateSlider");
     uiCreateColorPicker    = (UICreateColorPickerFn)GetProcAddress(dll, "UICornerstone_CreateColorPicker");
     uiCreateNumericUpDown  = (UICreateNumericUpDownFn)GetProcAddress(dll, "UICornerstone_CreateNumericUpDown");
     uiCreateSplitter           = (UICreateSplitterFn)GetProcAddress(dll, "UICornerstone_CreateSplitter");
-    uiSetSplitterLinkedControls = (UISetSplitterLinkedControlsFn)GetProcAddress(dll, "UICornerstone_SetSplitterLinkedControls");
-    uiSetSplitterMinSize       = (UISetSplitterMinSizeFn)GetProcAddress(dll, "UICornerstone_SetSplitterMinSize");
     // New property API
     uiSetColor    = (UISetColorFn)GetProcAddress(dll, "UICornerstone_SetColor");
     uiSetBool     = (UISetBoolFn)GetProcAddress(dll, "UICornerstone_SetBool");
     uiSetFloat    = (UISetFloatFn)GetProcAddress(dll, "UICornerstone_SetFloat");
     uiSetInt      = (UISetIntFn)GetProcAddress(dll, "UICornerstone_SetInt");
     uiSetString   = (UISetStringFn)GetProcAddress(dll, "UICornerstone_SetString");
+    uiSetPtr      = (UISetPtrFn)GetProcAddress(dll, "UICornerstone_SetPtr");
     uiGetString   = (UIGetStringFn)GetProcAddress(dll, "UICornerstone_GetString");
     uiGetFloat    = (UIGetFloatFn)GetProcAddress(dll, "UICornerstone_GetFloat");
     uiGetBool     = (UIGetBoolFn)GetProcAddress(dll, "UICornerstone_GetBool");
@@ -249,7 +242,7 @@ static void createAllControls() {
         if (g_prgStatus) printf("OK: created prgStatus\n");
     }
 
-    if (uiCreatePanel && uiCreateTextArea && uiAddChild) {
+    if (uiCreatePanel && uiCreateTextArea && uiAddChildControl) {
         g_panelHandle = uiCreatePanel(20, 135, 760, 220);
         if (g_panelHandle) {
             printf("OK: created Panel\n");
@@ -261,7 +254,7 @@ static void createAllControls() {
             printf("OK: created TextArea\n");
             if (uiSetString) uiSetString(g_textAreaHandle, "text",
                 "Hello from TextArea!\nEdit me and click the button.");
-            uiAddChild(g_panelHandle, g_textAreaHandle);
+            uiAddChildControl(g_panelHandle, g_textAreaHandle);
             printf("OK: added TextArea to Panel\n");
         }
 
@@ -291,7 +284,7 @@ static void createAllControls() {
         }
 
         // ── Splitter test ──
-        if (uiCreateSplitter && uiCreatePanel && uiAddChild) {
+        if (uiCreateSplitter && uiCreatePanel && uiAddChildControl) {
             g_spFirstPanel = uiCreatePanel(20, 370, 60, 30);
             if (g_spFirstPanel) {
                 printf("OK: created splitter first panel\n");
@@ -305,10 +298,14 @@ static void createAllControls() {
             g_splitterHandle = uiCreateSplitter(80, 370, 6, 30, 1);
             if (g_splitterHandle) {
                 printf("OK: created Splitter\n");
-                if (uiSetSplitterLinkedControls)
-                    uiSetSplitterLinkedControls(g_splitterHandle, g_spFirstPanel, g_spSecondPanel);
-                if (uiSetSplitterMinSize)
-                    uiSetSplitterMinSize(g_splitterHandle, 20.0f, 20.0f);
+                if (uiSetPtr) {
+                    uiSetPtr(g_splitterHandle, "first-linked", g_spFirstPanel);
+                    uiSetPtr(g_splitterHandle, "second-linked", g_spSecondPanel);
+                }
+                if (uiSetFloat) {
+                    uiSetFloat(g_splitterHandle, "first-min", 20.0f);
+                    uiSetFloat(g_splitterHandle, "second-min", 20.0f);
+                }
                 if (uiSetCallback)
                     uiSetCallback(g_splitterHandle, "moved", onSplitterMovedCb, nullptr);
             }
@@ -324,19 +321,19 @@ static void createAllControls() {
                 printf("OK: created ImageButton\n");
                 if (uiSetCallback)
                     uiSetCallback(g_imgBtnHandle, "click", onButtonClick, nullptr);
-                uiAddChild(g_panelHandle, g_imgBtnHandle);
+                uiAddChildControl(g_panelHandle, g_imgBtnHandle);
             }
         }
 
-        if (uiCreateButton && uiSetButtonAnimation) {
+        if (uiCreateButton && uiSetString) {
             g_aniBtnHandle = uiCreateButton("Ani Test", 210, 175, 200, 30);
             if (g_aniBtnHandle) {
                 printf("OK: created Animation Button\n");
-                uiSetButtonAnimation(g_aniBtnHandle,
+                uiSetString(g_aniBtnHandle, "animation",
                     "assets/animations/rotateBtn/rotateBtn.jsonc");
                 if (uiSetCallback)
                     uiSetCallback(g_aniBtnHandle, "click", onButtonClick, nullptr);
-                uiAddChild(g_panelHandle, g_aniBtnHandle);
+                uiAddChildControl(g_panelHandle, g_aniBtnHandle);
             }
         }
 
@@ -349,7 +346,7 @@ static void createAllControls() {
                     uiSetColor(g_btnHandle, "background", UIColor{100, 149, 237, 255});
                 if (uiSetCallback)
                     uiSetCallback(g_btnHandle, "click", onButtonClick, nullptr);
-                uiAddChild(g_panelHandle, g_btnHandle);
+                uiAddChildControl(g_panelHandle, g_btnHandle);
                 printf("OK: added Button to Panel\n");
             }
         }
@@ -366,14 +363,14 @@ static void updateStatusLabels() {
         const char* label = "Unchecked";
         if (st == 1) label = "Checked";
         snprintf(buf, sizeof(buf), "CheckBox: %s", label);
-        uiSetString(g_chkStatus, "text", buf);
+        uiSetString(g_chkStatus, "caption", buf);
     }
 
     if (g_progressHandle && uiGetFloat && g_prgStatus && uiSetString) {
         float v = 0.0f;
         uiGetFloat(g_progressHandle, "value", &v);
         snprintf(buf, sizeof(buf), "Progress: %.1f%%", v);
-        uiSetString(g_prgStatus, "text", buf);
+        uiSetString(g_prgStatus, "caption", buf);
     }
 
     if (g_editHandle && uiGetString && g_edtStatus && uiSetString) {
@@ -387,38 +384,27 @@ static void updateStatusLabels() {
         } else {
             snprintf(buf, sizeof(buf), "Edit: %s", text);
         }
-        uiSetString(g_edtStatus, "text", buf);
+        uiSetString(g_edtStatus, "caption", buf);
     }
 
     if (g_sliderHandle && uiGetFloat) {
         float sv = 0.0f;
         uiGetFloat(g_sliderHandle, "value", &sv);
-        static float lastSv = -1e9f;
-        if (sv != lastSv) { lastSv = sv; printf("Slider: %.1f\n", sv); }
     }
 
     if (g_nudHandle && uiGetFloat) {
         float nv = 0.0f;
         uiGetFloat(g_nudHandle, "value", &nv);
-        static float lastNv = -1e9f;
-        if (nv != lastNv) { lastNv = nv; printf("NumericUpDown: %.0f\n", nv); }
     }
 
     if (g_colorPickerHandle && uiGetString) {
         char hex[16];
         uiGetString(g_colorPickerHandle, "color", hex, sizeof(hex));
-        static char lastHex[16] = "";
-        if (strcmp(hex, lastHex) != 0) {
-            strncpy(lastHex, hex, sizeof(lastHex) - 1);
-            printf("Color: %s\n", hex);
-        }
     }
 
     if (g_splitterHandle && uiGetFloat) {
         float sr = 0.0f;
         uiGetFloat(g_splitterHandle, "ratio", &sr);
-        static float lastSr = -1.0f;
-        if (sr != lastSr) { lastSr = sr; printf("Splitter: %.3f\n", sr); }
     }
 }
 
@@ -465,7 +451,7 @@ static int runTest(const char* shortName, const char* displayName) {
     }
 
     void* cbs = GetUIBackendCallbacks();
-    if (!cbs || !initCABI(cbs, 800, 480)) {
+    if (!cbs || !initCABI(cbs, 800, 550)) {
         printf("FAIL: UICornerstone_Init\n");
         FreeLibrary(g_uiDll);
         return 1;

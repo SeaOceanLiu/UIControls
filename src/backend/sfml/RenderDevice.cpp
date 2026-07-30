@@ -271,9 +271,16 @@ class SFMLRenderDevice : public RenderDevice {
     sf::RenderTarget* m_target;
     sf::Color m_currentColor;
     bool m_clipEnabled;
+    std::vector<SRect> m_clipStack;
     sf::VertexArray m_fillBatch;
     sf::VertexArray m_lineBatch;
     bool m_batchDirty = false;
+
+    void applyClipRect(const SRect& rect) {
+        int fbH = static_cast<int>(m_target->getSize().y);
+        glScissor(static_cast<int>(rect.left), fbH - static_cast<int>(rect.top + rect.height),
+                  static_cast<int>(rect.width), static_cast<int>(rect.height));
+    }
 public:
     SFMLRenderDevice(sf::RenderWindow* window)
         : m_window(window), m_target(window)
@@ -307,17 +314,39 @@ public:
 
     void setClipRect(const SRect& rect) override {
         flushBatches();
+        m_clipStack.clear();
         m_clipEnabled = true;
         glEnable(GL_SCISSOR_TEST);
-        int fbH = static_cast<int>(m_target->getSize().y);
-        glScissor(static_cast<int>(rect.left), fbH - static_cast<int>(rect.top + rect.height),
-                  static_cast<int>(rect.width), static_cast<int>(rect.height));
+        applyClipRect(rect);
     }
 
     void clearClipRect() override {
         flushBatches();
+        m_clipStack.clear();
         m_clipEnabled = false;
         glDisable(GL_SCISSOR_TEST);
+    }
+
+    void pushClipRect(const SRect& rect) override {
+        flushBatches();
+        m_clipStack.push_back(rect);
+        if (!m_clipEnabled) {
+            m_clipEnabled = true;
+            glEnable(GL_SCISSOR_TEST);
+        }
+        applyClipRect(rect);
+    }
+
+    void popClipRect() override {
+        flushBatches();
+        if (!m_clipStack.empty())
+            m_clipStack.pop_back();
+        if (m_clipStack.empty()) {
+            m_clipEnabled = false;
+            glDisable(GL_SCISSOR_TEST);
+        } else {
+            applyClipRect(m_clipStack.back());
+        }
     }
 
     void fillRect(const SRect& rect) override {

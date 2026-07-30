@@ -1139,7 +1139,6 @@ private:
     std::string m_fontName;
     float m_fontSize;
     CornerStyle m_cornerStyle;
-    std::vector<::SRect> m_clipStack;
 };
 
 // ==================== 高级绘图功能 ====================

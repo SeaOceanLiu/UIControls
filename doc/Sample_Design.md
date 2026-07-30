@@ -64,7 +64,7 @@ sample_programmatic.exe
         └── SDL3_ttf.lib
 ```
 
-数据流：`main()` → `UICornerstone_CreateButton/CreateLabel/...` → 控件树 → `UICornerstone_AddChild()` 挂接父子关系
+数据流：`main()` → `UICornerstone_CreateButton/CreateLabel/...` → 控件树 → `UICornerstone_AddChildControl()` 挂接父子关系
 
 输出路径：`build/sample/sample_programmatic/<backend>/Debug/`
 
@@ -225,18 +225,18 @@ int main(void) {
     UIControlHandle title = UICornerstone_CreateLabel(
         "UICornerstone Sample (Programmatic)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChild(root, title);
+    UICornerstone_AddChildControl(root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(
         "Click Me", 20, 60, 200, 80);
     UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
     UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChild(root, btn);
+    UICornerstone_AddChildControl(root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
         "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChild(root, g_statusLabel);
+    UICornerstone_AddChildControl(root, g_statusLabel);
 
     while (!UICornerstone_IsQuitRequested()) {
         UICornerstone_ProcessEvents();
@@ -253,7 +253,7 @@ int main(void) {
 ### 关键差异说明
 
 1. **无 JSON**：控件通过 `UICornerstone_CreatePanel/CreateButton/CreateLabel` 直接创建
-2. **父子关系**：`UICornerstone_AddChild(root, child)` 将子控件挂到根 Panel
+2. **父子关系**：`UICornerstone_AddChildControl(root, child)` 将子控件挂到根 Panel
 3. **句柄存储**：`g_statusLabel` 静态变量替代 `FindControl` 查找
 4. **按钮颜色**：`UICornerstone_SetBGColor` 自动生成 hover（变亮 30%）和 pressed（变暗 30%）状态
 
@@ -301,18 +301,18 @@ int main(void) {
     UIControlHandle title = UICornerstone_CreateLabel(
         "UICornerstone Sample (Hybrid)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChild(root, title);
+    UICornerstone_AddChildControl(root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(
         "Click Me", 20, 60, 200, 80);
     UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
     UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChild(root, btn);
+    UICornerstone_AddChildControl(root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
         "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChild(root, g_statusLabel);
+    UICornerstone_AddChildControl(root, g_statusLabel);
 
     while (!UICornerstone_IsQuitRequested()) {
         UICornerstone_ProcessEvents();

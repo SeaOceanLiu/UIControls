@@ -10,6 +10,7 @@
 #include "Font.h"
 #include "Texture.h"
 #include "EventTypes.h"
+#include <vector>
 
 // ============================================================
 // CallbackAdapter 层：将 UIBackendCallbacks 包装为 C++ 抽象接口
@@ -56,6 +57,7 @@ public:
 class CallbackRenderDevice : public RenderDevice {
     UIRenderDeviceHandle m_handle;
     const UIBackendCallbacks* m_cbs;
+    std::vector<SRect> m_clipStack;
 public:
     CallbackRenderDevice(const UIBackendCallbacks* cbs, UIRenderDeviceHandle handle);
     ~CallbackRenderDevice() override;
@@ -63,6 +65,8 @@ public:
     void setBlendMode(BlendMode mode) override;
     void setClipRect(const SRect& rect) override;
     void clearClipRect() override;
+    void pushClipRect(const SRect& rect) override;
+    void popClipRect() override;
     void fillRect(const SRect& rect) override;
     void drawRect(const SRect& rect) override;
     void drawLine(float x1, float y1, float x2, float y2) override;

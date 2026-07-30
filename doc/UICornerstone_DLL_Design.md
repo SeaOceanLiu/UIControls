@@ -426,7 +426,7 @@ void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, fl
 void UICornerstone_SetVisible(UIControlHandle ctl, int visible);
 void UICornerstone_SetEnabled(UIControlHandle ctl, int enabled);
 void UICornerstone_SetText(UIControlHandle ctl, const char* text);
-void UICornerstone_AddChild(UIControlHandle parent, UIControlHandle child);
+void UICornerstone_AddChildControl(UIControlHandle parent, UIControlHandle child);
 void UICornerstone_SetOnClick(UIControlHandle ctl, UIActionCallback cb, void* userData);
 void UICornerstone_SetBGColor(UIControlHandle ctl, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 void UICornerstone_SetProgress(UIControlHandle ctl, float value);

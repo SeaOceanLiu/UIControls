@@ -6,6 +6,7 @@
 #include "SColor.h"
 #include "ControlBase.h"
 #include "Label.h"
+#include "PropertyNames.h"
 
 enum class CheckBoxStyle {
     Classic,
@@ -31,16 +32,16 @@ enum class CheckBoxVerticalAlign {
 };
 
 inline CheckBoxStyle CheckBoxStyleFromString(const char* s) {
-    if (_stricmp(s, "classic") == 0) return CheckBoxStyle::Classic;
-    if (_stricmp(s, "cross")   == 0) return CheckBoxStyle::Cross;
-    if (_stricmp(s, "circle")  == 0) return CheckBoxStyle::Circle;
+    if (_stricmp(s, PropertyNames::kStyleClassic) == 0) return CheckBoxStyle::Classic;
+    if (_stricmp(s, PropertyNames::kStyleCross)   == 0) return CheckBoxStyle::Cross;
+    if (_stricmp(s, PropertyNames::kStyleCircle)  == 0) return CheckBoxStyle::Circle;
     return CheckBoxStyle::Classic;
 }
 
 inline CheckState CheckStateFromString(const char* s) {
-    if (_stricmp(s, "unchecked")     == 0) return CheckState::Unchecked;
-    if (_stricmp(s, "checked")       == 0) return CheckState::Checked;
-    if (_stricmp(s, "indeterminate") == 0) return CheckState::Indeterminate;
+    if (_stricmp(s, PropertyNames::kCheckUnchecked)     == 0) return CheckState::Unchecked;
+    if (_stricmp(s, PropertyNames::kCheckChecked)       == 0) return CheckState::Checked;
+    if (_stricmp(s, PropertyNames::kCheckIndeterminate) == 0) return CheckState::Indeterminate;
     return CheckState::Unchecked;
 }
 

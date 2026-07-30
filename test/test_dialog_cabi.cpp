@@ -30,12 +30,11 @@ typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
 typedef int   (*UISetStringFn)(void*, const char*, const char*);
 typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
 typedef int   (*UISetColorFn)(void*, const char*, UIColor);
-typedef void  (*UIShowFn)(void*);
-typedef void  (*UICloseFn)(void*);
+typedef int   (*UISetBoolFn)(void*, const char*, int);
 typedef int   (*UISetFloatFn)(void*, const char*, float);
 typedef int   (*UIGetFloatFn)(void*, const char*, float*);
+typedef void  (*UISetRectFn)(void*, float, float, float, float);
 typedef const char*   (*UIGetControlIdFn)(void*);
-typedef void  (*UISetDialogPositionFn)(void*,float,float,float,float);
 
 static UIInitFn             uiInit                 = nullptr;
 static UISetViewportFn      uiSetViewport          = nullptr;
@@ -52,11 +51,10 @@ static UIRegisterActionFn   uiRegisterAction       = nullptr;
 static UISetStringFn        uiSetString            = nullptr;
 static UIGetStringFn        uiGetString            = nullptr;
 static UISetColorFn         uiSetColor             = nullptr;
-static UIShowFn             uiShow                 = nullptr;
-static UICloseFn            uiClose                = nullptr;
+static UISetBoolFn          uiSetBool              = nullptr;
 static UISetFloatFn         uiSetFloat             = nullptr;
 static UIGetFloatFn         uiGetFloat             = nullptr;
-static UISetDialogPositionFn    uiSetDialogPosition    = nullptr;
+static UISetRectFn          uiSetRect              = nullptr;
 static UIGetControlIdFn         uiGetControlId         = nullptr;
 
 static HMODULE g_uiDll = nullptr;
@@ -206,8 +204,8 @@ static void showColorDlg(void*, void*) {
     syncColorToAll(g_r, g_g, g_b, g_a);
     void* dlg = uiFindControl("colorDlg");
     if (!dlg) return;
-    uiSetDialogPosition(dlg, 100, 30, 296, 440);
-    uiShow(dlg);
+    uiSetRect(dlg, 100, 30, 296, 440);
+    uiSetBool(dlg, "visible", 1);
 }
 
 static void restoreFromSaved() {
@@ -241,11 +239,10 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(SetString);
     RESOLVE(GetString);
     RESOLVE(SetColor);
-    RESOLVE(Show);
-    RESOLVE(Close);
+    RESOLVE(SetBool);
     RESOLVE(SetFloat);
     RESOLVE(GetFloat);
-    RESOLVE(SetDialogPosition);
+    RESOLVE(SetRect);
     RESOLVE(GetControlId);
 #undef RESOLVE
 }
@@ -309,6 +306,8 @@ static int runTest(const char* shortName, const char* displayName) {
                 "id": "colorDlg",
                 "centered": true,
                 "rect": { "x": 0, "y": 0, "w": 296, "h": 440 },
+                "colors": { "background": { "normal": "#E0E0E0FF" } },
+                "borderVisible": true,
                 "confirmButton": { "text": "OK" },
                 "cancelButton": { "text": "Cancel" },
                 "events": {

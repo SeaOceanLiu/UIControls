@@ -142,6 +142,11 @@ void Popup::setContent(shared_ptr<ControlImpl> content) {
     }
 }
 
+void Popup::setRect(SRect rect) {
+    m_anchorMode = AnchorMode::Absolute;
+    Panel::setRect(rect);
+}
+
 void Popup::setCentered() {
     m_anchorMode = AnchorMode::Centered;
 }
@@ -375,6 +380,10 @@ void Dialog::recreateButtons() {
 int Popup::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kCloseOnClickOutside) == 0) { setCloseOnClickOutside(value != 0); return 1; }
     if (strcmp(prop, PropertyNames::kCloseOnEsc) == 0) { setCloseOnEsc(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kVisible) == 0) {
+        if (value) open(); else close();
+        return 1;
+    }
     return Panel::setBoolProperty(prop, value);
 }
 int Popup::getBoolProperty(const char* prop, int& out) {
@@ -383,7 +392,7 @@ int Popup::getBoolProperty(const char* prop, int& out) {
     return Panel::getBoolProperty(prop, out);
 }
 int Popup::setPtrProperty(const char* prop, void* value) {
-    if (strcmp(prop, "content") == 0) {
+    if (strcmp(prop, PropertyNames::kContent) == 0) {
         auto* impl = dynamic_cast<ControlImpl*>(static_cast<Control*>(value));
         if (impl) setContent(impl->shared_from_this());
         return 1;
@@ -391,8 +400,8 @@ int Popup::setPtrProperty(const char* prop, void* value) {
     return Panel::setPtrProperty(prop, value);
 }
 int Popup::setEnumProperty(const char* prop, const char* value) {
-    if (strcmp(prop, "centered-mode") == 0) {
-        if (strcmp(value, "centered") == 0) { setCentered(); return 1; }
+    if (strcmp(prop, PropertyNames::kCenteredMode) == 0) {
+        if (strcmp(value, PropertyNames::kCentered) == 0) { setCentered(); return 1; }
         return 0;
     }
     return Panel::setEnumProperty(prop, value);

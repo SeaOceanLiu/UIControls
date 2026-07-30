@@ -24,6 +24,8 @@ public:
     virtual void setBlendMode(BlendMode mode) = 0;
     virtual void setClipRect(const SRect& rect) = 0;
     virtual void clearClipRect() = 0;
+    virtual void pushClipRect(const SRect& rect) = 0;
+    virtual void popClipRect() = 0;
 
     // === 基础图元 ===
     virtual void fillRect(const SRect& rect) = 0;

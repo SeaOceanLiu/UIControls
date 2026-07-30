@@ -175,17 +175,17 @@ int main(void) {
     UIControlHandle root = UICornerstone_CreatePanel(0, 0, 800, 480);
     UIControlHandle title = UICornerstone_CreateLabel(
         "My App (Programmatic)", 18, 20, 10, 760, 30);
-    UICornerstone_AddChild(root, title);
+    UICornerstone_AddChildControl(root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(
         "Click Me", 20, 60, 200, 80);
     UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
     UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChild(root, btn);
+    UICornerstone_AddChildControl(root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
         "Click the button above", 14, 20, 160, 400, 24);
-    UICornerstone_AddChild(root, g_statusLabel);
+    UICornerstone_AddChildControl(root, g_statusLabel);
 
     while (!UICornerstone_IsQuitRequested()) {
         UICornerstone_ProcessEvents();
@@ -204,7 +204,7 @@ int main(void) {
 | 函数 | 作用 |
 |------|------|
 | `UICornerstone_CreatePanel/CreateButton/CreateLabel` | 创建控件 |
-| `UICornerstone_AddChild(parent, child)` | 挂接父子关系 |
+| `UICornerstone_AddChildControl(parent, child)` | 挂接父子关系 |
 | `UICornerstone_SetText(handle, text)` | 设置文本 |
 | `UICornerstone_SetBGColor(handle, r, g, b, a)` | 设置背景色（自动生成 hover/pressed） |
 | `UICornerstone_SetOnClick(handle, callback, user)` | 绑定点击事件 |

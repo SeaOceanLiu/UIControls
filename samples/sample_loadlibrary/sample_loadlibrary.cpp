@@ -118,10 +118,10 @@ typedef void  (*UIShutdownFn)(void);
 typedef void* (*UICreateButtonFn)(const char*,float,float,float,float);
 typedef void* (*UICreateLabelFn)(const char*,float,float,float,float,float);
 typedef void* (*UICreatePanelFn)(float,float,float,float);
-typedef void  (*UISetBGColorFn)(void*,uint8_t,uint8_t,uint8_t,uint8_t);
-typedef void  (*UISetTextFn)(void*,const char*);
+typedef int   (*UISetColorFn)(void*,const char*,UIColor);
+typedef int   (*UISetStringFn)(void*,const char*,const char*);
+typedef int   (*UISetCallbackFn)(void*,const char*,void(*)(void*,const void*,void*),void*);
 typedef void  (*UIAddChildFn)(void*,void*);
-typedef void  (*UISetOnClickFn)(void*,void(*)(void*,void*),void*);
 
 static UIInitFn            uiInit         = nullptr;
 static UISetViewportFn     uiSetViewport  = nullptr;
@@ -135,10 +135,10 @@ static UIShutdownFn        uiShutdown     = nullptr;
 static UICreateButtonFn    uiCreateButton  = nullptr;
 static UICreateLabelFn     uiCreateLabel   = nullptr;
 static UICreatePanelFn     uiCreatePanel   = nullptr;
-static UISetBGColorFn      uiSetBGColor    = nullptr;
-static UISetTextFn         uiSetText       = nullptr;
+static UISetColorFn        uiSetColor      = nullptr;
+static UISetStringFn       uiSetString     = nullptr;
+static UISetCallbackFn     uiSetCallback   = nullptr;
 static UIAddChildFn        uiAddChild      = nullptr;
-static UISetOnClickFn      uiSetOnClick    = nullptr;
 
 static HMODULE      g_uiDll  = nullptr;   // LoadLibrary 返回的 DLL 句柄
 static int          g_count  = 0;
@@ -146,12 +146,12 @@ static void*        g_status = nullptr;   // 状态标签句柄
 
 // ======== 回调函数 ========
 
-static void onBtnClick(void* ctl, void* user) {
-    (void)ctl; (void)user;
+static void onBtnClick(void* ctl, const void* evt, void* user) {
+    (void)ctl; (void)evt; (void)user;
     g_count++;
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_count);
-    if (g_status && uiSetText) uiSetText(g_status, buf);
+    if (g_status && uiSetString) uiSetString(g_status, "caption", buf);
 }
 
 // ======== main ========
@@ -193,14 +193,20 @@ int main(void) {
     RESOLVE(CreateButton);
     RESOLVE(CreateLabel);
     RESOLVE(CreatePanel);
-    RESOLVE(SetBGColor);
-    RESOLVE(SetText);
-    RESOLVE(AddChild);
-    RESOLVE(SetOnClick);
+    RESOLVE(SetColor);
+    RESOLVE(SetString);
+    RESOLVE(SetCallback);
+    // AddChild 导出名是 UICornerstone_AddChildControl（非 UICornerstone_AddChild）
+    *(void**)&uiAddChild = GetProcAddress(g_uiDll, "UICornerstone_AddChildControl");
 #undef RESOLVE
 
     if (!uiInit) {
         printf("FAIL: GetProcAddress(UICornerstone_Init)\n");
+        FreeLibrary(g_uiDll);
+        return 1;
+    }
+    if (!uiSetColor) {
+        printf("FAIL: GetProcAddress(UICornerstone_SetColor)\n");
         FreeLibrary(g_uiDll);
         return 1;
     }
@@ -227,7 +233,7 @@ int main(void) {
         return 1;
     }
     uiSetViewport(0, 0, 800, 480);
-    printf("OK: initialized\n");
+    printf("OK: initialized\n"); fflush(stdout);
 
     // ── 第五步：创建控件 ──────────────────────────────────────
     //
@@ -242,23 +248,25 @@ int main(void) {
     uiAddChild(root, title);
 
     void* btn = uiCreateButton("Click Me", 20, 60, 200, 80);
-    uiSetBGColor(btn, 74, 144, 217, 255);
-    uiSetOnClick(btn, onBtnClick, nullptr);
+    UIColor btnColor = {74, 144, 217, 255};
+    uiSetColor(btn, "background", btnColor);
+    uiSetCallback(btn, "click", onBtnClick, nullptr);
     uiAddChild(root, btn);
 
     g_status = uiCreateLabel("Click the button above", 14,
                              20, 160, 400, 24);
     uiAddChild(root, g_status);
 
-    // ── 第六步：帧循环 ──────────────────────────────────────────
+    printf("entering loop\n"); fflush(stdout);
+    int frameCount = 0;
     while (!uiIsQuitRequested()) {
+        if (++frameCount <= 3) { printf("frame %d\n", frameCount); fflush(stdout); }
         uiProcessEvents();
         uiUpdate(1.0 / 60.0);
         uiClear();
         uiRender();
         uiPresent();
     }
-
     // ── 清理 ──────────────────────────────────────────────────
     uiShutdown();
     FreeLibrary(g_uiDll);

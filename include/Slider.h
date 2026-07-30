@@ -8,6 +8,7 @@
 #include "ControlBase.h"
 #include "Label.h"
 #include "EventQueue.h"
+#include "PropertyNames.h"
 
 enum class SliderStyle {
     Horizontal,
@@ -15,8 +16,8 @@ enum class SliderStyle {
 };
 
 inline SliderStyle SliderStyleFromString(const char* s) {
-    if (_stricmp(s, "horizontal") == 0) return SliderStyle::Horizontal;
-    if (_stricmp(s, "vertical")   == 0) return SliderStyle::Vertical;
+    if (_stricmp(s, PropertyNames::kOrientHorizontal) == 0) return SliderStyle::Horizontal;
+    if (_stricmp(s, PropertyNames::kOrientVertical)   == 0) return SliderStyle::Vertical;
     return SliderStyle::Horizontal;
 }
 

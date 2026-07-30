@@ -55,7 +55,7 @@ static void onSplitterMoved(void* ctl, void* user) {
     uiGetFloat(uiFindControl("mySplitter"), "ratio", &r);
     snprintf(g_ratioInfo, sizeof(g_ratioInfo), "Ratio: %.3f", r);
     void* lbl = uiFindControl("lblStatus");
-    if (lbl) uiSetString(lbl, "text", g_ratioInfo);
+    if (lbl) uiSetString(lbl, "caption", g_ratioInfo);
     printf("%s\n", g_ratioInfo);
 }
 

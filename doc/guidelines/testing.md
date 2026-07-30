@@ -47,3 +47,25 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(10, 50, 120, 24);
 2. 审核通过后扩展 **test_fromsource_cabi.cpp 集成**（追加 ~20 行代码，验证 DLL 模式）。
 3. 最后创建**独立的 `test_xxxx_cabi.cpp`**（完整覆盖 C ABI 接口）。
 4. SFML/Raylib 后端的测试在 SDL3 确认通过后再启动。
+
+## C ABI 测试常见陷阱
+
+### 属性名不匹配
+C ABI Setter/Getter 使用属性名字符串，与 C++ 内部属性常量必须一致：
+
+| 问题 | 错误用法 | 正确用法 |
+|------|---------|---------|
+| 对 Label 设文字内容 | `uiSetString(lbl, "text", ...)` | `uiSetString(lbl, "caption", ...)` |
+| 对 WinFrame 设标题 | `uiSetString(wf, "caption", ...)` | `uiSetString(wf, "title", ...)` |
+| 读取 Splitter 比例 | `uiGetFloat(sp, "value", &r)` | `uiGetFloat(sp, "ratio", &r)` — 两者均可 |
+
+**规则**：Label/Button/MenuItem 用 `"caption"`，EditBox/TextArea 用 `"text"`，WinFrame 用 `"title"`。
+
+### Getter/Setter 不对称
+`setFloatProperty("ratio")` 已实现但 `getFloatProperty("ratio")` 缺失，导致 C ABI 写成功、读失败。**每次添加 setter 时必须同时实现 getter**。
+
+### void* userData 的读写
+TreeView JSON 加载将 `"userData"` 存为 `new std::string(...)` → `void*`，C ABI 回调中**必须用 `GetPtr("selected-user-data")` 获取 `void*` 再转回 `std::string*`**，不可用 `GetString`。
+
+### 子控件遮挡阻断事件分发
+`ControlImpl::handleEvent` 中位置类事件（MouseDown/Up）**逆序遍历子控件**，并做遮挡检查：若上层同辈控件覆盖了点击位置，下层控件被跳过。因此在 WinFrame 中将 Label 放在关闭按钮附近时，Label 的 `(x, y, w, h)` 不得覆盖关闭按钮区域（y < 标题栏高度 30px 且 x 在右上角范围）。

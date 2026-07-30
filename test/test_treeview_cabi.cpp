@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include "../../include/UICornerstoneAPI.h"
 
@@ -28,8 +29,8 @@ typedef int   (*UILoadLayoutFn)(const char*);
 typedef void* (*UIFindControlFn)(const char*);
 typedef void  (*UIRegisterActionFn)(const char*, void(*)(void*,void*), void*);
 typedef int   (*UISetStringFn)(void*, const char*, const char*);
-typedef const char* (*UIGetSelectedIdFn)(void*);
-typedef const char* (*UIGetSelectedUserDataFn)(void*);
+typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
+typedef int   (*UIGetPtrFn)(void*, const char*, void**);
 
 static UIInitFn               uiInit               = nullptr;
 static UISetViewportFn        uiSetViewport        = nullptr;
@@ -44,8 +45,8 @@ static UILoadLayoutFn         uiLoadLayout         = nullptr;
 static UIFindControlFn        uiFindControl        = nullptr;
 static UIRegisterActionFn     uiRegisterAction     = nullptr;
 static UISetStringFn          uiSetString          = nullptr;
-static UIGetSelectedIdFn      uiTreeGetSelId       = nullptr;
-static UIGetSelectedUserDataFn uiTreeGetSelUserData = nullptr;
+static UIGetStringFn          uiGetString          = nullptr;
+static UIGetPtrFn             uiGetPtr             = nullptr;
 static void*                  g_labelHandle        = nullptr;
 static void*                  g_treeHandle         = nullptr;
 
@@ -123,18 +124,28 @@ static void onTreeNodeSelected(void* ctl, void* userData) {
     (void)userData;
     if (!g_labelHandle || !ctl) return;
 
-    const char* id  = uiTreeGetSelId ? uiTreeGetSelId(ctl) : nullptr;
-    const char* ud  = uiTreeGetSelUserData ? uiTreeGetSelUserData(ctl) : nullptr;
+    char idBuf[128] = "";
+    char udBuf[128] = "";
+    if (uiGetString) {
+        uiGetString(ctl, "selected-id", idBuf, (int)sizeof(idBuf));
+    }
+    if (uiGetPtr) {
+        void* ud = nullptr;
+        if (uiGetPtr(ctl, "selected-user-data", &ud) && ud) {
+            auto* s = static_cast<std::string*>(ud);
+            _snprintf_s(udBuf, sizeof(udBuf), _TRUNCATE, "%s", s->c_str());
+        }
+    }
 
     char buf[512];
-    if (id && ud)
-        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Selected: %s\nCustom data: %s", id, ud);
-    else if (id)
-        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Selected: %s", id);
+    if (idBuf[0] && udBuf[0])
+        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Selected: %s\nCustom data: %s", idBuf, udBuf);
+    else if (idBuf[0])
+        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Selected: %s", idBuf);
     else
         _snprintf_s(buf, sizeof(buf), _TRUNCATE, "(deselected)");
 
-    uiSetString(g_labelHandle, "text", buf);
+    uiSetString(g_labelHandle, "caption", buf);
 }
 
 static void loadFunctions() {
@@ -151,8 +162,8 @@ static void loadFunctions() {
     uiFindControl    = (UIFindControlFn)      GetProcAddress(g_uiDll, "UICornerstone_FindControl");
     uiRegisterAction = (UIRegisterActionFn)   GetProcAddress(g_uiDll, "UICornerstone_RegisterAction");
     uiSetString      = (UISetStringFn)        GetProcAddress(g_uiDll, "UICornerstone_SetString");
-    uiTreeGetSelId   = (UIGetSelectedIdFn)    GetProcAddress(g_uiDll, "UICornerstone_TreeViewGetSelectedId");
-    uiTreeGetSelUserData = (UIGetSelectedUserDataFn) GetProcAddress(g_uiDll, "UICornerstone_TreeViewGetSelectedUserData");
+    uiGetString      = (UIGetStringFn)        GetProcAddress(g_uiDll, "UICornerstone_GetString");
+    uiGetPtr         = (UIGetPtrFn)           GetProcAddress(g_uiDll, "UICornerstone_GetPtr");
 }
 
 int main() {
@@ -164,11 +175,6 @@ int main() {
     loadFunctions();
     if (!uiInit || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetString || !uiIsQuit) {
         printf("FAIL: GetProcAddress\n");
-        FreeLibrary(g_uiDll);
-        return 1;
-    }
-    if (!uiTreeGetSelId || !uiTreeGetSelUserData) {
-        printf("FAIL: missing TreeView C ABI exports\n");
         FreeLibrary(g_uiDll);
         return 1;
     }

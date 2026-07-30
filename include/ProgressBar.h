@@ -7,6 +7,7 @@
 #include "SColor.h"
 #include "ControlBase.h"
 #include "Label.h"
+#include "PropertyNames.h"
 
 enum class ProgressBarStyle {
     Horizontal,
@@ -20,15 +21,15 @@ enum class ProgressBarTextMode {
 };
 
 inline ProgressBarStyle ProgressBarStyleFromString(const char* s) {
-    if (_stricmp(s, "horizontal") == 0) return ProgressBarStyle::Horizontal;
-    if (_stricmp(s, "vertical")   == 0) return ProgressBarStyle::Vertical;
+    if (_stricmp(s, PropertyNames::kOrientHorizontal) == 0) return ProgressBarStyle::Horizontal;
+    if (_stricmp(s, PropertyNames::kOrientVertical)   == 0) return ProgressBarStyle::Vertical;
     return ProgressBarStyle::Horizontal;
 }
 
 inline ProgressBarTextMode ProgressBarTextModeFromString(const char* s) {
-    if (_stricmp(s, "none")    == 0) return ProgressBarTextMode::None;
-    if (_stricmp(s, "percent") == 0) return ProgressBarTextMode::Percent;
-    if (_stricmp(s, "custom")  == 0) return ProgressBarTextMode::Custom;
+    if (_stricmp(s, PropertyNames::kTextModeNone)    == 0) return ProgressBarTextMode::None;
+    if (_stricmp(s, PropertyNames::kTextModePercent) == 0) return ProgressBarTextMode::Percent;
+    if (_stricmp(s, PropertyNames::kTextModeCustom)  == 0) return ProgressBarTextMode::Custom;
     return ProgressBarTextMode::None;
 }
 
