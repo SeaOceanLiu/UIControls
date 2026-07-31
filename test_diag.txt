@@ -1,1 +1,0 @@
-[DIAG] nud1.readOnly=0 nud7.readOnly=1 nud8.readOnly=0

@@ -1,3 +1,0 @@
-[ONUPDATE] nud1 value=50
-[ONUPDATE] focused=1
-[ONUPDATE] after Up: value=50

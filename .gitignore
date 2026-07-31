@@ -419,11 +419,10 @@ FodyWeavers.xsd
 
 # Build output
 build/
-label_log.txt
 
-# Test output
-test_stdout.txt
-test_stderr.txt
+# Test/log output files (debug prints, test stdout/stderr redirects)
+test*.txt
+*log.txt
 
 # Archive files (not source code)
 *.rar

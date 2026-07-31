@@ -1,2 +1,0 @@
-[TEST] g_nud1 readOnly=0 value=50
-[TEST] after UP: value=50

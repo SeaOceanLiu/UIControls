@@ -1,3 +1,0 @@
-[DIAG] Direct step: after=51
-[DIAG] Inject KeyDown Up...
-[DIAG] After KeyDown Up: value=51

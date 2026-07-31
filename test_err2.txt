@@ -1,3 +1,0 @@
-[TEST] g_nud1 readOnly=0 value=50 focused=0
-[TEST] after setFocused: focused=1
-[TEST] after UP: value=50 focused=1
