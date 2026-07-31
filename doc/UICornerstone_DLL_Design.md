@@ -413,12 +413,30 @@ UIControlHandle UICornerstone_CreateTextArea(
     float x, float y, float w, float h);
 UIControlHandle UICornerstone_CreateWinFrame(
     const char* title, float x, float y, float w, float h);
-UIControlHandle UICornerstone_CreateMenu(void);
+UIControlHandle UICornerstone_CreateScrollBar(
+    float x, float y, float w, float h, int orientation);
+UIControlHandle UICornerstone_CreateTreeView(
+    float x, float y, float w, float h);
+UIControlHandle UICornerstone_CreateHandleControl(
+    UIControlHandle target, float x, float y, float w, float h);
 UIControlHandle UICornerstone_CreateColorPicker(
     float x, float y, float w, float h, const char* color);
 UIControlHandle UICornerstone_CreateImageButton(
     const char* normalImage, const char* hoverImage, const char* pressedImage,
     float x, float y, float w, float h);
+
+/* ============ Menu 三件套 ============ */
+/* 生命周期：Create 函数创建的 MenuPanel/MenuItem 暂存于内部保活池；
+   通过 MenuBarAddMenu / MenuPanelAddItem / MenuItemSetSubMenu 挂载后所有权转交 MenuBar 链。
+   CreateMenuItem type: 0=Normal, 1=Separator, 2=SubMenu（越界返回 NULL）。 */
+UIControlHandle UICornerstone_CreateMenuBar(
+    float x, float y, float w, float h);
+UIControlHandle UICornerstone_CreateMenuPanel(void);
+UIControlHandle UICornerstone_CreateMenuItem(const char* caption, int type);
+void UICornerstone_MenuBarAddMenu(UIControlHandle bar, const char* caption, UIControlHandle panel);
+void UICornerstone_MenuPanelAddItem(UIControlHandle panel, UIControlHandle item);
+void UICornerstone_MenuPanelAddSeparator(UIControlHandle panel);
+void UICornerstone_MenuItemSetSubMenu(UIControlHandle item, UIControlHandle panel);
 
 /* ============ 控件通用操作 ============ */
 void UICornerstone_SetRect(UIControlHandle ctl, float x, float y, float w, float h);
@@ -1188,3 +1206,4 @@ int main() {
 | 1.14 | 2026-07-15 | ComboBox C ABI API（`CreateComboBox`/`ComboBoxSetItems`/`ComboBoxSetSelectedIndex`/`ComboBoxGetSelectedIndex`/`ComboBoxGetSelectedLabel`/`ComboBoxSetOnSelectionChanged`）；鼠标滚轮事件桥接新增 x/y 坐标；ComboBox JSON 布局解析；`test_combobox_cabi` 三后端单源文件测试 |
 | 1.15 | 2026-07-16 | 重构：`test_fromsource_cabi`、`test_dialog_cabi`、`test_combobox_cabi` 统一为单源文件 + 编译定义模式，删除共享头文件和后端变体文件；CMake 改用 `add_fromsource_target` 宏统一管理 |
 | 1.16 | 2026-07-21 | `UICornerstone_Shutdown` 新增 `BENCH->removeAllControls()` 在 `BackendManager::shutdown()` 前销毁控制树，避免 `FreeLibrary` 静态析构时控件访问已释放的后端资源；`EventQueue` watcher map 改用 `weak_ptr<Control>` 消除静态析构顺序问题 |
+| 1.17 | 2026-07-31 | 补齐 C ABI 创建 API：`CreateScrollBar`（orientation 0=垂直/非 0=水平）、`CreateTreeView`、`CreateHandleControl`（target 必传非 NULL）；Menu 三件套 7 函数（`CreateMenuBar/CreateMenuPanel/CreateMenuItem/MenuBarAddMenu/MenuPanelAddItem/MenuPanelAddSeparator/MenuItemSetSubMenu`）替换已删除的空实现 `CreateMenu`，引入 `g_menuPool` 保活池管理裸指针生命周期；`sample_loadlibrary` 后端独立 TU 编译（SDL3/SFML/Raylib 三后端可构建） |

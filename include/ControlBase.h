@@ -151,6 +151,7 @@ public:
     virtual void setFocusable(bool focusable) = 0;
     virtual void onFocusGained(bool byKeyboard) = 0;
     virtual void onFocusLost() = 0;
+    virtual void onFocusScopeActivated() = 0;  // 键盘切换（CTRL+Tab）将焦点 scope 激活时调用，如 WinFrame 提升到顶层
     virtual void setShowFocusRing(bool show) = 0;
     virtual void setFocusRingAlwaysVisible(bool always) = 0;
     virtual void setFocusRingColor(SColor color) = 0;
@@ -347,6 +348,7 @@ public:
     void setFocusable(bool focusable) override;
     void onFocusGained(bool byKeyboard) override;
     void onFocusLost() override;
+    void onFocusScopeActivated() override;
     void setShowFocusRing(bool show) override { m_showFocusRing = show; }
     void setFocusRingAlwaysVisible(bool always) override { m_focusRingAlwaysVisible = always; }
     void setFocusRingColor(SColor color) override { m_focusRingColor = color; }

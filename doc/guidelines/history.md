@@ -1683,3 +1683,50 @@ Done, 180 frames                        # 帧循环正常完成
 
 **关键修正 —— `sample_loadlibrary` 结构体参数 ABI 不匹配**：
 - `UISetColorFn` 错误地将 `UIColor`（4 字节结构体）拆为 4 个 `uint8_t` 参数。MSVC x64 调用约定中，4 字节结构体通过单寄存器传递，而 4 个独立 `uint8_t` 占用 4 个不同的参数位置（寄存器+栈），导致 `UICornerstone_SetColor` 读取到乱值。修复为 `typedef int (*UISetColorFn)(void*, const char*, UIColor)` 并在调用处构造 `UIColor` 临时变量。
+
+### 2026-07-31: 焦点切换 z-order 修复 + ScrollBar/TreeView/HandleControl/Menu C ABI 补齐
+
+**Bug — WinFrame 键盘焦点切换不提升顶层**：
+
+- `Control` 新增 `virtual void onFocusScopeActivated()`（`include/ControlBase.h`，`ControlImpl` 默认空实现）
+- `WinFrame` 覆盖为 `bringToFront()`
+- `FocusManager::focusFirstInScope()`、`focusNext()`、`focusPrev()` 三处切换成功后均调用 `findFocusScope(c)->onFocusScopeActivated()`
+- 覆盖两个场景：CTRL+Tab 直接切到 WinFrame；Tab 首次聚焦非顶层 WinFrame
+
+**C ABI 补齐 —— ScrollBar / TreeView / HandleControl / Menu**：
+
+- `UICornerstone_CreateScrollBar(x, y, w, h, orientation)`：orientation 0=垂直，非 0=水平（`ScrollBarOrientation`），属性走统一系统
+- `UICornerstone_CreateTreeView(x, y, w, h)`：此前 TreeView 只能通过 layout JSON 创建
+- `UICornerstone_CreateHandleControl(target, x, y, w, h)`（target 必传非 NULL）+ `HandleControl::setTarget(Control*)` 裸指针重载
+- HandleControl 裸指针存活标记：C ABI 路径无法从裸指针构造 weak_ptr，新增 no-op deleter 的 `m_targetShared` 成员；`handleEvent`/`draw` 存活检查改为 `m_targetWeak.expired() && !m_targetShared`；`detach()`/析构 reset
+- Menu 三件套（7 个导出）：`UICornerstone_CreateMenuBar(x,y,w,h)`、`UICornerstone_CreateMenuPanel()`、`UICornerstone_CreateMenuItem(caption, type)`（type 0=Normal/1=Separator/2=SubMenu，越界返回 nullptr）、`UICornerstone_MenuBarAddMenu(bar, caption, panel)`、`UICornerstone_MenuPanelAddItem(panel, item)`、`UICornerstone_MenuPanelAddSeparator(panel)`、`UICornerstone_MenuItemSetSubMenu(item, panel)`
+- Menu 生命周期：裸指针无法恢复 shared_ptr，参照 `g_popupPool` 模式新增 `g_menuPool` 保活池（`menuPoolKeep`/`menuPoolTake`）；创建时进池，挂载进 MenuBar 链时转出所有权
+- `UICornerstone_CreateMenu` 空实现（printf "not implemented"）已删除
+- MenuBar/MenuPanel/MenuItem 继承自虚拟基类，向下转换必须用 `dynamic_cast`/`dynamic_pointer_cast`（MSVC C2635）
+- `src/Menu.cpp:919` 残留孤立字符"对"导致语法错误（增量构建长期未暴露），已删除
+
+**sample_loadlibrary 三后端化**：
+
+- 原实现硬编码 `#include "../../src/backend/sdl3/*.cpp"` 导致 Raylib/SFML 构建失败
+- `CMakeLists.txt` 改为按 `${_BACKEND_LOWER}` 将后端 6 个源文件编译为独立 TU（同 `sample_fromsource` 的 `_BACKEND_SOURCES` 模式）
+- 源码改用 `extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);` 声明；补 `Surface.h`/`Cursor.h`/`ResourceProvider.h` include
+
+**验证**：SDL3/SFML/Raylib 三后端 `UICornerstone.lib` + `UICornerstone_dll.dll` 全部编译通过，0 错误；三后端 `sample_loadlibrary.exe` 均运行进入帧循环；新导出符号经 pefile 验证。提交 `7c63af0` 覆盖 4 示例修复（44 文件，含 `doc/CABI_MultiInstance_Design.md`/`doc/CppBinding_Design.md` 新文档）。
+
+### 2026-07-31: Menu 重构 — 去除内嵌 Label，直接绘制文本
+
+**背景**：Menu 原实现每菜单项内嵌 3 个 Label（caption/shortcut/arrow）+ MenuBar 每项 1 个 Label，存在控件树膨胀、位置手工同步（`updateLabelPositions`/`layoutEntries` 反复 setRect）、字体大小"须在创建前设置"、箭头依赖 Nerd Font 字形（`▶`）、hover 双重维护/双重绘制、字体状态全局变量（多实例冲突）、MenuBar 非 (0,0) 时面板坐标双重偏移等问题。
+
+**重构内容**：
+
+- **文本直接绘制**（同 TreeView 模式）：MenuBar/MenuPanel 各自懒加载共享 `SharedFont`（`ensureFont()`，`loadFontFromMemoryWithText`，字号 = `fontSize × getScaleXX()`）；MenuItem 经 `setMenuFont` 从所属面板注入同一字体；`draw()` 用 `TextRenderer::drawText` 绘制标题/快捷键
+- **箭头图形化**：子菜单箭头改用 `RenderDevice::drawTriangle`（照 TreeView::drawArrow），与勾选标记（drawLine）风格统一，不依赖字体字形
+- **全局状态 → 实例成员**：删除 `MenuColors::g_menuTextSize`/`g_heightRatio`/`getItemHeight()`/`getBarHeight()`；MenuBar 持有 `m_menuTextSize`/`m_itemHeightRatio`/`m_fontName`，MenuPanel 持有 `m_fontSize`/`m_heightRatio`/`m_fontName`；`setFontSize`/`setItemHeightRatio`/`setFontName` 修改后即时重载字体并重算面板尺寸，同步所有子面板，"须在创建前设置"限制消除
+- **hover 统一管理**：删除 `MenuItem::m_hovered` 与 MenuItem::draw 中 hover 背景（死代码 + 双重绘制），背景统一由 MenuPanel 按 `m_hoveredIndex` 绘制
+- **坐标修正**：`MenuBar::openMenu` 原用 `getDrawRect()`（屏幕坐标）直接 `setPosition`，而面板是 MenuBar 子控件，MenuBar 不在 (0,0) 时双重偏移；改为扣除父链偏移后传相对坐标
+- `MenuItem::getItemHeight()` 静态方法移除（项高度由面板 `m_fontSize × m_heightRatio` 统一计算）；`setEnumProperty("font", ...)` 从"不支持返回 0"变为完整支持
+- `src/Menu.cpp` 由 1044 行精简至约 750 行
+
+**验证**：SDL3/SFML/Raylib 三后端静态库 + `UICornerstone_dll.dll` 全部编译通过，0 错误；`test_menu.exe` 三后端运行正常（事件循环 6 秒无崩溃）。C ABI 导出（`CreateMenuBar/CreateMenuPanel/CreateMenuItem/MenuBarAddMenu/MenuPanelAddItem/MenuPanelAddSeparator/MenuItemSetSubMenu`）签名不变，`src/UICornerstoneAPI.cpp` 无需修改。
+
+**文档**：`doc/Menu_Design.md`（§2 类图同步实例成员与 setMenuFont、§3.2 生命周期重写、§4.1 字体描述、§4.2 运行时调整即时生效、§6.4 API 变更表、§7.4 注意事项）、`doc/guidelines/history.md` 本次记录。

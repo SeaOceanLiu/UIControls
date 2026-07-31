@@ -1,5 +1,7 @@
 ﻿// 由AI(GLM 5.1)生成，可能不完整或有错误，请自行检查和修改
 // Menu.cpp - VSCode风格菜单控件实现
+// 重构说明：去除内嵌 Label 控件，文本直接经 TextRenderer 绘制（同 TreeView 模式），
+// 字体/尺寸状态为实例成员，hover 统一由 MenuPanel 管理。
 
 #include "Menu.h"
 #include "PropertyNames.h"
@@ -27,14 +29,11 @@ namespace MenuColors {
     // 分隔线
     constexpr SColor SEPARATOR(69, 69, 69, 255);
 
-    // 尺寸（基于字体大小比例计算）
-    inline float g_menuTextSize = 20.0f;
+    // 尺寸（基于字体大小 × 比例系数计算，见 MenuPanel::m_fontSize / m_heightRatio）
+    constexpr float DEFAULT_TEXT_SIZE = 20.0f;
     constexpr float DEFAULT_HEIGHT_RATIO = 1.6f;
-    inline float g_heightRatio = DEFAULT_HEIGHT_RATIO;
     constexpr float MIN_HEIGHT_RATIO = 1.0f;
     constexpr float MAX_HEIGHT_RATIO = 3.0f;
-    inline float getItemHeight() { return g_menuTextSize * g_heightRatio; }
-    inline float getBarHeight() { return g_menuTextSize * g_heightRatio; }
     constexpr float ITEM_LEFT_PADDING   = 28.0f;
     constexpr float ITEM_RIGHT_PADDING  = 20.0f;
     constexpr float ICON_AREA_WIDTH     = 20.0f;
@@ -45,8 +44,29 @@ namespace MenuColors {
     constexpr float PANEL_RADIUS        = 5.0f;
     constexpr float PANEL_SHADOW_OFFSET = 3.0f;
     constexpr float PANEL_SHADOW_BLUR   = 8.0f;
-    constexpr FontName MENU_FONT         = FontName::MapleMono_NF_CN_Regular;
+    constexpr FontName MENU_FONT        = FontName::MapleMono_NF_CN_Regular;
 }
+
+namespace {
+
+// 加载菜单字体（同 TreeView::ensureFont 模式）：从资源读取字体文件并经 TextRenderer 创建
+SharedFont loadMenuFont(Control* ctl, FontName fontName, float fontSize) {
+    TextRenderer* renderer = ctl->getTextRenderer();
+    if (!renderer) return nullptr;
+    ResourceProvider* provider = ctl->getResourceProvider();
+    if (!provider) return nullptr;
+
+    auto it = ConstDef::fontFiles.find(fontName);
+    if (it == ConstDef::fontFiles.end()) return nullptr;
+    string fontPath = ConstDef::pathPrefix.string() + "/" + it->second;
+    auto data = provider->readFile(fontPath);
+    if (!data || data->empty()) return nullptr;
+
+    int scaledSize = static_cast<int>(fontSize * ctl->getScaleXX());
+    return renderer->loadFontFromMemoryWithText(data->data(), data->size(), scaledSize, "W");
+}
+
+} // namespace
 
 // ==================== MenuItem 实现 ====================
 
@@ -56,12 +76,10 @@ MenuItem::MenuItem(Control *parent, MenuItemType type, float xScale, float yScal
     , m_caption("")
     , m_shortcut("")
     , m_checked(false)
-    , m_hovered(false)
     , m_onClick(nullptr)
     , m_subMenu(nullptr)
-    , m_captionLabel(nullptr)
-    , m_shortcutLabel(nullptr)
-    , m_arrowLabel(nullptr)
+    , m_font(nullptr)
+    , m_fontSize(MenuColors::DEFAULT_TEXT_SIZE)
 {
     setRect(SRect(0, 0, 0, 0));
 }
@@ -70,21 +88,19 @@ MenuItem::~MenuItem() = default;
 
 void MenuItem::create() {
     ControlImpl::create();
-    createLabels();
 }
 
-float MenuItem::getItemHeight() {
-    return MenuColors::getItemHeight();
+void MenuItem::setMenuFont(SharedFont font, float fontSize) {
+    m_font = std::move(font);
+    m_fontSize = fontSize;
 }
 
 void MenuItem::setCaption(const string& caption) {
     m_caption = caption;
-    createLabels();
 }
 
 void MenuItem::setShortcut(const string& shortcut) {
     m_shortcut = shortcut;
-    createLabels();
 }
 
 void MenuItem::setChecked(bool checked) {
@@ -94,84 +110,6 @@ void MenuItem::setChecked(bool checked) {
 void MenuItem::setSubMenu(shared_ptr<MenuPanel> panel) {
     m_subMenu = panel;
     m_type = MenuItemType::SubMenu;
-    createLabels();
-}
-
-void MenuItem::createLabels() {
-    // 创建标题Label
-    if (!m_caption.empty() && m_type != MenuItemType::Separator) {
-        m_captionLabel = LabelBuilder(this, {0, 0, 0, 0})
-            .setFont(MenuColors::MENU_FONT)
-            .setAlignmentMode(AlignmentMode::AM_MID_LEFT)
-            .setFontSize((int)MenuColors::g_menuTextSize)
-            .setCaption(m_caption)
-            .setTextStateColor(StateColor(StateColor::Type::Text)
-                .setNormal(MenuColors::ITEM_TEXT)
-                .setHover(MenuColors::ITEM_TEXT)
-                .setPressed(MenuColors::ITEM_TEXT))
-            .setEnableExpand(true)
-            .build();
-    }
-
-    // 创建快捷键Label
-    if (!m_shortcut.empty()) {
-        m_shortcutLabel = LabelBuilder(this, {0, 0, 0, 0})
-            .setFont(MenuColors::MENU_FONT)
-            .setAlignmentMode(AlignmentMode::AM_MID_RIGHT)
-            .setFontSize((int)MenuColors::g_menuTextSize)
-            .setCaption(m_shortcut)
-            .setTextStateColor(StateColor(StateColor::Type::Text)
-                .setNormal(MenuColors::SHORTCUT_TEXT)
-                .setHover(MenuColors::SHORTCUT_TEXT)
-                .setPressed(MenuColors::SHORTCUT_TEXT))
-            .setEnableExpand(true)
-            .build();
-    }
-
-    // 创建子菜单箭头Label
-    if (m_type == MenuItemType::SubMenu) {
-        m_arrowLabel = LabelBuilder(this, {0, 0, 0, 0})
-            .setFont(MenuColors::MENU_FONT)
-            .setAlignmentMode(AlignmentMode::AM_CENTER)
-            .setFontSize((int)MenuColors::g_menuTextSize)
-            .setCaption(u8"\u25B6")
-            .setTextStateColor(StateColor(StateColor::Type::Text)
-                .setNormal(MenuColors::ARROW_COLOR)
-                .setHover(MenuColors::ARROW_COLOR)
-                .setPressed(MenuColors::ARROW_COLOR))
-            .setEnableExpand(true)
-            .build();
-    }
-}
-
-void MenuItem::updateLabelPositions() {
-    if (m_type == MenuItemType::Separator) return;
-
-    float w = getRect().width;
-    float h = getRect().height;
-
-    // 标题：左侧padding后开始
-    if (m_captionLabel) {
-        float captionWidth = w - MenuColors::ITEM_LEFT_PADDING - MenuColors::ITEM_RIGHT_PADDING;
-        if (m_shortcutLabel) captionWidth -= MenuColors::SHORTCUT_MIN_WIDTH;
-        if (m_arrowLabel) captionWidth -= MenuColors::ARROW_AREA_WIDTH;
-        if (captionWidth < 0) captionWidth = 0;
-        m_captionLabel->setRect(SRect(MenuColors::ITEM_LEFT_PADDING, 0, captionWidth, h));
-    }
-
-    // 快捷键：右侧箭头区域之前
-    if (m_shortcutLabel) {
-        float shortcutRight = w - MenuColors::ITEM_RIGHT_PADDING;
-        if (m_arrowLabel) shortcutRight -= MenuColors::ARROW_AREA_WIDTH;
-        float shortcutWidth = m_shortcutLabel->getHotRect().width;
-        m_shortcutLabel->setRect(SRect(shortcutRight - shortcutWidth, 0, shortcutWidth, h));
-    }
-
-    // 箭头：最右侧
-    if (m_arrowLabel) {
-        m_arrowLabel->setRect(SRect(w - MenuColors::ARROW_AREA_WIDTH, 0,
-                                     MenuColors::ARROW_AREA_WIDTH, h));
-    }
 }
 
 void MenuItem::draw() {
@@ -179,12 +117,6 @@ void MenuItem::draw() {
     if (m_type == MenuItemType::Separator) return; // 分隔线由MenuPanel绘制
 
     SRect drawRect = getDrawRect();
-
-    // 绘制hover背景
-    if (m_hovered) {
-        GET_RENDERDEVICE->setDrawColor(MenuColors::ITEM_HOVER_BG);
-        GET_RENDERDEVICE->fillRect(SRect(drawRect.left, drawRect.top, drawRect.width, drawRect.height));
-    }
 
     // 绘制勾选标记
     if (m_checked) {
@@ -195,19 +127,38 @@ void MenuItem::draw() {
         GET_RENDERDEVICE->drawLine(cx - 1, cy + 3, cx + 4, cy - 3);
     }
 
-    // 绘制标题
-    if (m_captionLabel) {
-        m_captionLabel->draw();
+    TextRenderer* renderer = getTextRenderer();
+    if (renderer && m_font) {
+        int fontHeight = renderer->getFontHeight(m_font.get());
+        float textY = drawRect.top + (drawRect.height - fontHeight) / 2;
+
+        // 标题（左侧 padding 后开始）
+        if (!m_caption.empty()) {
+            renderer->drawText(m_font.get(), m_caption,
+                drawRect.left + MenuColors::ITEM_LEFT_PADDING, textY, MenuColors::ITEM_TEXT);
+        }
+
+        // 快捷键（右侧右对齐，箭头区域之前）
+        if (!m_shortcut.empty()) {
+            SSize sz = renderer->measureText(m_font.get(), m_shortcut);
+            float shortcutWidth = sz.width / getScaleXX();
+            float right = drawRect.right();
+            if (m_type == MenuItemType::SubMenu) right -= MenuColors::ARROW_AREA_WIDTH;
+            renderer->drawText(m_font.get(), m_shortcut,
+                right - MenuColors::ITEM_RIGHT_PADDING - shortcutWidth, textY, MenuColors::SHORTCUT_TEXT);
+        }
     }
 
-    // 绘制快捷键
-    if (m_shortcutLabel) {
-        m_shortcutLabel->draw();
-    }
-
-    // 绘制子菜单箭头
-    if (m_arrowLabel) {
-        m_arrowLabel->draw();
+    // 子菜单箭头（最右侧，图形绘制不依赖字体字形）
+    if (m_type == MenuItemType::SubMenu) {
+        float cx = drawRect.right() - MenuColors::ARROW_AREA_WIDTH / 2.0f;
+        float cy = drawRect.top + drawRect.height / 2.0f;
+        float size = 4.0f;
+        GET_RENDERDEVICE->drawTriangle(
+            cx - size * 0.577f, cy - size,
+            cx - size * 0.577f, cy + size,
+            cx + size * 0.577f * 2, cy,
+            MenuColors::ARROW_COLOR);
     }
 }
 
@@ -232,15 +183,7 @@ bool MenuItem::handleEvent(shared_ptr<Event> event) {
                 }
                 return true;
             }
-            if (event->m_type == EventType::MouseMove) {
-                if (!m_hovered) {
-                    m_hovered = true;
-                }
-                return true;
-            }
             return true;
-        } else {
-            m_hovered = false;
         }
     }
     return false;
@@ -271,13 +214,17 @@ void MenuItem::closeMenuChain() {
 
 MenuPanel::MenuPanel(Control *parent, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
-    , m_itemHeight(MenuColors::getItemHeight())
+    , m_fontSize(MenuColors::DEFAULT_TEXT_SIZE)
+    , m_heightRatio(MenuColors::DEFAULT_HEIGHT_RATIO)
+    , m_itemHeight(m_fontSize * m_heightRatio)
     , m_iconAreaWidth(MenuColors::ICON_AREA_WIDTH)
     , m_shortcutAreaWidth(0)
     , m_arrowAreaWidth(MenuColors::ARROW_AREA_WIDTH)
     , m_hoveredIndex(-1)
     , m_visible(false)
     , m_openSubMenu(nullptr)
+    , m_font(nullptr)
+    , m_fontName(MenuColors::MENU_FONT)
     , m_bgColor(MenuColors::PANEL_BG)
     , m_borderColor(MenuColors::PANEL_BORDER)
     , m_hoverColor(MenuColors::ITEM_HOVER_BG)
@@ -290,9 +237,53 @@ MenuPanel::MenuPanel(Control *parent, float xScale, float yScale)
 
 MenuPanel::~MenuPanel() = default;
 
+void MenuPanel::ensureFont() {
+    if (m_font) return;
+    m_font = loadMenuFont(this, m_fontName, m_fontSize);
+}
+
+void MenuPanel::updateItemsFont() {
+    for (auto& item : m_items) {
+        item->setMenuFont(m_font, m_fontSize);
+    }
+}
+
+void MenuPanel::setFontSize(float size) {
+    if (m_fontSize == size) return;
+    m_fontSize = size;
+    m_itemHeight = m_fontSize * m_heightRatio;
+    m_font.reset();
+    if (m_isCreated) {
+        ensureFont();
+        updateItemsFont();
+    }
+    recalculateSize();
+}
+
+void MenuPanel::setItemHeightRatio(float ratio) {
+    if (ratio < MenuColors::MIN_HEIGHT_RATIO) ratio = MenuColors::MIN_HEIGHT_RATIO;
+    if (ratio > MenuColors::MAX_HEIGHT_RATIO) ratio = MenuColors::MAX_HEIGHT_RATIO;
+    if (m_heightRatio == ratio) return;
+    m_heightRatio = ratio;
+    m_itemHeight = m_fontSize * m_heightRatio;
+    recalculateSize();
+}
+
+void MenuPanel::setFontName(FontName fontName) {
+    if (m_fontName == fontName && m_font) return;
+    m_fontName = fontName;
+    m_font.reset();
+    if (m_isCreated) {
+        ensureFont();
+        updateItemsFont();
+    }
+}
+
 void MenuPanel::addItem(shared_ptr<MenuItem> item) {
     if (!item) return;
+    ensureFont();
     item->setParent(this);
+    item->setMenuFont(m_font, m_fontSize);
     m_items.push_back(item);
     recalculateSize();
 }
@@ -324,10 +315,6 @@ void MenuPanel::hide() {
         m_openSubMenu = nullptr;
     }
     m_hoveredIndex = -1;
-    // 重置所有菜单项的hover状态
-    for (auto& item : m_items) {
-        // MenuItem没有直接的setHovered方法，通过绘制时检查hoveredIndex来处理
-    }
 }
 
 void MenuPanel::setPosition(float x, float y) {
@@ -346,18 +333,19 @@ void MenuPanel::recalculateSize() {
     float maxShortcutWidth = 0;
     bool hasSubMenu = false;
 
+    TextRenderer* renderer = getTextRenderer();
     for (auto& item : m_items) {
         if (item->getType() == MenuItemType::Separator) continue;
         if (item->hasSubMenu()) hasSubMenu = true;
 
         // 获取标题宽度
-        if (item->m_captionLabel) {
-            float w = item->m_captionLabel->getHotRect().width;
+        if (renderer && item->m_font && !item->m_caption.empty()) {
+            float w = renderer->measureText(item->m_font.get(), item->m_caption).width / getScaleXX();
             if (w > maxCaptionWidth) maxCaptionWidth = w;
         }
         // 获取快捷键宽度
-        if (item->m_shortcutLabel) {
-            float w = item->m_shortcutLabel->getHotRect().width;
+        if (renderer && item->m_font && !item->m_shortcut.empty()) {
+            float w = renderer->measureText(item->m_font.get(), item->m_shortcut).width / getScaleXX();
             if (w > maxShortcutWidth) maxShortcutWidth = w;
         }
     }
@@ -394,7 +382,6 @@ void MenuPanel::layoutItems() {
             y += item->getRect().height;
         } else {
             item->setRect(SRect(0, y, getRect().width, m_itemHeight));
-            item->updateLabelPositions();
             y += m_itemHeight;
         }
     }
@@ -445,19 +432,11 @@ void MenuPanel::setOpenSubMenu(shared_ptr<MenuPanel> panel) {
 void MenuPanel::setHoveredIndex(int index) {
     if (m_hoveredIndex == index) return;
 
-    // 重置旧hover项
-    if (m_hoveredIndex >= 0 && m_hoveredIndex < (int)m_items.size()) {
-        m_items[m_hoveredIndex]->m_hovered = false;
-    }
-
     m_hoveredIndex = index;
 
-    // 设置新hover项
+    // 如果hover到子菜单项，展开子菜单
     if (m_hoveredIndex >= 0 && m_hoveredIndex < (int)m_items.size()) {
         auto& item = m_items[m_hoveredIndex];
-        item->m_hovered = true;
-
-        // 如果hover到子菜单项，展开子菜单
         if (item->hasSubMenu()) {
             SRect itemRect = item->getDrawRect();
             auto subMenu = item->getSubMenu();
@@ -538,7 +517,7 @@ void MenuPanel::draw() {
             drawRect.width, drawRect.height), MenuColors::PANEL_RADIUS, false);
     }
 
-    // 4. 绘制菜单项和分隔线
+    // 4. 绘制菜单项和分隔线（hover 背景统一由面板管理）
     for (size_t i = 0; i < m_items.size(); ++i) {
         auto& item = m_items[i];
         if (item->getType() == MenuItemType::Separator) {
@@ -552,7 +531,7 @@ void MenuPanel::draw() {
             GET_RENDERDEVICE->setDrawColor(m_separatorColor);
             GET_RENDERDEVICE->fillRect(lineRect);
         } else {
-            if (item->m_hovered) {
+            if ((int)i == m_hoveredIndex) {
                 SRect itemRect = item->getDrawRect();
                 SRect bgRect(drawRect.left, itemRect.top, drawRect.width, itemRect.height);
                 GET_RENDERDEVICE->setDrawColor(m_hoverColor);
@@ -617,7 +596,7 @@ bool MenuPanel::isContainsPoint(float x, float y) {
 
 MenuBar::MenuBar(Control *parent, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
-    , m_barHeight(MenuColors::getBarHeight())
+    , m_barHeight(MenuColors::DEFAULT_TEXT_SIZE * MenuColors::DEFAULT_HEIGHT_RATIO)
     , m_hoveredIndex(-1)
     , m_activeIndex(-1)
     , m_menuMode(false)
@@ -627,13 +606,20 @@ MenuBar::MenuBar(Control *parent, float xScale, float yScale)
     , m_hoverTextColor(MenuColors::BAR_TEXT)
     , m_activeBgColor(MenuColors::BAR_ACTIVE_BG)
     , m_itemHeightRatio(MenuColors::DEFAULT_HEIGHT_RATIO)
-    , m_menuTextSize(MenuColors::g_menuTextSize)
+    , m_menuTextSize(MenuColors::DEFAULT_TEXT_SIZE)
+    , m_font(nullptr)
+    , m_fontName(MenuColors::MENU_FONT)
 {
     setRect(SRect(0, 0, 0, m_barHeight));
     setBorderVisible(false);
 }
 
 MenuBar::~MenuBar() = default;
+
+void MenuBar::ensureFont() {
+    if (m_font) return;
+    m_font = loadMenuFont(this, m_fontName, m_menuTextSize);
+}
 
 void MenuBar::setParent(Control *parent) {
     ControlImpl::setParent(parent);
@@ -649,24 +635,14 @@ void MenuBar::setRect(SRect rect) {
 }
 
 void MenuBar::addMenu(const string& caption, shared_ptr<MenuPanel> panel) {
+    ensureFont();
     MenuEntry entry;
     entry.caption = caption;
     entry.panel = panel;
     entry.panel->setParent(this);
+    entry.panel->setFontSize(m_menuTextSize);
+    entry.panel->setItemHeightRatio(m_itemHeightRatio);
     entry.panel->hide();
-
-    // 创建菜单项Label
-    entry.label = LabelBuilder(this, {0, 0, 0, m_barHeight})
-        .setFont(MenuColors::MENU_FONT)
-        .setAlignmentMode(AlignmentMode::AM_CENTER)
-        .setFontSize((int)m_menuTextSize)
-        .setCaption(caption)
-        .setTextStateColor(StateColor(StateColor::Type::Text)
-            .setNormal(m_textColor)
-            .setHover(m_hoverTextColor)
-            .setPressed(m_hoverTextColor))
-        .setEnableExpand(true)
-        .build();
 
     m_entries.push_back(std::move(entry));
     layoutEntries();
@@ -683,15 +659,14 @@ void MenuBar::removeMenu(const string& caption) {
 
 void MenuBar::layoutEntries() {
     float x = 0;
+    TextRenderer* renderer = getTextRenderer();
     for (auto& entry : m_entries) {
         float entryWidth = 0;
-        if (entry.label) {
-            entryWidth = entry.label->getHotRect().width + 2 * MenuColors::ITEM_LEFT_PADDING;
+        if (renderer && m_font) {
+            float textWidth = renderer->measureText(m_font.get(), entry.caption).width / getScaleXX();
+            entryWidth = textWidth + 2 * MenuColors::ITEM_LEFT_PADDING;
         }
         entry.hitRect = SRect(x, 0, entryWidth, m_barHeight);
-        if (entry.label) {
-            entry.label->setRect(SRect(x, 0, entryWidth, m_barHeight));
-        }
         x += entryWidth;
     }
     // 更新菜单栏宽度
@@ -724,7 +699,10 @@ void MenuBar::openMenu(int index) {
         auto& entry = m_entries[index];
         SRect hitRect = entry.hitRect;
         SRect drawRect = getDrawRect();
-        entry.panel->setPosition(drawRect.left + hitRect.left, drawRect.top + hitRect.height);
+        // MenuPanel 是 MenuBar 的子控件，需使用相对 MenuBar 的坐标（扣除父链偏移）
+        float offsetX = drawRect.left - getRect().left * getScaleXX();
+        float offsetY = drawRect.top - getRect().top * getScaleYY();
+        entry.panel->setPosition(offsetX + hitRect.left, offsetY + hitRect.top + hitRect.height);
         entry.panel->show();
     }
 }
@@ -765,13 +743,22 @@ void MenuBar::setBarHeight(float height) {
 void MenuBar::setItemHeightRatio(float ratio) {
     if (ratio < MenuColors::MIN_HEIGHT_RATIO) ratio = MenuColors::MIN_HEIGHT_RATIO;
     if (ratio > MenuColors::MAX_HEIGHT_RATIO) ratio = MenuColors::MAX_HEIGHT_RATIO;
+    if (m_itemHeightRatio == ratio) return;
     m_itemHeightRatio = ratio;
-    MenuColors::g_heightRatio = ratio;
+    for (auto& entry : m_entries) {
+        entry.panel->setItemHeightRatio(ratio);
+    }
 }
 
 void MenuBar::setFontSize(float size) {
+    if (m_menuTextSize == size) return;
     m_menuTextSize = size;
-    MenuColors::g_menuTextSize = size;
+    m_font.reset();
+    if (m_isCreated) ensureFont();
+    for (auto& entry : m_entries) {
+        entry.panel->setFontSize(size);
+    }
+    layoutEntries();
 }
 
 int MenuBar::setFloatProperty(const char* prop, float value) {
@@ -783,10 +770,16 @@ int MenuBar::setFloatProperty(const char* prop, float value) {
 
 int MenuBar::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kFont) == 0) {
-        // MenuBar uses global MenuColors::MENU_FONT; menu entry labels
-        // are created in addMenu() already using that font.
-        // Font changes after creation require recreating entries.
-        return 0;
+        FontName fn = FontNameFromString(value);
+        if (m_fontName == fn) return 1;
+        m_fontName = fn;
+        m_font.reset();
+        if (m_isCreated) ensureFont();
+        for (auto& entry : m_entries) {
+            entry.panel->setFontName(fn);
+        }
+        layoutEntries();
+        return 1;
     }
     return ControlImpl::setEnumProperty(prop, value);
 }
@@ -799,7 +792,7 @@ int MenuBar::getFloatProperty(const char* prop, float& out) {
 }
 
 int MenuBar::getEnumProperty(const char* prop, const char*& out) {
-    if (strcmp(prop, PropertyNames::kFont) == 0) { out = FontNameToString(MenuColors::MENU_FONT); return 1; }
+    if (strcmp(prop, PropertyNames::kFont) == 0) { out = FontNameToString(m_fontName); return 1; }
     return ControlImpl::getEnumProperty(prop, out);
 }
 
@@ -812,7 +805,8 @@ void MenuBar::draw() {
     GET_RENDERDEVICE->setDrawColor(m_bgColor);
     GET_RENDERDEVICE->fillRect(SRect(drawRect.left, drawRect.top, drawRect.width, drawRect.height));
 
-    // 2. 绘制菜单项
+    // 2. 绘制菜单项（背景 + 标题文本）
+    TextRenderer* renderer = getTextRenderer();
     for (size_t i = 0; i < m_entries.size(); ++i) {
         auto& entry = m_entries[i];
         SRect hitRect = entry.hitRect;
@@ -827,10 +821,14 @@ void MenuBar::draw() {
             GET_RENDERDEVICE->fillRect(itemBg);
         }
 
-        if (entry.label) {
-            entry.label->setRect(SRect(drawRect.left + hitRect.left, drawRect.top,
-                                       hitRect.width, hitRect.height));
-            entry.label->draw();
+        if (renderer && m_font) {
+            SSize sz = renderer->measureText(m_font.get(), entry.caption);
+            float textWidth = sz.width / getScaleXX();
+            int fontHeight = renderer->getFontHeight(m_font.get());
+            float textY = drawRect.top + (drawRect.height - fontHeight) / 2;
+            float textX = drawRect.left + hitRect.left + (hitRect.width - textWidth) / 2;
+            SColor color = ((int)i == m_hoveredIndex) ? m_hoverTextColor : m_textColor;
+            renderer->drawText(m_font.get(), entry.caption, textX, textY, color);
         }
     }
 
@@ -932,9 +930,6 @@ int MenuItem::getStringProperty(const char* prop, const char*& out) {
     return ControlImpl::getStringProperty(prop, out);
 }
 int MenuItem::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
-    if (strcmp(event, PropertyNames::kEventClick) == 0) {
-        return ControlImpl::setCallbackProperty(event, cb, userData);
-    }
     return ControlImpl::setCallbackProperty(event, cb, userData);
 }
 

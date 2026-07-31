@@ -112,6 +112,10 @@ void WinFrame::bringToFront() {
     }
 }
 
+void WinFrame::onFocusScopeActivated() {
+    bringToFront();
+}
+
 SPoint WinFrame::screenToLocal(float screenX, float screenY) {
     SRect drawRect = getDrawRect();
     return {

@@ -209,7 +209,26 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateTextArea(
     float x, float y, float w, float h);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateWinFrame(
     const char* title, float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenu(void);
+/* ============ Menu 三件套（MenuBar / MenuPanel / MenuItem） ============ */
+// Menu 是一组控件：MenuBar 为顶层菜单栏，MenuPanel 为下拉面板，
+// MenuItem 为菜单项。组装顺序：
+//   panel = CreateMenuPanel();  item = CreateMenuItem("Open", 0);
+//   MenuPanelAddItem(panel, item);  MenuItemSetSubMenu(item, subPanel);
+//   bar = CreateMenuBar(...);  MenuBarAddMenu(bar, "File", panel);
+// type: 0=Normal, 1=Separator, 2=SubMenu
+// MenuItem 的 caption/checked/shortcut/click 走统一属性系统
+// （SetString/SetBool/SetCallback，事件名 "click"）
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuBar(
+    float x, float y, float w, float h);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuPanel(void);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuItem(const char* caption, int type);
+UICORNERSTONE_API void UICornerstone_MenuBarAddMenu(
+    UIControlHandle bar, const char* caption, UIControlHandle panel);
+UICORNERSTONE_API void UICornerstone_MenuPanelAddItem(
+    UIControlHandle panel, UIControlHandle item);
+UICORNERSTONE_API void UICornerstone_MenuPanelAddSeparator(UIControlHandle panel);
+UICORNERSTONE_API void UICornerstone_MenuItemSetSubMenu(
+    UIControlHandle item, UIControlHandle panel);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateColorPicker(
     float x, float y, float w, float h, const char* color);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateNumericUpDown(
@@ -218,6 +237,12 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateComboBox(
     float x, float y, float w, float h);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateSplitter(
     float x, float y, float w, float h, int orientation);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateScrollBar(
+    float x, float y, float w, float h, int orientation);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateTreeView(
+    float x, float y, float w, float h);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateHandleControl(
+    UIControlHandle target, float x, float y, float w, float h);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(
     const char* normalImage,
     const char* hoverImage,

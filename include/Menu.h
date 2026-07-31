@@ -8,7 +8,7 @@
 #include <string>
 
 #include "ControlBase.h"
-#include "Label.h"
+#include "Font.h"
 #include "GraphTool.h"
 
 using namespace std;
@@ -58,8 +58,10 @@ public:
 
     MenuItemType getType() const { return m_type; }
 
-    // 菜单项高度（用于布局计算）
-    static float getItemHeight();
+    // 由所属 MenuPanel 注入共享字体（绘制文本用）
+    void setMenuFont(SharedFont font, float fontSize);
+    Font* getFont() const { return m_font.get(); }
+    float getFontSize() const { return m_fontSize; }
 
     // 关闭整个菜单链
     void closeMenuChain();
@@ -76,15 +78,10 @@ private:
     string m_caption;
     string m_shortcut;
     bool m_checked;
-    bool m_hovered;
     OnClickHandler m_onClick;
     shared_ptr<MenuPanel> m_subMenu;
-    shared_ptr<Label> m_captionLabel;
-    shared_ptr<Label> m_shortcutLabel;
-    shared_ptr<Label> m_arrowLabel;
-
-    void createLabels();
-    void updateLabelPositions();
+    SharedFont m_font;
+    float m_fontSize;
 };
 
 // ==================== MenuPanel 菜单面板 ====================
@@ -109,7 +106,7 @@ public:
     void hide();
     bool isVisible() const { return m_visible; }
 
-    // 设置位置（屏幕坐标）
+    // 设置位置（相对父控件坐标，由 MenuBar::openMenu 换算）
     void setPosition(float x, float y);
 
     // 获取菜单项
@@ -128,12 +125,21 @@ public:
     int getHoveredIndex() const { return m_hoveredIndex; }
     void setHoveredIndex(int index);
 
+    // 字体/尺寸（实例状态，修改后即时生效）
+    void setFontSize(float size);
+    float getFontSize() const { return m_fontSize; }
+    void setItemHeightRatio(float ratio);
+    float getItemHeightRatio() const { return m_heightRatio; }
+    void setFontName(FontName fontName);
+
     // 属性系统
     int setIntProperty(const char* prop, int value) override;
     int getIntProperty(const char* prop, int& out) override;
 
 private:
     vector<shared_ptr<MenuItem>> m_items;
+    float m_fontSize;
+    float m_heightRatio;
     float m_itemHeight;
     float m_iconAreaWidth;
     float m_shortcutAreaWidth;
@@ -142,6 +148,10 @@ private:
     bool m_visible;
     shared_ptr<MenuPanel> m_openSubMenu;
 
+    // 字体（面板内所有菜单项共享）
+    SharedFont m_font;
+    FontName m_fontName;
+
     // 颜色
     SColor m_bgColor;
     SColor m_borderColor;
@@ -149,6 +159,8 @@ private:
     SColor m_separatorColor;
     float m_shadowRadius;
 
+    void ensureFont();
+    void updateItemsFont();
     void layoutItems();
     int hitTest(float x, float y);
     void drawShadow();
@@ -196,7 +208,6 @@ private:
         string caption;
         SRect hitRect;
         shared_ptr<MenuPanel> panel;
-        shared_ptr<Label> label;
     };
 
     vector<MenuEntry> m_entries;
@@ -214,7 +225,10 @@ private:
 
     float m_itemHeightRatio;
     float m_menuTextSize;
+    SharedFont m_font;
+    FontName m_fontName;
 
+    void ensureFont();
     void layoutEntries();
     int hitTest(float x, float y);
     void openMenu(int index);

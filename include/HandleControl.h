@@ -13,6 +13,7 @@ public:
 
     // ── 附加/分离 ──
     void setTarget(shared_ptr<Control> target);
+    void setTarget(Control* target);  // C ABI 路径：裸指针目标（生命周期由调用方保证）
     Control* getTarget() const { return m_target; }
     void detach();
 
@@ -69,6 +70,9 @@ private:
     // ── 目标引用 ──
     Control*         m_target = nullptr;
     weak_ptr<Control> m_targetWeak;
+    // C ABI 路径的生命周期标记：裸指针目标无 weak 可用，用 no-op deleter
+    // 的 shared_ptr 占据成员以区分"从未设置"与"目标已过期"
+    std::shared_ptr<Control> m_targetShared;
 
     // ── 配置 ──
     float  m_handleSize       = 8.0f;

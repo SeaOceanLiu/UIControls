@@ -16,8 +16,8 @@
 //
 // 【学习要点】
 //   ① LoadLibrary + GetProcAddress — 完全手动管理 DLL 生命周期
-//   ② #include 后端 .cpp 文件 — 后端编译入同一 TU
-//   ③ 链接 UICornerstone_dll.lib 仅用于后端注册符号（非 C ABI）
+//   ② 后端 .cpp 文件由 CMake 按后端编译为独立 TU — 三后端通用
+//   ③ 不链接 UICornerstone_dll.lib — CORE 符号由本文件的 stub 提供
 //   ④ C ABI 函数全部通过函数指针调用，无 ILT
 //
 // 【何时使用此模式】
@@ -39,21 +39,19 @@
 // 包含 UICornerstoneAPI.h 获取 UIBackendCallbacks、UIControlHandle 等类型定义
 #include "../../include/UICornerstoneAPI.h"
 
-// ===== 后端源码通过 #include 编译入同一翻译单元 =====
-//
-// 6 个文件提供：窗口管理、渲染引擎、字体引擎、输入后端、光标、后端回调表。
-// 通过这些 #include，GetUIBackendCallbacks() 可直接在本 TU 内定义，
-// 无需 CMake 额外添加编译项。
-//
-// include 路径由 CMake 的 target_include_directories 提供。
-// 如需替换后端（如 SDL3 → SFML），只需修改路径中的 sdl3/ 为 sfml/。
+// stub 与 FilesystemResourceProvider 需要这些核心类声明
+#include "../../include/Surface.h"
+#include "../../include/Cursor.h"
+#include "../../include/ResourceProvider.h"
 
-#include "../../src/backend/sdl3/Window.cpp"
-#include "../../src/backend/sdl3/RenderDevice.cpp"
-#include "../../src/backend/sdl3/TextRenderer.cpp"
-#include "../../src/backend/sdl3/InputBackend.cpp"
-#include "../../src/backend/sdl3/Cursor.cpp"
-#include "../../src/backend/sdl3/BackendPlugin.cpp"
+// ===== 后端源码通过 CMake 编译为独立 TU =====
+//
+// 6 个文件（Window/RenderDevice/TextRenderer/InputBackend/Cursor/BackendPlugin）
+// 由 CMake 按当前后端（sdl3/sfml/raylib）选择后编译入本可执行文件，
+// 提供窗口管理、渲染引擎、字体引擎、输入后端、光标、后端回调表。
+// 因此本文件只需声明 GetUIBackendCallbacks()，无需 #include 后端 .cpp。
+
+extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 // ===== 零导入库：内联实现 Core 符号 =====
 //

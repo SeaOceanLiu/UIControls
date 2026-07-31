@@ -12,6 +12,7 @@ HandleControl::~HandleControl()
 {
     m_target = nullptr;
     m_targetWeak.reset();
+    m_targetShared.reset();
     m_resizing = false;
     m_dragging = false;
     m_activeHandle = HandleType::None;
@@ -26,6 +27,26 @@ void HandleControl::setTarget(shared_ptr<Control> target)
     if (m_target) detach();
     m_target = target.get();
     m_targetWeak = target;
+    m_targetShared.reset();
+    m_resizing = false;
+    m_dragging = false;
+    m_activeHandle = HandleType::None;
+
+    Control* parent = target->getParent();
+    if (parent) {
+        parent->addControl(shared_from_this());
+        setAlwaysOnTop(true);
+        setVisible(true);
+    }
+}
+
+void HandleControl::setTarget(Control* target)
+{
+    if (m_target) detach();
+    m_target = target;
+    m_targetWeak.reset();
+    // no-op deleter：仅作为目标存活标记（真实生命周期由 BENCH/调用方管理）
+    m_targetShared = std::shared_ptr<Control>(target, [](Control*) {});
     m_resizing = false;
     m_dragging = false;
     m_activeHandle = HandleType::None;
@@ -42,6 +63,7 @@ void HandleControl::detach()
 {
     m_target = nullptr;
     m_targetWeak.reset();
+    m_targetShared.reset();
     m_resizing = false;
     m_dragging = false;
     m_activeHandle = HandleType::None;
@@ -300,8 +322,8 @@ void HandleControl::setResizeCursor(HandleType type)
 
 bool HandleControl::handleEvent(shared_ptr<Event> event)
 {
-    // 目标已过期
-    if (m_targetWeak.expired()) {
+    // 目标已过期（C++ 路径 weak 检测；C ABI 路径 weak 为空但 m_targetShared 非空，不误判）
+    if (m_targetWeak.expired() && !m_targetShared) {
         m_target = nullptr;
         m_targetWeak.reset();
         setVisible(false);
@@ -379,7 +401,7 @@ bool HandleControl::handleEvent(shared_ptr<Event> event)
 
 void HandleControl::draw()
 {
-    if (m_targetWeak.expired()) {
+    if (m_targetWeak.expired() && !m_targetShared) {
         m_target = nullptr;
         m_targetWeak.reset();
         setVisible(false);

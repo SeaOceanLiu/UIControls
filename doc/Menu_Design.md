@@ -76,11 +76,11 @@ public:
     float getBarHeight() const;
 
     // 菜单项高度与字体大小的比例系数（范围 1.0 ~ 3.0，默认 1.6）
-    static void setItemHeightRatio(float ratio);
+    void setItemHeightRatio(float ratio);
 
-    // 菜单字体大小（默认 20.0，须在面板创建前设置）
-    static void setFontSize(float size);
-    static float getFontSize();
+    // 菜单字体大小（默认 20.0，实例状态，修改后即时生效）
+    void setFontSize(float size);
+    float getFontSize();
 
 private:
     struct MenuEntry {
@@ -95,7 +95,11 @@ private:
     int m_activeIndex;      // 当前激活（展开下拉）的菜单项索引，-1表示无
     bool m_menuMode;        // 是否处于菜单模式（点击展开后，鼠标移动自动切换菜单）
 
+    SharedFont m_font;      // 菜单栏标题共享字体（直接绘制，无内嵌 Label）
+    FontName m_fontName;    // 字体名称（可经 setEnumProperty("font", ...) 修改）
+
     // 绘制与布局
+    void ensureFont();
     void layoutEntries();
     int hitTest(float x, float y);
 };
@@ -137,13 +141,19 @@ public:
 
 private:
     vector<shared_ptr<MenuItem>> m_items;
-    float m_itemHeight;        // 统一菜单项高度
-    float m_minWidth;          // 最小宽度
+    float m_fontSize;          // 面板字号（实例状态，默认 20）
+    float m_heightRatio;       // 项高度 = m_fontSize × m_heightRatio（默认 1.6）
+    float m_itemHeight;        // 当前菜单项高度（m_fontSize × m_heightRatio）
     float m_iconAreaWidth;     // 左侧图标区宽度
     float m_shortcutAreaWidth; // 右侧快捷键区宽度
     int m_hoveredIndex;        // 当前hover的菜单项索引
-    shared_ptr<MenuPanel> m_subMenuPanel; // 当前展开的子菜单面板
+    shared_ptr<MenuPanel> m_openSubMenu; // 当前展开的子菜单面板
 
+    SharedFont m_font;         // 面板内所有菜单项共享字体（直接绘制）
+    FontName m_fontName;
+
+    void ensureFont();
+    void updateItemsFont();
     void layoutItems();
     int hitTest(float x, float y);
 };
@@ -177,8 +187,6 @@ public:
     string getCaption() const;
     void setShortcut(const string& shortcut);  // 如 "Ctrl+N"
     string getShortcut() const;
-    void setEnabled(bool enabled);
-    bool getEnabled() const;
     void setChecked(bool checked);
     bool getChecked() const;
 
@@ -190,16 +198,20 @@ public:
     shared_ptr<MenuPanel> getSubMenu() const;
     bool hasSubMenu() const;
 
+    // 字体（由所属 MenuPanel::addItem 注入，面板内共享同一字体对象）
+    void setMenuFont(SharedFont font, float fontSize);
+
     MenuItemType getType() const;
 
 private:
     MenuItemType m_type;
     string m_caption;
     string m_shortcut;
-    bool m_enabled;
     bool m_checked;
     OnClickHandler m_onClick;
     shared_ptr<MenuPanel> m_subMenu;  // 子菜单面板
+    SharedFont m_font;                // 直接绘制用共享字体
+    float m_fontSize;
 };
 ```
 
@@ -219,20 +231,23 @@ VSCode菜单的核心交互是"菜单模式"：
 ### 3.2 控件生命周期
 
 ```
-MenuItem::create()  →  ControlImpl::create()  →  createLabels()
+MenuItem::create()  →  ControlImpl::create()
+MenuBar::addMenu()  →  ensureFont()  →  panel->setFontSize() / setItemHeightRatio() →  layoutEntries()
+MenuPanel::addItem() →  ensureFont()  →  item->setMenuFont(font, fontSize)  →  recalculateSize()
 ```
 
-`create()` 中调用 `createLabels()` 创建所有 label 控件（文字、快捷键、箭头）。
-label 在创建时读取 `MenuColors::g_menuTextSize` 和 `MenuColors::MENU_FONT`，
-因此字体大小和字体必须在 create 调用之前设置。推荐在构建 MenuPanel 之前调用：
+菜单文本**不创建内嵌 Label 控件**，而是经 `TextRenderer` 直接绘制（同 TreeView 模式）：
+每个 MenuBar / MenuPanel 各自懒加载一个共享 `SharedFont`（`ensureFont()`），
+MenuItem 通过 `setMenuFont` 从所属面板注入同一字体对象。字体字号 = `fontSize × getScaleXX()`。
+
+字体大小与比例系数均为**实例状态**（`m_fontSize` / `m_heightRatio`），
+`setFontSize` / `setItemHeightRatio` 修改后即时重载字体并重算面板尺寸，
+**无需**在创建前设置：
 
 ```cpp
-MenuBar::setFontSize(16);                       // 先设字体大小
-auto panel = MenuPanelBuilder().addItem(...).build();  // 再构建面板
+auto panel = MenuPanelBuilder().addItem(...).build();
+panel->setFontSize(16);   // 已创建也可修改，即时生效
 ```
-
-**注意**：`setFontSize` 和 `setItemHeightRatio` 对已创建的 label 不生效，
-只有下次调用 `create()` 时才会读取新值。
 
 ### 3.3 事件处理流程
 
@@ -278,8 +293,10 @@ KeyDown (keyEvent):
 | 分隔线颜色 | #454545 |
 | 子菜单箭头 | #CCCCCC |
 | 快捷键文字 | #858585 |
-| **字体** | MapleMono_NF_CN_Regular（含 ▶ 等 Nerd Font 图标） |
+| **字体** | MapleMono_NF_CN_Regular（默认，可经 `setEnumProperty("font", ...)` 修改） |
 | **缺省字体大小** | 20px（运行时可通过 `MenuBar::setFontSize()` 修改） |
+
+子菜单箭头与勾选标记均为**图形绘制**（`drawTriangle` / `drawLine`），不依赖字体字形。
 
 所有颜色值在代码中使用 `SColor` 类型存储（非 `SDL_Color`），构造方式为 `SColor(r, g, b, a)` 整数或浮点数形式。
 
@@ -289,8 +306,8 @@ KeyDown (keyEvent):
 
 | 元素 | 尺寸 |
 |------|------|
-| 菜单栏高度 | `g_menuTextSize × g_heightRatio`（默认 20 × 1.6 = 32px） |
-| 菜单项高度 | `g_menuTextSize × g_heightRatio`（默认 20 × 1.6 = 32px） |
+| 菜单栏高度 | `m_fontSize × m_heightRatio`（默认 20 × 1.6 = 32px） |
+| 菜单项高度 | `m_fontSize × m_heightRatio`（默认 20 × 1.6 = 32px） |
 | 菜单项左侧padding | 28px |
 | 菜单项右侧padding | 20px |
 | 图标区域宽度 | 20px |
@@ -299,11 +316,10 @@ KeyDown (keyEvent):
 | 分隔线高度 | 1px |
 | 分隔线左右margin | 10px |
 
-**运行时调整：**
+**运行时调整**（实例方法，即时生效，自动同步所有子面板）：
 
-- `MenuBar::setFontSize(16)` → 菜单栏/项高度变为 16 × 1.6 = 25.6px
+- `MenuBar::setFontSize(16)` → 菜单栏/项高度变为 16 × 1.6 = 25.6px，重载字体并重算面板尺寸
 - `MenuBar::setItemHeightRatio(2.0)` → 菜单栏/项高度变为 当前字体大小 × 2.0
-- 字体大小和比例系数必须在 `MenuPanel` 创建（`createLabels()` 调用）**之前**设置，生效于 label 重建时。
 - 比例系数范围：1.0 ~ 3.0，超出自动钳制。
 
 ## 5. Builder模式
@@ -373,12 +389,18 @@ auto menuBar = MenuBarBuilder(parent)
 
 | API | 变更说明 |
 |------|---------|
-| `MenuBar::setFontSize(float)` | **新增** - 运行时修改菜单字体大小 |
-| `MenuBar::getFontSize()` | **新增** - 获取当前字体大小 |
-| `MenuBar::setItemHeightRatio(float)` | **新增** - 设置菜单项/栏高度与字体大小的比例 |
-| `MenuItem::create()` | **新增** - 调用 `createLabels()`，确保字体大小生效 |
-| `MenuColors::BAR_HEIGHT` / `ITEM_HEIGHT` | **移除** - 替换为 `getItemHeight()` / `getBarHeight()` 动态计算 |
-| `MenuColors::MENU_TEXT_SIZE` | **移除** - 替换为运行时变量 `g_menuTextSize` |
+| `MenuBar::setFontSize(float)` | **实例方法** - 运行时修改菜单字体大小，即时生效并同步所有子面板 |
+| `MenuBar::getFontSize()` | **实例方法** - 获取当前字体大小 |
+| `MenuBar::setItemHeightRatio(float)` | **实例方法** - 设置菜单项/栏高度与字体大小的比例 |
+| `MenuItem::setMenuFont(SharedFont, float)` | **新增** - 由 MenuPanel::addItem 注入共享字体 |
+| `MenuPanel::setFontSize / setItemHeightRatio / setFontName` | **新增** - 面板级字体/尺寸实例状态 |
+| `MenuItem::create()` | **新增** - 仅调用 `ControlImpl::create()`（原 `createLabels()` 已移除） |
+| `MenuItem::getItemHeight()` | **移除** - 项高度由面板的 `m_fontSize × m_heightRatio` 统一计算 |
+| `MenuColors::g_menuTextSize` / `g_heightRatio` | **移除** - 全局可变状态，替换为 MenuBar/MenuPanel 实例成员 |
+| `MenuColors::BAR_HEIGHT` / `ITEM_HEIGHT` | **移除** - 替换为动态计算 |
+| `MenuColors::MENU_TEXT_SIZE` | **移除** - 替换为实例成员 `m_fontSize` / `m_menuTextSize` |
+| 文本绘制 | **重构** - 内嵌 Label 控件（每项 3 个）移除，改经 TextRenderer 直接绘制（同 TreeView 模式）；子菜单箭头由 `drawTriangle` 图形绘制，不依赖字体字形 |
+| hover 状态 | **重构** - hover 背景统一由 MenuPanel 按 `m_hoveredIndex` 绘制，移除 MenuItem 自维护与双重绘制 |
 | 字体 | **变更** - `HarmonyOS_Sans_SC_Regular` → `MapleMono_NF_CN_Regular` |
 | 箭头编码 | **修复** - `"\u25B6"` → `u8"\u25B6"`（避免 CP936 乱码） |
 
@@ -438,7 +460,7 @@ g_parser.registerHandler("onMenuExit", [](shared_ptr<Control> c) {
 
 ### 7.4 注意事项
 
-- `font.size` 设置影响所有菜单（`MenuBar::setFontSize()` 是静态全局方法）
+- `font.size` 设置影响该 MenuBar 及其所有子面板（`MenuBar::setFontSize()` 为实例方法，自动同步面板）
 - MenuBar 不需要 `rect` 字段，其宽度继承自父容器，高度由 `barHeight` 或 font 自动计算
 - 菜单项与菜单栏不可独立在 JSON 中使用，必须作为 MenuBar 的子项
 - 子菜单使用递归解析，嵌套层级不限

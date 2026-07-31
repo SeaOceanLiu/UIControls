@@ -68,6 +68,8 @@ public:
 
     bool handleEvent(shared_ptr<Event> event) override;
 
+    void onFocusScopeActivated() override;
+
     void show(void) override;
     void hide(void) override;
     void setRect(SRect rect) override;

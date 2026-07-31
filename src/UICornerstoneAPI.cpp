@@ -18,6 +18,9 @@
 #include "Dialog.h"
 #include "WinFrame.h"
 #include "TreeView.h"
+#include "ScrollBar.h"
+#include "HandleControl.h"
+#include "Menu.h"
 #include "LayoutParser.h"
 #include "PlatformUtils.h"
 #include "Actor.h"
@@ -54,6 +57,26 @@ std::queue<UIEvent> g_queuedEvents;
 // 保持 Dialog/Popup 生命期：CreateDialog 中创建后立即加入，
 // close() 的 onClose 回调中自动清理。
 static std::vector<std::shared_ptr<Popup>> g_popupPool;
+
+// Menu 生命周期：MenuItem/MenuPanel 创建后先入池保活（裸指针无法
+// 恢复 shared_ptr），挂载到 MenuBar 链时从池中取出转移所有权。
+static std::vector<std::shared_ptr<Control>> g_menuPool;
+
+static void menuPoolKeep(std::shared_ptr<Control> ctl) {
+    g_menuPool.push_back(std::move(ctl));
+}
+
+static std::shared_ptr<Control> menuPoolTake(UIControlHandle ctl) {
+    if (!ctl) return nullptr;
+    for (auto it = g_menuPool.begin(); it != g_menuPool.end(); ++it) {
+        if (static_cast<Control*>(ctl) == it->get()) {
+            auto sp = *it;
+            g_menuPool.erase(it);
+            return sp;
+        }
+    }
+    return nullptr;
+}
 
 static void registerControlById(const std::string& id, UIControlHandle ctl) {
     if (!id.empty()) g_controlsById[id] = ctl;
@@ -504,9 +527,60 @@ UIControlHandle UICornerstone_CreateWinFrame(
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateMenu(void) {
-    printf("UICornerstone: CreateMenu not implemented yet\n");
-    return nullptr;
+UIControlHandle UICornerstone_CreateMenuBar(float x, float y, float w, float h) {
+    auto bar = make_shared<MenuBar>(BENCH, 1.0f, 1.0f);
+    bar->setRect(SRect(x, y, w, h));
+    BENCH->addControl(bar);
+    bar->create();
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(bar.get()));
+}
+
+UIControlHandle UICornerstone_CreateMenuPanel(void) {
+    auto panel = make_shared<MenuPanel>(nullptr, 1.0f, 1.0f);
+    panel->create();
+    auto* p = reinterpret_cast<UIControlHandle>(static_cast<Control*>(panel.get()));
+    menuPoolKeep(panel);
+    return p;
+}
+
+UIControlHandle UICornerstone_CreateMenuItem(const char* caption, int type) {
+    if (type < 0 || type > 2) return nullptr;
+    auto item = make_shared<MenuItem>(nullptr, static_cast<MenuItemType>(type), 1.0f, 1.0f);
+    if (caption) item->setCaption(caption);
+    item->create();
+    auto* p = reinterpret_cast<UIControlHandle>(static_cast<Control*>(item.get()));
+    menuPoolKeep(item);
+    return p;
+}
+
+void UICornerstone_MenuBarAddMenu(UIControlHandle bar, const char* caption, UIControlHandle panel) {
+    if (!bar || !panel) return;
+    auto sp = menuPoolTake(panel);
+    if (!sp) return;
+    auto* mb = dynamic_cast<MenuBar*>(static_cast<Control*>(bar));
+    if (mb) mb->addMenu(caption ? caption : "", std::dynamic_pointer_cast<MenuPanel>(sp));
+}
+
+void UICornerstone_MenuPanelAddItem(UIControlHandle panel, UIControlHandle item) {
+    if (!panel || !item) return;
+    auto sp = menuPoolTake(item);
+    if (!sp) return;
+    auto* pnl = dynamic_cast<MenuPanel*>(static_cast<Control*>(panel));
+    if (pnl) pnl->addItem(std::dynamic_pointer_cast<MenuItem>(sp));
+}
+
+void UICornerstone_MenuPanelAddSeparator(UIControlHandle panel) {
+    if (!panel) return;
+    auto* pnl = dynamic_cast<MenuPanel*>(static_cast<Control*>(panel));
+    if (pnl) pnl->addSeparator();
+}
+
+void UICornerstone_MenuItemSetSubMenu(UIControlHandle item, UIControlHandle panel) {
+    if (!item || !panel) return;
+    auto sp = menuPoolTake(panel);
+    if (!sp) return;
+    auto* it = dynamic_cast<MenuItem*>(static_cast<Control*>(item));
+    if (it) it->setSubMenu(std::dynamic_pointer_cast<MenuPanel>(sp));
 }
 
 UIControlHandle UICornerstone_CreateImageButton(
@@ -654,6 +728,33 @@ UIControlHandle UICornerstone_CreateSplitter(float x, float y, float w, float h,
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sp.get()));
 }
 
+UIControlHandle UICornerstone_CreateScrollBar(float x, float y, float w, float h, int orientation) {
+    auto sb = make_shared<ScrollBar>(BENCH, SRect(x, y, w, h),
+        orientation != 0 ? ScrollBarOrientation::Horizontal : ScrollBarOrientation::Vertical);
+    BENCH->addControl(sb);
+    sb->create();
+    sb->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sb.get()));
+}
+
+UIControlHandle UICornerstone_CreateTreeView(float x, float y, float w, float h) {
+    auto tv = make_shared<TreeView>(BENCH, SRect(x, y, w, h));
+    BENCH->addControl(tv);
+    tv->create();
+    tv->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(tv.get()));
+}
+
+UIControlHandle UICornerstone_CreateHandleControl(
+    UIControlHandle target, float x, float y, float w, float h) {
+    if (!target) return nullptr;
+    auto hc = make_shared<HandleControl>();
+    hc->setRect(SRect(x, y, w, h));
+    hc->create();
+    hc->setTarget(static_cast<Control*>(target));
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(hc.get()));
+}
+
 // ============================================================
 // Property system (string-based, multi-type)
 // ============================================================
@@ -782,6 +883,7 @@ int UICornerstone_GetEnum(UIControlHandle ctl, const char* prop, char* out, int 
     strncpy_s(out, maxLen, s, _TRUNCATE);
     return 1;
 }
+
 
 
 

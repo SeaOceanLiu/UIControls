@@ -1145,6 +1145,502 @@ flowchart TD
 | 销毁再创建 | LeakDetector | — | 三个后端 |
 | 空值容错 | 崩溃即失败 | — | 三个后端 |
 
+### 5.13 扩展分析：单窗口多 BENCH 视口
+
+> 这是多实例的**主要应用场景**——一个应用程序/一个窗口内同时显示多个独立的 UI 视口（如编辑器多面板、仪表盘多区块）。当前设计假设 1:1 的"一个 UIInstance = 一个窗口 + 一个控制树"，无法覆盖此场景。
+
+#### 5.13.1 场景描述
+
+```
+┌──────────────────────────────────────┐
+│          主窗口 (Window)              │
+│  ┌─────────────┐  ┌──────────────┐   │
+│  │ 视口 A       │  │ 视口 B       │   │
+│  │ Bench α     │  │ Bench β     │   │
+│  │ 控制树独立   │  │ 控制树独立   │   │
+│  │ 事件队列独立  │  │ 事件队列独立  │   │
+│  │ rect(0,0,800)│  │ rect(800,0,  │   │
+│  │             │  │      400,600)│   │
+│  └─────────────┘  └──────────────┘   │
+└──────────────────────────────────────┘
+     ↑                        ↑
+  共享: Window, RenderDevice, InputBackend, TextRenderer
+```
+
+#### 5.13.2 核心差异
+
+| 维度 | 当前设计（多窗口） | 多视口场景 |
+|------|------------------|-----------|
+| BackendManager | 每个 UIInstance 拥有一个 | **共享**——一个窗口一个 |
+| Window | 每个 UIInstance 一个 | **共享** |
+| InputBackend | 每个 UIInstance 一个 | **共享**，事件需按坐标路由到正确视口 |
+| RenderDevice | 每个 UIInstance 一个 | **共享**，渲染时设 scissor rect |
+| Bench（控制树） | 每个 UIInstance 一个 | **每个视口独立** |
+| EventQueue | 每个 UIInstance 一个 | **每个视口独立** |
+| DataContext | 每个 UIInstance 一个 | **每个视口独立** |
+| actions / controlsById | 每个 UIInstance 一组 | **每个视口独立** |
+| viewport（SRect） | 固定为窗口尺寸 | **每个视口自己的子区域** |
+
+#### 5.13.3 当前设计的覆盖缺口
+
+当前 `UIContext` 将后端资源和视口状态捆绑在同一个结构体中：
+
+```cpp
+struct UIContext {
+    BackendManager* backendManager;  // 一对一
+    Bench*  bench;                   // 一对一
+    SRect   viewport;                // 一对一
+    // ...所有绑在一起
+};
+```
+
+没有"共享后端，独立视口"的模式。以下三个子系统需要改造：
+
+##### 主要瓶颈 1：InputBackend → 事件路由
+
+`InputBackend` 是窗口级别的，产生的是窗口坐标下的原始输入事件。多视口场景下，输入事件需要：
+
+```
+InputBackend::pollEvent()
+  → 确定事件坐标落在哪个视口的 rect 内
+  → 转换为视口本地坐标
+  → 推送到对应视口的 EventQueue / 直接 dispatch 到控制树
+```
+
+这要求 `UICornerstone_ProcessEvents` 的语义从"处理本实例的输入"变为"处理窗口的输入，分发到所有视口"。
+
+当前 `User->>CAPI: ProcessEvents(instance)` 的实现中（`src/UICornerstoneAPI.cpp`）同时涉及 `g_queuedEvents`（视口级）和 `g_inputBackend->pollEvent()`（窗口级）。若多个视口共享 inputBackend，竞争轮询会导致事件丢失。
+
+##### 主要瓶颈 2：MainWindow::processEvents → 固定 dispatch 到单个 BENCH
+
+`src/MainWindow.cpp:32-76` 中 `MainWindow::processEvents` 硬编码将输入事件 dispatch 到 `BENCH->inputControl()`。在多视口场景下，需要 dispatch 到对应视口的 Bench。
+
+##### 主要瓶颈 3：Render → 缺少视口裁剪
+
+`UICornerstone_Render` 调用 `BENCH->draw()` 绘制整个控制树到全窗口。多视口需要：为每个视口设置 scissor rect，只绘制该视口的控制树到该区域。
+
+#### 5.13.4 推荐方案：UIInstance 层级（父子共享后端）
+
+引入"父 UIInstance（拥有后端）→ 子 UIInstance（共享后端，独立视口）"的层级关系：
+
+```c
+// 创建主实例：拥有自己的后端（窗口/GPU/输入）
+UIInstance window = UICornerstone_CreateInstance(callbacks, config);
+
+// 在窗口中创建视口：共享主实例的后端，拥有自己的控制树
+// SRect 定义视口在窗口中的位置和大小
+UIInstance viewportA = UICornerstone_CreateViewport(
+    window, (SRect){0, 0, 800, 600});
+UIInstance viewportB = UICornerstone_CreateViewport(
+    window, (SRect){800, 0, 400, 600});
+
+// 所有函数仍接受 UIInstance，签名不变
+UICornerstone_ProcessEvents(window);       // 轮询输入 + 分发到各视口
+UICornerstone_Update(viewportA, dt);       // 更新视口 A 的控制树
+UICornerstone_Update(viewportB, dt);       // 更新视口 B 的控制树
+UICornerstone_Render(viewportA);           // 绘制视口 A（自动设 scissor）
+UICornerstone_Render(viewportB);           // 绘制视口 B（自动设 scissor）
+```
+
+**内部结构变化**——UIContext 增加 `owner` 和 `ownsBackend`：
+
+```cpp
+struct UIContext {
+    // ── 层级关系 ──
+    UIContext*  owner = nullptr;     // 拥有后端的父实例，nullptr = 自己是 owner
+    bool        ownsBackend = true;  // false = 共享 owner 的后端
+
+    // ── Backend 资源 ──
+    // 当 ownsBackend==false 时，以下指针从 owner 继承
+    BackendManager* backendManager = nullptr;
+    Window*         window = nullptr;
+    RenderDevice*   renderDevice = nullptr;
+    InputBackend*   inputBackend = nullptr;
+    TextRenderer*   textRenderer = nullptr;
+    ResourceProvider* resourceProvider = nullptr;
+
+    // ── 视口状态（每个实例独立） ──
+    bool    initialized = false;
+    bool    quit = false;
+    SRect   viewport{0, 0, 1024, 768};
+
+    Bench*        bench = nullptr;
+    MainWindow*   mainWindow = nullptr;
+    EventQueue*   eventQueue = nullptr;
+    DataContext*  dataContext = nullptr;
+
+    std::unordered_map<std::string,
+        std::pair<UIActionCallback, void*>> actions;
+    std::unordered_map<std::string, UIControlHandle> controlsById;
+    std::queue<UIEvent> queuedEvents;
+    std::vector<std::shared_ptr<Popup>> popupPool;
+
+    // ── 调试 ──
+    uint32_t    instanceId = 0;
+    std::string debugLabel;
+};
+```
+
+**BackendManager 依旧为单个 static `s_registeredAPI`（进程级）**，但 `BackendManager` 实例本身（拥有 Window/RenderDevice/InputBackend/TextRenderer 对象）由主 UIInstance 持有，子 viewport 通过 `owner->backendManager` 访问。
+
+#### 5.13.5 子系统改造点
+
+##### ProcessEvents 语义分化
+
+```
+UIInstance (owner) → ProcessEvents:
+  1. 轮询 inputBackend->pollEvent()
+  2. 对每个事件，检查所有子 viewport 的 rect
+  3. 匹配坐标 → 推送到该 viewport 的 queuedEvents 或直接 dispatch
+  4. 不匹配 → 视为窗口事件（如关闭按钮）
+
+UIInstance (viewport) → ProcessEvents:
+  1. 只处理自己的 queuedEvents（不轮询 inputBackend）
+  2. dispatch 到自己的 Bench
+```
+
+实现策略——`UICornerstone_ProcessEvents` 内部判断 `ownsBackend`。核心新增：**`activeViewport` 追踪 + 焦点转移逻辑**：
+
+```cpp
+// Owner 的 UIContext 中新增：
+UIInstance activeViewport = nullptr;  // 当前拥有焦点的视口
+
+void UICornerstone_ProcessEvents(UIInstance instance) {
+    if (!instance || !instance->initialized) return;
+
+    if (instance->ownsBackend) {
+        // 窗口级别：轮询输入并分发到子视口
+        instance->inputBackend->newFrame();
+        UIEvent raw;
+        while (instance->inputBackend->pollEvent(&raw)) {
+            if (raw.type == MouseDown || raw.type == MouseUp
+                || raw.type == MouseMove || raw.type == MouseWheel) {
+                // 坐标类事件：按视口 rect 路由
+                UIInstance target = findViewportByCoord(instance, raw.x, raw.y);
+                if (target) {
+                    // 跨视口焦点转移
+                    if (target != instance->activeViewport
+                        && (raw.type == MouseDown || raw.type == MouseUp)) {
+                        if (instance->activeViewport) {
+                            // 清旧视口的焦点 + 触发 onFocusLost
+                            instance->activeViewport->focusManager->clearFocus();
+                        }
+                        instance->activeViewport = target;
+                    }
+                    // 转视口本地坐标
+                    raw.x -= target->viewport.x;
+                    raw.y -= target->viewport.y;
+                    target->queuedEvents.push(raw);
+                }
+                // 不匹配任何视口 → 丢弃（或视为窗口事件）
+            } else if (raw.type == KeyDown || raw.type == KeyUp) {
+                // 键盘事件：路由到当前活动视口
+                if (instance->activeViewport) {
+                    instance->activeViewport->queuedEvents.push(raw);
+                }
+            } else {
+                // 窗口事件（Close, Resize）→ 由 owner 自身处理
+                instance->queuedEvents.push(raw);
+            }
+        }
+    }
+
+    // 所有实例（owner 和 viewport）都处理自己的 queuedEvents
+    while (!instance->queuedEvents.empty()) {
+        auto evt = instance->queuedEvents.front();
+        instance->queuedEvents.pop();
+        instance->bench->inputControl(evt);
+    }
+}
+```
+
+**`findViewportByCoord` 实现**：
+
+```cpp
+UIInstance findViewportByCoord(UIInstance owner, int x, int y) {
+    // 按 Z-order（创建顺序）遍历，先匹配的优先
+    for (auto* child : owner->children) {
+        auto& r = child->viewport;
+        if (x >= r.x && x < r.x + r.width
+         && y >= r.y && y < r.y + r.height) {
+            return child;
+        }
+    }
+    return nullptr;
+}
+```
+
+**子 viewport 的生命周期管理**：owner 维护 `std::vector<UIInstance> children`，创建 viewport 时注册，销毁时摘除。销毁活动视口前先将另一个视口设为 active，或设为 nullptr。
+
+**`UIContext` 新增字段**：
+
+```cpp
+struct UIContext {
+    // ... 现有字段 ...
+    UIInstance activeViewport = nullptr;   // 仅 owner 使用
+    FocusManager focusManager;             // 从 MainWindow 移入
+};
+```
+
+**跨视口焦点转移的完整时序**：
+
+```
+1. 视口 A 当前 active，其中 EditBox_A 有焦点
+2. 用户点击视口 B 的 Button_B
+3. Owner::ProcessEvents 轮询到 MouseDown(coord=视口B区域)
+4. findViewportByCoord → 命中视口 B
+5. 检测到 target != activeViewport → 进入焦点转移
+6. 视口 A 的 FocusManager.clearFocus()
+   → 通知 EditBox_A.setFocused(false) → onFocusLost()
+   → 视口 A 编辑框关闭输入法、提交未完成编辑
+7. 设置 activeViewport = 视口 B
+8. 转换为视口 B 本地坐标，push 到视口 B 的 queuedEvents
+9. 视口 B::ProcessEvents 处理 queuedEvents
+   → dispatch 到 Button_B → setFocused(true, byKeyboard=false)
+   → 通知视口 B 的 FocusManager → Button_B 获得焦点
+10. 下一帧渲染：视口 A 的 EditBox_A 不画焦点环 ✅
+    视口 B 的 Button_B 不画焦点环（鼠标焦点，除非 alwaysVisible）✅
+```
+
+**Tab 键 / Ctrl+Tab 的行为**：
+
+| 按键 | 行为 | 处理者 |
+|------|------|--------|
+| Tab / Shift+Tab | **视口内**控件间循环 | activeViewport 的 FocusManager（`focusNext/focusPrev`） |
+| Ctrl+Tab / Ctrl+Shift+Tab | **智能路由**（见下） | owner 层预拦截 + activeViewport 的 FocusManager |
+
+**Ctrl+Tab 智能路由规则**（owner 层键盘事件预拦截）：
+
+```
+KeyDown(Ctrl+Tab / Ctrl+Shift+Tab) 到达 owner 层
+  │
+  ├─ 视口数 == 1 ?
+  │    └─ Yes → 原样转发给 activeViewport
+  │            （视口内 Scope 切换，单视口行为完全不变）✅
+  │
+  ├─ activeViewport 内可见 boundary 数 > 1 ?
+  │    └─ Yes → 转发给 activeViewport
+  │            （视口内 WinFrame/Dialog 切换优先，用户先切完本视口窗口）
+  │
+  └─ 否则（视口数 > 1 且视口内只有 Bench 一个 boundary）
+       → 跨视口切换:
+           1. oldVp->focusManager.clearFocus()
+              → 旧控件 setFocused(false) → onFocusLost()
+           2. owner->activeViewport = children[next/prev]
+           3. newVp->focusManager.focusFirstInScope(newVp->bench)
+              → 聚焦新视口第一个可聚焦控件（byKeyboard=true，显示焦点环）
+```
+
+```cpp
+// src/UICornerstoneAPI.cpp — owner 层键盘路由（伪代码）
+bool tryViewportScopeSwitch(UIInstance owner, UIEvent& keyEvent) {
+    if (!isCtrlTab(keyEvent)) return false;         // 仅 Ctrl+Tab / Ctrl+Shift+Tab
+    if (owner->children.size() <= 1) return false;  // 单视口：交给视口内处理
+
+    UIInstance cur = owner->activeViewport;
+    if (countVisibleBoundaries(cur) > 1) return false;  // 视口内多窗口：视口内优先
+
+    // 执行跨视口切换
+    cur->focusManager.clearFocus();
+    owner->activeViewport = shift ? prevViewport(owner, cur) : nextViewport(owner, cur);
+    owner->activeViewport->focusManager.focusFirstInScope(
+        owner->activeViewport->bench);
+    return true;  // 事件已消费
+}
+```
+
+设计依据（与 VS Code 等编辑器一致）：视口内有多窗口时 Ctrl+Tab 先切窗口；只有一个窗口时切视口。用户在两个层级都导航到"下一个域"。
+
+**键盘路由流程图**：
+
+```mermaid
+flowchart TD
+    A["KeyDown(Ctrl+Tab) 到达 owner"] --> B{"视口数 > 1?"}
+    B -->|No| C["转发给 activeViewport<br/>视口内 Scope 切换"]
+    B -->|Yes| D{"activeViewport 内<br/>可见 boundary > 1?"}
+    D -->|Yes| C
+    D -->|No| E["跨视口切换"]
+    E --> E1["clearFocus 旧视口"]
+    E1 --> E2["activeViewport = children[±1]"]
+    E2 --> E3["focusFirstInScope 新视口"]
+    E3 --> F["事件消费，不进入视口"]
+```
+
+**`countVisibleBoundaries` 实现**：遍历 `activeViewport->focusManager` 的 `m_boundaries`，统计 `isVisible()` 的项数（Bench 自身是首个 boundary，始终 +1）。
+
+**`clearFocus()` 实现**：
+
+```cpp
+// FocusManager.cpp
+void FocusManager::clearFocus() {
+    if (m_currentFocused) {
+        m_currentFocused->setFocused(false, false);  // 触发 onFocusLost()
+        m_currentFocused = nullptr;
+    }
+}
+```
+
+已在现有代码中存在（`FocusManager.cpp:66-71`），无需修改。 ✅
+
+##### Render 语义变化
+
+```cpp
+void UICornerstone_Render(UIInstance instance) {
+    if (!instance || !instance->initialized) return;
+    // 设置 scissor rect 到视口区域
+    instance->renderDevice->setScissor(
+        instance->viewport.x,
+        instance->viewport.y,
+        instance->viewport.width,
+        instance->viewport.height);
+    // 只绘制本视口的控制树
+    instance->bench->draw();
+    // 恢复 scissor
+    instance->renderDevice->setScissor(0, 0, 0, 0);
+}
+```
+
+注意：`renderDevice` 指针对于子 viewport 是从 `owner` 继承的，所以所有视口共享同一个渲染设备。
+
+##### DestroyInstance 的层级处理
+
+```cpp
+void UICornerstone_DestroyInstance(UIInstance instance) {
+    if (!instance) return;
+
+    // 先销毁所有子视口
+    for (auto* child : instance->children) {
+        UICornerstone_DestroyInstance(child);
+    }
+    instance->children.clear();
+
+    instance->destroy();  // 清理本实例的 Bench/EventQueue/...
+
+    if (instance->ownsBackend) {
+        // 只有 owner 才 shutdown BackendManager
+        instance->backendManager->shutdown();
+        delete instance->backendManager;
+    }
+
+    delete instance;
+}
+```
+
+#### 5.13.6 对现有设计的影响
+
+| 现有章节 | 需要修改 | 原因 |
+|---------|---------|------|
+| 5.1 UIContext | 新增 `owner`、`ownsBackend`、`children`、`activeViewport` 字段；`FocusManager` 从 MainWindow 移入作为值成员 | 层级关系 + 跨视口焦点追踪 |
+| 5.2 C ABI 新签名 | 新增 `CreateViewport` 函数 | 创建共享后端的视口 |
+| 5.3 单例改造 | BackendManager 从"每个实例拥有"改为"owner 实例拥有" | 共享 |
+| 5.4 Control 层 | `m_context` 仍是每个 Control 指向自己的 UIContext | 不需改 |
+| 5.5 宏 | 宏从 `m_context` 读取，自动指向正确的 UIContext；`GET_FOCUSMANAGER` 改为 `(CONTEXT->focusManager)` | 不需改 |
+| 5.8 生命周期 | 新增父子实例的创建/销毁时序；销毁 activeViewport 前需转移 | 需扩展 |
+| 5.9 错误处理 | 子视口初始化失败不应影响 owner | 需扩展 |
+| 5.10 所有权 | FocusManager 所有权从 MainWindow 移至 UIContext；owner 负责跨视口焦点调度 | 见分析 |
+| 5.11 调试 | 实例注册表兼容父子层级 | 不需改 |
+| 5.12 测试 | 新增多视口事件隔离测试，含跨视口焦点转移 | 见下文 |
+| — | ProcessEvents 输入路由实现 | 坐标类事件按 rect 分发到子视口；键盘事件发到 activeViewport；跨视口点击清旧焦点 | 新增 |
+| — | `Dialog/ColorPicker/ComboBox` 中 `MAINWIN->getWindowSize()` → `m_context->viewport` | 弹出窗口定位改为视口相对 |
+
+#### 5.13.7 新增测试：单窗口多视口
+
+新建 `test/test_multiviewport.cpp`：
+
+```cpp
+// 测试：1 个窗口 + 2 个视口，独立控制树
+
+UIBackendCallbacks* cb = GetUIBackendCallbacks();
+UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+assert(win);
+
+// 创建两个视口
+UIInstance vp1 = UICornerstone_CreateViewport(win, (SRect){0, 0, 640, 480});
+UIInstance vp2 = UICornerstone_CreateViewport(win, (SRect){640, 0, 640, 480});
+assert(vp1 != vp2);
+
+// 每个视口创建不同的控件
+UIControlHandle btn1 = UICornerstone_CreateControl(vp1, "Button");
+UIControlHandle btn2 = UICornerstone_CreateControl(vp2, "Label");
+
+// 帧循环
+for (int i = 0; i < 60; i++) {
+    UICornerstone_ProcessEvents(win);    // 轮询输入 + 分发到 vp1/vp2
+    UICornerstone_Update(vp1, 0.016);
+    UICornerstone_Update(vp2, 0.016);
+    UICornerstone_Render(vp1);           // 只绘制 vp1 区域
+    UICornerstone_Render(vp2);           // 只绘制 vp2 区域
+}
+
+// 先销毁视口，再销毁窗口
+UICornerstone_DestroyInstance(vp1);
+UICornerstone_DestroyInstance(vp2);
+UICornerstone_DestroyInstance(win);
+```
+
+**验证点**：
+- 两个视口独立渲染到各自区域
+- 鼠标点击视口 A 不触发视口 B 的回调
+- 每个视口有自己的 ID 查找空间
+- 销毁顺序：先子后父，不泄漏
+- 焦点转移：点击视口 B → 视口 A 旧控件 `onFocusLost()` 触发 → 视口 B 新控件 `onFocusGained()` 触发
+- 键盘事件路由：按下 Tab → 只在 activeViewport 内循环
+- activeViewport 销毁前转移：析构 active 视口时 owner 将其设为 nullptr 或另一个视口
+
+**新增：键盘跨视口导航测试**（`test_multiviewport.cpp` 追加，或独立 `test_multiviewport_keyboard.cpp`）：
+
+| # | 场景 | 步骤 | 预期 |
+|---|------|------|------|
+| K1 | 单视口 Ctrl+Tab 行为不变 | 只有 win（默认视口），内含 2 个 WinFrame；Ctrl+Tab | 在 2 个 WinFrame 间切换（原行为） |
+| K2 | 双视口 + 各视口单 WinFrame | Ctrl+Tab | 跨视口切换：vp1 → vp2，焦点落到 vp2 的第一个可聚焦控件，焦点环显示（byKeyboard=true） |
+| K3 | 双视口 + vp1 内 2 个 WinFrame | Ctrl+Tab | 视口内优先：在 vp1 的 2 个 WinFrame 间切换，不跳转视口 |
+| K4 | K3 之后 vp1 窗口切完 | 再次 Ctrl+Tab | 现在 vp1 内 boundary 只有 Bench → 跨视口跳 vp2 |
+| K5 | 跨视口后 Ctrl+Shift+Tab | Ctrl+Shift+Tab | 反向：vp2 → vp1 |
+| K6 | 跨视口后 Tab | Tab | 只在当前 activeViewport（vp2）内循环，不进入 vp1 |
+| K7 | 焦点回跳 | 跨视口切到 vp2 后，再切回 vp1 | vp1 的焦点环回到 vp1 内第一个可聚焦控件（focusFirstInScope），不是记忆原焦点 |
+
+K7 的补充说明：跨视口切换使用 `focusFirstInScope`，不记忆原视口内的焦点位置。若未来需要"切回时恢复原焦点"，可在 `UIContext` 增加 `savedFocusControl` 字段，初期不做。
+
+K1 验证点：`tryViewportScopeSwitch` 中 `children.size() <= 1` 直接返回 false，Ctrl+Tab 原样到达视口内 FocusManager。
+
+实现测试桩（K2 的核心断言）：
+
+```cpp
+// 键盘事件构造（通过 PushUIEvent 或直接调用内部路由）
+UIEvent evt;
+evt.type = KeyDown;
+evt.keycode = KeyCode::Tab;
+evt.mod = KeyMod::LCtrl;
+UICornerstone_PushUIEvent(win, evt);   // 发到 owner 层
+
+// 断言 activeViewport 切换
+assert(UICornerstone_GetActiveViewport(win) == vp2);
+// 断言 vp2 获得焦点环
+assert(vp2 内 first focusable control 的 isFocused() == true);
+// 断言 vp1 旧焦点被清
+assert(vp1 内原聚焦控件的 isFocused() == false);
+```
+
+需要为测试暴露两个调试辅助 API（Debug 构建）：
+
+```c
+// Debug 辅助：查询当前活动视口
+UICORNERSTONE_API UIInstance UICornerstone_Debug_GetActiveViewport(
+    UIInstance instance);
+
+// Debug 辅助：查询实例是否拥有焦点
+UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
+    UIInstance instance, UIControlHandle control);
+```
+
+#### 5.13.8 多视口 vs 多窗口：选择矩阵
+
+| 场景 | 方案 | API |
+|------|------|-----|
+| 多个独立窗口 | 多 UIInstance | `CreateInstance` × N |
+| 单窗口多面板 | 1 UIInstance + N 视口 | `CreateInstance` × 1 + `CreateViewport` × N |
+| 混合（多窗口，每窗口多面板） | 多 UIInstance × N 视口 | 上述组合 |
+
 ## 6. 实施清单
 
 | 序号 | 文件 | 操作 | 工作量 |
@@ -1170,17 +1666,29 @@ flowchart TD
 | 19 | `src/ConstDef.cpp` | 若需要实例独立路径，将 `g_pathPrefix` 迁入 `UIContext`（见 §7） | 小 |
 | 20 | 测试 | 测试 1: `CreateInstance`×1 → 完整运行 → `DestroyInstance`；测试 2: `CreateInstance`×2 → 两个独立窗口循环 → `DestroyInstance` | 中 |
 | 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员 | 小 |
+| 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
+| 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, SRect rect)` | 小 |
+| 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询 + 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport | 中 |
+| 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加 scissor rect 设置 | 小 |
+| 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
+| 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |
+| 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序 + 键盘导航测试（K1-K7） | 中 |
+| 28 | `include/MainWindow.h` | 移除 `m_focusManager` 值成员；移除 `getFocusManager()` | 小 |
+| 29 | `include/UIContext.h` | 新增 `FocusManager focusManager` 值成员 | 小 |
+| 30 | `include/ControlBase.h` | `GET_FOCUSMANAGER` 宏改为 `(CONTEXT->focusManager)` | 小 |
+| 31 | `src/Dialog.cpp` / `ColorPicker.cpp` / `ComboBox.cpp` | `MAINWIN->getWindowSize()` → `m_context->viewport`（弹出定位改为视口相对） | 小 |
+| 32 | `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` | 新增 Debug 辅助 API：`Debug_GetActiveViewport`、`Debug_IsControlFocused`（供测试断言） | 小 |
 
 ### 影响范围汇总
 
 | 类别 | 文件数 | 修改性质 |
 |------|--------|---------|
-| 新增 | 2 | `UIContext.h/.cpp` |
+| 新增 | 3 | `UIContext.h/.cpp`、`test_multiviewport.cpp` |
 | 核心修改 | 8 | `UICornerstoneAPI.h/.cpp`、`ControlBase.h`、`BackendPlugin.h`、`MainWindow.h/.cpp`、`Bench.h/.cpp` |
-| 小修改 | 7 | `EventQueue.h/.cpp`、`DataContext.h/.cpp`、`BackendManager.cpp`、`PlatformUtils.h`、`ConstDef.cpp` |
+| 小修改 | 10 | `EventQueue.h/.cpp`、`DataContext.h/.cpp`、`BackendManager.cpp`、`PlatformUtils.h`、`ConstDef.cpp`、`Dialog.cpp`、`ColorPicker.cpp`、`ComboBox.cpp`、`FocusManager.h`（无改动）|
 | 后端插件 | ~6 | 3 个后端的创建/销毁逻辑 |
-| 零修改 | ~20 | 控件业务 .cpp（宏自动适配） |
-| 总改动文件 | ~43 | 含 2 个新增 |
+| 零修改 | ~20 | 控件业务 .cpp（宏自动适配）|
+| 总改动文件 | ~48 | 含 3 个新增 |
 
 ## 7. 风险与注意事项
 

@@ -701,6 +701,9 @@ void ControlImpl::onFocusGained(bool byKeyboard) {
 void ControlImpl::onFocusLost() {
 }
 
+void ControlImpl::onFocusScopeActivated() {
+}
+
 void ControlImpl::drawFocusRing() {
     if (!m_focused || !m_showFocusRing) return;
     if (!m_focusRingAlwaysVisible && !m_focusByKeyboard) return;

@@ -6,8 +6,19 @@ endif()
 string(TOLOWER "${UICORNERSTONE_BACKEND}" _BACKEND_LOWER)
 set(_SAMPLE_DIR "${CMAKE_SOURCE_DIR}/build/sample/sample_loadlibrary/${_BACKEND_LOWER}")
 
+# 后端源码按当前后端选择，编译为独立 TU（与 sample_fromsource 相同模式）
+set(_BACKEND_SOURCES
+    "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/Window.cpp"
+    "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/RenderDevice.cpp"
+    "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/TextRenderer.cpp"
+    "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/InputBackend.cpp"
+    "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/Cursor.cpp"
+    "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/BackendPlugin.cpp"
+)
+
 add_executable(sample_loadlibrary
     sample_loadlibrary.cpp
+    ${_BACKEND_SOURCES}
 )
 
 target_include_directories(sample_loadlibrary PRIVATE

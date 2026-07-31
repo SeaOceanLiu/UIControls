@@ -124,6 +124,7 @@ bool FocusManager::focusNext(Control* current)
                 if (current) current->setFocused(false, false);
                 c->setFocused(true, true);
                 m_currentFocused = c;
+                if (Control* newScope = findFocusScope(c)) newScope->onFocusScopeActivated();
                 return true;
             }
             break;
@@ -149,6 +150,7 @@ bool FocusManager::focusPrev(Control* current)
                 if (current) current->setFocused(false, false);
                 c->setFocused(true, true);
                 m_currentFocused = c;
+                if (Control* newScope = findFocusScope(c)) newScope->onFocusScopeActivated();
                 return true;
             }
             break;
@@ -233,6 +235,8 @@ bool FocusManager::focusPrevScope()
 bool FocusManager::focusFirstInScope(Control* scope)
 {
     if (!scope) return false;
+    // 键盘/焦点切换激活 scope 时通知（如 WinFrame 提升到顶层）
+    scope->onFocusScopeActivated();
     for (Control* c : m_controls) {
         if (isDescendantOf(scope, c) && c->getVisible() && c->getEnable()) {
             if (m_currentFocused && m_currentFocused != c)
