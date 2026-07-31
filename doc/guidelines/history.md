@@ -1978,6 +1978,24 @@ Done, 180 frames                        # 帧循环正常完成
 
 **背景**：主设计 Session 提交 bd047d8（ninth audit pass，4 处修正：直接销毁子视口路径的悬垂修复、级联销毁快照遍历、§6 清单同步 26a/26c/27、生命周期注记）。本 Session 逐条核实（全部通过），并沿销毁/摘除新逻辑深入排查，未发现实质遗漏，仅 2 处小瑕疵。
 
+### 2026-07-31: 第十一轮复核（tenth audit pass 之复核 + 深入遗漏排查，修订 2 处）
+
+**背景**：辅设计 Session 提交 5b722eb（tenth audit pass，2 处修正：§6 26a/26b/26c 编号重排、5.13.7 验证点补"销毁后句柄失效"约定）。本 Session 逐条核实（全部通过），并沿重排/句柄失效语义排查，发现 1 处交叉引用遗漏 + 1 处注释微瑕。
+
+**辅设计 Session 修正核实（2 处全部通过）**：
+
+- §6 编号重排 26a→26b→26c（内容不变）：26c（getVisibleBoundaryCount）原插在 26a/26b 之间，编号不连续。核实重排后内容与文件一一对应
+- 销毁后句柄失效约定：`destroying` 短路只保护销毁期间的重入，销毁后对象已 delete 任何入口无法保护（读 instance->destroying 本身即 UAF）——约定"未定义行为，调用者责任"正确且必要；引用 CppBinding_Design.md:838（绑定层经 FindControl 返回空间接感知）核实无误；"销毁 activeViewport 视口后焦点丢失不自动转移，点击子视口或 Ctrl+Tab front/back 切入均可恢复"自洽无遗漏
+
+**本次新发现并修订（2 处）**：
+
+1. **26a 内文交叉引用未随重排同步（关键）**：重排前 getVisibleBoundaryCount 是 26c，26a 内文"见 26c"正确；重排后 26c 已是 CreateViewport 项，26a 内文仍写"见 26c"→ 指向错误项。已改"见 26b"
+2. **结构体 children 注释未补销毁摘除语义**：§5.13.4 `children` 注释仍只写"级联销毁"，第九轮落地的"直接销毁时摘除自身"未体现。已补
+
+**已核验排除**：销毁后句柄失效约定与 §7 风险 5（Debug controlsById 校验）无冲突（校验前提即实例句柄有效）；混合场景（多窗口 × 多视口）各 owner 独立轮询无交叉；快照遍历 + 先置 null 再递归的顺序在回调重入下安全（activeViewport 已 null）。
+
+**未提交**（用户指示更新但不提交）。
+
 **主设计 Session 修正核实（4 处全部通过）**：
 
 - 直接销毁子视口悬垂（严重）：分析正确——第八轮置 null 仅在 owner 级联循环内，直接 `DestroyInstance(vp1)`（5.13.7 测试正如此）不经过该循环：vp1 销毁后 win->children 残留悬垂指针（后续 `DestroyInstance(win)` 级联遍历读 vp1->destroying UAF）、win->activeViewport 残留悬垂（后续键盘 fallback 解引用 UAF）。尾部摘除块修复完整：

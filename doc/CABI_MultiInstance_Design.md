@@ -1383,7 +1383,7 @@ struct UIContext {
     // ── 层级关系 ──
     UIContext*  owner = nullptr;     // 拥有后端的父实例，nullptr = 自己是 owner
     bool        ownsBackend = true;  // false = 共享 owner 的后端
-    std::vector<UIContext*> children;  // 修订：子视口列表（CreateViewport 注册，DestroyInstance 级联销毁）
+    std::vector<UIContext*> children;  // 修订：子视口列表（CreateViewport 注册；DestroyInstance 级联销毁 + 直接销毁时摘除自身，复核修订 2026-07-31 第九/十一轮）
 
     // ── Backend 资源 ──
     // 当 ownsBackend==false 时，以下指针从 owner 继承
@@ -1972,7 +1972,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport（nullptr 回退 owner，复核修订 2026-07-31 第六轮） | 中 |
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
-| 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`（内部经 `FocusManager::getVisibleBoundaryCount()`，见 26c——m_boundaries 为私有成员，C ABI 层不可直接访问，复核修订 2026-07-31 第八轮）；在键盘事件进入视口前预拦截 | 中 |
+| 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`（内部经 `FocusManager::getVisibleBoundaryCount()`，见 26b——m_boundaries 为私有成员，C ABI 层不可直接访问，复核修订 2026-07-31 第八轮）；在键盘事件进入视口前预拦截 | 中 |
 | 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；兜底点击（未命中子视口）清 `activeViewport` 置 nullptr + 清旧视口焦点；键盘 fallback 在 `activeViewport==nullptr` 时退回 owner bench；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五/六/七轮） | 小 |
 | 26c | `include/FocusManager.h` / `src/FocusManager.cpp` | 新增 `int getVisibleBoundaryCount() const`（统计 `m_boundaries` 中 `isVisible()` 项数，m_boundaries 是私有成员 FocusManager.h:40，现有仅 registerBoundary/unregisterBoundary :27/29） | 小 |
 | 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序（含直接销毁子视口后 owner 继续运行的悬垂防护，复核修订 2026-07-31 第九轮）+ 键盘导航测试（K1-K8） | 中 |
