@@ -1730,3 +1730,22 @@ Done, 180 frames                        # 帧循环正常完成
 **验证**：SDL3/SFML/Raylib 三后端静态库 + `UICornerstone_dll.dll` 全部编译通过，0 错误；`test_menu.exe` 三后端运行正常（事件循环 6 秒无崩溃）。C ABI 导出（`CreateMenuBar/CreateMenuPanel/CreateMenuItem/MenuBarAddMenu/MenuPanelAddItem/MenuPanelAddSeparator/MenuItemSetSubMenu`）签名不变，`src/UICornerstoneAPI.cpp` 无需修改。
 
 **文档**：`doc/Menu_Design.md`（§2 类图同步实例成员与 setMenuFont、§3.2 生命周期重写、§4.1 字体描述、§4.2 运行时调整即时生效、§6.4 API 变更表、§7.4 注意事项）、`doc/guidelines/history.md` 本次记录。
+
+### 2026-07-31: WinFrame 焦点置顶统一修复（notifyControlFocused）
+
+**问题**：焦点进入 WinFrame scope 时置顶的钩子只覆盖 `focusNext`/`focusPrev`/`focusFirstInScope`（对 scope 自身）三条路径；`focusControl`（鼠标/代码聚焦）、`focusFirstInScope` 聚焦 scope **后代控件**等路径缺失 → 例如 Ctrl+Tab 切到 Bench scope 时 `focusFirstInScope(Bench)` 把焦点给到 WinFrame 内控件，但该 WinFrame 不置顶（需再按一次 Tab 或 Ctrl+Tab 往返才恢复）。
+
+**修复**（`src/FocusManager.cpp`，提交 `d80439e`）：
+
+- `notifyControlFocused` 聚焦分支新增：`if (Control* s = findFocusScope(ctl)) s->onFocusScopeActivated();` — 任何路径下焦点进入某 scope（WinFrame）即激活（提升顶层）
+- `focusNext`/`focusPrev`/`focusFirstInScope` 原有调用保留（幂等双保险）
+- 主界面（Bench scope）控件聚焦时 `findFocusScope` 返回 Bench（`onFocusScopeActivated` 空实现），无误触
+
+**实证**（sdl3 test_winframe 临时诊断代码，验证后已移除）：show 两 WinFrame 后完整序列 —— 首次 Tab → WinFrame1 置顶 ✓；Tab → 同 scope 内循环 ✓；Ctrl+Tab → WinFrame2 置顶 ✓；Ctrl+Tab 回 Bench scope → 焦点落 WinFrame1 控件 → **WinFrame1 立即置顶** ✓（修复前失败）；`focusControl(g_btn1)` 主界面按钮 → 不误触置顶 ✓。
+
+**调查发现**（未改动，供后续参考）：
+
+- `WinFrameBuilder::build()` 末尾 `hide()`（WinFrame.cpp:551）— WinFrame 默认隐藏，须 `show()` 后可见；`focusNextScope`/`focusPrevScope` 的 `if (!boundary->getVisible()) continue;` 会跳过隐藏的 WinFrame
+- `hide()` 不递归隐藏子控件（内部 Button/EditBox 仍 `getVisible()==true`，Tab 可聚焦到隐藏 WinFrame 内控件）
+- Tab 首个焦点是标题栏关闭按钮 `m_closeButton`（无 caption、parent 直接是 WinFrame，`setFocusable` 未禁，注册在 `m_controls` 首位）
+- 首次 Tab（`m_currentFocused==nullptr`）时 `focusNext(nullptr)` scope 为空，遍历全部 `m_controls`，聚焦第一个可见启用控件
