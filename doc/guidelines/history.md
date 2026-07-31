@@ -1805,3 +1805,28 @@ Done, 180 frames                        # 帧循环正常完成
 **核验确认无误的项**：UI_EVENT_MOUSE_DOWN/WHEEL 等为 UIEventType 枚举值（h:45-58）；InputBackend::newFrame() 存在（InputBackend.h:31）；UIInstanceConfig 修订版含 structSize 与 §7.2 一致；§5.9 rollback 标签逻辑正确。
 
 **验证**：残留 setScissor/getRootControl/单参 uiEventToEvent/&ctx->eventQueue 等清零；grep 复核通过。
+
+### 2026-07-31: 文档作者第二轮审核（second audit pass）之复核 + 4 处修正
+
+**背景**：文档作者在 2eb8a29（第一轮修订）基础上提交 b2c87d6（second audit pass，修订 198 行）。逐条对照真实源码复核作者分析。
+
+**作者分析正确（核验通过）**：
+
+- static char buf[256] 在 UICornerstone_GetControlId 函数体内（UICornerstoneAPI.cpp:635-647），非全局；GetString/GetEnum 用调用者 out 缓冲 + strncpy_s（:869-884），与 buf 无关
+- UIInstanceConfig 补 debugLabel（§5.11.1 定义确有该字段，字段序 structSize→debugLabel→resourceRoot→...）
+- Debug 辅助 6→4（第一轮笔误）
+- setContext 的 &ctx->eventQueue→ctx->eventQueue（eventQueue 是指针成员）
+- Render 用 pushClipRect/popClipRect（RenderDevice.h:27-28；现实现 cpp:341-346）
+- **两条事件通路**：uiEventToEvent 两参数 bool（cpp:223）；pollEvent(Event&) 直接产出 C++ Event（InputBackend.h:25）；合流到 bench->inputControl（cpp:293-333）
+- m_boundaries 仅 WinFrame（WinFrame.cpp:85/352）+ Dialog（Dialog.cpp:107）注册；Bench.cpp:33 只设 m_isFocusBoundary 不注册；focusNextScope 回退引用（FocusManager.cpp:190-198）准确
+
+**复核发现的 4 处问题（本次已修正）**：
+
+1. 	ryViewportScopeSwitch Ctrl 判定 !(mod & KeyMod::LCtrl) 漏 RCtrl——现实现 Bench.cpp:81 为 LCtrl||RCtrl，KeyMod::Ctrl=LCtrl|RCtrl（EventTypes.h:131）。改为 !isModSet(mod, KeyMod::Ctrl)，并补 ool shift = isModSet(mod, KeyMod::Shift)（原伪代码 shift 未定义）
+2. cur->focusManager.clearFocus()、owner->activeViewport->focusManager.focusFirstInScope(...) 用 . 访问指针成员（§5.13.4 定义 FocusManager*）→ 改 ->
+3. **K2 与新条件自相矛盾**：双视口各单 WinFrame 时 countVisibleBoundaries>=1 → 视口内优先，不会跨视口，但 K2 原预期"跨视口切换"。K2 及测试桩已同步：首次 Ctrl+Tab 聚焦本视口 WinFrame，隐藏后（count==0）才跨视口
+4. §6 第 25 项仍写 setClipRect，与 §5.13.5 的 pushClipRect/popClipRect 不一致 → 已同步
+
+**顺带改进**：坐标写回统一用 evt.mousePos.x/y 依赖 union 布局兼容（三事件坐标均在偏移 0，EventTypes.h:158-160），已补注释说明。
+
+**未提交**（用户指示更新但不提交）。

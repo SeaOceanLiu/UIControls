@@ -1466,6 +1466,9 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
                     instance->activeViewport = target;
                 }
                 // 转视口本地坐标后 dispatch 到目标视口
+                // 注：MouseMove/Down/Up/Wheel 的坐标字段（mousePos/mouseButton/mouseWheel）
+                // 均以 x,y 起始（EventTypes.h:158-160），写 mousePos.x/y 即覆盖偏移 0-7，
+                // 对三种事件均生效（依赖 union 布局兼容）
                 evt.mousePos.x = mx - target->viewport.x;
                 evt.mousePos.y = my - target->viewport.y;
                 target->bench->inputControl(std::make_shared<Event>(evt));
@@ -1579,19 +1582,23 @@ KeyDown(Ctrl+Tab / Ctrl+Shift+Tab) 到达 owner 层
 // src/UICornerstoneAPI.cpp — owner 层键盘路由（伪代码）
 // 复核修订：参数为 C++ Event&（轮询通路产出 Event；键码/修饰经 EventKey{keycode, mod}
 // 访问，EventTypes.h:161）
+// 修正（2026-07-31 二次复核）：Ctrl 判定须同时接受左右 Ctrl——现实现 Bench.cpp:81 为
+// LCtrl||RCtrl；KeyMod::Ctrl = LCtrl|RCtrl（EventTypes.h:131），否则右 Ctrl+Tab 会被误当普通 Tab
 bool tryViewportScopeSwitch(UIInstance owner, Event& keyEvent) {
     KeyCode code = keyEvent.keyEvent.keycode;              // KeyCode::Tab = 0x09（EventTypes.h:28）
     KeyMod  mod  = keyEvent.keyEvent.mod;                   // KeyMod::LCtrl = 0x0040（EventTypes.h:120）
-    if (code != KeyCode::Tab || !(mod & KeyMod::LCtrl)) return false;  // 仅 Ctrl+Tab / Ctrl+Shift+Tab
+    if (code != KeyCode::Tab || !isModSet(mod, KeyMod::Ctrl)) return false;  // 仅 Ctrl+Tab / Ctrl+Shift+Tab
     if (owner->children.size() <= 1) return false;  // 单视口：交给视口内处理
 
     UIInstance cur = owner->activeViewport;
     if (countVisibleBoundaries(cur) >= 1) return false;  // 视口内有 WinFrame/Dialog：视口内优先
 
     // 执行跨视口切换
-    cur->focusManager.clearFocus();
+    // 修正（2026-07-31 二次复核）：focusManager 是指针成员（§5.13.4），用 -> 访问
+    cur->focusManager->clearFocus();
+    bool shift = isModSet(mod, KeyMod::Shift);
     owner->activeViewport = shift ? prevViewport(owner, cur) : nextViewport(owner, cur);
-    owner->activeViewport->focusManager.focusFirstInScope(
+    owner->activeViewport->focusManager->focusFirstInScope(
         owner->activeViewport->bench);
     return true;  // 事件已消费
 }
@@ -1739,7 +1746,7 @@ UICornerstone_DestroyInstance(win);
 | # | 场景 | 步骤 | 预期 |
 |---|------|------|------|
 | K1 | 单视口 Ctrl+Tab 行为不变 | 只有 win（默认视口），内含 2 个 WinFrame；Ctrl+Tab | 在 2 个 WinFrame 间切换（原行为） |
-| K2 | 双视口 + 各视口单 WinFrame | Ctrl+Tab | 跨视口切换：vp1 → vp2，焦点落到 vp2 的第一个可聚焦控件，焦点环显示（byKeyboard=true） |
+| K2 | 双视口 + 各视口单 WinFrame | 首次 Ctrl+Tab；随后隐藏 vp1 的 WinFrame 再 Ctrl+Tab | 首次：vp1 内有 1 个可见 boundary（≥1）→ **视口内优先**，聚焦 vp1 的 WinFrame（与单视口行为一致，不跨视口）；vp1 WinFrame 隐藏后 count==0 → 跨视口切 vp2，焦点落 vp2 第一个可聚焦控件，焦点环显示（byKeyboard=true） |
 | K3 | 双视口 + vp1 内 2 个 WinFrame | Ctrl+Tab | 视口内优先：在 vp1 的 2 个 WinFrame 间切换，不跳转视口 |
 | K4 | vp1 的 2 个 WinFrame 全部隐藏/关闭后 | 再次 Ctrl+Tab | vp1 内无可见 boundary（复核修订：WinFrame/Dialog 关闭后 count==0，无"Bench 隐含 +1"）→ 跨视口跳 vp2 |
 | K5 | 跨视口后 Ctrl+Shift+Tab | Ctrl+Shift+Tab | 反向：vp2 → vp1 |
@@ -1750,7 +1757,7 @@ K7 的补充说明：跨视口切换使用 `focusFirstInScope`，不记忆原视
 
 K1 验证点：`tryViewportScopeSwitch` 中 `children.size() <= 1` 直接返回 false，Ctrl+Tab 原样到达视口内 FocusManager。
 
-实现测试桩（K2 的核心断言）：
+实现测试桩（K2 的核心断言，已同步二次复核后的行为）：
 
 ```cpp
 // 键盘事件构造（通过 PushUIEvent 或直接调用内部路由）
@@ -1763,7 +1770,14 @@ UI_EVENT_KEY_CODE(&evt) = (int)KeyCode::Tab;
 UI_EVENT_KEY_MOD(&evt)  = (uint16_t)KeyMod::LCtrl;
 UICornerstone_PushUIEvent(win, &evt);   // 发到 owner 层
 
-// 断言 activeViewport 切换
+// 首次 Ctrl+Tab：vp1 内有可见 WinFrame（count>=1）→ 视口内优先，不跨视口
+assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);
+assert(vp1 内 WinFrame 的 isFocused() == true);
+
+// 隐藏 vp1 的 WinFrame 后再次 Ctrl+Tab → 跨视口切 vp2
+vp1WinFrame->hide();                         // vp1 内需先创建 CreateWinFrame 并获得句柄
+UI_EVENT_KEY_MOD(&evt) = (uint16_t)KeyMod::LCtrl;  // 复用 evt，仍为 Ctrl+Tab
+UICornerstone_PushUIEvent(win, &evt);
 assert(UICornerstone_Debug_GetActiveViewport(win) == vp2);
 // 断言 vp2 获得焦点环
 assert(vp2 内 first focusable control 的 isFocused() == true);
@@ -1819,7 +1833,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
 | 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, SRect rect)` | 小 |
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport | 中 |
-| 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加 clipRect 设置（`setClipRect(const SRect&)`，见 §5.13.5） | 小 |
+| 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |
 | 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序 + 键盘导航测试（K1-K7） | 中 |
