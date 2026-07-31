@@ -57,6 +57,8 @@ void FocusManager::notifyControlFocused(Control* ctl, bool byKeyboard) {
         if (m_currentFocused)
             m_currentFocused->setFocused(false, false);
         m_currentFocused = ctl;
+        // 任何路径下焦点进入某 scope（如 WinFrame）时，激活该 scope（提升到顶层）
+        if (Control* s = findFocusScope(ctl)) s->onFocusScopeActivated();
     } else {
         if (m_currentFocused == ctl)
             m_currentFocused = nullptr;
