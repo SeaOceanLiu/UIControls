@@ -977,10 +977,11 @@ bool UIContext::initialize() {
         } \
     } while(0)
 
-// 或支持级别
-#define UI_LOGI(ctx, ...) UI_LOG(ctx, "INFO", __VA_ARGS__)
-#define UI_LOGW(ctx, ...) UI_LOG(ctx, "WARN", __VA_ARGS__)
-#define UI_LOGE(ctx, ...) UI_LOG(ctx, "ERROR", __VA_ARGS__)
+// 或支持级别（复核修订：原稿 `UI_LOG(ctx, "INFO", __VA_ARGS__)` 会把 "INFO" 当作格式串、
+// 消息内容当多余参数丢弃；级别应作为 fmt 前缀拼接）
+#define UI_LOGI(ctx, fmt, ...) UI_LOG(ctx, "[INFO] " fmt, ##__VA_ARGS__)
+#define UI_LOGW(ctx, fmt, ...) UI_LOG(ctx, "[WARN] " fmt, ##__VA_ARGS__)
+#define UI_LOGE(ctx, fmt, ...) UI_LOG(ctx, "[ERROR] " fmt, ##__VA_ARGS__)
 ```
 
 输出示例：
@@ -1045,6 +1046,9 @@ extern "C" __declspec(dllexport) UIInstance UICornerstone_Debug_GetAliveInstance
 
 ```cpp
 // UIContext.cpp — 静态析构检查
+// 复核修订：s_aliveInstances 仅在 _DEBUG 定义（§5.11.3），LeakDetector 须同样包裹，
+// 否则 Release 编译报"未定义标识符"；原稿"Release 保留、无开销"自相矛盾
+#ifdef _DEBUG
 struct LeakDetector {
     ~LeakDetector() {
         if (!s_aliveInstances.empty()) {
@@ -1061,6 +1065,7 @@ struct LeakDetector {
     }
 };
 static LeakDetector s_leakCheck;
+#endif
 ```
 
 #### 5.11.5 窗口标题标记
@@ -1073,7 +1078,7 @@ std::string title = config.windowTitle ? config.windowTitle : "UICornerstone";
 #ifdef _DEBUG
     title += " [" + ctx->debugLabel + "]";
 #endif
-backend->createWindow(title.c_str(), width, height, flags);
+callbacks->createWindow(title.c_str(), width, height, flags);  // 复核修订：回调表成员（UIBackendCallbacks），非 backend->
 ```
 
 各调试功能在 Release 构建中是否保留：
@@ -1084,7 +1089,7 @@ backend->createWindow(title.c_str(), width, height, flags);
 | debugLabel | 保留 | 保留 | 同上 |
 | 日志前缀 | 保留 | 可选 | 通过日志级别控制 |
 | 实例注册表 | 保留 | 摘除 | 全局锁 + vector，不安全 |
-| 泄漏检测 | 保留 | 保留 | `s_aliveInstances` 在 Release 中已空，无开销 |
+| 泄漏检测 | 保留 | 摘除 | 依赖 `s_aliveInstances`（仅 Debug 定义），Release 无开销（复核修订） |
 
 ### 5.12 测试方案
 
@@ -1333,7 +1338,7 @@ InputBackend::pollEvent()
 
 ##### 主要瓶颈 3：Render → 缺少视口裁剪
 
-`UICornerstone_Render` 调用 `BENCH->draw()` 绘制整个控制树到全窗口。多视口需要：为每个视口设置 clipRect（`setClipRect(const SRect&)`），只绘制该视口的控制树到该区域。
+`UICornerstone_Render` 调用 `BENCH->draw()` 绘制整个控制树到全窗口。多视口需要：为每个视口裁剪（`pushClipRect`/`popClipRect` 成对，RenderDevice.h:27-28，与现实现 cpp:343-345 一致），只绘制该视口的控制树到该区域。
 
 #### 5.13.4 推荐方案：UIInstance 层级（父子共享后端）
 
@@ -1344,11 +1349,12 @@ InputBackend::pollEvent()
 UIInstance window = UICornerstone_CreateInstance(callbacks, config);
 
 // 在窗口中创建视口：共享主实例的后端，拥有自己的控制树
-// SRect 定义视口在窗口中的位置和大小
+// UIRect 定义视口在窗口中的位置和大小（复核修订：C ABI 边界用 UIRect——
+// UICornerstoneAPI.h:34 的纯 C 结构体，布局与 SRect 相同；SRect 是 C++ 类型不在 C ABI 头中）
 UIInstance viewportA = UICornerstone_CreateViewport(
-    window, (SRect){0, 0, 800, 600});
+    window, UIRect{0, 0, 800, 600});
 UIInstance viewportB = UICornerstone_CreateViewport(
-    window, (SRect){800, 0, 400, 600});
+    window, UIRect{800, 0, 400, 600});
 
 // 所有函数仍接受 UIInstance，签名不变
 UICornerstone_ProcessEvents(window);       // 轮询输入 + 分发到各视口
@@ -1400,6 +1406,9 @@ struct UIContext {
     // 复核修订：GetControlId 静态输出缓冲迁入（原 static char buf[256]，cpp:637，见 §2.1）
     std::string strBuf;
 
+    // ── 资源路径（从 ConstDef 迁入，与 §5.1 定义保持一致，见 §7 风险 4） ──
+    // std::string pathPrefix;
+
     // ── 调试 ──
     uint32_t    instanceId = 0;
     std::string debugLabel;
@@ -1416,7 +1425,7 @@ struct UIContext {
 UIInstance (owner) → ProcessEvents:
   1. 轮询 inputBackend->pollEvent()
   2. 对每个事件，检查所有子 viewport 的 rect
-  3. 匹配坐标 → 推送到该 viewport 的 queuedEvents 或直接 dispatch
+  3. 匹配坐标 → 转视口本地坐标后直接 dispatch 到该 viewport 的 bench（复核修订：新实现为直接 dispatch，不经子视口队列）
   4. 不匹配 → 视为窗口事件（如关闭按钮）
 
 UIInstance (viewport) → ProcessEvents:
@@ -1500,17 +1509,30 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
         instance->queuedEvents.pop();
         Event event;
         if (!uiEventToEvent(ue, event)) continue;   // 两参数形式（cpp:223）
-        instance->bench->inputControl(std::make_shared<Event>(event));
+        // 复核修订：注入通路与轮询通路行为对齐——WindowClose/Resize 走实例自身
+        // （同现实现 cpp:302-305），键盘事件同样先经 Ctrl+Tab 智能路由
+        if (event.m_type == EventType::WindowClose) {
+            instance->quit = true;
+        } else if (event.m_type == EventType::WindowResize) {
+            instance->bench->resized(SRect(0, 0,
+                (float)event.resizeEvent.width, (float)event.resizeEvent.height));
+        } else if (event.m_type == EventType::KeyDown || event.m_type == EventType::KeyUp) {
+            if (!tryViewportScopeSwitch(instance, event)) {
+                instance->bench->inputControl(std::make_shared<Event>(event));
+            }
+        } else {
+            instance->bench->inputControl(std::make_shared<Event>(event));
+        }
     }
 }
 ```
 
-> **注意**：`ProcessEvents(viewportA)` 与 `ProcessEvents(owner)` 都各自动态消费本实例的 `queuedEvents`；若只调 `ProcessEvents(owner)` 而不同时调用各 viewport 的 `ProcessEvents`，输入会积压在子视口队列中不生效（见 §5.13.6 影响表第 4 项）。
+> **注意**（复核修订 2026-07-31）：owner 轮询的输入事件已**直接 dispatch** 到目标视口的 bench，不依赖子视口是否调用 `ProcessEvents`。`queuedEvents` 仅承载**外部注入**（`PushUIEvent(inst, ...)`）的事件，须由各实例自己的 `ProcessEvents` 消费——若外部向子视口 `PushUIEvent(vpA, ...)` 而从不调用 `ProcessEvents(vpA)`，注入事件会积压；owner 轮询输入不受影响。
 
 **`findViewportByCoord` 实现**：
 
 ```cpp
-UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 修订：float（UI_EVENT_MOUSE_X 返回 float）
+UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 复核修订：坐标为 C++ Event 的 float 字段（EventTypes.h:158-160）
     // 按 Z-order（创建顺序）遍历，先匹配的优先
     for (auto* child : owner->children) {
         auto& r = child->viewport;
@@ -1539,8 +1561,8 @@ UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 修订�
    → 通知 EditBox_A.setFocused(false) → onFocusLost()
    → 视口 A 编辑框关闭输入法、提交未完成编辑
 7. 设置 activeViewport = 视口 B
-8. 转换为视口 B 本地坐标，dispatch 到视口 B 的 bench（或经 queuedEvents）
-9. 视口 B::ProcessEvents 处理 queuedEvents
+8. 转换为视口 B 本地坐标，直接 dispatch 到视口 B 的 bench（复核修订：新实现不经 queuedEvents）
+9. 视口 B 的控件树收到事件（bench->inputControl）
    → dispatch 到 Button_B → setFocused(true, byKeyboard=false)
    → 通知视口 B 的 FocusManager → Button_B 获得焦点
 10. 下一帧渲染：视口 A 的 EditBox_A 不画焦点环 ✅
@@ -1604,7 +1626,7 @@ bool tryViewportScopeSwitch(UIInstance owner, Event& keyEvent) {
 }
 ```
 
-设计依据（与 VS Code 等编辑器一致）：视口内有多窗口时 Ctrl+Tab 先切窗口；只有一个窗口时切视口。用户在两个层级都导航到"下一个域"。
+设计依据（复核修订 2026-07-31）：原稿"视口内有多窗口时先切窗口；**只有一个窗口时切视口**"与修正后的规则（boundary ≥1 视口内优先，**0 个窗口才跨视口**）矛盾——单 WinFrame 视口下 Ctrl+Tab 在单视口原行为中聚焦该窗口内（FocusManager::focusNextScope，FocusManager.cpp:166-200），跨视口语义忠实于此：**有可见 WinFrame/Dialog 时视口内优先；无任何可见 WinFrame/Dialog 时才跨视口**。与 VS Code 的差异（VS Code 无窗口时切编辑器组，本项目以"无可见窗口"为跨视口条件）。
 
 **键盘路由流程图**：
 
@@ -1708,9 +1730,9 @@ UIBackendCallbacks* cb = GetUIBackendCallbacks();
 UIInstance win = UICornerstone_CreateInstance(cb, NULL);
 assert(win);
 
-// 创建两个视口
-UIInstance vp1 = UICornerstone_CreateViewport(win, (SRect){0, 0, 640, 480});
-UIInstance vp2 = UICornerstone_CreateViewport(win, (SRect){640, 0, 640, 480});
+// 创建两个视口（复核修订：UIRect 聚合初始化，C++ 中 (SRect){...} 是 C99 compound literal 编译不过）
+UIInstance vp1 = UICornerstone_CreateViewport(win, UIRect{0, 0, 640, 480});
+UIInstance vp2 = UICornerstone_CreateViewport(win, UIRect{640, 0, 640, 480});
 assert(vp1 != vp2);
 
 // 每个视口创建不同的控件（每个控件一个具体工厂，见 §5.2）
@@ -1772,7 +1794,9 @@ UICornerstone_PushUIEvent(win, &evt);   // 发到 owner 层
 
 // 首次 Ctrl+Tab：vp1 内有可见 WinFrame（count>=1）→ 视口内优先，不跨视口
 assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);
-assert(vp1 内 WinFrame 的 isFocused() == true);
+// 复核修订：focusFirstInScope(WinFrame) 聚焦的是 WinFrame 内第一个可聚焦控件
+// （FocusManager.cpp:242-250，如标题栏关闭按钮），WinFrame 本身不报 isFocused
+assert(vp1 内 WinFrame 中第一个可聚焦控件的 isFocused() == true);
 
 // 隐藏 vp1 的 WinFrame 后再次 Ctrl+Tab → 跨视口切 vp2
 vp1WinFrame->hide();                         // vp1 内需先创建 CreateWinFrame 并获得句柄
@@ -1831,7 +1855,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 20 | 测试 + samples | 测试 1: `CreateInstance`×1 → 完整运行 → `DestroyInstance`；测试 2: `CreateInstance`×2 → 两个独立窗口循环 → `DestroyInstance`；**samples ×4（hello_uicornerstone/sample_programmatic/sample_fromsource/sample_loadlibrary）与 test_fromsource_cabi 按 §5.12.1 适配**（后两者走 `CreateInstanceFromPlugin`） | 中 |
 | 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员 | 小 |
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
-| 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, SRect rect)` | 小 |
+| 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, UIRect rect)`（复核修订：UIRect 为纯 C 结构体，UICornerstoneAPI.h:34；SRect 是 C++ 类型，C ABI 不可用） | 小 |
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport | 中 |
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |

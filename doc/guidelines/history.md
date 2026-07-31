@@ -1830,3 +1830,28 @@ Done, 180 frames                        # 帧循环正常完成
 **顺带改进**：坐标写回统一用 evt.mousePos.x/y 依赖 union 布局兼容（三事件坐标均在偏移 0，EventTypes.h:158-160），已补注释说明。
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-07-31: 第四轮复核（third audit pass 之复核 + 深入遗漏排查，修订 12 处）
+
+**背景**：主设计 Session 提交 81d5bed（third audit pass，4 处修正 + 1 处改进）。前 2 处遗留问题（L1607 设计依据矛盾、K2 测试桩 isFocused 断言）修订后，做全文深入排查，又发现 8 处此前三轮均遗漏的问题。
+
+**主 Session 修正核实（全部通过）**：
+
+- Ctrl 判定 `isModSet(mod, KeyMod::Ctrl)`：Bench.cpp:81 确为 LCtrl||RCtrl；KeyMod::Ctrl=LCtrl|RCtrl（EventTypes.h:131）；isModSet 存在（EventTypes.h:142）。**补充**：原 `!(mod & KeyMod::LCtrl)` 因 enum class 无 operator!/隐式转 bool 本就编译不过，改 isModSet 是双重正确
+- `.` → `->`（FocusManager* 指针成员，§5.13.4）
+- K2 与 >=1 条件自相矛盾修正（内部闭环）
+- §6 第 25 项 setClipRect 残留（第二轮漏项）
+- 坐标写回 union 布局注释（EventTypes.h:158-160 均以 x,y 起始）
+
+**本次新发现并修订（8 处）**：
+
+1. **注入通路与路由/窗口事件脱节**（关键）：§5.13.5 伪代码注入通路直接 `bench->inputControl`，未过 tryViewportScopeSwitch——K2 测试桩用 PushUIEvent 注入 Ctrl+Tab 将永远走视口内逻辑，跨视口路由测试无效；且注入通路缺 WindowClose/WindowResize 分支（现实现 cpp:302-305 有）。已补：注入通路对齐轮询通路（Close→quit、Resize→resized、KeyDown/Up 先过 tryViewportScopeSwitch）
+2. **"注意"段过时**：原"只调 ProcessEvents(owner) 会让子视口输入积压"基于旧的队列推送实现；新实现 owner 直接 dispatch 到子视口 bench，与子视口 ProcessEvents 无关。已重写（积压仅适用于外部 PushUIEvent 注入且从不调子视口 ProcessEvents）；时序第 8/9 步、语义分化块同步
+3. **UI_LOGI/UI_LOGW/UI_LOGE 宏错误**：`UI_LOG(ctx, "INFO", __VA_ARGS__)` 把 "INFO" 当格式串、消息内容变多余参数被丢弃。改为 `UI_LOG(ctx, "[INFO] " fmt, ##__VA_ARGS__)`
+4. **LeakDetector Release 编译错误**：s_aliveInstances 仅 _DEBUG 定义（§5.11.3），LeakDetector 无条件引用 → Release 编译失败；且表格"泄漏检测 Release 保留"自相矛盾。已包 #ifdef _DEBUG + 表格改"摘除"
+5. **CreateViewport 用 SRect 错误**：UICornerstoneAPI.h 是纯 C 头（仅 stdint/stddef），无 SRect——有 UIRect（h:34，布局相同）。C ABI 边界应传 UIRect；且示例/测试代码 `(SRect){...}` 是 C99 compound literal，**C++ 编译不过**。已改 `UIRect{...}` 聚合初始化（§5.13.4 示例、§5.13.7 测试、§6 第 23 项签名）
+6. §5.11.5 `backend->createWindow` → `callbacks->createWindow`（UIBackendCallbacks 回调表成员）
+7. findViewportByCoord 注释残留 "UI_EVENT_MOUSE_X 返回 float"（基于 UIEvent 的旧说明）→ 改为 Event 坐标字段
+8. §5.13.3 瓶颈 3 / §5.13.4 结构体：瓶颈描述 setClipRect → pushClipRect/popClipRect；结构体补 pathPrefix 注释（与 §5.1 定义对齐）
+
+**遗留提示**：注入通路路由后，K2 测试桩（PushUIEvent 注入）在实现时可验证跨视口路由；轮询通路需真实键盘事件（测试可依赖注入通路或直接调内部函数）。
