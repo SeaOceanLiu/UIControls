@@ -1749,3 +1749,31 @@ Done, 180 frames                        # 帧循环正常完成
 - `hide()` 不递归隐藏子控件（内部 Button/EditBox 仍 `getVisible()==true`，Tab 可聚焦到隐藏 WinFrame 内控件）
 - Tab 首个焦点是标题栏关闭按钮 `m_closeButton`（无 caption、parent 直接是 WinFrame，`setFocusable` 未禁，注册在 `m_controls` 首位）
 - 首次 Tab（`m_currentFocused==nullptr`）时 `focusNext(nullptr)` scope 为空，遍历全部 `m_controls`，聚焦第一个可见启用控件
+
+### 2026-07-31: CABI_MultiInstance_Design.md 全面修订（对照真实源码核验）
+
+**背景**：多实例改造设计草案（doc/CABI_MultiInstance_Design.md）存在大量虚构 API 与事实性错误。对照 include/UICornerstoneAPI.h（63 个导出）、src/UICornerstoneAPI.cpp、ControlBase.h/.cpp、Bench.h、RenderDevice.h 等源码逐节核验并全面修订。
+
+**修正虚构 API（§5.2 重写）**：
+
+- 删除不存在的 CreateControl/SetControlAttribute/FindControlById/AddChild+RemoveChild；替换为完整迁移表：63 个现有导出按 6 组（帧循环 9 / 布局 4 / 控件工厂 25 含菜单 5 / 通用操作 5 / 属性 16 / 回调 1）+ 4 个 Debug 辅助
+- InitFromPlugin 迁移为 CreateInstanceFromPlugin（保留 LoadLibrary + GetUIBackendCallbacks 能力）
+- 伪代码全部改用真实 UIEvent{type; uint8_t data[128]} + UI_EVENT_MOUSE_X/Y 等宏（无 x/y/keycode/mod 直接字段）；ench->inputControl 需 uiEventToEvent 转换（UICornerstoneAPI.cpp:223）；UI_EVENT_CLICK 不存在（枚举为原始事件 UI_EVENT_MOUSE_DOWN 等）
+
+**修正事实错误**：
+
+- 全局变量 13→14：补 g_menuPool（UICornerstoneAPI.cpp:63）与 static char buf[256]（:637，线程不安全，改为实例内缓冲）
+- 后端静态缓存 12→15：补 createResourceProvider；**5 个 destroyXxx 回调在 UIBackendCallbacks 中已存在**（UICornerstoneAPI.h:87-153），§5.6 直接采用方案 A（原稿误以为不存在、推荐方案 B）
+- §5.3 Bench：实际继承 Panel+TopControl 是控件树根（Bench.h:11），无 getRootControl()/createControlByType
+- §5.4 补 m_eventQueueInstance：ControlImpl 构造绑定 EventQueue::getInstance()（ControlBase.cpp:657-659）、TopControl 构造（ControlBase.h:515）；**setContext 必须同步 m_eventQueueInstance**；析构 MAINWIN 引用（ControlBase.cpp:663）改经 m_context
+- §5.13.4 UIContext 结构体补 children/activeViewport/focusManager/menuPool 字段；§5.13.5 补队列消费说明（只调 ProcessEvents(owner) 会让子视口输入积压）
+- RenderDevice 为 setClipRect(const SRect&)（RenderDevice.h:25），全文 setScissor 清除
+- std::erase（C++20）→ remove_if+erase（CMakeLists.txt:4 为 C++17）
+- UIInstanceConfig 两处不一致统一为 structSize 版（§5.2/§5.11.1）
+- §5.12 补 samples×4（hello_uicornerstone/sample_programmatic/sample_fromsource/sample_loadlibrary）+ test_fromsource_cabi 适配（后两者走 CreateInstanceFromPlugin）
+
+**补全遗漏**：§7 新增 3 条风险（跨实例 IME 冲突、销毁期回调重入、裸指针句柄归属校验）；收益补充静态析构顺序消除（呼应 2026-07-21 Raylib DLL 慢退出）；§6 清单同步 14 全局/方案 A/samples；TOC 补 5.11-5.13。
+
+**验证**：残留虚构引用清零；文件补 UTF-8 BOM（编辑工具会丢 BOM，与上次 history.md 教训一致）。
+
+**未提交**（用户指示更新但不提交）。
