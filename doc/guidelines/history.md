@@ -1855,3 +1855,29 @@ Done, 180 frames                        # 帧循环正常完成
 8. §5.13.3 瓶颈 3 / §5.13.4 结构体：瓶颈描述 setClipRect → pushClipRect/popClipRect；结构体补 pathPrefix 注释（与 §5.1 定义对齐）
 
 **遗留提示**：注入通路路由后，K2 测试桩（PushUIEvent 注入）在实现时可验证跨视口路由；轮询通路需真实键盘事件（测试可依赖注入通路或直接调内部函数）。
+
+### 2026-07-31: 第五轮复核（fourth audit pass 之复核 + 深入遗漏排查，修订 6 处）
+
+**背景**：辅设计 Session 提交 9b72a85（fourth audit pass，修订 12 处：注入/路由通路统一、UI_LOG/LeakDetector 宏、UIRect for C ABI）。本 Session 逐条核实事实依据（全部通过），并做全文深入排查，又发现 4 处遗漏 + 2 处行为差异说明。
+
+**辅设计 Session 修正核实（8 处全部通过）**：
+
+- 注入通路对齐轮询通路（Close→quit、Resize→resized、KeyDown/Up 先过 tryViewportScopeSwitch）——且为 K2 测试桩（PushUIEvent 注入 Ctrl+Tab）生效的必要条件
+- "注意"段重写 + 时序第 8/9 步（轮询直接 dispatch，与 cpp:293-333 一致）
+- UI_LOGI/UI_LOGW/UI_LOGE 宏：`UI_LOG(ctx, "[INFO] " fmt, ##__VA_ARGS__)` 字符串拼接正确（原 "INFO" 当 fmt 吞消息）
+- LeakDetector 包 `#ifdef _DEBUG` + 表格改"摘除"（s_aliveInstances 仅 _DEBUG 定义）
+- CreateViewport 改 UIRect：UICornerstoneAPI.h:34 纯 C 结构体；SRect 是 C++ class（Utility.h:185），C ABI 按值传 C++ class 是 UB；`(SRect){...}` C99 compound literal 在 C++ 编译不过
+- `backend->createWindow` → `callbacks->createWindow`（回调表成员）
+- findViewportByCoord 注释 float 来源（EventTypes.h:158-160）
+- §5.13.3 setClipRect → pushClipRect/popClipRect（栈实现 RenderDevice.cpp:98-110，支持嵌套；控件内部无 setClipRect 调用，只有桥接层）
+
+**本次新发现并修订（6 处）**：
+
+1. **addChild 直赋 m_context 绕过 setContext 同步**（关键）：§5.4 方式 2 `child->m_context = m_context` 直赋，不同步 m_eventQueueInstance（§5.4 修订说明刚强调 setContext 必须同步）→ 事件投递仍指向旧实例。已改为 `child->setContext(m_context)`
+2. **destroying 标志未落地**：§7 风险 4 缓解措施要求 `instance->destroying` 置位 + C ABI 入口短路，但 §5.13.4 结构体无此字段、DestroyInstance 伪代码未置位。已补：结构体字段 + 伪代码置位/防重入 + 缓解措施明确守卫范围（ProcessEvents/Render/Update/PushUIEvent/SetCallback/Debug 辅助）+ §6 26b
+3. **未命中子视口的鼠标事件被丢弃**（`if (!target) break`）：owner 是全窗口兜底视口（自身 bench），子视口未覆盖区域与 owner 控件交互失效。已改为路由给 owner 自身 bench（Bench 内部未命中控件则焦点保留，同现实现）
+4. **activeViewport 初始 nullptr 与 K2 测试桩矛盾**：1796 行断言 `Debug_GetActiveViewport(win) == vp1` 在初始 nullptr（且测试桩从未点击）下必失败；且窗口启动后首次点击前键盘事件无处投递。已约定：**CreateViewport 创建首个子视口时自动设为 owner->activeViewport**
+5. 注入通路键盘 fallback 行为差异说明：注入到 owner 走 owner 树（注入语义 = 显式指定投递目标），与轮询通路（activeViewport->bench）不同，已注释明示
+6. 已核验排除项：§7 风险 3 IME 引用有效（startTextInput/stopTextInput 存在，InputBackend.h:15-17）；pushClipRect 栈实现支持嵌套（RenderDevice.cpp:98-110），多视口 Render 与控件内裁剪不冲突
+
+**未提交**（用户指示更新但不提交）。

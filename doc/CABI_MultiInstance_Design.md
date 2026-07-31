@@ -617,9 +617,11 @@ protected:
 auto* btn = new Button(ctx);
 
 // 方式 2：AddChild 时从父控件继承
+// 复核修订（2026-07-31 第五轮）：必须经 setContext 而非直赋 m_context——
+// 直赋会绕过 m_eventQueueInstance 同步（见上修订说明），事件投递仍指向旧实例
 void Control::addChild(Control* child) {
     if (!child->m_context) {
-        child->m_context = m_context;  // 继承父控件上下文
+        child->setContext(m_context);  // 继承父控件上下文，同时同步 m_eventQueueInstance
     }
     m_children.push_back(child);
 }
@@ -1387,6 +1389,9 @@ struct UIContext {
     // ── 视口状态（每个实例独立） ──
     bool    initialized = false;
     bool    quit = false;
+    // 复核修订（2026-07-31 第五轮）：destroying 标志（§7 风险 4 要求置位，
+    // 原稿结构体遗漏该字段）——DestroyInstance 全程置 true，C ABI 入口防重入短路
+    bool    destroying = false;
     SRect   viewport{0, 0, 1024, 768};
     UIInstance activeViewport = nullptr;   // 修订：仅 owner 使用，当前焦点视口（见 5.13.5）
     FocusManager* focusManager = nullptr;  // 修订：每实例独立焦点管理（自 MainWindow 移入）
@@ -1463,7 +1468,13 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
                 float my = (evt.m_type == EventType::MouseWheel)
                     ? evt.mouseWheel.y : evt.mousePos.y;
                 UIInstance target = findViewportByCoord(instance, mx, my);
-                if (!target) break;          // 不匹配任何视口 → 丢弃（或视为窗口事件）
+                // 复核修订（2026-07-31 第五轮）：未命中任何子视口时路由给 owner 自身
+                // bench（owner 视口 = 全窗口兜底），而非丢弃——owner 默认视口区域的
+                // 控件仍可交互（Bench 内部行为同现实现，未命中控件则焦点保留）
+                if (!target) {
+                    instance->bench->inputControl(std::make_shared<Event>(evt));
+                    break;
+                }
 
                 // 跨视口焦点转移（仅按下/抬起触发）
                 if (target != instance->activeViewport
@@ -1518,6 +1529,10 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
                 (float)event.resizeEvent.width, (float)event.resizeEvent.height));
         } else if (event.m_type == EventType::KeyDown || event.m_type == EventType::KeyUp) {
             if (!tryViewportScopeSwitch(instance, event)) {
+                // 注入通路 fallback 走 instance 自身 bench（注入语义 = 显式指定投递目标：
+                // 注入到 owner 走 owner 树，注入到 vpA 走 vpA 树），
+                // 与轮询通路（activeViewport->bench）不同——注入到 owner 的普通 Tab
+                // 在 owner 树内循环，不进入 activeViewport（复核修订 2026-07-31 第五轮）
                 instance->bench->inputControl(std::make_shared<Event>(event));
             }
         } else {
@@ -1546,6 +1561,8 @@ UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 复核�
 ```
 
 **子 viewport 的生命周期管理**：owner 维护 `std::vector<UIInstance> children`，创建 viewport 时注册，销毁时摘除。销毁活动视口前先将另一个视口设为 active，或设为 nullptr。
+
+> 复核修订（2026-07-31 第五轮）：`owner->activeViewport` 初始为 nullptr——若首个子视口创建时不自动赋值，则窗口启动后（首次点击前）键盘事件无处投递（§5.13.5 轮询通路 `if (... && instance->activeViewport)` 为假被丢弃），且 K2 测试桩 `Debug_GetActiveViewport(win) == vp1` 断言必失败。**约定：`CreateViewport` 创建 owner 的首个子视口时自动设为 `owner->activeViewport`（首个视口即默认活动视口）**。
 
 > 修订说明（2026-07-31）：`activeViewport`/`focusManager` 字段已并入 §5.13.4 的 UIContext 结构体（原稿此处重复定义且未纳入主结构体）。
 
@@ -1681,8 +1698,10 @@ void UICornerstone_Render(UIInstance instance) {
 ##### DestroyInstance 的层级处理
 
 ```cpp
+// 复核修订（2026-07-31 第五轮）：destroying 标志置位 + 防重入（见 §7 风险 4）
 void UICornerstone_DestroyInstance(UIInstance instance) {
-    if (!instance) return;
+    if (!instance || instance->destroying) return;
+    instance->destroying = true;  // 置位：回调重入的 C ABI 入口直接短路
 
     // 先销毁所有子视口
     for (auto* child : instance->children) {
@@ -1860,6 +1879,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |
+| 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五轮） | 小 |
 | 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序 + 键盘导航测试（K1-K7） | 中 |
 | 28 | `include/MainWindow.h` | 移除 `m_focusManager` 值成员；移除 `getFocusManager()` | 小 |
 | 29 | `include/UIContext.h` | 新增 `FocusManager* focusManager` 指针成员（自 MainWindow 的 `unique_ptr` 移入） | 小 |
@@ -1916,7 +1936,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 
 `DestroyInstance` 逆序析构控件时，`onFocusLost`/`onDestroy` 等回调可能执行用户代码（如 `SetCallback` 注册的 handler），用户代码若回调 `ProcessEvents`/`Render` 或销毁其他实例，会访问已析构对象。
 
-**缓解**：`DestroyInstance` 全程设置 `instance->destroying` 标志；C ABI 函数入口若发现 `destroying` 直接返回（防重入短路）；回调执行顺序在析构控件树之前完成（先通知、后析构）。
+**缓解**（复核修订 2026-07-31 第五轮）：`DestroyInstance` 全程设置 `instance->destroying` 标志（字段已并入 §5.13.4 结构体）；可被回调重入的 C ABI 入口（`ProcessEvents`/`Render`/`Update`/`PushUIEvent`/`SetCallback`/Debug 辅助等）入口若发现 `destroying` 直接返回（防重入短路）；回调执行顺序在析构控件树之前完成（先通知、后析构）。
 
 #### 5. 裸指针句柄无归属校验（修订新增）
 
