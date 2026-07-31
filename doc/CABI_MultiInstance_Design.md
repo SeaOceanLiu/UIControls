@@ -1870,6 +1870,7 @@ UICornerstone_DestroyInstance(win);
 - 鼠标点击视口 A 不触发视口 B 的回调
 - 每个视口有自己的 ID 查找空间
 - 销毁顺序：先子后父，不泄漏
+- 销毁后句柄失效：`DestroyInstance` 后该实例句柄不得再传入任何 C ABI 入口（未定义行为，调用者责任；`destroying` 短路只保护销毁**期间**的重入，不保护销毁后）
 - 焦点转移：点击视口 B → 视口 A 旧控件 `onFocusLost()` 触发 → 视口 B 新控件 `onFocusGained()` 触发
 - 键盘事件路由：按下 Tab → 只在 activeViewport 内循环（复核修订 2026-07-31 第七轮：activeViewport 非 null 时；为 null——点击 owner 区域后——退回 owner 树）
 - activeViewport 销毁前转移：析构 active 视口时 owner 将其设为 nullptr 或另一个视口
@@ -1972,8 +1973,8 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`（内部经 `FocusManager::getVisibleBoundaryCount()`，见 26c——m_boundaries 为私有成员，C ABI 层不可直接访问，复核修订 2026-07-31 第八轮）；在键盘事件进入视口前预拦截 | 中 |
-| 26c | `include/FocusManager.h` / `src/FocusManager.cpp` | 新增 `int getVisibleBoundaryCount() const`（统计 `m_boundaries` 中 `isVisible()` 项数，m_boundaries 是私有成员 FocusManager.h:40，现有仅 registerBoundary/unregisterBoundary :27/29） | 小 |
 | 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；兜底点击（未命中子视口）清 `activeViewport` 置 nullptr + 清旧视口焦点；键盘 fallback 在 `activeViewport==nullptr` 时退回 owner bench；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五/六/七轮） | 小 |
+| 26c | `include/FocusManager.h` / `src/FocusManager.cpp` | 新增 `int getVisibleBoundaryCount() const`（统计 `m_boundaries` 中 `isVisible()` 项数，m_boundaries 是私有成员 FocusManager.h:40，现有仅 registerBoundary/unregisterBoundary :27/29） | 小 |
 | 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序（含直接销毁子视口后 owner 继续运行的悬垂防护，复核修订 2026-07-31 第九轮）+ 键盘导航测试（K1-K8） | 中 |
 | 28 | `include/MainWindow.h` | 移除 `m_focusManager` 值成员；移除 `getFocusManager()` | 小 |
 | 29 | `include/UIContext.h` | 新增 `FocusManager* focusManager` 指针成员（自 MainWindow 的 `unique_ptr` 移入） | 小 |

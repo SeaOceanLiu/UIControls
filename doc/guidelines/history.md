@@ -1973,3 +1973,27 @@ Done, 180 frames                        # 帧循环正常完成
 **已核验排除**：快照拷贝后 `children.clear()` 保留（快照遍历销毁全部子视口，clear 确保容器清空，二者不冲突）；摘除在 `delete instance` 之前（用 instance->owner 指针，owner 此时必然存活——子销毁时 owner 未销毁；owner 自身销毁时 instance->owner 为 null 跳过）。
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-07-31: 第十轮复核（ninth audit pass 之复核 + 深入遗漏排查，修订 2 处）
+
+**背景**：主设计 Session 提交 bd047d8（ninth audit pass，4 处修正：直接销毁子视口路径的悬垂修复、级联销毁快照遍历、§6 清单同步 26a/26c/27、生命周期注记）。本 Session 逐条核实（全部通过），并沿销毁/摘除新逻辑深入排查，未发现实质遗漏，仅 2 处小瑕疵。
+
+**主设计 Session 修正核实（4 处全部通过）**：
+
+- 直接销毁子视口悬垂（严重）：分析正确——第八轮置 null 仅在 owner 级联循环内，直接 `DestroyInstance(vp1)`（5.13.7 测试正如此）不经过该循环：vp1 销毁后 win->children 残留悬垂指针（后续 `DestroyInstance(win)` 级联遍历读 vp1->destroying UAF）、win->activeViewport 残留悬垂（后续键盘 fallback 解引用 UAF）。尾部摘除块修复完整：
+  - 摘除在 `delete instance` 之前、`destroy()` 之后（回调重入窗口由 destroying 短路保护）✅
+  - 级联销毁时循环内置 null 先执行、尾部 `owner->activeViewport == instance` 条件不满足跳过——两处置 null 不重复、双路径全覆盖 ✅
+  - owner 自身销毁时 instance->owner 为 null 跳过 ✅；三层嵌套（视口带子视口）递归摘除完整 ✅
+  - 销毁后坐标路由遍历不到已销毁视口（children 已摘除）、键盘 fallback 走 owner（activeViewport 已 null）、销毁后重建首个子视口自动激活——均自洽 ✅
+- 快照遍历：必要且正确——递归中 `erase(remove(...))` 修改原容器，快照拷贝迭代不受影响；循环后 `children.clear()` 无害（已空）✅
+- §6 同步内容正确 ✅
+- 生命周期注记正确 ✅
+
+**本次新发现并修订（2 处，均为小瑕疵）**：
+
+1. **§6 编号不连续**：26c（getVisibleBoundaryCount）插在 26a/26b 之间，编号顺序 26a→26c→26b。已重排为 26a→26b→26c（内容不变）
+2. **销毁后句柄失效约定缺失**：摘除逻辑落地后"销毁后句柄不得再使用"语义需明确（`destroying` 短路只保护销毁期间的重入，销毁后任何入口均无法保护——对象已 delete）。已在 5.13.7 验证点补一条约定（未定义行为，调用者责任）
+
+**已核验排除**：句柄失效约定核对——CppBinding_Design.md:838 仅绑定层"自动失效检测"（经 FindControl 返回空间接感知），核心库无此约定，补入 5.13.7 验证点；销毁 activeViewport 视口后焦点丢失（不自动转移）符合"置 nullptr"约定，点击子视口或 Ctrl+Tab（front/back 切入）均可恢复，自洽无遗漏。
+
+**未提交**（用户指示更新但不提交）。
