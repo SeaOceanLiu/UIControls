@@ -1777,3 +1777,31 @@ Done, 180 frames                        # 帧循环正常完成
 **验证**：残留虚构引用清零；文件补 UTF-8 BOM（编辑工具会丢 BOM，与上次 history.md 教训一致）。
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-07-31: CABI_MultiInstance_Design.md 复核修订（第二轮，对照源码二次核验）
+
+**背景**：上一轮修订（2026-07-31）提交后，对全部代码引用与内部一致性做二次核验，发现 7 项重大 + 7 项次要问题，已全部修订进文档（追加"复核修订（2026-07-31）"标注）。
+
+**重大修正**：
+
+- **buf 归属纠错**：`static char buf[256]` 位于 `UICornerstone_GetControlId` 函数体内（cpp:637），非匿名 namespace 全局、**非 GetString 缓冲**（GetString/GetEnum 用调用者缓冲 + strncpy_s，cpp:869-885）。§1/§2.1/§6 第 4 项三处"GetString 输出缓冲"表述改正；全局实为 14 项（13+补 g_menuPool），"遗漏 2 项"的数字矛盾澄清
+- **UIInstanceConfig 仍未真正统一**：§5.11.1 有 debugLabel、§5.2 没有（修订说明称已统一，实际未统）。已按 §5.11.1 字段序（structSize→debugLabel→resourceRoot→windowTitle→windowWidth→windowHeight→reserved[6]）补齐 §5.2
+- **setContext 类型错误**：`&ctx->eventQueue` 得 `EventQueue**`（eventQueue 是指针成员），改为 `ctx->eventQueue`
+- **FocusManager 归属矛盾**：§5.3 MainWindow 示例与 §5.10 所有权模型仍把 FocusManager 挂 MainWindow，与 §5.13.4/§6 第 28-29 项（移入 UIContext）冲突，已统一
+- **§5.6 重复块**： "移除静态缓存"与"静态缓存移除"两节代码完全相同，已删除后者
+- **Debug 辅助数量**：§5.2 "6 个新增" vs 实际列出 4 个，改为 4 个
+- **§5.13.5 ProcessEvents 重写（关键）**：原稿混写两条事件通路——轮询通路实际产出 **C++ `Event`**（`InputBackend::pollEvent(Event&)`，InputBackend.h:25），不是 UIEvent；坐标在 `mousePos/mouseButton/mouseWheel`（EventTypes.h:158-160）；`uiEventToEvent` 为两参数签名（cpp:223）；`inputControl` 收 `shared_ptr<Event>`。已按真实实现重写路由伪代码（轮询 → Event 层路由 + 坐标转换 + 直接 dispatch；注入队列 → uiEventToEvent → dispatch），并同步 §5.13.6/§6 第 24 项表述
+
+**次要修正**：
+
+- Render 伪代码改 `pushClipRect/popClipRect`（现实现 UICornerstoneAPI.cpp:343-345），删"恢复整窗"步骤；§5.13.2 表格同步
+- **countVisibleBoundaries 断言纠错**：`m_boundaries` 仅由 WinFrame（WinFrame.cpp:85）/Dialog（Dialog.cpp:107）注册，Bench 不注册——"Bench 是首个 boundary 始终 +1"不成立；智能路由条件 `>1` 改 `>=1`（规则块/Mermaid 图/伪代码/K4 同步）
+- §5.8 Mermaid Note "createRootControl" → "Bench 即控件树根"
+- §5.13.4 UIContext 结构体补 `strBuf`（此前只补了 menuPool/children/activeViewport/focusManager）
+- §5.12.2 测试 1 补 `#include "BackendPlugin.h"`（GetUIBackendCallbacks 声明）
+- §5.12.1 "§6 第 20-22 项" → "第 20 项"
+- tryViewportScopeSwitch 参数 `UIEvent&` → `Event&`，键码判断改为 `keyEvent.keyEvent.keycode/mod`（KeyCode::Tab=0x09、KeyMod::LCtrl=0x0040 已核实）
+
+**核验确认无误的项**：UI_EVENT_MOUSE_DOWN/WHEEL 等为 UIEventType 枚举值（h:45-58）；InputBackend::newFrame() 存在（InputBackend.h:31）；UIInstanceConfig 修订版含 structSize 与 §7.2 一致；§5.9 rollback 标签逻辑正确。
+
+**验证**：残留 setScissor/getRootControl/单参 uiEventToEvent/&ctx->eventQueue 等清零；grep 复核通过。

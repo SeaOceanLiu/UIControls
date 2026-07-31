@@ -32,7 +32,7 @@
 当前 C ABI 通过**文件作用域静态变量**和**类静态单例**共享状态，进程生命周期内只能存在一个 UICornerstone 实例。
 
 ```cpp
-// src/UICornerstoneAPI.cpp — 14 个全局变量（修订：含 g_menuPool 与 static char buf[256]）
+// src/UICornerstoneAPI.cpp — 14 个全局变量（修订：补 g_menuPool；static char buf[256] 在 GetControlId 函数体内，非全局，见 §2.1）
 namespace {
     const UIBackendCallbacks* g_callbacks = nullptr;
     Window* g_window = nullptr;
@@ -60,7 +60,11 @@ DataContext::getInstance()   → static shared_ptr<DataContext> s_instance
 
 ### 2.1 UICornerstoneAPI.cpp（实例上下文，14 项）
 
-> 修订说明（2026-07-31）：原清单 13 项，遗漏 `g_menuPool`（Menu C ABI 补齐时加入的保活池）与 `static char buf[256]`（GetString 输出缓冲）。**以下 14 项全部迁入 UIContext**（`char buf` 改为实例内字符串缓冲，消除线程安全隐患）。
+> 修订说明（2026-07-31）：原清单 13 项，遗漏 `g_menuPool`（Menu C ABI 补齐时加入的保活池），现为 **14 项**。
+>
+> 复核修订（2026-07-31）：`static char buf[256]` **不在匿名 namespace 中**——它位于 `UICornerstone_GetControlId` 函数体内（src/UICornerstoneAPI.cpp:637），是该函数返回 `const char*` 的静态输出缓冲，**并非 GetString 输出缓冲**（`GetString`/`GetEnum`，cpp:869-885，使用调用者传入的 out 缓冲 + `strncpy_s`）。它属于线程不安全的进程级静态（多实例并发调 GetControlId 会互踩），改造时一并改为 `UIContext` 内 `std::string strBuf`（见 §5.1）。
+>
+> **以下 14 项全部迁入 UIContext**。
 
 | 变量 | 类型 | 说明 |
 |------|------|------|
@@ -220,7 +224,8 @@ struct UIContext {
     // ── 菜单保活池（修订：g_menuPool 迁入，见 §2.1） ──
     std::vector<std::shared_ptr<Control>> menuPool;
 
-    // ── 实例内字符串缓冲（修订：替代 static char buf[256]，消除线程安全隐患） ──
+    // ── 实例内字符串缓冲（复核修订：替代 GetControlId 的 static char buf[256]（cpp:637）；
+    //    非 GetString 缓冲——GetString/GetEnum 用调用者传入的 out，见 §2.1） ──
     std::string strBuf;
 
     // ── 资源路径（从 ConstDef 迁入，见 §7 风险 4） ──
@@ -306,6 +311,7 @@ typedef struct UIContext* UIInstance;
 ```c
 typedef struct {
     uint32_t    structSize;         // sizeof(UIInstanceConfig)
+    const char* debugLabel;         // 调试标签（复核修订：§5.11.1 有、此处原缺，已补齐，见下）
     const char* resourceRoot;       // 资源根目录，null→默认
     const char* windowTitle;        // 窗口标题，null→"UICornerstone"
     int         windowWidth;        // 0→默认
@@ -314,10 +320,12 @@ typedef struct {
 } UIInstanceConfig;
 
 #define UI_INSTANCE_CONFIG_DEFAULT \
-    { sizeof(UIInstanceConfig), NULL, NULL, 0, 0, {0} }
+    { sizeof(UIInstanceConfig), NULL, NULL, NULL, 0, 0, {0} }
 ```
 
 > 修订说明（2026-07-31）：原稿在 §5.2 与 §5.11.1 出现两处不一致定义（`reserved[8]` vs `structSize + reserved[6]`）。本处统一为带 `structSize` 的版本（与 §7.2 的版本兼容策略一致）。
+>
+> 复核修订（2026-07-31）：统一并不彻底——§5.11.1 的定义比此处多出 `debugLabel` 字段且插在 `structSize` 之后。**两处字段顺序必须完全一致**（`structSize → debugLabel → resourceRoot → windowTitle → windowWidth → windowHeight → reserved[6]`），否则同一结构体在文档两处定义不同，实现时无从取舍。已在本处补齐 `debugLabel`（字段偏移随之变化），`UI_INSTANCE_CONFIG_DEFAULT` 宏已同步为 7 个初值。
 
 实例生命周期——只有两个函数，没有独立的 Init/Shutdown：
 
@@ -341,7 +349,7 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
 
 `CreateInstance` 与 `CreateInstanceFromPlugin` 共享同一实现（后者多一步插件解析）。静态链接路径（测试/示例直接调 `GetUIBackendCallbacks`）走前者。
 
-所有功能函数新增 `UIInstance` 首参数，删除旧签名。**完整迁移清单（63 个现有导出 + 6 个新增 Debug 辅助）**：
+所有功能函数新增 `UIInstance` 首参数，删除旧签名。**完整迁移清单（63 个现有导出 + 4 个新增 Debug 辅助）**：
 
 **帧循环与视口**（旧签名 → 新签名）：
 
@@ -425,7 +433,7 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
 |---------|--------|
 | `SetCallback(ctl, event, cb, userData)` | `SetCallback(UIInstance, UIControlHandle, const char* event, UIEventCallback, void*)` |
 
-**新增 Debug 辅助**（见 §5.11 / §5.13，Debug 构建）：
+**新增 Debug 辅助**（复核修订：共 4 个，2 个实例注册表 + 2 个焦点查询；见 §5.11 / §5.13，Debug 构建）：
 
 ```c
 UICORNERSTONE_API int      UICornerstone_Debug_GetAliveCount(void);
@@ -523,13 +531,13 @@ public:
     ~MainWindow();
 
     ResourceProvider* getResourceProvider() { return m_resourceProvider.get(); }
-    FocusManager* getFocusManager() { return m_focusManager.get(); }
+    // 复核修订：FocusManager 已移入 UIContext（§5.13.4/§6 第 28-29 项），
+    // 不再由 MainWindow 持有；访问经 CONTEXT->focusManager（§5.5 宏）或 instance->focusManager
     // ...
 
 private:
     UIContext* m_context;
     std::unique_ptr<ResourceProvider> m_resourceProvider;
-    std::unique_ptr<FocusManager> m_focusManager;
 };
 ```
 
@@ -594,7 +602,9 @@ protected:
 >    ```cpp
 >    void Control::setContext(UIContext* ctx) {
 >        m_context = ctx;
->        m_eventQueueInstance = ctx ? &ctx->eventQueue : nullptr;
+>        // 复核修订：UIContext::eventQueue 是指针成员（EventQueue*，见 §5.13.4），
+>        // 原稿 `&ctx->eventQueue` 得 EventQueue**，类型错误；直接赋指针本身
+>        m_eventQueueInstance = ctx ? ctx->eventQueue : nullptr;
 >    }
 >    ```
 > 3. `ControlImpl` 析构中的 `MAINWIN` 引用同样经 `m_context` 解析（`m_context->mainWindow` 或该实例的控件注册表），杜绝跨实例访问旧单例；
@@ -702,22 +712,9 @@ typedef struct {
 
 因此**不再需要方案选择**：销毁路径直接使用回调表内的 5 个 `destroyXxx`，`DestroyInstance` 时按创建逆序逐个调用。需要核实的只有一点——**当前 `UICornerstoneAPI.cpp` 的旧 `Shutdown()` 是否实际调用过这些回调**（历史上对象由插件静态变量持有、进程结束时随 DLL 卸载销毁，destroy 回调可能未接线）；改造后必须接线并在 `DestroyInstance` 中调用，同时保留 `Plugin_Shutdown` 作为 DLL 卸载兜底（防御：跳过已销毁对象）。
 
-#### 静态缓存移除
+#### 静态缓存移除（复核修订：本小节与上文"移除静态缓存"内容重复，已删除原重复块）
 
-```cpp
-// 改造前
-static Window* g_pluginWin = nullptr;
-UIWindowHandle bridge_createWindow(...) {
-    if (!g_pluginWin) g_pluginWin = new SDL3Window(title, w, h, flags);
-    return (UIWindowHandle)g_pluginWin;
-}
-
-// 改造后
-UIWindowHandle bridge_createWindow(const char* title, int w, int h,
-                                    uint32_t flags) {
-    return (UIWindowHandle) new SDL3Window(title, w, h, flags);
-}
-```
+> 改造前后对比如上（见"移除静态缓存"）。要点：`UIBackendCallbacks` 中 **5 个创建函数 + 5 个销毁回调均成对存在**（createWindow↔destroyWindow、createRenderDevice↔destroyRenderDevice、createInputBackend↔destroyInputBackend、createTextRenderer↔destroyTextRenderer、createResourceProvider↔destroyResourceProvider，UICornerstoneAPI.h:86-153），改造只移除静态缓存，不增删回调。
 
 #### 影响范围
 
@@ -784,7 +781,7 @@ sequenceDiagram
 
     CAPI->>B: Bench(ctx)
     activate B
-    Note over B: createRootControl, setContext(ctx)
+    Note over B: Bench 即控件树根（Panel+TopControl），setContext(ctx)
     B-->>CAPI: ok
     deactivate B
 
@@ -903,7 +900,8 @@ UIContext (owner)
   │     └── 后端对象 (Window, RenderDevice, ...) → 由 BackendManager::shutdown 释放
   ├── MainWindow*        → new/delete in initialize/destroy
   │     └── ResourceProvider (unique_ptr)  → auto
-  │     └── FocusManager (unique_ptr)      → auto
+  ├── FocusManager*      → 复核修订：自 MainWindow 移入 UIContext 直接持有（§5.13.4/§6 第 28-29 项），
+  │                        每实例一个，跨视口焦点转移/键盘路由用（5.13.5）
   ├── Bench*             → new/delete in initialize/destroy
   │     └── Control 树 (raw ptr)           → Bench 管理析构
   ├── EventQueue*        → new/delete in initialize/destroy
@@ -1092,7 +1090,7 @@ backend->createWindow(title.c_str(), width, height, flags);
 
 #### 5.12.1 现有测试的改造
 
-> 修订说明（2026-07-31）：调用方清单不止 `test_xxx.cpp`。**samples 目录 4 个示例**（`hello_uicornerstone`、`sample_programmatic`、`sample_fromsource`、`sample_loadlibrary`）与 `test_fromsource_cabi.cpp` 同样依赖单例，需一并列入改造范围（迁移清单见 §6 第 20-22 项）。其中两个是动态库场景：`sample_fromsource`/`sample_loadlibrary` 走 `InitFromPlugin`，改造后对应 `CreateInstanceFromPlugin`。
+> 修订说明（2026-07-31）：调用方清单不止 `test_xxx.cpp`。**samples 目录 4 个示例**（`hello_uicornerstone`、`sample_programmatic`、`sample_fromsource`、`sample_loadlibrary`）与 `test_fromsource_cabi.cpp` 同样依赖单例，需一并列入改造范围（迁移清单见 §6 第 20 项）。其中两个是动态库场景：`sample_fromsource`/`sample_loadlibrary` 走 `InitFromPlugin`，改造后对应 `CreateInstanceFromPlugin`。
 
 当前测试（`test_xxx.cpp`）依赖单例 `MAINWIN->run(&app)`。改造后必须适配为实例模式：
 
@@ -1146,6 +1144,7 @@ UICornerstone_DestroyInstance(inst);
 
 ```cpp
 #include "UICornerstoneAPI.h"
+#include "BackendPlugin.h"   // GetUIBackendCallbacks()（复核修订：原稿遗漏该 include，会编译失败）
 #include <cstdio>
 #include <cassert>
 
@@ -1291,7 +1290,7 @@ flowchart TD
 | BackendManager | 每个 UIInstance 拥有一个 | **共享**——一个窗口一个 |
 | Window | 每个 UIInstance 一个 | **共享** |
 | InputBackend | 每个 UIInstance 一个 | **共享**，事件需按坐标路由到正确视口 |
-| RenderDevice | 每个 UIInstance 一个 | **共享**，渲染时设 clipRect（`setClipRect(const SRect&)`，RenderDevice.h:25） |
+| RenderDevice | 每个 UIInstance 一个 | **共享**，渲染时 `pushClipRect`（视口区域）→ `popClipRect`（RenderDevice.h:27-28，与现 `UICornerstone_Render` 实现一致，UICornerstoneAPI.cpp:343-345） |
 | Bench（控制树） | 每个 UIInstance 一个 | **每个视口独立** |
 | EventQueue | 每个 UIInstance 一个 | **每个视口独立** |
 | DataContext | 每个 UIInstance 一个 | **每个视口独立** |
@@ -1398,6 +1397,9 @@ struct UIContext {
     std::vector<std::shared_ptr<Popup>> popupPool;
     std::vector<std::shared_ptr<Control>> menuPool;  // 修订：菜单保活池（§2.1 g_menuPool）
 
+    // 复核修订：GetControlId 静态输出缓冲迁入（原 static char buf[256]，cpp:637，见 §2.1）
+    std::string strBuf;
+
     // ── 调试 ──
     uint32_t    instanceId = 0;
     std::string debugLabel;
@@ -1422,61 +1424,80 @@ UIInstance (viewport) → ProcessEvents:
   2. dispatch 到自己的 Bench
 ```
 
-实现策略——`UICornerstone_ProcessEvents` 内部判断 `ownsBackend`。核心新增：**`activeViewport` 追踪 + 焦点转移逻辑**：
+实现策略——`UICornerstone_ProcessEvents` 内部判断 `ownsBackend`。核心新增：**`activeViewport` 追踪 + 焦点转移逻辑**。
+
+> 复核修订（2026-07-31）——**两条事件通路，产出类型不同**（原稿将两条通路混写为 UIEvent，伪代码与真实实现不符）：
+> 1. **注入队列通路**：`PushUIEvent(instance, const UIEvent*)` 写入 `queuedEvents`，事件类型为 C ABI 的 `UIEvent`（`{UIEventType type; uint8_t data[128]}`，UICornerstoneAPI.h:63-66），须经 `uiEventToEvent`（UICornerstoneAPI.cpp:223，**两参数**：`static bool uiEventToEvent(const UIEvent&, Event&)`）转为 C++ `Event`；
+> 2. **后端轮询通路**：`InputBackend::pollEvent(Event&)`（InputBackend.h:25）**直接产出 C++ `Event`**（StateMachine.h:16：`EventType m_type` + union，鼠标坐标在 `mousePos.x/y`、`mouseButton.x/y`、`mouseWheel.x/y`，EventTypes.h:158-160），不经 UIEvent。
+>
+> 路由逻辑统一在 **C++ `Event` 层**实现（两条通路经 `uiEventToEvent` 后合流），`bench->inputControl` 接收 `shared_ptr<Event>`（现实现见 UICornerstoneAPI.cpp:293-333）。
 
 ```cpp
-// 修订说明（2026-07-31）：UIEvent 无 x/y 直接字段（见 UICornerstoneAPI.h:63-66），
-// 坐标须经 UI_EVENT_MOUSE_X/Y 宏读写；枚举名为 UI_EVENT_MOUSE_*/UI_EVENT_KEY_*；
-// bench->inputControl 接收 shared_ptr<Event>，UIEvent 须经 uiEventToEvent 转换
-// （UICornerstoneAPI.cpp:223 现有转换函数）
-
+// 伪代码（owner 层窗口级路由，合流后基于 C++ Event）
 void UICornerstone_ProcessEvents(UIInstance instance) {
     if (!instance || !instance->initialized) return;
 
     if (instance->ownsBackend) {
-        // 窗口级别：轮询输入并分发到子视口
-        instance->inputBackend->newFrame();
-        UIEvent raw;
-        while (instance->inputBackend->pollEvent(&raw)) {
-            if (raw.type == UI_EVENT_MOUSE_DOWN || raw.type == UI_EVENT_MOUSE_UP
-                || raw.type == UI_EVENT_MOUSE_MOVE || raw.type == UI_EVENT_MOUSE_WHEEL) {
-                // 坐标类事件：按视口 rect 路由
-                float mx = UI_EVENT_MOUSE_X(&raw);   // 经宏读取坐标
-                float my = UI_EVENT_MOUSE_Y(&raw);
+        // 窗口级别：轮询输入并分发到子视口（产出 C++ Event，非 UIEvent）
+        instance->inputBackend->newFrame();                  // InputBackend.h:31
+        Event evt;
+        while (instance->inputBackend->pollEvent(evt)) {
+            switch (evt.m_type) {
+            case EventType::MouseMove:
+            case EventType::MouseDown:
+            case EventType::MouseUp:
+            case EventType::MouseWheel: {
+                // 坐标类事件：按视口 rect 路由（坐标字段见 EventTypes.h:158-160；
+                // MouseDown/Up 的 mouseButton 与 mousePos 同布局，均可经 mousePos 读 x/y）
+                float mx = (evt.m_type == EventType::MouseWheel)
+                    ? evt.mouseWheel.x : evt.mousePos.x;
+                float my = (evt.m_type == EventType::MouseWheel)
+                    ? evt.mouseWheel.y : evt.mousePos.y;
                 UIInstance target = findViewportByCoord(instance, mx, my);
-                if (target) {
-                    // 跨视口焦点转移
-                    if (target != instance->activeViewport
-                        && (raw.type == UI_EVENT_MOUSE_DOWN || raw.type == UI_EVENT_MOUSE_UP)) {
-                        if (instance->activeViewport) {
-                            // 清旧视口的焦点 + 触发 onFocusLost
-                            instance->activeViewport->focusManager->clearFocus();
-                        }
-                        instance->activeViewport = target;
+                if (!target) break;          // 不匹配任何视口 → 丢弃（或视为窗口事件）
+
+                // 跨视口焦点转移（仅按下/抬起触发）
+                if (target != instance->activeViewport
+                    && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
+                    if (instance->activeViewport) {
+                        // 清旧视口的焦点 + 触发 onFocusLost
+                        instance->activeViewport->focusManager->clearFocus();
                     }
-                    // 转视口本地坐标（经宏写回）
-                    UI_EVENT_MOUSE_X(&raw) = mx - target->viewport.x;
-                    UI_EVENT_MOUSE_Y(&raw) = my - target->viewport.y;
-                    target->queuedEvents.push(raw);
+                    instance->activeViewport = target;
                 }
-                // 不匹配任何视口 → 丢弃（或视为窗口事件）
-            } else if (raw.type == UI_EVENT_KEY_DOWN || raw.type == UI_EVENT_KEY_UP) {
-                // 键盘事件：路由到当前活动视口
-                if (instance->activeViewport) {
-                    instance->activeViewport->queuedEvents.push(raw);
+                // 转视口本地坐标后 dispatch 到目标视口
+                evt.mousePos.x = mx - target->viewport.x;
+                evt.mousePos.y = my - target->viewport.y;
+                target->bench->inputControl(std::make_shared<Event>(evt));
+                break;
+            }
+            case EventType::KeyDown:
+            case EventType::KeyUp:
+                // 键盘事件：先经 Ctrl+Tab 智能路由（§5.13.5），未消费则发到当前活动视口
+                if (!tryViewportScopeSwitch(instance, evt) && instance->activeViewport) {
+                    instance->activeViewport->bench->inputControl(std::make_shared<Event>(evt));
                 }
-            } else {
-                // 窗口事件（Close, Resize）→ 由 owner 自身处理
-                instance->queuedEvents.push(raw);
+                break;
+            default:
+                // 窗口事件（WindowClose/WindowResize）→ owner 自身处理（同现实现 cpp:319-324）
+                if (evt.m_type == EventType::WindowClose) {
+                    instance->quit = true;
+                } else if (evt.m_type == EventType::WindowResize) {
+                    instance->bench->resized(SRect(0, 0,
+                        (float)evt.resizeEvent.width, (float)evt.resizeEvent.height));
+                }
+                break;
             }
         }
     }
 
-    // 所有实例（owner 和 viewport）都处理自己的 queuedEvents
+    // 注入队列通路（UIEvent → Event）：所有实例（owner 和 viewport）都处理自己的 queuedEvents
     while (!instance->queuedEvents.empty()) {
-        auto evt = instance->queuedEvents.front();
+        UIEvent ue = instance->queuedEvents.front();
         instance->queuedEvents.pop();
-        instance->bench->inputControl(uiEventToEvent(&evt));  // 修订：UIEvent → Event 转换
+        Event event;
+        if (!uiEventToEvent(ue, event)) continue;   // 两参数形式（cpp:223）
+        instance->bench->inputControl(std::make_shared<Event>(event));
     }
 }
 ```
@@ -1515,7 +1536,7 @@ UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 修订�
    → 通知 EditBox_A.setFocused(false) → onFocusLost()
    → 视口 A 编辑框关闭输入法、提交未完成编辑
 7. 设置 activeViewport = 视口 B
-8. 转换为视口 B 本地坐标，push 到视口 B 的 queuedEvents
+8. 转换为视口 B 本地坐标，dispatch 到视口 B 的 bench（或经 queuedEvents）
 9. 视口 B::ProcessEvents 处理 queuedEvents
    → dispatch 到 Button_B → setFocused(true, byKeyboard=false)
    → 通知视口 B 的 FocusManager → Button_B 获得焦点
@@ -1539,11 +1560,13 @@ KeyDown(Ctrl+Tab / Ctrl+Shift+Tab) 到达 owner 层
   │    └─ Yes → 原样转发给 activeViewport
   │            （视口内 Scope 切换，单视口行为完全不变）✅
   │
-  ├─ activeViewport 内可见 boundary 数 > 1 ?
+  ├─ activeViewport 内可见 boundary 数 >= 1 ?
   │    └─ Yes → 转发给 activeViewport
-  │            （视口内 WinFrame/Dialog 切换优先，用户先切完本视口窗口）
+  │            （视口内 WinFrame/Dialog 切换优先；复核修订：boundary 仅含 WinFrame/Dialog，
+  │             无"Bench 隐含 +1"，故条件为 >=1——1 个 WinFrame 时 Ctrl+Tab 原样聚焦该窗口内，
+  │             与单视口原行为一致，不跨视口）
   │
-  └─ 否则（视口数 > 1 且视口内只有 Bench 一个 boundary）
+  └─ 否则（视口数 > 1 且视口内无可见 WinFrame/Dialog）
        → 跨视口切换:
            1. oldVp->focusManager.clearFocus()
               → 旧控件 setFocused(false) → onFocusLost()
@@ -1554,12 +1577,16 @@ KeyDown(Ctrl+Tab / Ctrl+Shift+Tab) 到达 owner 层
 
 ```cpp
 // src/UICornerstoneAPI.cpp — owner 层键盘路由（伪代码）
-bool tryViewportScopeSwitch(UIInstance owner, UIEvent& keyEvent) {
-    if (!isCtrlTab(keyEvent)) return false;         // 仅 Ctrl+Tab / Ctrl+Shift+Tab
+// 复核修订：参数为 C++ Event&（轮询通路产出 Event；键码/修饰经 EventKey{keycode, mod}
+// 访问，EventTypes.h:161）
+bool tryViewportScopeSwitch(UIInstance owner, Event& keyEvent) {
+    KeyCode code = keyEvent.keyEvent.keycode;              // KeyCode::Tab = 0x09（EventTypes.h:28）
+    KeyMod  mod  = keyEvent.keyEvent.mod;                   // KeyMod::LCtrl = 0x0040（EventTypes.h:120）
+    if (code != KeyCode::Tab || !(mod & KeyMod::LCtrl)) return false;  // 仅 Ctrl+Tab / Ctrl+Shift+Tab
     if (owner->children.size() <= 1) return false;  // 单视口：交给视口内处理
 
     UIInstance cur = owner->activeViewport;
-    if (countVisibleBoundaries(cur) > 1) return false;  // 视口内多窗口：视口内优先
+    if (countVisibleBoundaries(cur) >= 1) return false;  // 视口内有 WinFrame/Dialog：视口内优先
 
     // 执行跨视口切换
     cur->focusManager.clearFocus();
@@ -1578,7 +1605,7 @@ bool tryViewportScopeSwitch(UIInstance owner, UIEvent& keyEvent) {
 flowchart TD
     A["KeyDown(Ctrl+Tab) 到达 owner"] --> B{"视口数 > 1?"}
     B -->|No| C["转发给 activeViewport<br/>视口内 Scope 切换"]
-    B -->|Yes| D{"activeViewport 内<br/>可见 boundary > 1?"}
+    B -->|Yes| D{"activeViewport 内<br/>可见 boundary >= 1?"}
     D -->|Yes| C
     D -->|No| E["跨视口切换"]
     E --> E1["clearFocus 旧视口"]
@@ -1587,7 +1614,8 @@ flowchart TD
     E3 --> F["事件消费，不进入视口"]
 ```
 
-**`countVisibleBoundaries` 实现**：遍历 `activeViewport->focusManager` 的 `m_boundaries`，统计 `isVisible()` 的项数（Bench 自身是首个 boundary，始终 +1）。
+**countVisibleBoundaries 实现**：遍历 `activeViewport->focusManager` 的 `m_boundaries`，统计 `isVisible()` 的项数。
+> 复核修订：`m_boundaries` **仅由 WinFrame（WinFrame.cpp:85）与 Dialog（Dialog.cpp:107）在构造时注册**，Bench 不注册——原稿"Bench 自身是首个 boundary，始终 +1"的断言不成立。故智能路由条件相应修正（见下）：**有可见 boundary（≥1）时视口内优先；无任何可见 WinFrame/Dialog 时才跨视口**。这与单视口原行为一致（`focusNextScope` 无 boundary 时回退到根 scope 首个可聚焦控件，FocusManager.cpp:190-198）。
 
 **`clearFocus()` 实现**：
 
@@ -1608,16 +1636,14 @@ void FocusManager::clearFocus() {
 ```cpp
 void UICornerstone_Render(UIInstance instance) {
     if (!instance || !instance->initialized) return;
-    // 设置 clipRect 到视口区域（RenderDevice 接口为 setClipRect(const SRect&)，
-    // 见 RenderDevice.h:25，无 setScissor）
-    instance->renderDevice->setClipRect(
+    // 复核修订：现 Render 实现用 pushClipRect/popClipRect 成对裁剪
+    // （UICornerstoneAPI.cpp:343-345），无需"恢复整窗"步骤
+    instance->renderDevice->pushClipRect(
         SRect{instance->viewport.x, instance->viewport.y,
               instance->viewport.width, instance->viewport.height});
     // 只绘制本视口的控制树
     instance->bench->draw();
-    // 恢复 clipRect（整窗口范围）
-    instance->renderDevice->setClipRect(
-        SRect{0, 0, instance->window->getSize().width, instance->window->getSize().height});
+    instance->renderDevice->popClipRect();
 }
 ```
 
@@ -1661,7 +1687,7 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
 | 5.10 所有权 | FocusManager 所有权从 MainWindow 移至 UIContext；owner 负责跨视口焦点调度 | 见分析 |
 | 5.11 调试 | 实例注册表兼容父子层级 | 不需改 |
 | 5.12 测试 | 新增多视口事件隔离测试，含跨视口焦点转移 | 见下文 |
-| — | ProcessEvents 输入路由实现 | 坐标类事件按 rect 分发到子视口；键盘事件发到 activeViewport；跨视口点击清旧焦点 | 新增 |
+| — | ProcessEvents 输入路由实现 | 坐标类事件按 rect 分发到子视口（C++ `Event` 层，§5.13.5）；键盘事件发到 activeViewport；跨视口点击清旧焦点 | 新增 |
 | — | `Dialog/ColorPicker/ComboBox` 中 `MAINWIN->getWindowSize()` → `m_context->viewport` | 弹出窗口定位改为视口相对 |
 
 #### 5.13.7 新增测试：单窗口多视口
@@ -1715,7 +1741,7 @@ UICornerstone_DestroyInstance(win);
 | K1 | 单视口 Ctrl+Tab 行为不变 | 只有 win（默认视口），内含 2 个 WinFrame；Ctrl+Tab | 在 2 个 WinFrame 间切换（原行为） |
 | K2 | 双视口 + 各视口单 WinFrame | Ctrl+Tab | 跨视口切换：vp1 → vp2，焦点落到 vp2 的第一个可聚焦控件，焦点环显示（byKeyboard=true） |
 | K3 | 双视口 + vp1 内 2 个 WinFrame | Ctrl+Tab | 视口内优先：在 vp1 的 2 个 WinFrame 间切换，不跳转视口 |
-| K4 | K3 之后 vp1 窗口切完 | 再次 Ctrl+Tab | 现在 vp1 内 boundary 只有 Bench → 跨视口跳 vp2 |
+| K4 | vp1 的 2 个 WinFrame 全部隐藏/关闭后 | 再次 Ctrl+Tab | vp1 内无可见 boundary（复核修订：WinFrame/Dialog 关闭后 count==0，无"Bench 隐含 +1"）→ 跨视口跳 vp2 |
 | K5 | 跨视口后 Ctrl+Shift+Tab | Ctrl+Shift+Tab | 反向：vp2 → vp1 |
 | K6 | 跨视口后 Tab | Tab | 只在当前 activeViewport（vp2）内循环，不进入 vp1 |
 | K7 | 焦点回跳 | 跨视口切到 vp2 后，再切回 vp1 | vp1 的焦点环回到 vp1 内第一个可聚焦控件（focusFirstInScope），不是记忆原焦点 |
@@ -1772,7 +1798,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 1 | 新增 `include/UIContext.h` | 定义 `UIContext` 结构体 + `initialize()/destroy()` 声明 | 小 |
 | 2 | 新增 `src/UIContext.cpp` | 实现 `initialize()`（事务性创建 BM/MW/Bench/EQ/DC）、`destroy()`（逆序析构） | 中 |
 | 3 | `include/UICornerstoneAPI.h` | 新增 `UIInstance` typedef、`UIInstanceConfig` 结构体（`structSize` 版，见 §5.2）；所有函数增加 `UIInstance` 首参；新增 `CreateInstance`/`DestroyInstance`；`InitFromPlugin` 改造为 `CreateInstanceFromPlugin`（保留插件加载能力）；删除 `Init`/`Shutdown` 及旧无参签名 | 小 |
-| 4 | `src/UICornerstoneAPI.cpp` | 14 个全局变量移至 `UIContext`（修订：含 `g_menuPool` 与 `static char buf[256]`，buf 改为实例内缓冲）；删除 `Init`/`Shutdown`；所有函数实现从 `g_xxx` 改为 `instance->xxx` | 中 |
+| 4 | `src/UICornerstoneAPI.cpp` | 14 个全局变量移至 `UIContext`（复核修订：补 `g_menuPool`；`GetControlId` 的 `static char buf[256]`（cpp:637）非全局、线程不安全，改为 `UIContext::strBuf`）；删除 `Init`/`Shutdown`；所有函数实现从 `g_xxx` 改为 `instance->xxx` | 中 |
 | 5 | `include/ControlBase.h` | Control 增加 `UIContext* m_context` 成员，构造函数可选接收 `UIContext*`；宏重定义 | 小 |
 | 6 | 控件源码 ~20 个 .cpp 文件 | 宏定义变化，调用处代码不动；重新编译即可 | 零修改 |
 | 7 | `include/BackendPlugin.h` | BackendManager 取消 singleton，构造函数/initialize/shutdown 改为实例方法 | 小 |
@@ -1792,7 +1818,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员 | 小 |
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
 | 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, SRect rect)` | 小 |
-| 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询 + 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport | 中 |
+| 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport | 中 |
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加 clipRect 设置（`setClipRect(const SRect&)`，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |
