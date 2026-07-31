@@ -616,14 +616,22 @@ protected:
 // 方式 1：构造函数传入（推荐，显式）
 auto* btn = new Button(ctx);
 
-// 方式 2：AddChild 时从父控件继承
+// 方式 2：addControl 时从父控件继承
 // 复核修订（2026-07-31 第五轮）：必须经 setContext 而非直赋 m_context——
 // 直赋会绕过 m_eventQueueInstance 同步（见上修订说明），事件投递仍指向旧实例
-void Control::addChild(Control* child) {
+// 复核修订（2026-07-31 第六轮）：真实方法是 ControlImpl::addControl(shared_ptr<Control>)
+// （ControlBase.cpp:304-317，含 setParent + setRenderDevice(getRenderDevice())），
+// 非文档原 addChild 命名；多实例化需在此补 setContext 同步，
+// setRenderDevice(getRenderDevice()) 经 §5.5 宏重定义自动指向 CONTEXT->renderDevice
+void ControlImpl::addControl(shared_ptr<Control> child) {
+    if (child == nullptr) return;
     if (!child->m_context) {
         child->setContext(m_context);  // 继承父控件上下文，同时同步 m_eventQueueInstance
     }
     m_children.push_back(child);
+    child->setParent(this);
+    child->setRenderDevice(getRenderDevice());
+    stabilizeTopmostChildren();
 }
 
 // 方式 3：C ABI 层创建时由 UIContext 设置
@@ -1393,7 +1401,7 @@ struct UIContext {
     // 原稿结构体遗漏该字段）——DestroyInstance 全程置 true，C ABI 入口防重入短路
     bool    destroying = false;
     SRect   viewport{0, 0, 1024, 768};
-    UIInstance activeViewport = nullptr;   // 修订：仅 owner 使用，当前焦点视口（见 5.13.5）
+    UIInstance activeViewport = nullptr;   // 仅 owner 使用，当前焦点视口；nullptr = 无子视口或焦点在 owner 树（复核修订 2026-07-31 第六轮：键盘路由回退 owner bench）
     FocusManager* focusManager = nullptr;  // 修订：每实例独立焦点管理（自 MainWindow 移入）
 
     Bench*        bench = nullptr;
@@ -1472,6 +1480,15 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
                 // bench（owner 视口 = 全窗口兜底），而非丢弃——owner 默认视口区域的
                 // 控件仍可交互（Bench 内部行为同现实现，未命中控件则焦点保留）
                 if (!target) {
+                    // 复核修订（2026-07-31 第六轮）：owner 兜底点击同样进入焦点转移——
+                    // 点击 owner 区域视为"焦点回到 owner 树"：清旧视口焦点 + activeViewport=nullptr
+                    // （键盘随后回退 owner 树，见上），避免鼠标焦点（owner 树）与键盘焦点
+                    // （子视口）分离；否则子视口旧控件保持焦点环、键盘仍投递到子视口
+                    if (instance->activeViewport
+                        && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
+                        instance->activeViewport->focusManager->clearFocus();
+                        instance->activeViewport = nullptr;
+                    }
                     instance->bench->inputControl(std::make_shared<Event>(evt));
                     break;
                 }
@@ -1497,8 +1514,13 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
             case EventType::KeyDown:
             case EventType::KeyUp:
                 // 键盘事件：先经 Ctrl+Tab 智能路由（§5.13.5），未消费则发到当前活动视口
-                if (!tryViewportScopeSwitch(instance, evt) && instance->activeViewport) {
-                    instance->activeViewport->bench->inputControl(std::make_shared<Event>(evt));
+                // 复核修订（2026-07-31 第六轮）：原 `&& instance->activeViewport` 在无子视口的
+                // 纯多实例场景（children 为空，activeViewport 恒 nullptr）会**静默丢弃全部键盘事件**——
+                // 与鼠标兜底（上）不对称。回退到 owner 自身 bench
+                if (!tryViewportScopeSwitch(instance, evt)) {
+                    UIInstance kbdTarget = instance->activeViewport
+                        ? instance->activeViewport : instance;
+                    kbdTarget->bench->inputControl(std::make_shared<Event>(evt));
                 }
                 break;
             default:
@@ -1791,7 +1813,7 @@ UICornerstone_DestroyInstance(win);
 | K3 | 双视口 + vp1 内 2 个 WinFrame | Ctrl+Tab | 视口内优先：在 vp1 的 2 个 WinFrame 间切换，不跳转视口 |
 | K4 | vp1 的 2 个 WinFrame 全部隐藏/关闭后 | 再次 Ctrl+Tab | vp1 内无可见 boundary（复核修订：WinFrame/Dialog 关闭后 count==0，无"Bench 隐含 +1"）→ 跨视口跳 vp2 |
 | K5 | 跨视口后 Ctrl+Shift+Tab | Ctrl+Shift+Tab | 反向：vp2 → vp1 |
-| K6 | 跨视口后 Tab | Tab | 只在当前 activeViewport（vp2）内循环，不进入 vp1 |
+| K6 | 跨视口后 Tab | Tab | 只在当前 activeViewport（vp2）内循环，不进入 vp1（复核修订 2026-07-31 第六轮：**注入目标须为 vp2**（`PushUIEvent(vp2, Tab)`）或走轮询通路——注入到 win 会按注入语义走 owner 树（§5.13.5 注入通路 fallback），测不到"视口内循环"） |
 | K7 | 焦点回跳 | 跨视口切到 vp2 后，再切回 vp1 | vp1 的焦点环回到 vp1 内第一个可聚焦控件（focusFirstInScope），不是记忆原焦点 |
 
 K7 的补充说明：跨视口切换使用 `focusFirstInScope`，不记忆原视口内的焦点位置。若未来需要"切回时恢复原焦点"，可在 `UIContext` 增加 `savedFocusControl` 字段，初期不做。
@@ -1875,7 +1897,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员 | 小 |
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
 | 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, UIRect rect)`（复核修订：UIRect 为纯 C 结构体，UICornerstoneAPI.h:34；SRect 是 C++ 类型，C ABI 不可用） | 小 |
-| 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport | 中 |
+| 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport（nullptr 回退 owner，复核修订 2026-07-31 第六轮） | 中 |
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |

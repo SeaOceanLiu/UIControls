@@ -1881,3 +1881,25 @@ Done, 180 frames                        # 帧循环正常完成
 6. 已核验排除项：§7 风险 3 IME 引用有效（startTextInput/stopTextInput 存在，InputBackend.h:15-17）；pushClipRect 栈实现支持嵌套（RenderDevice.cpp:98-110），多视口 Render 与控件内裁剪不冲突
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-07-31: 第六轮复核（fifth audit pass 之复核 + 深入遗漏排查，修订 6 处）
+
+**背景**：主设计 Session 提交 6284881（fifth audit pass，6 处修正）。逐条核实（SRect 确为 class，Utility.h:185；addControl 真实实现 ControlBase.cpp:304-317）后，发现 1 处严重遗漏 + 3 处次要问题，已修订。
+
+**主 Session 修正核实（6 处全部通过）**：
+
+- addChild 直赋 → setContext：正确（与 §5.4 修订说明的 m_eventQueueInstance 同步一致）；但方法名 addChild 非真实 addControl，且真实实现（ControlBase.cpp:304-317）含 setParent + setRenderDevice(getRenderDevice())——多实例化须在 addControl 中同步 setContext；setRenderDevice 经宏重定义自动适配。已对齐命名并补实现骨架
+- destroying 标志落地：正确（§7 风险 4 与结构体/伪代码/§6 脱节修复；顺带防 double-destroy）
+- 未命中子视口 → owner 兜底：正确（鼠标兜底）
+- activeViewport 首个子视口自动激活：正确且必要（否则 K2 断言失败 + countVisibleBoundaries(nullptr) 空指针）
+- 注入通路 fallback 语义说明：正确
+- 排除项核实（IME、pushClipRect 栈嵌套）：准确
+
+**本次新发现并修订（4 处）**：
+
+1. **键盘路由 nullptr 丢弃（严重）**：轮询通路 `if (!tryViewportScopeSwitch(...) && instance->activeViewport)` 在无子视口的纯多实例场景（children 空，activeViewport 恒 nullptr）**静默丢弃全部键盘事件**——多实例设计的基础场景（双窗口测试、全部现有测试改造）键盘不可用，与第五轮刚补的鼠标兜底不对称。已改：`kbdTarget = activeViewport ? activeViewport : instance`（nullptr 回退 owner 树）
+2. **owner 兜底点击的 activeViewport 状态未定义**：点击 owner 区域（子视口空隙）只投递事件，不清旧视口焦点、不更新 activeViewport → 鼠标焦点（owner 树）与键盘焦点（子视口）分离。已补：owner 兜底 MouseDown/Up → 旧视口 clearFocus + activeViewport=nullptr（与 1 结合，nullptr 语义 = 焦点在 owner 树）
+3. **K6 测试注入目标未注明**：注入到 win 的 Tab 按注入语义走 owner 树，测不到"vp2 内循环"。K6 已注明注入目标须为 vp2 或走轮询通路
+4. **§5.4 方式 2 命名与实现骨架**：addChild → ControlImpl::addControl（真实签名 shared_ptr<Control> + setParent + setRenderDevice），补 setContext 同步点；§5.13.4 activeViewport 注释补 nullptr 语义；§6 第 24 项补键盘回退
+
+**遗留提示**：owner 兜底点击后 activeViewport=nullptr，再点击子视口正常转移；销毁 activeViewport 的视口时 owner 需置 nullptr（§5.13.5 已有约定）。
