@@ -1928,3 +1928,26 @@ Done, 180 frames                        # 帧循环正常完成
 **已核验排除**：注入通路 tryViewportScopeSwitch 不受影响（注入到 vpA 时 children 空短路，注入到 owner 正常）；K1 场景（纯多实例 Ctrl+Tab）由第六轮键盘 fallback 修复后与"2 个 WinFrame 间切换"预期一致。
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-07-31: 第八轮复核（seventh audit pass 之复核 + 深入遗漏排查，修订 4 处）
+
+**背景**：主设计 Session 提交 fbca905（seventh audit pass，6 处修正：第六轮联动漏洞修复、nextViewport/prevViewport 定义补齐、owner 兜底点击时序段、Ctrl+Tab 规则文本 null 分支、语义分化块同步、addControl 命名残留清理）。本 Session 逐条核实（全部通过），并沿 activeViewport==null 新语义继续排查销毁路径与可访问性，发现 1 处重要 + 3 处次要遗漏。
+
+**主设计 Session 修正核实（6 处全部通过）**：
+
+- 联动漏洞修复：`cur && countVisibleBoundaries(cur) >= 1`、`if (cur) clearFocus()`、countVisibleBoundaries 入参判空（nullptr→0）、cur==nullptr 时 nextViewport/prevViewport 取 front/back——修复完整，路径分析确认此前确被 children.size()<=1 短路掩盖，第六轮使多视口下 activeViewport 首次可为 null
+- nextViewport/prevViewport 环移实现正确：`++it != end ? *it : front()`；`it != begin ? prev(it) : back()`（it==end 时 prev(end)==last，与 front 起点语义自洽）
+- `if (!owner->activeViewport) return false;` 防御：实际不可达（children 空已被 size()<=1 短路），无害冗余，可保留
+- owner 兜底点击时序段与伪代码/规则文本三方一致（MouseDown/Up 触发、清焦点、置 null、事件进 owner bench、键盘后续、再点击恢复）
+- 语义分化块第 4 步、§7 风险 2、§6 26b 同步正确
+
+**本次新发现并修订（4 处）**：
+
+1. **DestroyInstance 销毁 activeViewport 悬空（重要）**：销毁子视口循环未处理 `activeViewport == child`——验证点"析构 active 视口时 owner 将其设为 nullptr"仅有文字约定、伪代码未实现。销毁后 owner 继续运行（多窗口场景销毁其中一个窗口的视口）→ 键盘 fallback `activeViewport ? activeViewport : instance` 解引用已 delete 的 UIContext → 崩溃。已修：循环内递归前置 `if (instance->activeViewport == child) instance->activeViewport = nullptr;`
+2. **countVisibleBoundaries 访问器缺口**：伪代码直接遍历 `focusManager->m_boundaries`，但该成员为私有（FocusManager.h:40），仅有 registerBoundary/unregisterBoundary（:27/29）无 getter。已注明：须新增 `FocusManager::getVisibleBoundaryCount() const` 或友元声明
+3. **Mermaid 流程图未同步 null 分支**：规则文本已补"activeViewport 非空 且"，流程图 D 条件/E1 步骤仍为旧文本。已同步（D: "activeViewport 非空 且 内可见 boundary >= 1?"；E1: "若 activeViewport 非空：clearFocus 旧视口"；E2: cur 为 null 取 front/back）
+4. **K 测试无 owner 兜底场景**：新增 K8（点击 owner 区域 → activeViewport==nullptr → Debug_GetActiveViewport 返回 null、旧焦点已清、Tab 走 owner 树、Ctrl+Tab 从 children.front() 切入）——覆盖 cur==nullptr 分支的回归
+
+**已核验排除**：DestroyInstance 中 destroying 短路仅保护销毁期间的重入，不解决销毁后的悬空访问（故遗漏 1 必须修复）；递归销毁循环中 owner->children 不被修改（child 销毁不改 owner 容器），`children.clear()` 前迭代安全；nextViewport 的 `if (!owner->activeViewport) return false;` 防御不可达但无害。
+
+**未提交**（用户指示更新但不提交）。

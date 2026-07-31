@@ -1697,17 +1697,18 @@ bool tryViewportScopeSwitch(UIInstance owner, Event& keyEvent) {
 flowchart TD
     A["KeyDown(Ctrl+Tab) 到达 owner"] --> B{"视口数 > 1?"}
     B -->|No| C["转发给 activeViewport<br/>视口内 Scope 切换"]
-    B -->|Yes| D{"activeViewport 内<br/>可见 boundary >= 1?"}
+    B -->|Yes| D{"activeViewport 非空 且<br/>内可见 boundary >= 1?"}
     D -->|Yes| C
     D -->|No| E["跨视口切换"]
-    E --> E1["clearFocus 旧视口"]
-    E1 --> E2["activeViewport = children[±1]"]
+    E --> E1["若 activeViewport 非空：clearFocus 旧视口"]
+    E1 --> E2["activeViewport = children[±1]<br/>(cur 为 null 时取 front/back)"]
     E2 --> E3["focusFirstInScope 新视口"]
     E3 --> F["事件消费，不进入视口"]
 ```
 
 **countVisibleBoundaries 实现**：遍历 `activeViewport->focusManager` 的 `m_boundaries`，统计 `isVisible()` 的项数。
 > 复核修订（2026-07-31 第七轮）：入参判空——`nullptr`（activeViewport 为 null）返回 0，供 `tryViewportScopeSwitch` 判空后调用（第六轮"焦点回 owner 树"后该场景可达）。
+> 复核修订（2026-07-31 第七轮复核）：`m_boundaries` 为 `FocusManager` 私有成员（FocusManager.h:40），当前仅有 `registerBoundary`/`unregisterBoundary`（FocusManager.h:27/29），**无遍历访问器**——实现时须在 `FocusManager` 新增 `int getVisibleBoundaryCount() const`（或声明 `countVisibleBoundaries` 为友元），C ABI 层不可直接访问。
 
 **`nextViewport`/`prevViewport` 实现**（复核修订 2026-07-31 第七轮：原稿仅引用未定义）：
 
@@ -1773,6 +1774,14 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
 
     // 先销毁所有子视口
     for (auto* child : instance->children) {
+        // 复核修订（2026-07-31 第七轮复核）：正在销毁的子视口若是 activeViewport，
+        // 须先置 null——否则销毁后 owner 继续运行（多窗口场景）时，键盘 fallback
+        // （activeViewport ? activeViewport : instance，见 ProcessEvents）会解引用
+        // 已 delete 的 UIContext（验证点"析构 active 视口时 owner 将其设为 nullptr"的
+        // 文字约定此前未在伪代码中实现）
+        if (instance->activeViewport == child) {
+            instance->activeViewport = nullptr;
+        }
         UICornerstone_DestroyInstance(child);
     }
     instance->children.clear();
@@ -1861,6 +1870,7 @@ UICornerstone_DestroyInstance(win);
 | K5 | 跨视口后 Ctrl+Shift+Tab | Ctrl+Shift+Tab | 反向：vp2 → vp1 |
 | K6 | 跨视口后 Tab | Tab | 只在当前 activeViewport（vp2）内循环，不进入 vp1（复核修订 2026-07-31 第六轮：**注入目标须为 vp2**（`PushUIEvent(vp2, Tab)`）或走轮询通路——注入到 win 会按注入语义走 owner 树（§5.13.5 注入通路 fallback），测不到"视口内循环"） |
 | K7 | 焦点回跳 | 跨视口切到 vp2 后，再切回 vp1 | vp1 的焦点环回到 vp1 内第一个可聚焦控件（focusFirstInScope），不是记忆原焦点 |
+| K8 | 点击 owner 区域后焦点回 owner 树 | 视口 A 活动（EditBox_A 有焦点）→ 点击 owner 区域（未命中子视口）→ 再按 Tab / Ctrl+Tab | activeViewport==nullptr（`Debug_GetActiveViewport(win)` 返回 null）；旧视口焦点已清（EditBox_A isFocused()==false）；Tab 经键盘 fallback 在 owner 树内循环；Ctrl+Tab 经 tryViewportScopeSwitch 从 children.front() 切入 vp1（复核修订 2026-07-31 第七轮：覆盖 cur==nullptr 分支，防 countVisibleBoundaries/nextViewport null 解引用） |
 
 K7 的补充说明：跨视口切换使用 `focusFirstInScope`，不记忆原视口内的焦点位置。若未来需要"切回时恢复原焦点"，可在 `UIContext` 增加 `savedFocusControl` 字段，初期不做。
 
