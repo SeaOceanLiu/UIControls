@@ -1439,7 +1439,8 @@ UIInstance (owner) → ProcessEvents:
   1. 轮询 inputBackend->pollEvent()
   2. 对每个事件，检查所有子 viewport 的 rect
   3. 匹配坐标 → 转视口本地坐标后直接 dispatch 到该 viewport 的 bench（复核修订：新实现为直接 dispatch，不经子视口队列）
-  4. 不匹配 → 视为窗口事件（如关闭按钮）
+  4. 不匹配 → dispatch 到 owner 自身 bench（兜底，owner 视口 = 全窗口）；MouseDown/Up
+     同时清旧视口焦点 + activeViewport=nullptr（复核修订 2026-07-31 第六/七轮：焦点回 owner 树）
 
 UIInstance (viewport) → ProcessEvents:
   1. 只处理自己的 queuedEvents（不轮询 inputBackend）
@@ -1608,6 +1609,21 @@ UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 复核�
     视口 B 的 Button_B 不画焦点环（鼠标焦点，除非 alwaysVisible）✅
 ```
 
+**点击 owner 区域（未命中子视口）的焦点转移**（复核修订 2026-07-31 第七轮：与第六轮兜底点击行为对齐，原时序段落未覆盖）：
+
+```
+1. 视口 A 当前 active，其中 EditBox_A 有焦点
+2. 用户点击 owner 区域（findViewportByCoord 未命中任何子视口）
+3. MouseDown/MouseUp 触发（MouseMove 不触发，仅悬停不转移焦点）：
+   - activeViewport 非空 → activeViewport->focusManager->clearFocus()
+     → EditBox_A 失去焦点（onFocusLost → 提交未完成编辑）
+   - activeViewport = nullptr（焦点回到 owner 树）
+4. 事件 dispatch 到 owner 自身 bench（owner 视口 = 全窗口兜底）
+5. 后续键盘事件：Ctrl+Tab 智能路由（cur==nullptr → 跨视口切入 children[0]/children[last]，
+   见 tryViewportScopeSwitch）；普通 Tab 经键盘 fallback 退回 owner 树（owner 的 FocusManager）
+6. 再次点击任一子视口区域 → 重新置 activeViewport，回到视口间转移流程
+```
+
 **Tab 键 / Ctrl+Tab 的行为**：
 
 | 按键 | 行为 | 处理者 |
@@ -1622,19 +1638,22 @@ KeyDown(Ctrl+Tab / Ctrl+Shift+Tab) 到达 owner 层
   │
   ├─ 视口数 == 1 ?
   │    └─ Yes → 原样转发给 activeViewport
-  │            （视口内 Scope 切换，单视口行为完全不变）✅
+  │            （视口内 Scope 切换，单视口行为完全不变；activeViewport 为 null——
+  │             点击 owner 区域后——经键盘 fallback 退回 owner 树）✅
   │
-  ├─ activeViewport 内可见 boundary 数 >= 1 ?
+  ├─ activeViewport 非空 且 内可见 boundary 数 >= 1 ?
   │    └─ Yes → 转发给 activeViewport
   │            （视口内 WinFrame/Dialog 切换优先；复核修订：boundary 仅含 WinFrame/Dialog，
   │             无"Bench 隐含 +1"，故条件为 >=1——1 个 WinFrame 时 Ctrl+Tab 原样聚焦该窗口内，
   │             与单视口原行为一致，不跨视口）
   │
-  └─ 否则（视口数 > 1 且视口内无可见 WinFrame/Dialog）
+  └─ 否则（视口数 > 1 且视口内无可见 WinFrame/Dialog，
+        或 activeViewport 为 null——焦点在 owner 树）
        → 跨视口切换:
-           1. oldVp->focusManager.clearFocus()
+           1. 若 activeViewport 非空：oldVp->focusManager.clearFocus()
               → 旧控件 setFocused(false) → onFocusLost()
            2. owner->activeViewport = children[next/prev]
+              （activeViewport 为 null 时 next 取 children.front()，prev 取 children.back()）
            3. newVp->focusManager.focusFirstInScope(newVp->bench)
               → 聚焦新视口第一个可聚焦控件（byKeyboard=true，显示焦点环）
 ```
@@ -1652,13 +1671,18 @@ bool tryViewportScopeSwitch(UIInstance owner, Event& keyEvent) {
     if (owner->children.size() <= 1) return false;  // 单视口：交给视口内处理
 
     UIInstance cur = owner->activeViewport;
-    if (countVisibleBoundaries(cur) >= 1) return false;  // 视口内有 WinFrame/Dialog：视口内优先
+    // 复核修订（2026-07-31 第七轮）：点击 owner 区域后 activeViewport 可为 nullptr
+    // （§5.13.5 兜底点击 → 焦点回 owner 树），此处必须判空——否则 countVisibleBoundaries(nullptr)
+    // 与 nextViewport(owner, nullptr) null 解引用（第六轮引入联动漏洞）
+    if (cur && countVisibleBoundaries(cur) >= 1) return false;  // 视口内有 WinFrame/Dialog：视口内优先
 
     // 执行跨视口切换
     // 修正（2026-07-31 二次复核）：focusManager 是指针成员（§5.13.4），用 -> 访问
-    cur->focusManager->clearFocus();
+    if (cur) cur->focusManager->clearFocus();  // cur==nullptr（焦点在 owner 树）无需清焦点
     bool shift = isModSet(mod, KeyMod::Shift);
+    // cur==nullptr 时视同"无活动视口"，切入创建顺序第一个/最后一个子视口
     owner->activeViewport = shift ? prevViewport(owner, cur) : nextViewport(owner, cur);
+    if (!owner->activeViewport) return false;  // 防御：无子视口（纯多实例）不消费
     owner->activeViewport->focusManager->focusFirstInScope(
         owner->activeViewport->bench);
     return true;  // 事件已消费
@@ -1683,6 +1707,28 @@ flowchart TD
 ```
 
 **countVisibleBoundaries 实现**：遍历 `activeViewport->focusManager` 的 `m_boundaries`，统计 `isVisible()` 的项数。
+> 复核修订（2026-07-31 第七轮）：入参判空——`nullptr`（activeViewport 为 null）返回 0，供 `tryViewportScopeSwitch` 判空后调用（第六轮"焦点回 owner 树"后该场景可达）。
+
+**`nextViewport`/`prevViewport` 实现**（复核修订 2026-07-31 第七轮：原稿仅引用未定义）：
+
+```cpp
+// 在 children 序列中取 cur 的下一个/上一个；cur==nullptr（焦点在 owner 树）时
+// 视同"无活动视口"：next 取 children.front()（创建顺序第一个），prev 取 children.back()
+UIInstance nextViewport(UIInstance owner, UIInstance cur) {
+    auto& cs = owner->children;
+    if (cs.empty()) return nullptr;
+    if (!cur) return cs.front();
+    auto it = std::find(cs.begin(), cs.end(), cur);
+    return (it != cs.end() && ++it != cs.end()) ? *it : cs.front();
+}
+UIInstance prevViewport(UIInstance owner, UIInstance cur) {
+    auto& cs = owner->children;
+    if (cs.empty()) return nullptr;
+    if (!cur) return cs.back();
+    auto it = std::find(cs.begin(), cs.end(), cur);
+    return (it != cs.begin()) ? *std::prev(it) : cs.back();
+}
+```
 > 复核修订：`m_boundaries` **仅由 WinFrame（WinFrame.cpp:85）与 Dialog（Dialog.cpp:107）在构造时注册**，Bench 不注册——原稿"Bench 自身是首个 boundary，始终 +1"的断言不成立。故智能路由条件相应修正（见下）：**有可见 boundary（≥1）时视口内优先；无任何可见 WinFrame/Dialog 时才跨视口**。这与单视口原行为一致（`focusNextScope` 无 boundary 时回退到根 scope 首个可聚焦控件，FocusManager.cpp:190-198）。
 
 **`clearFocus()` 实现**：
@@ -1801,7 +1847,7 @@ UICornerstone_DestroyInstance(win);
 - 每个视口有自己的 ID 查找空间
 - 销毁顺序：先子后父，不泄漏
 - 焦点转移：点击视口 B → 视口 A 旧控件 `onFocusLost()` 触发 → 视口 B 新控件 `onFocusGained()` 触发
-- 键盘事件路由：按下 Tab → 只在 activeViewport 内循环
+- 键盘事件路由：按下 Tab → 只在 activeViewport 内循环（复核修订 2026-07-31 第七轮：activeViewport 非 null 时；为 null——点击 owner 区域后——退回 owner 树）
 - activeViewport 销毁前转移：析构 active 视口时 owner 将其设为 nullptr 或另一个视口
 
 **新增：键盘跨视口导航测试**（`test_multiviewport.cpp` 追加，或独立 `test_multiviewport_keyboard.cpp`）：
@@ -1901,7 +1947,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |
-| 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五轮） | 小 |
+| 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；兜底点击（未命中子视口）清 `activeViewport` 置 nullptr + 清旧视口焦点；键盘 fallback 在 `activeViewport==nullptr` 时退回 owner bench；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五/六/七轮） | 小 |
 | 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序 + 键盘导航测试（K1-K7） | 中 |
 | 28 | `include/MainWindow.h` | 移除 `m_focusManager` 值成员；移除 `getFocusManager()` | 小 |
 | 29 | `include/UIContext.h` | 新增 `FocusManager* focusManager` 指针成员（自 MainWindow 的 `unique_ptr` 移入） | 小 |
@@ -1940,13 +1986,13 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 
 #### 2. 控件构造期间 m_context 空指针
 
-`Control` 在构造后、挂到控件树（`addChild`/`setContext`）之前，宏 `GET_RENDERDEVICE` 等读到 `m_context == nullptr` 会崩溃。
+`Control` 在构造后、挂到控件树（`addControl`/`setContext`）之前，宏 `GET_RENDERDEVICE` 等读到 `m_context == nullptr` 会崩溃。
 
 **缓解措施**：
 - 宏中加 `assert(m_context)`（Debug 构建）
 - Release 中 `if (m_context) { ... }` 跳过
 - 所有 Control 构造函数在完成 `setContext` 前不调用依赖上下文的函数
-- `addChild` 中自动 setContext，减少遗漏窗口
+- `addControl` 中自动 setContext，减少遗漏窗口（复核修订 2026-07-31 第六/七轮：现有实现 ControlBase.cpp:304-317 无 setContext，多实例化改造时在正行补同步，见 §5.4 方式 2）
 
 #### 3. 跨实例 IME 输入法冲突（修订新增）
 

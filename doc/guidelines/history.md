@@ -1903,3 +1903,28 @@ Done, 180 frames                        # 帧循环正常完成
 4. **§5.4 方式 2 命名与实现骨架**：addChild → ControlImpl::addControl（真实签名 shared_ptr<Control> + setParent + setRenderDevice），补 setContext 同步点；§5.13.4 activeViewport 注释补 nullptr 语义；§6 第 24 项补键盘回退
 
 **遗留提示**：owner 兜底点击后 activeViewport=nullptr，再点击子视口正常转移；销毁 activeViewport 的视口时 owner 需置 nullptr（§5.13.5 已有约定）。
+
+### 2026-07-31: 第七轮复核（sixth audit pass 之复核 + 深入遗漏排查，修订 6 处）
+
+**背景**：辅设计 Session 提交 37b52d3（sixth audit pass，5 处修正：addControl 实名化、activeViewport nullptr 语义、owner 兜底点击焦点转移、键盘 fallback 退回 owner、K6 注入目标修正）。本 Session 逐条核实源码事实（全部通过），并排查第六轮行为的连带影响，发现 1 处严重联动漏洞 + 3 处同步遗漏。
+
+**辅设计 Session 修正核实（5 处全部通过）**：
+
+- addControl 实名化：真实方法 `ControlImpl::addControl(shared_ptr<Control>)`（ControlBase.cpp:304-317）——含 nullptr 检查、重复检查（find）、setParent(this)、setRenderDevice(getRenderDevice())、stabilizeTopmostChildren()（ControlBase.h:326）；真实实现**无 m_context 继承**，文档伪代码为改造版（保留 setContext 同步），处理正确
+- activeViewport 注释补 nullptr 语义（焦点在 owner 树）——正确
+- owner 兜底点击清旧视口焦点 + activeViewport=nullptr（避免鼠标/键盘焦点分离）——正确且必要
+- 键盘 fallback 退回 owner bench：原 `&& instance->activeViewport` 在纯多实例场景（children 空）静默丢弃全部键盘事件，与鼠标兜底不对称——正确（顺带修复 K1 场景）
+- K6 注入目标须为 vp2（注入到 win 走 owner 树）——正确，与 §5.13.5 注入通路 fallback 语义自洽
+
+**本次新发现并修订（6 处）**：
+
+1. **第六轮联动漏洞（严重）**：新增"点击 owner 区域 → activeViewport=nullptr"后，多视口场景 Ctrl+Tab 可达 `countVisibleBoundaries(nullptr)` 与 `nextViewport(owner, nullptr)`——**null 解引用崩溃**（此前被单视口短路 children.size()<=1 挡住，纯多实例 children 空同样短路；第六轮使多视口下 activeViewport 首次可为 null）。已修：tryViewportScopeSwitch 判空（cur 非空才查 boundary、才 clearFocus）、防御性无子视口不消费、countVisibleBoundaries 入参判空（nullptr→0）、cur==nullptr 时切入 children.front()/back()（shift 反向）
+2. **nextViewport/prevViewport 未定义**：文档仅引用无定义。已补实现（children 序列环移，nullptr 起点 = front/back）
+3. **时序段落未覆盖 owner 兜底转移**：新增"点击 owner 区域 → 焦点回 owner 树"独立时序（MouseDown/Up 触发、清焦点、置 null、事件进 owner bench、后续键盘行为、再点击子视口恢复）
+4. **Ctrl+Tab 规则文本/流程图边界**：规则文本与验证点补 activeViewport==null 分支（单视口+点击 owner 区域 → fallback 退回 owner 树；跨视口起点取 front/back）
+5. **语义分化块第 4 步残留**："不匹配 → 视为窗口事件"与第六轮兜底行为冲突 → 同步为"dispatch 到 owner bench + MouseDown/Up 清焦点/置 null"
+6. **§7 风险 2 命名残留**：addChild → addControl（第六轮实名化后风险段未同步）；§6 26b 补兜底点击清 activeViewport + 键盘 fallback 实现项
+
+**已核验排除**：注入通路 tryViewportScopeSwitch 不受影响（注入到 vpA 时 children 空短路，注入到 owner 正常）；K1 场景（纯多实例 Ctrl+Tab）由第六轮键盘 fallback 修复后与"2 个 WinFrame 间切换"预期一致。
+
+**未提交**（用户指示更新但不提交）。
