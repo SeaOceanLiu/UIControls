@@ -1584,6 +1584,7 @@ UIInstance findViewportByCoord(UIInstance owner, float x, float y) {  // 复核�
 ```
 
 **子 viewport 的生命周期管理**：owner 维护 `std::vector<UIInstance> children`，创建 viewport 时注册，销毁时摘除。销毁活动视口前先将另一个视口设为 active，或设为 nullptr。
+> 复核修订（2026-07-31 第九轮）："销毁时摘除"已在 `DestroyInstance` 伪代码实现（owner->children 摘除 + owner->activeViewport 置 null，见上）——覆盖**直接销毁子视口**路径（5.13.7 测试正如此），不仅限于 owner 级联销毁。
 
 > 复核修订（2026-07-31 第五轮）：`owner->activeViewport` 初始为 nullptr——若首个子视口创建时不自动赋值，则窗口启动后（首次点击前）键盘事件无处投递（§5.13.5 轮询通路 `if (... && instance->activeViewport)` 为假被丢弃），且 K2 测试桩 `Debug_GetActiveViewport(win) == vp1` 断言必失败。**约定：`CreateViewport` 创建 owner 的首个子视口时自动设为 `owner->activeViewport`（首个视口即默认活动视口）**。
 
@@ -1772,8 +1773,10 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
     if (!instance || instance->destroying) return;
     instance->destroying = true;  // 置位：回调重入的 C ABI 入口直接短路
 
-    // 先销毁所有子视口
-    for (auto* child : instance->children) {
+    // 复核修订（2026-07-31 第九轮）：快照遍历——子视口销毁时从 owner->children
+    // 摘除自身（见下），直接 range-for 遍历会在迭代中 erase，迭代器失效
+    auto snapshot = instance->children;  // 拷贝快照
+    for (auto* child : snapshot) {
         // 复核修订（2026-07-31 第七轮复核）：正在销毁的子视口若是 activeViewport，
         // 须先置 null——否则销毁后 owner 继续运行（多窗口场景）时，键盘 fallback
         // （activeViewport ? activeViewport : instance，见 ProcessEvents）会解引用
@@ -1792,6 +1795,18 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
         // 只有 owner 才 shutdown BackendManager
         instance->backendManager->shutdown();
         delete instance->backendManager;
+    }
+
+    // 复核修订（2026-07-31 第九轮）：从 owner 摘除 + 清 activeViewport 引用——
+    // 直接对子视口调 DestroyInstance（5.13.7 测试正如此）时，级联循环不会执行，
+    // 若不摘除：owner->children 残留悬垂指针（后续 DestroyInstance(owner) 级联遍历 UAF）、
+    // owner->activeViewport 残留悬垂（后续键盘事件解引用 UAF）
+    if (instance->owner) {
+        if (instance->owner->activeViewport == instance) {
+            instance->owner->activeViewport = nullptr;
+        }
+        auto& cs = instance->owner->children;
+        cs.erase(std::remove(cs.begin(), cs.end(), instance), cs.end());
     }
 
     delete instance;
@@ -1956,9 +1971,10 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport（nullptr 回退 owner，复核修订 2026-07-31 第六轮） | 中 |
 | 25 | `src/UICornerstoneAPI.cpp` | `Render` 增加视口裁剪：`pushClipRect`/`popClipRect` 成对（`RenderDevice.h:27-28`，同现实现 cpp:343-345，见 §5.13.5） | 小 |
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
-| 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`；在键盘事件进入视口前预拦截 | 中 |
+| 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`（内部经 `FocusManager::getVisibleBoundaryCount()`，见 26c——m_boundaries 为私有成员，C ABI 层不可直接访问，复核修订 2026-07-31 第八轮）；在键盘事件进入视口前预拦截 | 中 |
+| 26c | `include/FocusManager.h` / `src/FocusManager.cpp` | 新增 `int getVisibleBoundaryCount() const`（统计 `m_boundaries` 中 `isVisible()` 项数，m_boundaries 是私有成员 FocusManager.h:40，现有仅 registerBoundary/unregisterBoundary :27/29） | 小 |
 | 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；兜底点击（未命中子视口）清 `activeViewport` 置 nullptr + 清旧视口焦点；键盘 fallback 在 `activeViewport==nullptr` 时退回 owner bench；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五/六/七轮） | 小 |
-| 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序 + 键盘导航测试（K1-K7） | 中 |
+| 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序（含直接销毁子视口后 owner 继续运行的悬垂防护，复核修订 2026-07-31 第九轮）+ 键盘导航测试（K1-K8） | 中 |
 | 28 | `include/MainWindow.h` | 移除 `m_focusManager` 值成员；移除 `getFocusManager()` | 小 |
 | 29 | `include/UIContext.h` | 新增 `FocusManager* focusManager` 指针成员（自 MainWindow 的 `unique_ptr` 移入） | 小 |
 | 30 | `include/ControlBase.h` | `GET_FOCUSMANAGER` 宏改为 `(CONTEXT->focusManager)` | 小 |

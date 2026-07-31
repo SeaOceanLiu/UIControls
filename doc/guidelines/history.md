@@ -1951,3 +1951,25 @@ Done, 180 frames                        # 帧循环正常完成
 **已核验排除**：DestroyInstance 中 destroying 短路仅保护销毁期间的重入，不解决销毁后的悬空访问（故遗漏 1 必须修复）；递归销毁循环中 owner->children 不被修改（child 销毁不改 owner 容器），`children.clear()` 前迭代安全；nextViewport 的 `if (!owner->activeViewport) return false;` 防御不可达但无害。
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-07-31: 第九轮复核（eighth audit pass 之复核 + 深入遗漏排查，修订 4 处）
+
+**背景**：辅设计 Session 提交 eb52ffe（eighth audit pass，4 处修正：mermaid null 分支同步、countVisibleBoundaries 访问器缺口、DestroyInstance 级联销毁 activeViewport 置 null、K8 测试桩）。本 Session 逐条核实源码事实（全部通过），并沿"直接销毁子视口"路径深入分析，发现 1 处严重悬垂遗漏 + 3 处同步遗漏。
+
+**辅设计 Session 修正核实（4 处全部通过）**：
+
+- mermaid 流程图同步（D 条件补"activeViewport 非空 且"、E1 条件 clearFocus、E2 cur 为 null 取 front/back）——与规则文本一致
+- countVisibleBoundaries 访问器缺口：`m_boundaries` 确为 FocusManager 私有成员（FocusManager.h:40），现有仅 registerBoundary/unregisterBoundary（:27/29）无 getter，`getCurrentFocused()`（:25）是唯一访问器——C ABI 层直接遍历不成立，须新增 `getVisibleBoundaryCount() const` 或友元
+- DestroyInstance 级联销毁循环内 `activeViewport == child` 置 null——正确（销毁后 owner 继续运行时键盘 fallback 不再解引用已 delete 对象）
+- K8 测试桩（owner 兜底点击 → activeViewport==nullptr、旧焦点已清、Tab 走 owner 树、Ctrl+Tab 从 front() 切入）——与第六/七轮行为一致
+
+**本次新发现并修订（4 处）**：
+
+1. **直接销毁子视口路径悬垂（严重）**：级联销毁（owner 循环）已由第八轮修复，但**直接对子视口调 DestroyInstance**（5.13.7 测试第一段正是 `DestroyInstance(vp1); DestroyInstance(vp2); DestroyInstance(win)`）时：vp1/vp2 销毁后**不摘除 owner->children**（残留悬垂指针）→ 后续 `DestroyInstance(win)` 级联遍历时对已 delete 的 vp1 调 DestroyInstance → 读 `vp1->destroying` UAF；且 owner->activeViewport 若指向 vp1 同样悬垂（第八轮置 null 只在级联循环内）。已修：DestroyInstance 尾部 `if (instance->owner)` 块——activeViewport 置 null + `cs.erase(std::remove(...))` 摘除
+2. **级联销毁迭代器失效**：补摘除后，owner 级联 range-for 在迭代中 erase 子项 → 迭代器失效。已改为先拷贝 `auto snapshot = instance->children` 再遍历（子销毁时摘除安全）
+3. **§6 清单未同步**：26a 补 `getVisibleBoundaryCount()` 调用说明（m_boundaries 私有）；新增 26c 实现项（FocusManager.h/.cpp 新增 `int getVisibleBoundaryCount() const`）；27 项 K1-K7 → K1-K8 + 销毁顺序补悬垂防护验证
+4. **生命周期管理段注记**：文字约定"销毁时摘除"现已落地伪代码，补注记明确覆盖直接销毁路径
+
+**已核验排除**：快照拷贝后 `children.clear()` 保留（快照遍历销毁全部子视口，clear 确保容器清空，二者不冲突）；摘除在 `delete instance` 之前（用 instance->owner 指针，owner 此时必然存活——子销毁时 owner 未销毁；owner 自身销毁时 instance->owner 为 null 跳过）。
+
+**未提交**（用户指示更新但不提交）。
