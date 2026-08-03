@@ -6,13 +6,15 @@
 #include <unordered_map>
 #include <string>
 #include "SColor.h"
-#include "MainWindow.h"
+#include "ConstDef.h"
+#include "UIContext.h"
 #include "Utility.h"
 #include "EventQueue.h"
 #include "TextRenderer.h"
 #include "InputBackend.h"
 #include "ResourceProvider.h"
 #include "FocusManager.h"
+#include "RenderDevice.h"
 
 using namespace std;
 
@@ -135,12 +137,25 @@ public:
 class Control{
 protected:
     // 事件队列
-    EventQueue *m_eventQueueInstance;
+    EventQueue *m_eventQueueInstance = nullptr;
+    // 所属实例上下文（多实例：每个控件指向自己的 UIContext）
+    UIContext* m_context = nullptr;
 
     virtual void recreate() = 0; //重新创建控件，主要用于在一些属性改变时需要重新创建控件的情况，比如大小改变，位置改变等
 
 public:
+    explicit Control(UIContext* ctx = nullptr) : m_context(ctx) {}
     virtual ~Control() = default;
+
+    UIContext* getContext() const { return m_context; }
+    // 同步 m_eventQueueInstance：事件投递必须指向所属实例的队列。
+    // 多实例两阶段创建：控件先以 null context 创建（字体等延迟加载），
+    // 挂入控件树（addControl/setContext）后由 ControlImpl::setContext
+    // 传播 context 并触发 recreate() 重建资源。
+    virtual void setContext(UIContext* ctx) {
+        m_context = ctx;
+        m_eventQueueInstance = ctx ? ctx->eventQueue : nullptr;
+    }
 
     // === Focus API ===
     virtual void setFocused(bool focused, bool byKeyboard = false) = 0;
@@ -338,6 +353,8 @@ public:
     ControlImpl(const ControlImpl& other);
     ~ControlImpl();
     void create(void) override;  // 初始创建控件，缺省情况下只有初始创建控件后，才能显示和处理事件
+    void setContext(UIContext* ctx) override;  // 传播 context 至子树并触发延迟重建
+    bool isCreated(void) const { return m_isCreated; }
 
     // === Focus API ===
     void setFocused(bool focused, bool byKeyboard = false) override;
@@ -512,8 +529,11 @@ public:
 /*主界面需要继承该类，以支持事件列队的处理入口eventLoopEntry*/
 class TopControl: virtual public Control{
 public:
-    TopControl(void){m_eventQueueInstance = EventQueue::getInstance();}
+    TopControl(UIContext* ctx = nullptr): Control(ctx){
+        m_eventQueueInstance = ctx ? ctx->eventQueue : nullptr;
+    }
     void eventLoopEntry(void){
+        if (!m_eventQueueInstance) return;
         int evCount = 0;
         shared_ptr<Event> eventInQueue = m_eventQueueInstance->popEventFromQueue();
         while(eventInQueue != nullptr){
@@ -528,4 +548,20 @@ public:
         }
     }
 };
+
+// ============================================================
+// 上下文宏：在 Control 派生类成员函数内展开（引用 m_context）。
+// null 保护：控件在挂入控件树（addControl/setContext）之前 m_context
+// 可能为 nullptr，宏返回 nullptr 而非解引用崩溃。
+// 注意：不能命名为 CONTEXT——winnt.h 在 AMD64 下定义 #define CONTEXT
+// CONTEXT_AMD64，同名宏会导致 Windows SDK 头文件解析崩溃。
+// ============================================================
+#define GET_CONTEXT (m_context)
+#define BENCH (GET_CONTEXT ? (GET_CONTEXT)->bench : nullptr)
+#define MAINWIN (GET_CONTEXT ? (GET_CONTEXT)->mainWindow : nullptr)
+#define GET_RENDERDEVICE (GET_CONTEXT ? (GET_CONTEXT)->renderDevice : nullptr)
+#define GET_TEXTRENDERER (GET_CONTEXT ? (GET_CONTEXT)->textRenderer : nullptr)
+#define GET_INPUTBACKEND (GET_CONTEXT ? (GET_CONTEXT)->inputBackend : nullptr)
+#define GET_RESOURCEPROVIDER (GET_CONTEXT ? (GET_CONTEXT)->resourceProvider : nullptr)
+#define GET_FOCUSMANAGER (GET_CONTEXT ? (GET_CONTEXT)->focusManager : nullptr)
 #endif  // ControlBaseH

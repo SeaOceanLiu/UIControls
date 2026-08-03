@@ -9,6 +9,7 @@
 #include "Button.h"
 #include "GraphTool.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -151,6 +152,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    EditBoxApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<EditBoxApp>(argc, argv);
 }

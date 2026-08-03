@@ -5,6 +5,38 @@
 #include "PlatformUtils.h"
 
 // ============================================================
+// MainWindow
+// ============================================================
+MainWindow::MainWindow(UIContext* ctx):
+    m_context(ctx),
+    m_resourceProvider(ResourceProvider::createFilesystem(
+        (ctx && !ctx->resourceRoot.empty()) ? ctx->resourceRoot : ConstDef::pathPrefix.string())),
+    m_size({INITIAL_WIDTH, INITIAL_HEIGHT}),
+    m_pos({INITIAL_POSX, INITIAL_POSY}),
+    m_displayWidth(0),
+    m_displayHeight(0),
+    m_quitRequested(false),
+    m_nextTick(0),
+    m_nextRepeatTick(0),
+    m_lastAction(nullptr)
+{
+    Window* w = getWindow();
+    if (w) {
+        m_size = w->getSize();
+        m_pos = w->getPosition();
+        m_displayWidth = w->getDisplayWidth();
+        m_displayHeight = w->getDisplayHeight();
+    }
+}
+
+MainWindow::~MainWindow() = default;
+
+void MainWindow::setTitle(const std::string& title) {
+    Window* w = getWindow();
+    if (w) w->setTitle(title);
+}
+
+// ============================================================
 // Mode 1: Owned loop — delegates to the tick-based API below
 // ============================================================
 int MainWindow::run(AppCallbacks* app) {
@@ -30,8 +62,8 @@ bool MainWindow::init(AppCallbacks* app) {
 }
 
 bool MainWindow::processEvents(AppCallbacks* app) {
-    auto* backend = BackendManager::instance();
-    auto* inputBackend = backend->inputBackend();
+    if (!m_context || !m_context->inputBackend) return true;
+    auto* inputBackend = m_context->inputBackend;
     inputBackend->newFrame();
 
     Event event;
@@ -50,7 +82,7 @@ bool MainWindow::processEvents(AppCallbacks* app) {
                 m_pendingResizeH = h;
                 m_lastResizeArrival = Platform::GetTicks();
                 onWindowResized(w, h);
-                BackendManager::instance()->window()->onResized(w, h);
+                if (m_context->window) m_context->window->onResized(w, h);
                 break;
             }
             case EventType::WindowMoved:
@@ -60,7 +92,7 @@ bool MainWindow::processEvents(AppCallbacks* app) {
                 {
                     // Dispatch all events (new-style and old-style) to controls
                     auto sharedEvent = make_shared<Event>(event);
-                    BENCH->inputControl(sharedEvent);
+                    m_context->bench->inputControl(sharedEvent);
                 }
                 // Notify app of events via new-style API
                 app->onEvent(event);
@@ -83,7 +115,7 @@ void MainWindow::update(AppCallbacks* app) {
     uint64_t now = Platform::GetTicks();
     if (m_pendingResizeW >= 0 && m_pendingResizeH >= 0 &&
         now - m_lastResizeArrival >= 200) {
-        BENCH->resized({0, 0, (float)m_pendingResizeW, (float)m_pendingResizeH});
+        m_context->bench->resized({0, 0, (float)m_pendingResizeW, (float)m_pendingResizeH});
         m_pendingResizeW = -1;
         m_pendingResizeH = -1;
     }
@@ -92,7 +124,7 @@ void MainWindow::update(AppCallbacks* app) {
 
 void MainWindow::render(AppCallbacks* app) {
     app->onRender();
-    BackendManager::instance()->renderDevice()->present();
+    if (m_context && m_context->renderDevice) m_context->renderDevice->present();
 }
 
 void MainWindow::shutdown(AppCallbacks* app) {

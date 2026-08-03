@@ -1,4 +1,4 @@
-// =========================================================================
+﻿// =========================================================================
 // test_splitter_cabi.cpp -- single fromsource C ABI test for Splitter (all backends)
 // Backend name provided via -DBACKEND_SHORT_NAME / -DBACKEND_DISPLAY_NAME
 // =========================================================================
@@ -15,22 +15,22 @@
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 // ===== C ABI function pointer types =====
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef int   (*UILoadLayoutFn)(const char*);
-typedef void* (*UIFindControlFn)(const char*);
-typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef int  (*UISetStringFn)(void*, const char*, const char*);
-typedef int  (*UIGetFloatFn)(void*, const char*, float*);
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef void  (*UIDestroyInstanceFn)(UIInstance);
+typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
+typedef void* (*UIFindControlFn)(UIInstance,const char*);
+typedef void  (*UIRegisterActionFn)(UIInstance,const char*,void(*)(void*,void*),void*);
+typedef int  (*UISetStringFn)(UIInstance,void*,const char*,const char*);
+typedef int  (*UIGetFloatFn)(UIInstance,void*,const char*,float*);
 
-static UIInitFn             uiInit                 = nullptr;
+static UICreateInstanceFn   uiCreateInstance       = nullptr;
 static UISetViewportFn      uiSetViewport          = nullptr;
 static UIProcessEventsFn    uiProcessEvents        = nullptr;
 static UIUpdateFn           uiUpdate               = nullptr;
@@ -38,24 +38,25 @@ static UIClearFn            uiClear                = nullptr;
 static UIRenderFn           uiRender               = nullptr;
 static UIPresentFn          uiPresent              = nullptr;
 static UIIsQuitFn           uiIsQuitRequested      = nullptr;
-static UIShutdownFn         uiShutdown             = nullptr;
+static UIDestroyInstanceFn  uiDestroyInstance      = nullptr;
 static UILoadLayoutFn       uiLoadLayout           = nullptr;
 static UIFindControlFn      uiFindControl          = nullptr;
 static UIRegisterActionFn   uiRegisterAction       = nullptr;
 static UISetStringFn uiSetString = nullptr;
 static UIGetFloatFn  uiGetFloat  = nullptr;
 
-static HMODULE g_uiDll = nullptr;
+static HMODULE  g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
 
 static char g_ratioInfo[128] = "Ratio: 0.400";
 
 static void onSplitterMoved(void* ctl, void* user) {
     (void)ctl; (void)user;
     float r = 0.0f;
-    uiGetFloat(uiFindControl("mySplitter"), "ratio", &r);
+    uiGetFloat(g_inst, uiFindControl(g_inst, "mySplitter"), "ratio", &r);
     snprintf(g_ratioInfo, sizeof(g_ratioInfo), "Ratio: %.3f", r);
-    void* lbl = uiFindControl("lblStatus");
-    if (lbl) uiSetString(lbl, "caption", g_ratioInfo);
+    void* lbl = uiFindControl(g_inst, "lblStatus");
+    if (lbl) uiSetString(g_inst, lbl, "caption", g_ratioInfo);
     printf("%s\n", g_ratioInfo);
 }
 
@@ -63,7 +64,7 @@ static void loadAllProcs(HMODULE dll) {
 #define RESOLVE(name) \
     *(void**)&ui##name = GetProcAddress(dll, "UICornerstone_" #name)
 
-    RESOLVE(Init);
+    RESOLVE(CreateInstance);
     RESOLVE(SetViewport);
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -71,7 +72,7 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
-    RESOLVE(Shutdown);
+    RESOLVE(DestroyInstance);
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
@@ -88,16 +89,21 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: loaded UICornerstone.dll\n");
 
     loadAllProcs(g_uiDll);
-    if (!uiInit) { printf("FAIL: GetProcAddress(Init)\n"); FreeLibrary(g_uiDll); return 1; }
+    if (!uiCreateInstance) { printf("FAIL: GetProcAddress(CreateInstance)\n"); FreeLibrary(g_uiDll); return 1; }
 
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) { printf("FAIL: GetUIBackendCallbacks\n"); FreeLibrary(g_uiDll); return 1; }
 
-    if (!uiInit(callbacks)) { printf("FAIL: Init\n"); FreeLibrary(g_uiDll); return 1; }
-    uiSetViewport(0, 0, 600, 320);
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_splitter_cabi";
+    cfg.windowWidth = 600;
+    cfg.windowHeight = 320;
+    g_inst = uiCreateInstance(callbacks, &cfg);
+    if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
+    uiSetViewport(g_inst, 0, 0, 600, 320);
     printf("OK: initialized\n");
 
-    uiRegisterAction("onSplitterMoved", onSplitterMoved, nullptr);
+    uiRegisterAction(g_inst, "onSplitterMoved", onSplitterMoved, nullptr);
 
     const char* layoutJson = R"json({
         "version": "1.0",
@@ -182,25 +188,26 @@ static int runTest(const char* shortName, const char* displayName) {
         ]
     })json";
 
-    if (!uiLoadLayout(layoutJson)) { printf("FAIL: LoadLayout\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    if (!uiLoadLayout(g_inst, layoutJson)) { printf("FAIL: LoadLayout\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("OK: layout loaded\n");
 
-    void* sp = uiFindControl("mySplitter");
-    if (!sp) { printf("FAIL: FindControl(mySplitter)\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    void* sp = uiFindControl(g_inst, "mySplitter");
+    if (!sp) { printf("FAIL: FindControl(mySplitter)\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     float r0 = 0.0f;
-    uiGetFloat(sp, "ratio", &r0);
+    uiGetFloat(g_inst, sp, "ratio", &r0);
     printf("OK: Splitter found, initial ratio=%.3f\n", r0);
 
     printf("Frame loop... (interact with the Splitter or close the window)\n");
-    while (!uiIsQuitRequested()) {
-        uiProcessEvents();
-        uiUpdate(1.0 / 60.0);
-        uiClear();
-        uiRender();
-        uiPresent();
+    while (!uiIsQuitRequested(g_inst)) {
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
     }
 
-    uiShutdown();
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
     g_uiDll = nullptr;
     printf("test_splitter_cabi_%s: done\n", shortName);

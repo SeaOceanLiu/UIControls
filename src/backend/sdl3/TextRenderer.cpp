@@ -48,10 +48,12 @@ public:
     }
 
     ~SDL3TextRenderer() override {
-        if (m_textEngine) {
-            TTF_DestroyRendererTextEngine(m_textEngine);
-        }
-        TTF_Quit();
+        // 注意：不调用 TTF_DestroyRendererTextEngine / TTF_Quit。
+        // SDL3_ttf 内部维护全局 text engine 注册表，DLL detach 时会遍历注册表
+        // 递减引用计数；若此处先行销毁 engine，detach 时将解引用已释放内存
+        // （崩溃特征：SDL3_ttf.dll 0xa707 dec [rax+60h]，rax=[rcx+0xD0] 为空）。
+        // 字体对象（TTF_CloseFont）无全局注册表，可在本处显式释放。
+        m_fontCache.clear();
     }
 
     SharedFont loadFont(const std::string& path, int size) override {

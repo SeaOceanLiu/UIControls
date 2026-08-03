@@ -39,6 +39,7 @@ Splitter::~Splitter() {
 
 void Splitter::create() {
     if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
     ControlImpl::create();
     m_focusable = false;  // 强制 FocusManager 重新注册
     setFocusable(true);
@@ -212,7 +213,7 @@ void Splitter::applySplitRatio(float ratio) {
 void Splitter::startDrag(const SPoint& mousePos) {
     m_dragging = true;
     if (!m_dragWatcherRegistered) {
-        EventQueue* eq = EventQueue::getInstance();
+        EventQueue* eq = m_context->eventQueue;
         eq->addBeforeEventHandlingWatcher(EventType::MouseDown, getThis());
         eq->addBeforeEventHandlingWatcher(EventType::MouseMove, getThis());
         eq->addBeforeEventHandlingWatcher(EventType::MouseUp, getThis());

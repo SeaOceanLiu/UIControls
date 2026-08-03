@@ -1,4 +1,4 @@
-#ifndef SliderH
+﻿#ifndef SliderH
 #define SliderH
 
 #include <functional>

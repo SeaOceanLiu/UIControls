@@ -11,8 +11,8 @@
 #include <unordered_set>
 #include "PlatformUtils.h"
 
-LayoutParser::LayoutParser()
-    : m_currentLineNo(0)
+LayoutParser::LayoutParser(DataContext* dataContext)
+    : m_dataContext(dataContext), m_currentLineNo(0)
 {
 }
 
@@ -79,7 +79,6 @@ shared_ptr<Control> LayoutParser::parseLayout(const string& jsonContent) {
             }
         }
     }
-
     return root;
 }
 
@@ -142,7 +141,7 @@ void LayoutParser::clearHandlers() {
 // ==================== 状态管理 ====================
 
 void LayoutParser::clear() {
-    DataContext::instance()->unwatchAll();
+    if (m_dataContext) m_dataContext->unwatchAll();
     m_controlsById.clear();
     m_menuBars.clear();
     m_dialogs.clear();
@@ -672,6 +671,10 @@ shared_ptr<ComboBox> LayoutParser::parseComboBox(const json& j, Control* parent)
 
     if (j.contains("text") && j["text"].is_string()) {
         combo->setText(j["text"].get<string>());
+    }
+
+    if (j.contains("editable") && j["editable"].is_boolean()) {
+        combo->setEditable(j["editable"].get<bool>());
     }
 
     if (j.contains("placeholder") && j["placeholder"].is_string()) {
@@ -1853,6 +1856,12 @@ shared_ptr<Dialog> LayoutParser::parseDialog(const json& j, Control* parent) {
 
     parseChildren(dlg, j);
     dlg->create();
+    // Dialog 默认隐藏：布局加载时不弹出，由事件驱动 open() 挂树显示；
+    // 显式 visible:true 时立即打开（open() 以 getVisible()==false 为前提）
+    dlg->setVisible(false);
+    if (j.value("visible", false)) {
+        dlg->open();
+    }
     return dlg;
 }
 
@@ -2197,11 +2206,11 @@ static void applyBinding(shared_ptr<ControlImpl> ctrl, const string& prop, const
     }
 }
 
-static void bindProperty(shared_ptr<ControlImpl> ctrl, const string& prop, const string& source, const string& mode) {
-    auto ctx = DataContext::instance();
+static void bindProperty(DataContext* dataContext, shared_ptr<ControlImpl> ctrl, const string& prop, const string& source, const string& mode) {
+    if (!dataContext) return;
     weak_ptr<ControlImpl> weakCtrl = ctrl;
     if (mode == "oneWay" || mode == "twoWay") {
-        ctx->watch(source, [weakCtrl, prop](const DataValue& val) {
+        dataContext->watch(source, [weakCtrl, prop](const DataValue& val) {
             auto locked = dynamic_pointer_cast<ControlImpl>(weakCtrl.lock());
             if (locked) applyBinding(locked, prop, val);
         });
@@ -2210,8 +2219,8 @@ static void bindProperty(shared_ptr<ControlImpl> ctrl, const string& prop, const
         if (prop == "text") {
             if (auto eb = dynamic_pointer_cast<EditBox>(ctrl)) {
                 auto s = source;
-                eb->setOnTextChanged([s](shared_ptr<Control>, string text) {
-                    DataContext::instance()->set(s, text);
+                eb->setOnTextChanged([s, dataContext](shared_ptr<Control>, string text) {
+                    dataContext->set(s, text);
                 });
             }
         }
@@ -2219,19 +2228,19 @@ static void bindProperty(shared_ptr<ControlImpl> ctrl, const string& prop, const
             if (auto cb = dynamic_pointer_cast<CheckBox>(ctrl)) {
                 auto s = source;
                 shared_ptr<CheckBox> weakCB = cb;
-                cb->setOnCheckChanged([s, weakCB](shared_ptr<CheckBox>, CheckState, CheckState newState) {
+                cb->setOnCheckChanged([s, dataContext, weakCB](shared_ptr<CheckBox>, CheckState, CheckState newState) {
                     string vs = "Unchecked";
                     if (newState == CheckState::Checked) vs = "Checked";
                     else if (newState == CheckState::Indeterminate) vs = "Indeterminate";
-                    DataContext::instance()->set(s, vs);
+                    dataContext->set(s, vs);
                 });
             }
         }
         if (prop == "value") {
             if (auto sb = dynamic_pointer_cast<ScrollBar>(ctrl)) {
                 auto s = source;
-                sb->setOnPositionChanged([s](shared_ptr<ScrollBar>, float, float newValue, float, float) {
-                    DataContext::instance()->set(s, (double)newValue);
+                sb->setOnPositionChanged([s, dataContext](shared_ptr<ScrollBar>, float, float newValue, float, float) {
+                    dataContext->set(s, (double)newValue);
                 });
             }
         }
@@ -2256,7 +2265,7 @@ void LayoutParser::parseBindings(shared_ptr<ControlImpl> ctrl, const json& j) {
         } else {
             continue;
         }
-        bindProperty(ctrl, prop, source, mode);
+        bindProperty(m_dataContext, ctrl, prop, source, mode);
     }
     popJsonPath();
 }

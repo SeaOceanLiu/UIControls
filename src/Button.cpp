@@ -17,6 +17,24 @@ Button::Button(Control *parent, SRect rect, float xScale, float yScale):
     setFocusable(true);
 }
 
+void Button::create(void){
+    if (m_isCreated) return;
+
+    ControlImpl::create();
+    // 状态 Actor 不在 m_children（setParent 仅挂渲染/事件链），
+    // setContext 的子树传播到达不了它们，这里在 context 就绪后补建
+    auto ensureActor = [this](shared_ptr<Actor>& actor){
+        if (actor != nullptr && !actor->isCreated()){
+            actor->setParent(this);
+            actor->create();
+        }
+    };
+    ensureActor(m_actor);
+    ensureActor(m_hoverActor);
+    ensureActor(m_pressedActor);
+    ensureActor(m_disabledActor);
+}
+
 void Button::update(void){
     if (!getEnable()) return;
 
@@ -191,6 +209,20 @@ void Button::setRect(SRect rect){
     }
     if (m_luotiAni != nullptr){
         m_luotiAni->setRect({0, 0, m_rect.width, m_rect.height});
+    }
+    // 状态 Actor 与按钮同尺寸（拉伸填满按钮），按钮尺寸变化时需同步，
+    // 否则图片停留在旧尺寸矩形上（拉伸失效/错位）
+    if (m_actor != nullptr){
+        m_actor->setRect({0, 0, m_rect.width, m_rect.height});
+    }
+    if (m_hoverActor != nullptr){
+        m_hoverActor->setRect({0, 0, m_rect.width, m_rect.height});
+    }
+    if (m_pressedActor != nullptr){
+        m_pressedActor->setRect({0, 0, m_rect.width, m_rect.height});
+    }
+    if (m_disabledActor != nullptr){
+        m_disabledActor->setRect({0, 0, m_rect.width, m_rect.height});
     }
 }
 

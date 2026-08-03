@@ -11,6 +11,7 @@
 #include <memory>
 #include <filesystem>
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -55,6 +56,8 @@ void onMenuAbout(shared_ptr<Control> c) { TestUtil::log("Menu: About"); }
 void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("testLayoutAdvancedInitialize");
 
+    // 全局解析器在实例创建前构造，这里延迟绑定数据上下文
+    g_parser.setDataContext(g_uiInstance ? g_uiInstance->dataContext : nullptr);
     g_parser.registerHandler("onScaleTypeBtnClick", onScaleTypeBtnClick);
     g_parser.registerHandler("onMenuNew", onMenuNew);
     g_parser.registerHandler("onMenuOpen", onMenuOpen);
@@ -70,13 +73,13 @@ void testBenchInitialize(shared_ptr<Bench>) {
         TestUtil::log("[Component] FramedGreeter button clicked! (nested component test)");
     });
     g_parser.registerHandler("onDecProgress", [](shared_ptr<Control>) {
-        auto ctx = DataContext::instance();
+        auto ctx = g_uiInstance->dataContext;
         double v = ctx->get("progressValue").asDouble() - 10.0;
         if (v < 0) v = 100.0;
         ctx->set("progressValue", v);
     });
     g_parser.registerHandler("onIncProgress", [](shared_ptr<Control>) {
-        auto ctx = DataContext::instance();
+        auto ctx = g_uiInstance->dataContext;
         double v = ctx->get("progressValue").asDouble() + 10.0;
         if (v > 100) v = 0.0;
         ctx->set("progressValue", v);
@@ -109,7 +112,7 @@ void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("[HotReload] Watching: %s", g_layoutPath.filename().string().c_str());
 
     // Data binding: set initial values
-    auto ctx = DataContext::instance();
+    auto ctx = g_uiInstance->dataContext;
     ctx->set("sharedText", string("Hello from DataContext!"));
     ctx->set("progressValue", 42.0);
 }
@@ -141,6 +144,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    LayoutAdvancedApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<LayoutAdvancedApp, 1400, 900, UIWindowFlags::Resizable>(argc, argv);
 }

@@ -50,7 +50,20 @@ Actor& Actor::operator=(const Actor& other) {
     return *this;
 }
 
+void Actor::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟加载
+    if (!m_resourceId.empty()) {
+        loadFromResource(m_resourceId);
+    } else if (!m_filePath.empty()) {
+        loadFromFile(m_filePath);
+    }
+    ControlImpl::create();
+}
+
 void Actor::loadFromFile(fs::path filePath) {
+    m_filePath = filePath;
+    if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后由 create() 加载
     if (filePath.is_relative()) {
         filePath = fs::path(Platform::GetBasePath()) / filePath;
     }
@@ -83,6 +96,8 @@ void Actor::loadFromFile(fs::path filePath) {
 }
 
 void Actor::loadFromResource(string resourceId) {
+    m_resourceId = resourceId;
+    if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后由 create() 加载
     ResourceProvider* provider = getResourceProvider();
     if (provider == nullptr) {
         Platform::Log("Actor::loadFromResource: No resource provider\n");
@@ -110,7 +125,8 @@ void Actor::loadTextureFromSurface(Surface* surface) {
     if (!m_matchParentRect) {
         m_rect.width = (float)surface->width();
         m_rect.height = (float)surface->height();
-    } else {
+    } else if (getParent() != nullptr) {
+        // create() 时可能尚未挂树（setParent 尚未调用），尺寸由 setParent 修正
         m_rect.width = getParent()->getRect().width;
         m_rect.height = getParent()->getRect().height;
     }
@@ -125,7 +141,7 @@ void Actor::loadTextureFromSurface(Surface* surface) {
 void Actor::setParent(Control *parent){
     Material::setParent(parent);
 
-    if (m_matchParentRect) {
+    if (m_matchParentRect && getParent() != nullptr) {
         m_rect.width = getParent()->getRect().width;
         m_rect.height = getParent()->getRect().height;
 

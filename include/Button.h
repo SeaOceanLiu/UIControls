@@ -34,6 +34,7 @@ public:
     Button(Control *parent, SRect rect, float xScale=1.0f, float yScale=1.0f);
     void update(void) override;
     void draw(void) override;
+    void create(void) override;
     bool handleEvent(shared_ptr<Event> event) override;
     void setRect(SRect rect) override;
     // 鼠标进入/退出处理

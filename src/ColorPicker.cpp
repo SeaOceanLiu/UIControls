@@ -79,6 +79,9 @@ ColorPicker::~ColorPicker() {
 }
 
 void ColorPicker::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
+
     Panel::create();
     setTransparent(true);
     setBorderVisible(false);
@@ -93,6 +96,9 @@ void ColorPicker::create() {
     m_dialog->setTextRenderer(getTextRenderer());
     m_dialog->setResourceProvider(getResourceProvider());
     m_dialog->setInputBackend(getInputBackend());
+    // 浮层继承宿主实例上下文：Dialog 以 nullptr 构造，无 setContext 传播路径，
+    // 必须在宿主挂树后（此处 GET_CONTEXT 就绪）显式补建
+    m_dialog->setContext(GET_CONTEXT);
     m_dialog->setOnConfirm([this](shared_ptr<ConfirmPopup>) {
         onOK();
     });
@@ -210,9 +216,10 @@ SRect ColorPicker::computePopupRect() {
     float ph = m_popupHeight;
     float renderedW = pw * sx;
     float renderedH = ph * sy;
-    SSize ws = MAINWIN->getWindowSize();
-    float screenW = (float)ws.width;
-    float screenH = (float)ws.height;
+    // 视口相对定位（多视口场景弹层按视口区域钳制）
+    SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
+    float screenW = vp.width;
+    float screenH = vp.height;
 
     // 1) Try below
     float by = dr.bottom() + 2.0f;

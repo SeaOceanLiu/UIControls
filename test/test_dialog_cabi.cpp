@@ -14,50 +14,51 @@
 
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
-// ===== C ABI function pointer types =====
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef int   (*UILoadLayoutFn)(const char*);
-typedef void* (*UIFindControlFn)(const char*);
-typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef int   (*UISetStringFn)(void*, const char*, const char*);
-typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
-typedef int   (*UISetColorFn)(void*, const char*, UIColor);
-typedef int   (*UISetBoolFn)(void*, const char*, int);
-typedef int   (*UISetFloatFn)(void*, const char*, float);
-typedef int   (*UIGetFloatFn)(void*, const char*, float*);
-typedef void  (*UISetRectFn)(void*, float, float, float, float);
-typedef const char*   (*UIGetControlIdFn)(void*);
+// ===== C ABI function pointer types（当前 API：多实例，函数均带 UIInstance 参数）=====
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void       (*UIDestroyInstanceFn)(UIInstance);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
+typedef void* (*UIFindControlFn)(UIInstance,const char*);
+typedef void  (*UIRegisterActionFn)(UIInstance,const char*,void(*)(void*,void*),void*);
+typedef int   (*UISetStringFn)(UIInstance,void*,const char*,const char*);
+typedef int   (*UIGetStringFn)(UIInstance,void*,const char*,char*,int);
+typedef int   (*UISetColorFn)(UIInstance,void*,const char*,UIColor);
+typedef int   (*UISetBoolFn)(UIInstance,void*,const char*,int);
+typedef int   (*UISetFloatFn)(UIInstance,void*,const char*,float);
+typedef int   (*UIGetFloatFn)(UIInstance,void*,const char*,float*);
+typedef void  (*UISetRectFn)(UIInstance,void*,float,float,float,float);
+typedef const char*   (*UIGetControlIdFn)(UIInstance,void*);
 
-static UIInitFn             uiInit                 = nullptr;
-static UISetViewportFn      uiSetViewport          = nullptr;
-static UIProcessEventsFn    uiProcessEvents        = nullptr;
-static UIUpdateFn           uiUpdate               = nullptr;
-static UIClearFn            uiClear                = nullptr;
-static UIRenderFn           uiRender               = nullptr;
-static UIPresentFn          uiPresent              = nullptr;
-static UIIsQuitFn           uiIsQuitRequested      = nullptr;
-static UIShutdownFn         uiShutdown             = nullptr;
-static UILoadLayoutFn       uiLoadLayout           = nullptr;
-static UIFindControlFn      uiFindControl          = nullptr;
-static UIRegisterActionFn   uiRegisterAction       = nullptr;
-static UISetStringFn        uiSetString            = nullptr;
-static UIGetStringFn        uiGetString            = nullptr;
-static UISetColorFn         uiSetColor             = nullptr;
-static UISetBoolFn          uiSetBool              = nullptr;
-static UISetFloatFn         uiSetFloat             = nullptr;
-static UIGetFloatFn         uiGetFloat             = nullptr;
-static UISetRectFn          uiSetRect              = nullptr;
-static UIGetControlIdFn         uiGetControlId         = nullptr;
+static UICreateInstanceFn  uiCreateInstance       = nullptr;
+static UIDestroyInstanceFn uiDestroyInstance      = nullptr;
+static UISetViewportFn     uiSetViewport          = nullptr;
+static UIProcessEventsFn   uiProcessEvents        = nullptr;
+static UIUpdateFn          uiUpdate               = nullptr;
+static UIClearFn           uiClear                = nullptr;
+static UIRenderFn          uiRender               = nullptr;
+static UIPresentFn         uiPresent              = nullptr;
+static UIIsQuitFn          uiIsQuitRequested      = nullptr;
+static UILoadLayoutFn      uiLoadLayout           = nullptr;
+static UIFindControlFn     uiFindControl          = nullptr;
+static UIRegisterActionFn  uiRegisterAction       = nullptr;
+static UISetStringFn       uiSetString            = nullptr;
+static UIGetStringFn       uiGetString            = nullptr;
+static UISetColorFn        uiSetColor             = nullptr;
+static UISetBoolFn         uiSetBool              = nullptr;
+static UISetFloatFn        uiSetFloat             = nullptr;
+static UIGetFloatFn        uiGetFloat             = nullptr;
+static UISetRectFn         uiSetRect              = nullptr;
+static UIGetControlIdFn    uiGetControlId         = nullptr;
 
 static HMODULE g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
 
 // ===== 当前颜色状态 =====
 static int g_r = 255, g_g = 102, g_b = 0, g_a = 255;
@@ -76,18 +77,18 @@ static const uint32_t kPresetColors[] = {
 
 // ===== 工具函数：设置色块颜色 =====
 static void setSwatchColor(const char* swatchId, int r, int g, int b, int a = 255) {
-    void* sw = uiFindControl(swatchId);
-    if (sw) uiSetColor(sw, "background", UIColor{(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a});
+    void* sw = uiFindControl(g_inst, swatchId);
+    if (sw) uiSetColor(g_inst, sw, "background", UIColor{(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a});
 }
 
 // ===== 更新 hex 输入框文本 =====
 static void updateHexInput(int r, int g, int b, int a) {
-    void* hexEb = uiFindControl("hexInput");
+    void* hexEb = uiFindControl(g_inst, "hexInput");
     if (!hexEb) return;
     char buf[16];
     snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", r, g, b, a);
     g_updatingHex = true;
-    uiSetString(hexEb, "text", buf);
+    uiSetString(g_inst, hexEb, "text", buf);
     g_updatingHex = false;
 }
 
@@ -104,15 +105,15 @@ static void setColorFromPreset(uint32_t color) {
     g_g = (int)((color >> 8) & 0xFF);
     g_b = (int)(color & 0xFF);
     g_a = 255;
-    uiSetFloat(uiFindControl("rSlider"), "value", (float)g_r);
-    uiSetFloat(uiFindControl("gSlider"), "value", (float)g_g);
-    uiSetFloat(uiFindControl("bSlider"), "value", (float)g_b);
-    uiSetFloat(uiFindControl("aSlider"), "value", (float)g_a);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "rSlider"), "value", (float)g_r);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "gSlider"), "value", (float)g_g);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "bSlider"), "value", (float)g_b);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "aSlider"), "value", (float)g_a);
     syncColorToAll(g_r, g_g, g_b, g_a);
 }
 
 static int presetIndexFromId(void* ctl) {
-    const char* id = uiGetControlId(ctl);
+    const char* id = uiGetControlId(g_inst, ctl);
     if (!id || id[0] == '\0') return -1;
     if (strncmp(id, "cp_", 3) != 0) return -1;
     int idx = atoi(id + 3);
@@ -128,16 +129,16 @@ static void onPreset(void* ctl, void* user) {
 // ===== 滑块变化 → 同步所有 UI =====
 static void onColorChange(void* ctl, void* user) {
     (void)ctl; (void)user;
-    void* rS = uiFindControl("rSlider");
-    void* gS = uiFindControl("gSlider");
-    void* bS = uiFindControl("bSlider");
-    void* aS = uiFindControl("aSlider");
+    void* rS = uiFindControl(g_inst, "rSlider");
+    void* gS = uiFindControl(g_inst, "gSlider");
+    void* bS = uiFindControl(g_inst, "bSlider");
+    void* aS = uiFindControl(g_inst, "aSlider");
     if (!rS || !gS || !bS || !aS) return;
     float rv, gv, bv, av;
-    uiGetFloat(rS, "value", &rv);
-    uiGetFloat(gS, "value", &gv);
-    uiGetFloat(bS, "value", &bv);
-    uiGetFloat(aS, "value", &av);
+    uiGetFloat(g_inst, rS, "value", &rv);
+    uiGetFloat(g_inst, gS, "value", &gv);
+    uiGetFloat(g_inst, bS, "value", &bv);
+    uiGetFloat(g_inst, aS, "value", &av);
     int r = (int)rv, g = (int)gv, b = (int)bv, a = (int)av;
     setSwatchColor("dlgSwatch", r, g, b);
     setSwatchColor("btnSwatch", r, g, b);
@@ -147,22 +148,22 @@ static void onColorChange(void* ctl, void* user) {
 // ===== Dialog 确定 → 读取滑块值提交 globals + 主界面 Hex 标签 =====
 static void onColorConfirmed(void* ctl, void* user) {
     (void)ctl; (void)user;
-    void* rS = uiFindControl("rSlider");
-    void* gS = uiFindControl("gSlider");
-    void* bS = uiFindControl("bSlider");
-    void* aS = uiFindControl("aSlider");
+    void* rS = uiFindControl(g_inst, "rSlider");
+    void* gS = uiFindControl(g_inst, "gSlider");
+    void* bS = uiFindControl(g_inst, "bSlider");
+    void* aS = uiFindControl(g_inst, "aSlider");
     if (!rS || !gS || !bS || !aS) return;
     float rv, gv, bv, av;
-    uiGetFloat(rS, "value", &rv);
-    uiGetFloat(gS, "value", &gv);
-    uiGetFloat(bS, "value", &bv);
-    uiGetFloat(aS, "value", &av);
+    uiGetFloat(g_inst, rS, "value", &rv);
+    uiGetFloat(g_inst, gS, "value", &gv);
+    uiGetFloat(g_inst, bS, "value", &bv);
+    uiGetFloat(g_inst, aS, "value", &av);
     g_r = (int)rv; g_g = (int)gv; g_b = (int)bv; g_a = (int)av;
     g_savedR = g_r; g_savedG = g_g; g_savedB = g_b; g_savedA = g_a;
     char buf[32];
     snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", g_r, g_g, g_b, g_a);
-    void* lbl = uiFindControl("lblColor");
-    if (lbl) uiSetString(lbl, "text", buf);
+    void* lbl = uiFindControl(g_inst, "lblColor");
+    if (lbl) uiSetString(g_inst, lbl, "caption", buf);
 }
 
 // ===== 解析 Hex 字符串 → 更新滑块 + swatch =====
@@ -178,10 +179,10 @@ static void parseHexAndApply(const char* hex) {
     }
     if (r<0||g<0||b<0) return;
     g_r = r; g_g = g; g_b = b; g_a = a;
-    uiSetFloat(uiFindControl("rSlider"), "value", (float)r);
-    uiSetFloat(uiFindControl("gSlider"), "value", (float)g);
-    uiSetFloat(uiFindControl("bSlider"), "value", (float)b);
-    uiSetFloat(uiFindControl("aSlider"), "value", (float)a);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "rSlider"), "value", (float)r);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "gSlider"), "value", (float)g);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "bSlider"), "value", (float)b);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "aSlider"), "value", (float)a);
     syncColorToAll(r, g, b, a);
 }
 
@@ -189,7 +190,7 @@ static void onHexChanged(void* ctl, void* user) {
     (void)ctl; (void)user;
     if (g_updatingHex) return;
     char textBuf[256] = "";
-    uiGetString(ctl, "text", textBuf, sizeof(textBuf));
+    uiGetString(g_inst, ctl, "text", textBuf, sizeof(textBuf));
     const char* text = textBuf;
     if (text) parseHexAndApply(text);
 }
@@ -197,15 +198,15 @@ static void onHexChanged(void* ctl, void* user) {
 // ===== 打开 Dialog → 保存当前色 + 同步控件 + 锚定 =====
 static void showColorDlg(void*, void*) {
     g_savedR = g_r; g_savedG = g_g; g_savedB = g_b; g_savedA = g_a;
-    uiSetFloat(uiFindControl("rSlider"), "value", (float)g_r);
-    uiSetFloat(uiFindControl("gSlider"), "value", (float)g_g);
-    uiSetFloat(uiFindControl("bSlider"), "value", (float)g_b);
-    uiSetFloat(uiFindControl("aSlider"), "value", (float)g_a);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "rSlider"), "value", (float)g_r);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "gSlider"), "value", (float)g_g);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "bSlider"), "value", (float)g_b);
+    uiSetFloat(g_inst, uiFindControl(g_inst, "aSlider"), "value", (float)g_a);
     syncColorToAll(g_r, g_g, g_b, g_a);
-    void* dlg = uiFindControl("colorDlg");
+    void* dlg = uiFindControl(g_inst, "colorDlg");
     if (!dlg) return;
-    uiSetRect(dlg, 100, 30, 296, 440);
-    uiSetBool(dlg, "visible", 1);
+    uiSetRect(g_inst, dlg, 100, 30, 296, 440);
+    uiSetBool(g_inst, dlg, "visible", 1);
 }
 
 static void restoreFromSaved() {
@@ -213,8 +214,8 @@ static void restoreFromSaved() {
     setSwatchColor("btnSwatch", g_r, g_g, g_b, g_a);
     char buf[32];
     snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", g_r, g_g, g_b, g_a);
-    void* lbl = uiFindControl("lblColor");
-    if (lbl) uiSetString(lbl, "text", buf);
+    void* lbl = uiFindControl(g_inst, "lblColor");
+    if (lbl) uiSetString(g_inst, lbl, "caption", buf);
 }
 
 static void onColorCancelled(void*, void*) { restoreFromSaved(); }
@@ -224,7 +225,7 @@ static void loadAllProcs(HMODULE dll) {
 #define RESOLVE(name) \
     *(void**)&ui##name = GetProcAddress(dll, "UICornerstone_" #name)
 
-    RESOLVE(Init);
+    RESOLVE(CreateInstance);
     RESOLVE(SetViewport);
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -232,7 +233,7 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
-    RESOLVE(Shutdown);
+    RESOLVE(DestroyInstance);
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
@@ -255,22 +256,27 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: loaded UICornerstone.dll\n");
 
     loadAllProcs(g_uiDll);
-    if (!uiInit) { printf("FAIL: GetProcAddress(Init)\n"); FreeLibrary(g_uiDll); return 1; }
+    if (!uiCreateInstance) { printf("FAIL: GetProcAddress(CreateInstance)\n"); FreeLibrary(g_uiDll); return 1; }
 
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) { printf("FAIL: GetUIBackendCallbacks\n"); FreeLibrary(g_uiDll); return 1; }
 
-    if (!uiInit(callbacks)) { printf("FAIL: Init\n"); FreeLibrary(g_uiDll); return 1; }
-    uiSetViewport(0, 0, 800, 480);
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_dialog_cabi";
+    cfg.windowWidth = 800;
+    cfg.windowHeight = 480;
+    g_inst = uiCreateInstance(callbacks, &cfg);
+    if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
+    uiSetViewport(g_inst, 0, 0, 800, 480);
     printf("OK: initialized\n");
 
-    uiRegisterAction("showColorDlg",     showColorDlg,     nullptr);
-    uiRegisterAction("onColorChange",    onColorChange,    nullptr);
-    uiRegisterAction("onColorConfirmed", onColorConfirmed, nullptr);
-    uiRegisterAction("onColorCancelled", onColorCancelled, nullptr);
-    uiRegisterAction("onColorClose",     onColorClose,     nullptr);
-    uiRegisterAction("onPreset", onPreset, nullptr);
-    uiRegisterAction("onHexChanged", onHexChanged, nullptr);
+    uiRegisterAction(g_inst, "showColorDlg",     showColorDlg,     nullptr);
+    uiRegisterAction(g_inst, "onColorChange",    onColorChange,    nullptr);
+    uiRegisterAction(g_inst, "onColorConfirmed", onColorConfirmed, nullptr);
+    uiRegisterAction(g_inst, "onColorCancelled", onColorCancelled, nullptr);
+    uiRegisterAction(g_inst, "onColorClose",     onColorClose,     nullptr);
+    uiRegisterAction(g_inst, "onPreset", onPreset, nullptr);
+    uiRegisterAction(g_inst, "onHexChanged", onHexChanged, nullptr);
 
     const char* layoutJson = R"json({
         "version": "1.0",
@@ -429,19 +435,20 @@ static int runTest(const char* shortName, const char* displayName) {
         ]
     })json";
 
-    if (!uiLoadLayout(layoutJson)) { printf("FAIL: LoadLayout\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    if (!uiLoadLayout(g_inst, layoutJson)) { printf("FAIL: LoadLayout\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("OK: layout loaded\n");
 
     printf("Frame loop... (click color swatch or close the window)\n");
-    while (!uiIsQuitRequested()) {
-        uiProcessEvents();
-        uiUpdate(1.0 / 60.0);
-        uiClear();
-        uiRender();
-        uiPresent();
+    while (!uiIsQuitRequested(g_inst)) {
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
     }
 
-    uiShutdown();
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
     g_uiDll = nullptr;
     printf("test_dialog_cabi_%s: done\n", shortName);

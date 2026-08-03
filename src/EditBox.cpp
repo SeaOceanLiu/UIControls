@@ -43,7 +43,7 @@ EditBox::EditBox(Control *parent, SRect rect, float xScale, float yScale)
 
     setFocusable(true);
 
-    loadFontInternal();
+    if (GET_CONTEXT != nullptr) loadFontInternal();  // 两阶段：挂树后由 create() 加载
     updateTextOffset();
 
     InputBackend* ib = getInputBackend();
@@ -53,7 +53,21 @@ EditBox::EditBox(Control *parent, SRect rect, float xScale, float yScale)
 EditBox::~EditBox() {
 }
 
+void EditBox::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建（字体依赖 context）
+
+    ControlImpl::create();
+    loadFontInternal();
+    updateTextOffset();
+    // 激活文本输入：构造时可能无 context（未挂树）导致构造中的 startTextInput 未执行，
+    // 挂树后 create() 由 setContext→recreate() 重跑，在此补齐
+    InputBackend* ib = getInputBackend();
+    if (ib) ib->startTextInput();
+}
+
 void EditBox::loadFontInternal() {
+    if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后由 create() 加载
     ResourceProvider* provider = getResourceProvider();
     if (provider == nullptr) {
         printf("EditBox::loadFontInternal: No resource provider\n");
@@ -633,14 +647,14 @@ void EditBox::setFocused(bool focused, bool byKeyboard) {
 
     if (focused) {
         if (!m_focusWatcherRegistered) {
-            EventQueue::getInstance()->addBeforeEventHandlingWatcher(EventType::Custom, getThis());
+            m_context->eventQueue->addBeforeEventHandlingWatcher(EventType::Custom, getThis());
             m_focusWatcherRegistered = true;
         }
 
         auto event = make_shared<Event>(EventType::Custom);
         event->customInt = static_cast<int>(EventName::ON_FOCUS);
         event->customPtr = this;
-        EventQueue::getInstance()->pushEventIntoQueue(event);
+        m_context->eventQueue->pushEventIntoQueue(event);
     }
 
     ControlImpl::setFocused(focused, byKeyboard);

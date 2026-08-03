@@ -133,7 +133,11 @@ void CheckBox::adjustBoxVerticalAlign(void) {
 
 void CheckBox::recreate(void) {
     // 没有创建过，直接退出，待调用create方法时会重新创建相关资源
-    if(!m_isCreated) return;
+    if(!m_isCreated) {
+        // 两阶段创建：context 就绪后（挂树）由 setContext 触发
+        create();
+        return;
+    }
 
     // 释放子控件
     releaseCaption();
@@ -146,6 +150,7 @@ void CheckBox::recreate(void) {
 }
 void CheckBox::create(void) {
     if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
 
     createCaption();
     setBoxSize();

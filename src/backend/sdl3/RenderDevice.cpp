@@ -2,6 +2,7 @@
 #include "Texture.h"
 #include "Surface.h"
 #include "ConstDef.h"
+#include "BackendPlugin.h"
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <vector>
@@ -18,7 +19,8 @@ public:
     }
 
     ~SDL3Texture() override {
-        if (m_texture) {
+        // SDL_Quit 后（进程退出阶段残留对象析构）调用 SDL_DestroyTexture 为未定义行为
+        if (m_texture && SDL3BackendIsActive()) {
             SDL_DestroyTexture(m_texture);
         }
     }
@@ -307,7 +309,8 @@ public:
     }
 
     ~SDL3Surface() override {
-        if (m_surface) {
+        // SDL_Quit 后（进程退出阶段残留对象析构）调用 SDL_DestroySurface 为未定义行为
+        if (m_surface && SDL3BackendIsActive()) {
             SDL_DestroySurface(m_surface);
         }
     }

@@ -30,6 +30,24 @@ typedef void* UIFontHandle;
 typedef void* UITextHandle;
 typedef void* UITextureHandle;
 
+/* 实例句柄：一个 UICornerstone 实例（窗口或视口）。不透明指针。 */
+typedef struct UIContext* UIInstance;
+
+/* 实例配置：可选项，全部可 NULL/0 表示默认。structSize 用于 C API 版本兼容检查。 */
+typedef struct {
+    uint32_t    structSize;         /* 必须填 sizeof(UIInstanceConfig) */
+    const char* debugLabel;         /* 调试标签，null → "Instance_<id>" */
+    const char* resourceRoot;       /* 资源根目录，null → 默认 */
+    const char* windowTitle;        /* 窗口标题，null → "UICornerstone" */
+    int         windowWidth;        /* 0 → 默认 1024 */
+    int         windowHeight;       /* 0 → 默认 768 */
+    uint32_t    windowFlags;        /* 跨后端统一窗口标志（UIWindowFlags，值对齐 SDL_WINDOW_*） */
+    uint32_t    reserved[6];        /* 未来扩展预留 */
+} UIInstanceConfig;
+
+#define UI_INSTANCE_CONFIG_DEFAULT \
+    { sizeof(UIInstanceConfig), NULL, NULL, NULL, 0, 0, 0, {0} }
+
 /* ============ 基础类型 ============ */
 typedef struct { float x, y, w, h; }   UIRect;
 typedef struct { uint8_t r, g, b, a; } UIColor;
@@ -155,109 +173,134 @@ typedef struct {
     int                      (*fileExists)(UIResourceProviderHandle, const char* path);
 } UIBackendCallbacks;
 
-/* ============ 初始化 ============ */
-UICORNERSTONE_API int  UICornerstone_Init(const UIBackendCallbacks* callbacks);
-UICORNERSTONE_API void UICornerstone_Shutdown(void);
-UICORNERSTONE_API int  UICornerstone_InitFromPlugin(const char* pluginName);
+/* ============ 实例生命周期 ============ */
+/* 创建实例：alloc + init 一次性完成。失败返回 NULL。 */
+UICORNERSTONE_API UIInstance UICornerstone_CreateInstance(
+    const UIBackendCallbacks* callbacks,
+    const UIInstanceConfig* config);       /* NULL → 全默认 */
+
+/* 销毁实例：级联销毁子视口，owner 才 shutdown BackendManager。NULL 安全。 */
+UICORNERSTONE_API void UICornerstone_DestroyInstance(UIInstance instance);
+
+/* 从后端插件 DLL（UIBackend_<pluginName>.dll）创建实例。
+   静态链接路径回退 GetUIBackendCallbacks。 */
+UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
+    const char* pluginName,
+    const UIInstanceConfig* config);
+
+/* 在父实例（owner）的窗口中创建子视口：共享后端，独立控制树/事件队列/DataContext。
+   rect 为窗口坐标系下的视口区域。 */
+UICORNERSTONE_API UIInstance UICornerstone_CreateViewport(
+    UIInstance parent, UIRect rect);
 
 /* ============ 视口控制 ============ */
-UICORNERSTONE_API void UICornerstone_SetViewport(float x, float y, float w, float h);
-UICORNERSTONE_API void UICornerstone_GetViewport(float* x, float* y, float* w, float* h);
+UICORNERSTONE_API void UICornerstone_SetViewport(UIInstance instance, float x, float y, float w, float h);
+UICORNERSTONE_API void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w, float* h);
 
 /* ============ 帧循环 ============ */
-UICORNERSTONE_API void UICornerstone_ProcessEvents(void);
-UICORNERSTONE_API void UICornerstone_Update(double deltaTime);
+UICORNERSTONE_API void UICornerstone_ProcessEvents(UIInstance instance);
+UICORNERSTONE_API void UICornerstone_Update(UIInstance instance, double deltaTime);
 
 // 注入外部事件（例如从 SDL_AppEvent 回调传入的 SDL 事件）。
 // 事件会在下一次 UICornerstone_ProcessEvents 中被处理。
-UICORNERSTONE_API void UICornerstone_PushUIEvent(const UIEvent* ue);
+UICORNERSTONE_API void UICornerstone_PushUIEvent(UIInstance instance, const UIEvent* ue);
 
 // 只渲染视口区域。不清除帧缓冲区、不 present。
 // 调用者必须在外层自行 clear + render + present。
-UICORNERSTONE_API void UICornerstone_Render(void);
+UICORNERSTONE_API void UICornerstone_Render(UIInstance instance);
 
 // 清除帧缓冲区和翻转缓冲区（可选，仅在调用者不自行管理帧时使用）
-UICORNERSTONE_API void UICornerstone_Clear(void);
-UICORNERSTONE_API void UICornerstone_Present(void);
+UICORNERSTONE_API void UICornerstone_Clear(UIInstance instance);
+UICORNERSTONE_API void UICornerstone_Present(UIInstance instance);
 
-UICORNERSTONE_API int  UICornerstone_IsQuitRequested(void);
+UICORNERSTONE_API int  UICornerstone_IsQuitRequested(UIInstance instance);
+
+/* ============ Debug 辅助 ============ */
+// 存活实例数（Release 构建返回 0）
+UICORNERSTONE_API int      UICornerstone_Debug_GetAliveCount(void);
+// 按索引取存活实例（Release 构建返回 NULL）
+UICORNERSTONE_API UIInstance UICornerstone_Debug_GetAliveInstance(int index);
+// 查询当前活动视口（子视口为 null；viewport 实例查询返回 owner 的活动视口）
+UICORNERSTONE_API UIInstance UICornerstone_Debug_GetActiveViewport(UIInstance instance);
+// 查询控件是否拥有焦点
+UICORNERSTONE_API int      UICornerstone_Debug_IsControlFocused(UIInstance instance, UIControlHandle control);
 
 /* ============ 布局系统 ============ */
-UICORNERSTONE_API int               UICornerstone_LoadLayout(const char* jsonContent);
-UICORNERSTONE_API int               UICornerstone_LoadLayoutFromFile(const char* filePath);
-UICORNERSTONE_API UIControlHandle   UICornerstone_FindControl(const char* id);
+UICORNERSTONE_API int               UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent);
+UICORNERSTONE_API int               UICornerstone_LoadLayoutFromFile(UIInstance instance, const char* filePath);
+UICORNERSTONE_API UIControlHandle   UICornerstone_FindControl(UIInstance instance, const char* id);
 
 typedef void (*UIActionCallback)(UIControlHandle ctl, void* userData);
-UICORNERSTONE_API void UICornerstone_RegisterAction(const char* name, UIActionCallback cb, void* userData);
+UICORNERSTONE_API void UICornerstone_RegisterAction(UIInstance instance, const char* name, UIActionCallback cb, void* userData);
 
 /* ============ 编程式控件创建 ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateButton(const char* text,
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateButton(UIInstance instance, const char* text,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateLabel(const char* text, float fontSize,
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateLabel(UIInstance instance, const char* text, float fontSize,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateCheckBox(const char* text,
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateCheckBox(UIInstance instance, const char* text,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateEditBox(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateEditBox(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateProgressBar(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateProgressBar(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateSlider(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateSlider(UIInstance instance,
     float x, float y, float w, float h, float min, float max, float value);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreatePanel(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreatePanel(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateTextArea(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateTextArea(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateWinFrame(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateWinFrame(UIInstance instance,
     const char* title, float x, float y, float w, float h);
 /* ============ Menu 三件套（MenuBar / MenuPanel / MenuItem） ============ */
 // Menu 是一组控件：MenuBar 为顶层菜单栏，MenuPanel 为下拉面板，
 // MenuItem 为菜单项。组装顺序：
-//   panel = CreateMenuPanel();  item = CreateMenuItem("Open", 0);
-//   MenuPanelAddItem(panel, item);  MenuItemSetSubMenu(item, subPanel);
-//   bar = CreateMenuBar(...);  MenuBarAddMenu(bar, "File", panel);
+//   panel = CreateMenuPanel(inst);  item = CreateMenuItem(inst, "Open", 0);
+//   MenuPanelAddItem(inst, panel, item);  MenuItemSetSubMenu(inst, item, subPanel);
+//   bar = CreateMenuBar(inst, ...);  MenuBarAddMenu(inst, bar, "File", panel);
 // type: 0=Normal, 1=Separator, 2=SubMenu
 // MenuItem 的 caption/checked/shortcut/click 走统一属性系统
 // （SetString/SetBool/SetCallback，事件名 "click"）
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuBar(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuBar(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuPanel(void);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuItem(const char* caption, int type);
-UICORNERSTONE_API void UICornerstone_MenuBarAddMenu(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuPanel(UIInstance instance);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* caption, int type);
+UICORNERSTONE_API void UICornerstone_MenuBarAddMenu(UIInstance instance,
     UIControlHandle bar, const char* caption, UIControlHandle panel);
-UICORNERSTONE_API void UICornerstone_MenuPanelAddItem(
+UICORNERSTONE_API void UICornerstone_MenuPanelAddItem(UIInstance instance,
     UIControlHandle panel, UIControlHandle item);
-UICORNERSTONE_API void UICornerstone_MenuPanelAddSeparator(UIControlHandle panel);
-UICORNERSTONE_API void UICornerstone_MenuItemSetSubMenu(
+UICORNERSTONE_API void UICornerstone_MenuPanelAddSeparator(UIInstance instance, UIControlHandle panel);
+UICORNERSTONE_API void UICornerstone_MenuItemSetSubMenu(UIInstance instance,
     UIControlHandle item, UIControlHandle panel);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateColorPicker(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateColorPicker(UIInstance instance,
     float x, float y, float w, float h, const char* color);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateNumericUpDown(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateNumericUpDown(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateComboBox(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateComboBox(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateSplitter(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateSplitter(UIInstance instance,
     float x, float y, float w, float h, int orientation);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateScrollBar(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateScrollBar(UIInstance instance,
     float x, float y, float w, float h, int orientation);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateTreeView(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateTreeView(UIInstance instance,
     float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateHandleControl(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
     UIControlHandle target, float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
     const char* normalImage,
     const char* hoverImage,
     const char* pressedImage,
     float x, float y, float w, float h);
 
 /* ============ 控件通用操作 ============ */
-UICORNERSTONE_API void UICornerstone_SetRect(UIControlHandle ctl, float x, float y, float w, float h);
-UICORNERSTONE_API void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, float* h);
-UICORNERSTONE_API void UICornerstone_AddChildControl(UIControlHandle parent, UIControlHandle child);
-UICORNERSTONE_API void UICornerstone_DestroyControl(UIControlHandle ctl);
-UICORNERSTONE_API const char* UICornerstone_GetControlId(UIControlHandle ctl);
+UICORNERSTONE_API void UICornerstone_SetRect(UIInstance instance, UIControlHandle ctl, float x, float y, float w, float h);
+UICORNERSTONE_API void UICornerstone_GetRect(UIInstance instance, UIControlHandle ctl, float* x, float* y, float* w, float* h);
+UICORNERSTONE_API void UICornerstone_AddChildControl(UIInstance instance, UIControlHandle parent, UIControlHandle child);
+UICORNERSTONE_API void UICornerstone_DestroyControl(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API const char* UICornerstone_GetControlId(UIInstance instance, UIControlHandle ctl);
 
 /* ============ Dialog/Popup ============ */
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(UIInstance instance,
     const char* confirmText, const char* cancelText,
     float x, float y, float w, float h);
 
@@ -266,41 +309,41 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(
 /* ── Setter ── */
 // 设置单色属性。prop 是属性名，如 "selected"、"hover"、"background"
 // 返回 1 成功，0 不识别的属性
-UICORNERSTONE_API int UICornerstone_SetColor(   UIControlHandle ctl, const char* prop, UIColor       value);
+UICORNERSTONE_API int UICornerstone_SetColor(   UIInstance instance, UIControlHandle ctl, const char* prop, UIColor       value);
 
 // 设置 4 态颜色属性。prop 如 "background"、"border"、"text"
-UICORNERSTONE_API int UICornerstone_SetStateColor( UIControlHandle ctl, const char* prop, UIStateColor  value);
+UICORNERSTONE_API int UICornerstone_SetStateColor( UIInstance instance, UIControlHandle ctl, const char* prop, UIStateColor  value);
 
 // 设置布尔属性。prop 如 "visible"、"enabled"，value: 0=假, 非0=真
-UICORNERSTONE_API int UICornerstone_SetBool(     UIControlHandle ctl, const char* prop, int           value);
+UICORNERSTONE_API int UICornerstone_SetBool(     UIInstance instance, UIControlHandle ctl, const char* prop, int           value);
 
 // 设置整数属性。prop 如 "font-size"
-UICORNERSTONE_API int UICornerstone_SetInt(     UIControlHandle ctl, const char* prop, int           value);
+UICORNERSTONE_API int UICornerstone_SetInt(     UIInstance instance, UIControlHandle ctl, const char* prop, int           value);
 
 // 设置浮点属性。prop 如 "indent-width"、"row-height"
-UICORNERSTONE_API int UICornerstone_SetFloat(   UIControlHandle ctl, const char* prop, float         value);
+UICORNERSTONE_API int UICornerstone_SetFloat(   UIInstance instance, UIControlHandle ctl, const char* prop, float         value);
 
 // 设置字符串属性。prop 如 "text"、"font"
-UICORNERSTONE_API int UICornerstone_SetString(  UIControlHandle ctl, const char* prop, const char*   value);
+UICORNERSTONE_API int UICornerstone_SetString(  UIInstance instance, UIControlHandle ctl, const char* prop, const char*   value);
 
 // 设置枚举属性。value 为枚举值名称字符串，如 "vertical"、"checked"
-UICORNERSTONE_API int UICornerstone_SetEnum(    UIControlHandle ctl, const char* prop, const char*   value);
+UICORNERSTONE_API int UICornerstone_SetEnum(    UIInstance instance, UIControlHandle ctl, const char* prop, const char*   value);
 
 // 设置指针属性。prop 如 "content"、"first-linked"，value 为 UIControlHandle
-UICORNERSTONE_API int UICornerstone_SetPtr(     UIControlHandle ctl, const char* prop, void*         value);
+UICORNERSTONE_API int UICornerstone_SetPtr(     UIInstance instance, UIControlHandle ctl, const char* prop, void*         value);
 
 /* ── Getter ── */
 // 读取属性值。返回 1 成功，0 属性不识别
-UICORNERSTONE_API int UICornerstone_GetColor(   UIControlHandle ctl, const char* prop, UIColor*       out);
-UICORNERSTONE_API int UICornerstone_GetStateColor( UIControlHandle ctl, const char* prop, UIStateColor*  out);
-UICORNERSTONE_API int UICornerstone_GetBool(     UIControlHandle ctl, const char* prop, int*           out);
-UICORNERSTONE_API int UICornerstone_GetInt(     UIControlHandle ctl, const char* prop, int*           out);
-UICORNERSTONE_API int UICornerstone_GetFloat(   UIControlHandle ctl, const char* prop, float*         out);
-UICORNERSTONE_API int UICornerstone_GetString(  UIControlHandle ctl, const char* prop, char* out, int maxLen);
-UICORNERSTONE_API int UICornerstone_GetEnum(    UIControlHandle ctl, const char* prop, char* out, int maxLen);
+UICORNERSTONE_API int UICornerstone_GetColor(   UIInstance instance, UIControlHandle ctl, const char* prop, UIColor*       out);
+UICORNERSTONE_API int UICornerstone_GetStateColor( UIInstance instance, UIControlHandle ctl, const char* prop, UIStateColor*  out);
+UICORNERSTONE_API int UICornerstone_GetBool(     UIInstance instance, UIControlHandle ctl, const char* prop, int*           out);
+UICORNERSTONE_API int UICornerstone_GetInt(     UIInstance instance, UIControlHandle ctl, const char* prop, int*           out);
+UICORNERSTONE_API int UICornerstone_GetFloat(   UIInstance instance, UIControlHandle ctl, const char* prop, float*         out);
+UICORNERSTONE_API int UICornerstone_GetString(  UIInstance instance, UIControlHandle ctl, const char* prop, char* out, int maxLen);
+UICORNERSTONE_API int UICornerstone_GetEnum(    UIInstance instance, UIControlHandle ctl, const char* prop, char* out, int maxLen);
 
 // 读取指针属性。out 返回属性值。返回 1 成功，0 属性不识别
-UICORNERSTONE_API int UICornerstone_GetPtr(     UIControlHandle ctl, const char* prop, void**        out);
+UICORNERSTONE_API int UICornerstone_GetPtr(     UIInstance instance, UIControlHandle ctl, const char* prop, void**        out);
 
 /* ── Callback ── */
 typedef struct {
@@ -320,7 +363,7 @@ typedef struct {
 typedef void (*UIEventCallback)(UIControlHandle ctl, const UIEventData* event, void* userData);
 
 // 绑定事件回调。event 为事件名，如 "click"、"value-changed"
-UICORNERSTONE_API int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData);
+UICORNERSTONE_API int UICornerstone_SetCallback(UIInstance instance, UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData);
 
 #ifdef __cplusplus
 }

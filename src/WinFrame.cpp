@@ -82,11 +82,25 @@ WinFrame::WinFrame(Control* parent, SRect rect, float xScale, float yScale):
         .build());
 
     m_isFocusBoundary = true;
-    GET_FOCUSMANAGER->registerBoundary(this);
+}
+
+// 两阶段：构造时 context 可能未就绪（parent=nullptr），焦点边界注册延迟到
+// context 就绪后的 create（registerBoundary 幂等，recreate 多次调用安全）
+void WinFrame::create() {
+    // 保留初始可见性：ControlImpl::create 会无条件 setVisible(true)，
+    // 解析期 hide()（初始隐藏的窗口）不得在挂树 recreate 时被覆盖弹出
+    bool vis = m_visible;
+    ControlImpl::create();
+    m_visible = vis;
+    FocusManager* fm = m_context ? m_context->focusManager : nullptr;
+    if (fm) fm->registerBoundary(this);
 }
 
 WinFrame::~WinFrame() {
-    GET_FOCUSMANAGER->unregisterBoundary(this);
+    if (UIContext::isActive(m_context)) {
+        FocusManager* fm = m_context->focusManager;
+        if (fm) fm->unregisterBoundary(this);
+    }
     delete m_cursorSizeWE;
     delete m_cursorSizeNS;
     delete m_cursorSizeNWSE;
@@ -349,22 +363,26 @@ void WinFrame::show(void) {
     Panel::show();
     bringToFront();
     m_isFocusBoundary = true;
-    GET_FOCUSMANAGER->registerBoundary(this);
+    FocusManager* fm = m_context ? m_context->focusManager : nullptr;
+    if (fm) fm->registerBoundary(this);
 }
 
 void WinFrame::hide(void) {
-    Control* fc = GET_FOCUSMANAGER->getCurrentFocused();
-    if (fc) {
-        Control* p = fc->getParent();
-        while (p) {
-            if (p == this) {
-                fc->setFocused(false, false);
-                break;
+    FocusManager* fm = m_context ? m_context->focusManager : nullptr;
+    if (fm) {
+        Control* fc = fm->getCurrentFocused();
+        if (fc) {
+            Control* p = fc->getParent();
+            while (p) {
+                if (p == this) {
+                    fc->setFocused(false, false);
+                    break;
+                }
+                p = p->getParent();
             }
-            p = p->getParent();
         }
+        fm->unregisterBoundary(this);
     }
-    GET_FOCUSMANAGER->unregisterBoundary(this);
     Panel::hide();
 }
 

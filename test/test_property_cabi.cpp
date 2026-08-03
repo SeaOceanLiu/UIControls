@@ -17,35 +17,35 @@
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 // ===== C ABI function pointer types =====
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef int   (*UILoadLayoutFn)(const char*);
-typedef void* (*UIFindControlFn)(const char*);
-typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef int   (*UISetColorFn)(void*,const char*,UIColor);
-typedef int   (*UIGetColorFn)(void*,const char*,UIColor*);
-typedef int   (*UISetStateColorFn)(void*,const char*,UIStateColor);
-typedef int   (*UIGetStateColorFn)(void*,const char*,UIStateColor*);
-typedef int   (*UISetBoolFn)(void*,const char*,int);
-typedef int   (*UIGetBoolFn)(void*,const char*,int*);
-typedef int   (*UISetIntFn)(void*,const char*,int);
-typedef int   (*UIGetIntFn)(void*,const char*,int*);
-typedef int   (*UISetFloatFn)(void*,const char*,float);
-typedef int   (*UIGetFloatFn)(void*,const char*,float*);
-typedef int   (*UISetStringFn)(void*,const char*,const char*);
-typedef int   (*UIGetStringFn)(void*,const char*,char*,int);
-typedef int   (*UISetEnumFn)(void*,const char*,const char*);
-typedef int   (*UIGetEnumFn)(void*,const char*,char*,int);
-typedef int   (*UISetCallbackFn)(void*,const char*,UIEventCallback,void*);
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void       (*UIDestroyInstanceFn)(UIInstance);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
+typedef void* (*UIFindControlFn)(UIInstance,const char*);
+typedef void  (*UIRegisterActionFn)(UIInstance,const char*,void(*)(void*,void*),void*);
+typedef int   (*UISetColorFn)(UIInstance,void*,const char*,UIColor);
+typedef int   (*UIGetColorFn)(UIInstance,void*,const char*,UIColor*);
+typedef int   (*UISetStateColorFn)(UIInstance,void*,const char*,UIStateColor);
+typedef int   (*UIGetStateColorFn)(UIInstance,void*,const char*,UIStateColor*);
+typedef int   (*UISetBoolFn)(UIInstance,void*,const char*,int);
+typedef int   (*UIGetBoolFn)(UIInstance,void*,const char*,int*);
+typedef int   (*UISetIntFn)(UIInstance,void*,const char*,int);
+typedef int   (*UIGetIntFn)(UIInstance,void*,const char*,int*);
+typedef int   (*UISetFloatFn)(UIInstance,void*,const char*,float);
+typedef int   (*UIGetFloatFn)(UIInstance,void*,const char*,float*);
+typedef int   (*UISetStringFn)(UIInstance,void*,const char*,const char*);
+typedef int   (*UIGetStringFn)(UIInstance,void*,const char*,char*,int);
+typedef int   (*UISetEnumFn)(UIInstance,void*,const char*,const char*);
+typedef int   (*UIGetEnumFn)(UIInstance,void*,const char*,char*,int);
+typedef int   (*UISetCallbackFn)(UIInstance,void*,const char*,UIEventCallback,void*);
 
-static UIInitFn             uiInit                 = nullptr;
+static UICreateInstanceFn   uiCreateInstance       = nullptr;
 static UISetViewportFn      uiSetViewport          = nullptr;
 static UIProcessEventsFn    uiProcessEvents        = nullptr;
 static UIUpdateFn           uiUpdate               = nullptr;
@@ -53,7 +53,7 @@ static UIClearFn            uiClear                = nullptr;
 static UIRenderFn           uiRender               = nullptr;
 static UIPresentFn          uiPresent              = nullptr;
 static UIIsQuitFn           uiIsQuitRequested      = nullptr;
-static UIShutdownFn         uiShutdown             = nullptr;
+static UIDestroyInstanceFn  uiDestroyInstance      = nullptr;
 static UILoadLayoutFn       uiLoadLayout           = nullptr;
 static UIFindControlFn      uiFindControl          = nullptr;
 static UIRegisterActionFn   uiRegisterAction       = nullptr;
@@ -74,6 +74,7 @@ static UIGetEnumFn          uiGetEnum              = nullptr;
 static UISetCallbackFn      uiSetCallback          = nullptr;
 
 static HMODULE g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
 
 // ===== 娴嬭瘯缁撴灉缁熻 =====
 static int g_passCount = 0;
@@ -100,7 +101,7 @@ static void loadAllProcs(HMODULE dll) {
 #define RESOLVE(name) \
     *(void**)&ui##name = GetProcAddress(dll, "UICornerstone_" #name)
 
-    RESOLVE(Init);
+    RESOLVE(CreateInstance);
     RESOLVE(SetViewport);
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -108,7 +109,7 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
-    RESOLVE(Shutdown);
+    RESOLVE(DestroyInstance);
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
@@ -133,12 +134,12 @@ static void loadAllProcs(HMODULE dll) {
 static int runPropertyTests(void) {
     printf("\n--- Color property tests ---\n");
 
-    void* slider = uiFindControl("sliderProp");
-    void* check  = uiFindControl("checkProp");
-    void* prog   = uiFindControl("progProp");
-    void* scroll = uiFindControl("scrollProp");
-    void* combo  = uiFindControl("comboProp");
-    void* nud    = uiFindControl("nudProp");
+    void* slider = uiFindControl(g_inst, "sliderProp");
+    void* check  = uiFindControl(g_inst, "checkProp");
+    void* prog   = uiFindControl(g_inst, "progProp");
+    void* scroll = uiFindControl(g_inst, "scrollProp");
+    void* combo  = uiFindControl(g_inst, "comboProp");
+    void* nud    = uiFindControl(g_inst, "nudProp");
 
     CHECK(slider != NULL, "FindControl(sliderProp)");
     CHECK(check  != NULL, "FindControl(checkProp)");
@@ -154,24 +155,24 @@ static int runPropertyTests(void) {
     UIColor green = {0,255,0,255};
     UIColor blue  = {0,0,255,255};
 
-    CHECK_RET(uiSetColor(slider, "track",         red),   1, "Slider: SetColor(track, red)");
-    CHECK_RET(uiSetColor(slider, "thumb",         green), 1, "Slider: SetColor(thumb, green)");
-    CHECK_RET(uiSetColor(slider, "thumb-hover",   blue),  1, "Slider: SetColor(thumb-hover, blue)");
-    CHECK_RET(uiSetColor(slider, "tick",          red),   1, "Slider: SetColor(tick, red)");
-    CHECK_RET(uiSetColor(slider, "label",         green), 1, "Slider: SetColor(label, green)");
-    CHECK_RET(uiSetColor(slider, "invalid-prop",  red),   0, "Slider: SetColor(invalid) -> 0");
+    CHECK_RET(uiSetColor(g_inst, slider, "track",         red),   1, "Slider: SetColor(track, red)");
+    CHECK_RET(uiSetColor(g_inst, slider, "thumb",         green), 1, "Slider: SetColor(thumb, green)");
+    CHECK_RET(uiSetColor(g_inst, slider, "thumb-hover",   blue),  1, "Slider: SetColor(thumb-hover, blue)");
+    CHECK_RET(uiSetColor(g_inst, slider, "tick",          red),   1, "Slider: SetColor(tick, red)");
+    CHECK_RET(uiSetColor(g_inst, slider, "label",         green), 1, "Slider: SetColor(label, green)");
+    CHECK_RET(uiSetColor(g_inst, slider, "invalid-prop",  red),   0, "Slider: SetColor(invalid) -> 0");
 
-    CHECK_RET(uiSetColor(check, "check",          green), 1, "CheckBox: SetColor(check, green)");
-    CHECK_RET(uiSetColor(check, "cross",          red),   1, "CheckBox: SetColor(cross, red)");
-    CHECK_RET(uiSetColor(check, "box-border",     blue),  1, "CheckBox: SetColor(box-border, blue)");
+    CHECK_RET(uiSetColor(g_inst, check, "check",          green), 1, "CheckBox: SetColor(check, green)");
+    CHECK_RET(uiSetColor(g_inst, check, "cross",          red),   1, "CheckBox: SetColor(cross, red)");
+    CHECK_RET(uiSetColor(g_inst, check, "box-border",     blue),  1, "CheckBox: SetColor(box-border, blue)");
 
-    CHECK_RET(uiSetColor(prog,  "background",     red),   1, "ProgressBar: SetColor(background, red)");
-    CHECK_RET(uiSetColor(prog,  "progress",       green), 1, "ProgressBar: SetColor(progress, green)");
+    CHECK_RET(uiSetColor(g_inst, prog,  "background",     red),   1, "ProgressBar: SetColor(background, red)");
+    CHECK_RET(uiSetColor(g_inst, prog,  "progress",       green), 1, "ProgressBar: SetColor(progress, green)");
 
-    CHECK_RET(uiSetColor(scroll,"track",          red),   1, "ScrollBar: SetColor(track, red)");
-    CHECK_RET(uiSetColor(scroll,"thumb",          green), 1, "ScrollBar: SetColor(thumb, green)");
-    CHECK_RET(uiSetColor(scroll,"thumb-hover",    blue),  1, "ScrollBar: SetColor(thumb-hover, blue)");
-    CHECK_RET(uiSetColor(scroll,"thumb-pressed",  red),   1, "ScrollBar: SetColor(thumb-pressed, red)");
+    CHECK_RET(uiSetColor(g_inst, scroll,"track",          red),   1, "ScrollBar: SetColor(track, red)");
+    CHECK_RET(uiSetColor(g_inst, scroll,"thumb",          green), 1, "ScrollBar: SetColor(thumb, green)");
+    CHECK_RET(uiSetColor(g_inst, scroll,"thumb-hover",    blue),  1, "ScrollBar: SetColor(thumb-hover, blue)");
+    CHECK_RET(uiSetColor(g_inst, scroll,"thumb-pressed",  red),   1, "ScrollBar: SetColor(thumb-pressed, red)");
 
     // 鈹€鈹€ SetStateColor 鈹€鈹€
     UIStateColor sbg;
@@ -180,126 +181,126 @@ static int runPropertyTests(void) {
     sbg.pressed    = {80,80,80,255};
     sbg.disabled   = {20,20,20,255};
 
-    CHECK_RET(uiSetStateColor(slider, "background", sbg), 1, "Slider: SetStateColor(background)");
-    CHECK_RET(uiSetStateColor(slider, "border",     sbg), 1, "Slider: SetStateColor(border)");
+    CHECK_RET(uiSetStateColor(g_inst, slider, "background", sbg), 1, "Slider: SetStateColor(background)");
+    CHECK_RET(uiSetStateColor(g_inst, slider, "border",     sbg), 1, "Slider: SetStateColor(border)");
 
     // 鈹€鈹€ GetStateColor (閫氱敤 StateColor 灞炴€э紝鐢?ControlImpl 瀹炵幇) 鈹€鈹€
     UIStateColor got;
     memset(&got, 0, sizeof(got));
-    CHECK_RET(uiGetStateColor(slider, "background", &got), 1, "Slider: GetStateColor(background) -> 1");
+    CHECK_RET(uiGetStateColor(g_inst, slider, "background", &got), 1, "Slider: GetStateColor(background) -> 1");
     CHECK(got.normal.r == 40 && got.normal.g == 40, "  -> normal.r = 40, normal.g = 40");
 
     memset(&got, 0, sizeof(got));
-    CHECK_RET(uiGetStateColor(slider, "invalid", &got), 0, "Slider: GetStateColor(invalid) -> 0");
+    CHECK_RET(uiGetStateColor(g_inst, slider, "invalid", &got), 0, "Slider: GetStateColor(invalid) -> 0");
 
     printf("\n--- Bool property tests ---\n");
 
     // 鈹€鈹€ SetBool 鈹€鈹€
-    CHECK_RET(uiSetBool(slider, "show-value-label", 1), 1, "Slider: SetBool(show-value-label, 1)");
-    CHECK_RET(uiSetBool(slider, "reverse",          1), 1, "Slider: SetBool(reverse, 1)");
-    CHECK_RET(uiSetBool(slider, "invalid-bool",     1), 0, "Slider: SetBool(invalid) -> 0");
+    CHECK_RET(uiSetBool(g_inst, slider, "show-value-label", 1), 1, "Slider: SetBool(show-value-label, 1)");
+    CHECK_RET(uiSetBool(g_inst, slider, "reverse",          1), 1, "Slider: SetBool(reverse, 1)");
+    CHECK_RET(uiSetBool(g_inst, slider, "invalid-bool",     1), 0, "Slider: SetBool(invalid) -> 0");
 
     // CheckBox 没有 "checked" 独立 bool 属性，checked 状态由 SetEnum(check-state) 控制
-    CHECK_RET(uiSetBool(check,  "tri-state",        0), 1, "CheckBox: SetBool(tri-state, 0)");
+    CHECK_RET(uiSetBool(g_inst, check,  "tri-state",        0), 1, "CheckBox: SetBool(tri-state, 0)");
 
     // 鈹€鈹€ GetBool (閫氱敤 Bool 灞炴€х敱 ControlImpl 澶勭悊) 鈹€鈹€
     int bval = -1;
-    CHECK_RET(uiGetBool(slider, "visible", &bval), 1, "Slider: GetBool(visible) -> 1");
+    CHECK_RET(uiGetBool(g_inst, slider, "visible", &bval), 1, "Slider: GetBool(visible) -> 1");
     CHECK(bval == 1, "  -> visible = 1");
 
     bval = -1;
-    CHECK_RET(uiGetBool(slider, "invalid", &bval), 0, "Slider: GetBool(invalid) -> 0");
+    CHECK_RET(uiGetBool(g_inst, slider, "invalid", &bval), 0, "Slider: GetBool(invalid) -> 0");
 
     printf("\n--- Int property tests ---\n");
 
     // 鈹€鈹€ SetInt 鈹€鈹€
-    CHECK_RET(uiSetInt(combo, "selected-index", 2),  1, "ComboBox: SetInt(selected-index, 2)");
-    CHECK_RET(uiSetInt(combo, "max-visible-items", 5), 1, "ComboBox: SetInt(max-visible-items, 5)");
-    CHECK_RET(uiSetInt(combo, "invalid-int", 0),      0, "ComboBox: SetInt(invalid) -> 0");
+    CHECK_RET(uiSetInt(g_inst, combo, "selected-index", 2),  1, "ComboBox: SetInt(selected-index, 2)");
+    CHECK_RET(uiSetInt(g_inst, combo, "max-visible-items", 5), 1, "ComboBox: SetInt(max-visible-items, 5)");
+    CHECK_RET(uiSetInt(g_inst, combo, "invalid-int", 0),      0, "ComboBox: SetInt(invalid) -> 0");
 
     // NumericUpDown 只接受 "decimals" 作为 int 属性
-    CHECK_RET(uiSetInt(nud,   "decimals", 2),          1, "NumericUpDown: SetInt(decimals, 2)");
+    CHECK_RET(uiSetInt(g_inst, nud,   "decimals", 2),          1, "NumericUpDown: SetInt(decimals, 2)");
 
     // 控件特有 getter 现在已实现
     int ival = -1;
-    CHECK_RET(uiGetInt(combo, "selected-index", &ival), 1, "ComboBox: GetInt(selected-index) -> 1");
+    CHECK_RET(uiGetInt(g_inst, combo, "selected-index", &ival), 1, "ComboBox: GetInt(selected-index) -> 1");
     CHECK(ival == 2, "  -> selected-index = 2");
 
     ival = -1;
-    CHECK_RET(uiGetInt(combo, "invalid", &ival), 0, "ComboBox: GetInt(invalid) -> 0");
+    CHECK_RET(uiGetInt(g_inst, combo, "invalid", &ival), 0, "ComboBox: GetInt(invalid) -> 0");
 
     printf("\n--- Float property tests ---\n");
 
     // 鈹€鈹€ SetFloat 鈹€鈹€
-    CHECK_RET(uiSetFloat(slider, "step",             5.0f),  1, "Slider: SetFloat(step, 5.0)");
-    CHECK_RET(uiSetFloat(slider, "track-thickness",  8.0f),  1, "Slider: SetFloat(track-thickness, 8.0)");
-    CHECK_RET(uiSetFloat(slider, "value",            50.0f), 1, "Slider: SetFloat(value, 50.0)");
-    CHECK_RET(uiSetFloat(slider, "invalid-float",    0.0f),  0, "Slider: SetFloat(invalid) -> 0");
+    CHECK_RET(uiSetFloat(g_inst, slider, "step",             5.0f),  1, "Slider: SetFloat(step, 5.0)");
+    CHECK_RET(uiSetFloat(g_inst, slider, "track-thickness",  8.0f),  1, "Slider: SetFloat(track-thickness, 8.0)");
+    CHECK_RET(uiSetFloat(g_inst, slider, "value",            50.0f), 1, "Slider: SetFloat(value, 50.0)");
+    CHECK_RET(uiSetFloat(g_inst, slider, "invalid-float",    0.0f),  0, "Slider: SetFloat(invalid) -> 0");
 
-    CHECK_RET(uiSetFloat(scroll, "value",    42.0f), 1, "ScrollBar: SetFloat(value, 42.0)");
-    CHECK_RET(uiSetFloat(scroll, "page-size",20.0f), 1, "ScrollBar: SetFloat(page-size, 20.0)");
-    CHECK_RET(uiSetFloat(scroll, "range-min",0.0f),  1, "ScrollBar: SetFloat(range-min, 0.0)");
-    CHECK_RET(uiSetFloat(scroll, "range-max",200.0f),1, "ScrollBar: SetFloat(range-max, 200.0)");
-    CHECK_RET(uiSetFloat(scroll, "step-size", 5.0f), 1, "ScrollBar: SetFloat(step-size, 5.0)");
+    CHECK_RET(uiSetFloat(g_inst, scroll, "value",    42.0f), 1, "ScrollBar: SetFloat(value, 42.0)");
+    CHECK_RET(uiSetFloat(g_inst, scroll, "page-size",20.0f), 1, "ScrollBar: SetFloat(page-size, 20.0)");
+    CHECK_RET(uiSetFloat(g_inst, scroll, "range-min",0.0f),  1, "ScrollBar: SetFloat(range-min, 0.0)");
+    CHECK_RET(uiSetFloat(g_inst, scroll, "range-max",200.0f),1, "ScrollBar: SetFloat(range-max, 200.0)");
+    CHECK_RET(uiSetFloat(g_inst, scroll, "step-size", 5.0f), 1, "ScrollBar: SetFloat(step-size, 5.0)");
 
-    CHECK_RET(uiSetFloat(prog,   "value", 75.0f), 1, "ProgressBar: SetFloat(value, 75.0)");
-    CHECK_RET(uiSetFloat(nud,    "step",  2.0f),  1, "NumericUpDown: SetFloat(step, 2.0)");
+    CHECK_RET(uiSetFloat(g_inst, prog,   "value", 75.0f), 1, "ProgressBar: SetFloat(value, 75.0)");
+    CHECK_RET(uiSetFloat(g_inst, nud,    "step",  2.0f),  1, "NumericUpDown: SetFloat(step, 2.0)");
 
     // 鈹€鈹€ GetFloat 鈹€鈹€
     // 控件特有 getter 现在已实现
     float fval = -1.0f;
-    CHECK_RET(uiGetFloat(slider, "value", &fval), 1, "Slider: GetFloat(value) -> 1");
+    CHECK_RET(uiGetFloat(g_inst, slider, "value", &fval), 1, "Slider: GetFloat(value) -> 1");
     CHECK(fval > 49.0f && fval < 51.0f, "  -> value ~ 50.0");
-    CHECK_RET(uiGetFloat(slider, "invalid", &fval), 0, "Slider: GetFloat(invalid) -> 0");
+    CHECK_RET(uiGetFloat(g_inst, slider, "invalid", &fval), 0, "Slider: GetFloat(invalid) -> 0");
 
     printf("\n--- String property tests ---\n");
 
     // 鈹€鈹€ SetString 鈹€鈹€
-    CHECK_RET(uiSetString(slider, "label-format", "%.0f px"), 1, "Slider: SetString(label-format, '%.0f px')");
-    CHECK_RET(uiSetString(slider, "invalid-str",   "x"),       0, "Slider: SetString(invalid) -> 0");
+    CHECK_RET(uiSetString(g_inst, slider, "label-format", "%.0f px"), 1, "Slider: SetString(label-format, '%.0f px')");
+    CHECK_RET(uiSetString(g_inst, slider, "invalid-str",   "x"),       0, "Slider: SetString(invalid) -> 0");
 
-    CHECK_RET(uiSetString(prog,   "custom-text", "%.0f%%"),   1, "ProgressBar: SetString(custom-text, '%.0f%%')");
+    CHECK_RET(uiSetString(g_inst, prog,   "custom-text", "%.0f%%"),   1, "ProgressBar: SetString(custom-text, '%.0f%%')");
 
     // 控件特有 getter 现在已实现
     char sbuf[128];
     memset(sbuf, 0, sizeof(sbuf));
-    CHECK_RET(uiGetString(slider, "label-format", sbuf, (int)sizeof(sbuf)), 1, "Slider: GetString(label-format) -> 1");
+    CHECK_RET(uiGetString(g_inst, slider, "label-format", sbuf, (int)sizeof(sbuf)), 1, "Slider: GetString(label-format) -> 1");
     CHECK(strcmp(sbuf, "%.0f px") == 0, "  -> label-format = '%.0f px'");
     memset(sbuf, 0, sizeof(sbuf));
-    CHECK_RET(uiGetString(slider, "invalid", sbuf, (int)sizeof(sbuf)), 0, "Slider: GetString(invalid) -> 0");
+    CHECK_RET(uiGetString(g_inst, slider, "invalid", sbuf, (int)sizeof(sbuf)), 0, "Slider: GetString(invalid) -> 0");
 
     printf("\n--- Enum property tests ---\n");
 
     // 鈹€鈹€ SetEnum 鈹€鈹€
-    CHECK_RET(uiSetEnum(slider, "style", "horizontal"), 1, "Slider: SetEnum(style, horizontal)");
-    CHECK_RET(uiSetEnum(slider, "style", "vertical"),   1, "Slider: SetEnum(style, vertical)");
-    CHECK_RET(uiSetEnum(slider, "style", "invalid"),    0, "Slider: SetEnum(style, invalid) -> 0");
-    CHECK_RET(uiSetEnum(slider, "invalid-enum", "x"),   0, "Slider: SetEnum(invalid-enum, ...) -> 0");
+    CHECK_RET(uiSetEnum(g_inst, slider, "style", "horizontal"), 1, "Slider: SetEnum(style, horizontal)");
+    CHECK_RET(uiSetEnum(g_inst, slider, "style", "vertical"),   1, "Slider: SetEnum(style, vertical)");
+    CHECK_RET(uiSetEnum(g_inst, slider, "style", "invalid"),    0, "Slider: SetEnum(style, invalid) -> 0");
+    CHECK_RET(uiSetEnum(g_inst, slider, "invalid-enum", "x"),   0, "Slider: SetEnum(invalid-enum, ...) -> 0");
 
-    CHECK_RET(uiSetEnum(check,  "style", "auto-check"), 1, "CheckBox: SetEnum(style, auto-check)");
-    CHECK_RET(uiSetEnum(check,  "check-state", "mixed"), 1, "CheckBox: SetEnum(check-state, mixed)");
+    CHECK_RET(uiSetEnum(g_inst, check,  "style", "auto-check"), 1, "CheckBox: SetEnum(style, auto-check)");
+    CHECK_RET(uiSetEnum(g_inst, check,  "check-state", "mixed"), 1, "CheckBox: SetEnum(check-state, mixed)");
 
-    CHECK_RET(uiSetEnum(prog,   "style", "mario"),      1, "ProgressBar: SetEnum(style, mario)");
-    CHECK_RET(uiSetEnum(prog,   "text-mode", "value"),  1, "ProgressBar: SetEnum(text-mode, value)");
+    CHECK_RET(uiSetEnum(g_inst, prog,   "style", "mario"),      1, "ProgressBar: SetEnum(style, mario)");
+    CHECK_RET(uiSetEnum(g_inst, prog,   "text-mode", "value"),  1, "ProgressBar: SetEnum(text-mode, value)");
 
-    CHECK_RET(uiSetEnum(scroll, "orientation", "horizontal"), 1, "ScrollBar: SetEnum(orientation, horizontal)");
-    CHECK_RET(uiSetEnum(scroll, "orientation", "vertical"),   1, "ScrollBar: SetEnum(orientation, vertical)");
-    CHECK_RET(uiSetEnum(scroll, "orientation", "invalid"),    0, "ScrollBar: SetEnum(orientation, invalid) -> 0");
+    CHECK_RET(uiSetEnum(g_inst, scroll, "orientation", "horizontal"), 1, "ScrollBar: SetEnum(orientation, horizontal)");
+    CHECK_RET(uiSetEnum(g_inst, scroll, "orientation", "vertical"),   1, "ScrollBar: SetEnum(orientation, vertical)");
+    CHECK_RET(uiSetEnum(g_inst, scroll, "orientation", "invalid"),    0, "ScrollBar: SetEnum(orientation, invalid) -> 0");
 
     // 控件特有 enum getter 尚未实现 (Phase 4 待完成)
     char ebuf[64];
     memset(ebuf, 0, sizeof(ebuf));
-    CHECK_RET(uiGetEnum(slider, "style", ebuf, (int)sizeof(ebuf)), 1, "Slider: GetEnum(style) -> 1");
+    CHECK_RET(uiGetEnum(g_inst, slider, "style", ebuf, (int)sizeof(ebuf)), 1, "Slider: GetEnum(style) -> 1");
     CHECK(strcmp(ebuf, "vertical") == 0, "  -> style = 'vertical'");
 
     memset(ebuf, 0, sizeof(ebuf));
-    CHECK_RET(uiGetEnum(slider, "invalid", ebuf, (int)sizeof(ebuf)), 0, "Slider: GetEnum(invalid) -> 0");
+    CHECK_RET(uiGetEnum(g_inst, slider, "invalid", ebuf, (int)sizeof(ebuf)), 0, "Slider: GetEnum(invalid) -> 0");
 
     printf("\n--- Callback property tests ---\n");
 
     // setCallbackProperty 现已在 ControlImpl 中实现通用存储
-    CHECK_RET(uiSetCallback(slider, "value-changed", onEventCallback, NULL), 1, "Slider: SetCallback(value-changed) -> 1");
-    CHECK_RET(uiSetCallback(slider, "invalid-event", onEventCallback, NULL), 1, "Slider: SetCallback(invalid-event) -> 1");
+    CHECK_RET(uiSetCallback(g_inst, slider, "value-changed", onEventCallback, NULL), 1, "Slider: SetCallback(value-changed) -> 1");
+    CHECK_RET(uiSetCallback(g_inst, slider, "invalid-event", onEventCallback, NULL), 1, "Slider: SetCallback(invalid-event) -> 1");
 
     printf("\n========================================\n");
     printf("Property test results: %d passed, %d failed\n", g_passCount, g_failCount);
@@ -316,14 +317,18 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: loaded UICornerstone.dll\n");
 
     loadAllProcs(g_uiDll);
-    if (!uiInit) { printf("FAIL: GetProcAddress(Init)\n"); FreeLibrary(g_uiDll); return 1; }
+    if (!uiCreateInstance) { printf("FAIL: GetProcAddress(CreateInstance)\n"); FreeLibrary(g_uiDll); return 1; }
 
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) { printf("FAIL: GetUIBackendCallbacks\n"); FreeLibrary(g_uiDll); return 1; }
 
-    if (!uiInit(callbacks)) { printf("FAIL: Init\n"); FreeLibrary(g_uiDll); return 1; }
-    fflush(stdout);
-    uiSetViewport(0, 0, 540, 520);
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_property_cabi";
+    cfg.windowWidth = 540;
+    cfg.windowHeight = 520;
+    g_inst = uiCreateInstance(callbacks, &cfg);
+    if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
+    uiSetViewport(g_inst, 0, 0, 540, 520);
     printf("OK: initialized\n");
     fflush(stdout);
 
@@ -386,7 +391,7 @@ static int runTest(const char* shortName, const char* displayName) {
         ]
     })json";
 
-    if (!uiLoadLayout(layoutJson)) { printf("FAIL: LoadLayout\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    if (!uiLoadLayout(g_inst, layoutJson)) { printf("FAIL: LoadLayout\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("OK: layout loaded\n");
     fflush(stdout);
 
@@ -396,7 +401,17 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("\nProperty test results: %d passed, %d failed\n", g_passCount, g_failCount);
     fflush(stdout);
 
-    uiShutdown();
+    printf("Frame loop... (interact with the controls or close the window)\n");
+    while (!uiIsQuitRequested(g_inst)) {
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
+    }
+
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
     g_uiDll = nullptr;
     printf("test_property_cabi_%s: done (return %d)\n", shortName, ret);

@@ -7,6 +7,7 @@
 #include "EditBox.h"
 #include "TextArea.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -238,6 +239,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    LabelApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<LabelApp>(argc, argv);
 }

@@ -31,13 +31,9 @@ private:
     std::queue<shared_ptr<Event>> m_eventQueue;
     std::unordered_map<EventType, std::vector<weak_ptr<Control>>> m_beforeEventHandlingWatcherMap;
     std::unordered_map<EventType, std::vector<weak_ptr<Control>>> m_afterEventHandlingWatcherMap;
+public:
     EventQueue(){}
     ~EventQueue(){clear();}
-public:
-    static EventQueue* getInstance(void){
-        static EventQueue instance;
-        return &instance;
-    }
     static bool isPositionEvent(EventType type) {
         switch(type){
             case EventType::FingerDown:

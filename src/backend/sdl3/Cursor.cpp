@@ -1,4 +1,5 @@
 ﻿#include "Cursor.h"
+#include "BackendPlugin.h"
 #include <SDL3/SDL_mouse.h>
 
 class SDLCursor : public Cursor {
@@ -7,7 +8,8 @@ class SDLCursor : public Cursor {
 public:
     SDLCursor(SDL_Cursor* cursor, bool owned) : m_cursor(cursor), m_owned(owned) {}
     ~SDLCursor() override {
-        if (m_owned && m_cursor) {
+        // SDL_Quit 后（进程退出阶段残留对象析构）调用 SDL_DestroyCursor 为未定义行为
+        if (m_owned && m_cursor && SDL3BackendIsActive()) {
             SDL_DestroyCursor(m_cursor);
         }
     }

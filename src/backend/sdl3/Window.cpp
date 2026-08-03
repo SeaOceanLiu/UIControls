@@ -60,6 +60,10 @@ public:
 
     RenderDevice* renderDevice() override { return m_renderDevice; }
 
+    void setResizable(bool resizable) override {
+        if (m_window) SDL_SetWindowResizable(m_window, resizable);
+    }
+
     bool getMousePosition(float& x, float& y) override {
         if (!m_window) return false;
         SDL_GetMouseState(&x, &y);
@@ -83,6 +87,8 @@ private:
 Window* CreateSDL3Window(const char* title, int width, int height, uint32_t flags) {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
+    // flags 为跨后端统一窗口标志（UIWindowFlags，值对齐 SDL_WINDOW_*，可直接透传）。
+    // 注意：SDL3 部分平台运行期 SetWindowResizable 不生效，可调性需在创建时指定
     if (!SDL_CreateWindowAndRenderer(title, width, height, flags, &window, &renderer)) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return nullptr;

@@ -14,6 +14,7 @@
 #include "WinFrame.h"
 #include "PlatformUtils.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -152,6 +153,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    LayoutApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<LayoutApp>(argc, argv);
 }

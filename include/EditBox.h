@@ -59,6 +59,7 @@ protected:
 public:
     EditBox(Control *parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
     ~EditBox();
+    void create(void) override;  // 两阶段创建：挂树后加载字体
     void update(void) override;
     void draw(void) override;
     bool handleEvent(shared_ptr<Event> event) override;

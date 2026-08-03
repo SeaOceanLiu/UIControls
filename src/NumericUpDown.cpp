@@ -1,4 +1,4 @@
-#define NOMINMAX
+﻿#define NOMINMAX
 #include "NumericUpDown.h"
 #include "GraphTool.h"
 #include "PropertyNames.h"
@@ -33,6 +33,9 @@ NumericUpDown::NumericUpDown(Control* parent, const SRect& rect,
 NumericUpDown::~NumericUpDown() {}
 
 void NumericUpDown::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
+
     EditBox::create();
     EditBox::setText(formatValue(m_value));
     InputBackend* ib = getInputBackend();

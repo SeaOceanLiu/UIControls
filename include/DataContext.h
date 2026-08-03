@@ -37,7 +37,7 @@ class DataContext {
 public:
     using Watcher = function<void(const DataValue&)>;
 
-    static shared_ptr<DataContext> instance();
+    DataContext() = default;
 
     void set(const string& key, const DataValue& value);
     DataValue get(const string& key) const;
@@ -49,11 +49,6 @@ public:
     void clear();
 
 private:
-    DataContext() = default;
-    friend shared_ptr<DataContext>; // allow make_shared
-
-    static shared_ptr<DataContext> s_instance;
-
     unordered_map<string, DataValue> m_data;
     unordered_map<string, vector<Watcher>> m_watchers;
 };

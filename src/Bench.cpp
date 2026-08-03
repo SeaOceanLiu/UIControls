@@ -16,9 +16,10 @@ void Bench::initial(void){
     fireCCallback(PropertyNames::kEventInitial, CCallbackData::None, nullptr);
 }
 
-Bench::Bench(Control *parent, SRect rect, float xScale, float yScale):
-    TopControl(),
-    Panel(parent, rect, xScale, yScale),
+Bench::Bench(UIContext* ctx):
+    TopControl(ctx),
+    Panel(nullptr, {0, 0, INITIAL_WIDTH, INITIAL_HEIGHT}),
+    Control(ctx),
     m_isLoading(true),
     m_isInitialed(false),
     m_nextTick(0),
@@ -92,6 +93,7 @@ bool Bench::handleEvent(shared_ptr<Event> event) {
                 GET_FOCUSMANAGER->focusPrev(current);
             else
                 GET_FOCUSMANAGER->focusNext(current);
+            return true;
         }
         return true;
     }

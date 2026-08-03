@@ -12,6 +12,7 @@
 #include "AppCallbacks.h"
 #include "PlatformUtils.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -349,18 +350,12 @@ void createDialog3Demo() {
     contentPanel->create();
 
     g_debugEB->setParent(contentPanel.get());
-    g_debugEB->setRenderDevice(contentPanel->getRenderDevice());
-    g_debugEB->setTextRenderer(contentPanel->getTextRenderer());
     contentPanel->addControl(g_debugEB);
 
     g_debugVal->setParent(contentPanel.get());
-    g_debugVal->setRenderDevice(contentPanel->getRenderDevice());
-    g_debugVal->setTextRenderer(contentPanel->getTextRenderer());
     contentPanel->addControl(g_debugVal);
 
     g_debugSlider->setParent(contentPanel.get());
-    g_debugSlider->setRenderDevice(contentPanel->getRenderDevice());
-    g_debugSlider->setTextRenderer(contentPanel->getTextRenderer());
     contentPanel->addControl(g_debugSlider);
 
     g_dlg3->setContent(contentPanel);
@@ -473,18 +468,12 @@ void createDialog5Demo() {
     contentP->create();
 
     g_focusEB1->setParent(contentP.get());
-    g_focusEB1->setRenderDevice(contentP->getRenderDevice());
-    g_focusEB1->setTextRenderer(contentP->getTextRenderer());
     contentP->addControl(g_focusEB1);
 
     g_focusEB2->setParent(contentP.get());
-    g_focusEB2->setRenderDevice(contentP->getRenderDevice());
-    g_focusEB2->setTextRenderer(contentP->getTextRenderer());
     contentP->addControl(g_focusEB2);
 
     infoLb->setParent(contentP.get());
-    infoLb->setRenderDevice(contentP->getRenderDevice());
-    infoLb->setTextRenderer(contentP->getTextRenderer());
     contentP->addControl(infoLb);
 
     g_dlg5->setContent(contentP);
@@ -663,6 +652,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    DialogTestApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<DialogTestApp>(argc, argv);
 }

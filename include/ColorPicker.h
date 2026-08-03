@@ -1,4 +1,4 @@
-#ifndef ColorPickerH
+﻿#ifndef ColorPickerH
 #define ColorPickerH
 
 #include <functional>

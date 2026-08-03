@@ -66,6 +66,8 @@ public:
     WinFrame(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
     ~WinFrame();
 
+    void create(void) override;
+
     bool handleEvent(shared_ptr<Event> event) override;
 
     void onFocusScopeActivated() override;

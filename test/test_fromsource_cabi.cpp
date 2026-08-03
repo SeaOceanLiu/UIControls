@@ -15,46 +15,46 @@
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 // ===== C ABI function pointer types =====
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef void* (*UICreateButtonFn)(const char*,float,float,float,float);
-typedef void* (*UICreateLabelFn)(const char*,float,float,float,float,float);
-typedef void* (*UICreateCheckBoxFn)(const char*,float,float,float,float);
-typedef void* (*UICreateEditBoxFn)(float,float,float,float);
-typedef void* (*UICreateProgressBarFn)(float,float,float,float);
-typedef void* (*UICreatePanelFn)(float,float,float,float);
-typedef void* (*UICreateTextAreaFn)(float,float,float,float);
-typedef void* (*UICreateWinFrameFn)(const char*,float,float,float,float);
-typedef void  (*UIAddChildControlFn)(void*,void*);
-typedef void  (*UIPushUIEventFn)(const void*);
-typedef void  (*UIDestroyControlFn)(void*);
-typedef void* (*UICreateImageButtonFn)(const char*,const char*,const char*,float,float,float,float);
-typedef void* (*UICreateSliderFn)(float,float,float,float,float,float,float);
-typedef void* (*UICreateColorPickerFn)(float,float,float,float,const char*);
-typedef void* (*UICreateNumericUpDownFn)(float,float,float,float);
-typedef void* (*UICreateSplitterFn)(float,float,float,float,int);
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef void  (*UIDestroyInstanceFn)(UIInstance);
+typedef void* (*UICreateButtonFn)(UIInstance,const char*,float,float,float,float);
+typedef void* (*UICreateLabelFn)(UIInstance,const char*,float,float,float,float,float);
+typedef void* (*UICreateCheckBoxFn)(UIInstance,const char*,float,float,float,float);
+typedef void* (*UICreateEditBoxFn)(UIInstance,float,float,float,float);
+typedef void* (*UICreateProgressBarFn)(UIInstance,float,float,float,float);
+typedef void* (*UICreatePanelFn)(UIInstance,float,float,float,float);
+typedef void* (*UICreateTextAreaFn)(UIInstance,float,float,float,float);
+typedef void* (*UICreateWinFrameFn)(UIInstance,const char*,float,float,float,float);
+typedef void  (*UIAddChildControlFn)(UIInstance,void*,void*);
+typedef void  (*UIPushUIEventFn)(UIInstance,const UIEvent*);
+typedef void  (*UIDestroyControlFn)(UIInstance,void*);
+typedef void* (*UICreateImageButtonFn)(UIInstance,const char*,const char*,const char*,float,float,float,float);
+typedef void* (*UICreateSliderFn)(UIInstance,float,float,float,float,float,float,float);
+typedef void* (*UICreateColorPickerFn)(UIInstance,float,float,float,float,const char*);
+typedef void* (*UICreateNumericUpDownFn)(UIInstance,float,float,float,float);
+typedef void* (*UICreateSplitterFn)(UIInstance,float,float,float,float,int);
 
 // Property API function pointer types
-typedef int   (*UISetColorFn)(void*, const char*, UIColor);
-typedef int   (*UISetBoolFn)(void*, const char*, int);
-typedef int   (*UISetFloatFn)(void*, const char*, float);
-typedef int   (*UISetIntFn)(void*, const char*, int);
-typedef int   (*UISetStringFn)(void*, const char*, const char*);
-typedef int   (*UISetPtrFn)(void*, const char*, void*);
-typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
-typedef int   (*UIGetFloatFn)(void*, const char*, float*);
-typedef int   (*UIGetBoolFn)(void*, const char*, int*);
-typedef int   (*UISetCallbackFn)(void*, const char*, UIEventCallback, void*);
+typedef int   (*UISetColorFn)(UIInstance, void*, const char*, UIColor);
+typedef int   (*UISetBoolFn)(UIInstance, void*, const char*, int);
+typedef int   (*UISetFloatFn)(UIInstance, void*, const char*, float);
+typedef int   (*UISetIntFn)(UIInstance, void*, const char*, int);
+typedef int   (*UISetStringFn)(UIInstance, void*, const char*, const char*);
+typedef int   (*UISetPtrFn)(UIInstance, void*, const char*, void*);
+typedef int   (*UIGetStringFn)(UIInstance, void*, const char*, char*, int);
+typedef int   (*UIGetFloatFn)(UIInstance, void*, const char*, float*);
+typedef int   (*UIGetBoolFn)(UIInstance, void*, const char*, int*);
+typedef int   (*UISetCallbackFn)(UIInstance, void*, const char*, UIEventCallback, void*);
 
 // ===== C ABI function pointers =====
-static UIInitFn             uiInit             = nullptr;
+static UICreateInstanceFn   uiCreateInstance   = nullptr;
 static UISetViewportFn      uiSetViewport      = nullptr;
 static UIProcessEventsFn    uiProcessEvents    = nullptr;
 static UIUpdateFn           uiUpdate           = nullptr;
@@ -62,7 +62,7 @@ static UIClearFn            uiClear            = nullptr;
 static UIRenderFn           uiRender           = nullptr;
 static UIPresentFn          uiPresent          = nullptr;
 static UIIsQuitFn           uiIsQuit           = nullptr;
-static UIShutdownFn         uiShutdown         = nullptr;
+static UIDestroyInstanceFn  uiDestroyInstance  = nullptr;
 static UICreateButtonFn     uiCreateButton     = nullptr;
 static UICreateLabelFn      uiCreateLabel      = nullptr;
 static UICreateCheckBoxFn   uiCreateCheckBox   = nullptr;
@@ -112,8 +112,8 @@ static void* g_spFirstPanel   = nullptr;
 static void* g_spSecondPanel  = nullptr;
 static void* g_winFrameLabel  = nullptr;
 
-static HMODULE g_uiDll = nullptr;
-static bool    g_uiInitialized = false;
+static HMODULE  g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
 static int     g_frameCount = 0;
 
 // ===== Button callback =====
@@ -124,25 +124,25 @@ static void onButtonClick(void* ctl, const UIEventData* evt, void* userData) {
     if (!g_textAreaHandle || !uiGetString) return;
 
     char text[4096] = "";
-    uiGetString(g_textAreaHandle, "text", text, sizeof(text));
+    uiGetString(g_inst, g_textAreaHandle, "text", text, sizeof(text));
 
     if (!g_winFrameHandle) {
         g_winFrameHandle = uiCreateWinFrame(
-            "TextArea Content", 60, 40, 500, 300);
+            g_inst, "TextArea Content", 60, 40, 500, 300);
         if (!g_winFrameHandle) {
             printf("FAIL: creating WinFrame\n"); fflush(stdout);
             return;
         }
-        g_winFrameLabel = uiCreateLabel(text, 14.0f, 10, 35, 480, 240);
-        if (g_winFrameLabel) uiAddChildControl(g_winFrameHandle, g_winFrameLabel);
+        g_winFrameLabel = uiCreateLabel(g_inst, text, 14.0f, 10, 35, 480, 240);
+        if (g_winFrameLabel) uiAddChildControl(g_inst, g_winFrameHandle, g_winFrameLabel);
         printf("OK: created WinFrame with Label\n"); fflush(stdout);
     } else {
-        if (uiSetBool) uiSetBool(g_winFrameHandle, "visible", 1);
+        if (uiSetBool) uiSetBool(g_inst, g_winFrameHandle, "visible", 1);
         if (g_winFrameLabel && uiSetString)
-            uiSetString(g_winFrameLabel, "caption", text);
+            uiSetString(g_inst, g_winFrameLabel, "caption", text);
     }
     if (uiSetString) {
-        uiSetString(g_winFrameHandle, "title", text);
+        uiSetString(g_inst, g_winFrameHandle, "title", text);
     }
 }
 
@@ -150,14 +150,14 @@ static void onButtonClick(void* ctl, const UIEventData* evt, void* userData) {
 static void onSplitterMovedCb(void* ctl, const UIEventData* evt, void* userData) {
     (void)ctl; (void)evt; (void)userData;
     float r = 0.0f;
-    if (uiGetFloat) uiGetFloat(g_splitterHandle, "ratio", &r);
+    if (uiGetFloat) uiGetFloat(g_inst, g_splitterHandle, "ratio", &r);
     printf("Splitter ratio: %.3f\n", r);
     fflush(stdout);
 }
 
 // ===== Load all C ABI function pointers from DLL =====
 static bool loadAllProcs(HMODULE dll) {
-    uiInit          = (UIInitFn)GetProcAddress(dll, "UICornerstone_Init");
+    uiCreateInstance = (UICreateInstanceFn)GetProcAddress(dll, "UICornerstone_CreateInstance");
     uiSetViewport   = (UISetViewportFn)GetProcAddress(dll, "UICornerstone_SetViewport");
     uiProcessEvents = (UIProcessEventsFn)GetProcAddress(dll, "UICornerstone_ProcessEvents");
     uiUpdate        = (UIUpdateFn)GetProcAddress(dll, "UICornerstone_Update");
@@ -165,7 +165,7 @@ static bool loadAllProcs(HMODULE dll) {
     uiRender        = (UIRenderFn)GetProcAddress(dll, "UICornerstone_Render");
     uiPresent       = (UIPresentFn)GetProcAddress(dll, "UICornerstone_Present");
     uiIsQuit        = (UIIsQuitFn)GetProcAddress(dll, "UICornerstone_IsQuitRequested");
-    uiShutdown      = (UIShutdownFn)GetProcAddress(dll, "UICornerstone_Shutdown");
+    uiDestroyInstance = (UIDestroyInstanceFn)GetProcAddress(dll, "UICornerstone_DestroyInstance");
     uiCreateButton     = (UICreateButtonFn)GetProcAddress(dll, "UICornerstone_CreateButton");
     uiCreateLabel      = (UICreateLabelFn)GetProcAddress(dll, "UICornerstone_CreateLabel");
     uiCreateCheckBox   = (UICreateCheckBoxFn)GetProcAddress(dll, "UICornerstone_CreateCheckBox");
@@ -193,126 +193,131 @@ static bool loadAllProcs(HMODULE dll) {
     uiGetFloat    = (UIGetFloatFn)GetProcAddress(dll, "UICornerstone_GetFloat");
     uiGetBool     = (UIGetBoolFn)GetProcAddress(dll, "UICornerstone_GetBool");
     uiSetCallback = (UISetCallbackFn)GetProcAddress(dll, "UICornerstone_SetCallback");
-    return uiInit != nullptr;
+    return uiCreateInstance != nullptr;
 }
 
 // ===== Common functions =====
-static bool initCABI(void* cbs, int viewportW, int viewportH) {
-    if (!uiInit(cbs)) return false;
-    uiSetViewport(0, 0, (float)viewportW, (float)viewportH);
-    g_uiInitialized = true;
+static bool initCABI(const UIBackendCallbacks* cbs, int viewportW, int viewportH) {
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_fromsource_cabi";
+    cfg.windowWidth = viewportW;
+    cfg.windowHeight = viewportH;
+    g_inst = uiCreateInstance(cbs, &cfg);
+    if (!g_inst) return false;
+    uiSetViewport(g_inst, 0, 0, (float)viewportW, (float)viewportH);
     return true;
 }
 
 static void createAllControls() {
     if (uiCreateCheckBox) {
-        g_checkHandle = uiCreateCheckBox("Check me", 20, 15, 180, 30);
+        g_checkHandle = uiCreateCheckBox(g_inst, "Check me", 20, 15, 180, 30);
         if (g_checkHandle) {
             printf("OK: created CheckBox\n");
-            if (uiSetBool) uiSetBool(g_checkHandle, "checked", 1);
+            if (uiSetBool) uiSetBool(g_inst, g_checkHandle, "checked", 1);
         }
     }
     if (uiCreateLabel) {
-        g_chkStatus = uiCreateLabel("CheckBox: Checked", 12.0f, 20, 50, 180, 16);
+        g_chkStatus = uiCreateLabel(g_inst, "CheckBox: Checked", 12.0f, 20, 50, 180, 16);
         if (g_chkStatus) printf("OK: created chkStatus\n");
     }
 
     if (uiCreateEditBox) {
-        g_editHandle = uiCreateEditBox(220, 15, 560, 30);
+        g_editHandle = uiCreateEditBox(g_inst, 220, 15, 560, 30);
         if (g_editHandle) {
             printf("OK: created EditBox\n");
-            if (uiSetString) uiSetString(g_editHandle, "text", "Type here...");
+            if (uiSetString) uiSetString(g_inst, g_editHandle, "text", "Type here...");
         }
     }
     if (uiCreateLabel) {
-        g_edtStatus = uiCreateLabel("Edit: ", 12.0f, 220, 50, 560, 16);
+        g_edtStatus = uiCreateLabel(g_inst, "Edit: ", 12.0f, 220, 50, 560, 16);
         if (g_edtStatus) printf("OK: created edtStatus\n");
     }
 
     if (uiCreateProgressBar) {
-        g_progressHandle = uiCreateProgressBar(20, 80, 760, 20);
+        g_progressHandle = uiCreateProgressBar(g_inst, 20, 80, 760, 20);
         if (g_progressHandle) {
             printf("OK: created ProgressBar\n");
-            if (uiSetColor) uiSetColor(g_progressHandle, "background", UIColor{60, 60, 60, 255});
-            if (uiSetFloat) uiSetFloat(g_progressHandle, "value", 0.0f);
+            if (uiSetColor) uiSetColor(g_inst, g_progressHandle, "background", UIColor{60, 60, 60, 255});
+            if (uiSetFloat) uiSetFloat(g_inst, g_progressHandle, "value", 0.0f);
         }
     }
     if (uiCreateLabel) {
-        g_prgStatus = uiCreateLabel("Progress: 0.0%", 12.0f, 20, 105, 230, 16);
+        g_prgStatus = uiCreateLabel(g_inst, "Progress: 0.0%", 12.0f, 20, 105, 230, 16);
         if (g_prgStatus) printf("OK: created prgStatus\n");
     }
 
     if (uiCreatePanel && uiCreateTextArea && uiAddChildControl) {
-        g_panelHandle = uiCreatePanel(20, 135, 760, 220);
+        g_panelHandle = uiCreatePanel(g_inst, 20, 135, 760, 220);
         if (g_panelHandle) {
             printf("OK: created Panel\n");
-            if (uiSetColor) uiSetColor(g_panelHandle, "background", UIColor{50, 55, 60, 255});
+            if (uiSetColor) uiSetColor(g_inst, g_panelHandle, "background", UIColor{50, 55, 60, 255});
         }
 
-        g_textAreaHandle = uiCreateTextArea(5, 5, 750, 160);
+        g_textAreaHandle = uiCreateTextArea(g_inst, 5, 5, 750, 160);
         if (g_textAreaHandle) {
             printf("OK: created TextArea\n");
-            if (uiSetString) uiSetString(g_textAreaHandle, "text",
+            if (uiSetString) uiSetString(g_inst, g_textAreaHandle, "text",
                 "Hello from TextArea!\nEdit me and click the button.");
-            uiAddChildControl(g_panelHandle, g_textAreaHandle);
+            uiAddChildControl(g_inst, g_panelHandle, g_textAreaHandle);
             printf("OK: added TextArea to Panel\n");
         }
 
         if (uiCreateSlider) {
-            g_sliderHandle = uiCreateSlider(20, 470, 300, 30, 0, 100, 50);
+            g_sliderHandle = uiCreateSlider(g_inst, 20, 470, 300, 30, 0, 100, 50);
             if (g_sliderHandle) printf("OK: created Slider\n");
         }
 
         if (uiCreateColorPicker) {
-            g_colorPickerHandle = uiCreateColorPicker(450, 470, 96, 24, "#FF6600");
+            g_colorPickerHandle = uiCreateColorPicker(g_inst, 450, 470, 96, 24, "#FF6600");
             if (g_colorPickerHandle) {
                 printf("OK: created ColorPicker\n");
                 if (uiSetFloat)
-                    uiSetFloat(g_colorPickerHandle, "closed-swatch-size", 16.0f);
+                    uiSetFloat(g_inst, g_colorPickerHandle, "closed-swatch-size", 16.0f);
                 if (uiSetInt)
-                    uiSetInt(g_colorPickerHandle, "closed-font-size", 12);
+                    uiSetInt(g_inst, g_colorPickerHandle, "closed-font-size", 12);
             }
         }
 
         if (uiCreateNumericUpDown) {
-            g_nudHandle = uiCreateNumericUpDown(360, 470, 80, 32);
+            g_nudHandle = uiCreateNumericUpDown(g_inst, 360, 470, 80, 32);
             if (g_nudHandle) {
                 printf("OK: created NumericUpDown\n");
                 if (uiSetFloat)
-                    uiSetFloat(g_nudHandle, "value", 50.0f);
+                    uiSetFloat(g_inst, g_nudHandle, "value", 50.0f);
             }
         }
 
         // ── Splitter test ──
         if (uiCreateSplitter && uiCreatePanel && uiAddChildControl) {
-            g_spFirstPanel = uiCreatePanel(20, 370, 60, 30);
+            g_spFirstPanel = uiCreatePanel(g_inst, 20, 370, 60, 30);
             if (g_spFirstPanel) {
                 printf("OK: created splitter first panel\n");
-                if (uiSetColor) uiSetColor(g_spFirstPanel, "background", UIColor{60, 70, 80, 255});
+                if (uiSetColor) uiSetColor(g_inst, g_spFirstPanel, "background", UIColor{60, 70, 80, 255});
             }
-            g_spSecondPanel = uiCreatePanel(86, 370, 60, 30);
+            g_spSecondPanel = uiCreatePanel(g_inst, 86, 370, 60, 30);
             if (g_spSecondPanel) {
                 printf("OK: created splitter second panel\n");
-                if (uiSetColor) uiSetColor(g_spSecondPanel, "background", UIColor{80, 70, 60, 255});
+                if (uiSetColor) uiSetColor(g_inst, g_spSecondPanel, "background", UIColor{80, 70, 60, 255});
             }
-            g_splitterHandle = uiCreateSplitter(80, 370, 6, 30, 1);
+            g_splitterHandle = uiCreateSplitter(g_inst, 80, 370, 6, 30, 1);
             if (g_splitterHandle) {
                 printf("OK: created Splitter\n");
                 if (uiSetPtr) {
-                    uiSetPtr(g_splitterHandle, "first-linked", g_spFirstPanel);
-                    uiSetPtr(g_splitterHandle, "second-linked", g_spSecondPanel);
+                    uiSetPtr(g_inst, g_splitterHandle, "first-linked", g_spFirstPanel);
+                    uiSetPtr(g_inst, g_splitterHandle, "second-linked", g_spSecondPanel);
                 }
                 if (uiSetFloat) {
-                    uiSetFloat(g_splitterHandle, "first-min", 20.0f);
-                    uiSetFloat(g_splitterHandle, "second-min", 20.0f);
+                    uiSetFloat(g_inst, g_splitterHandle, "first-min", 20.0f);
+                    uiSetFloat(g_inst, g_splitterHandle, "second-min", 20.0f);
                 }
                 if (uiSetCallback)
-                    uiSetCallback(g_splitterHandle, "moved", onSplitterMovedCb, nullptr);
+                    uiSetCallback(g_inst, g_splitterHandle, "moved", onSplitterMovedCb, nullptr);
             }
         }
 
         if (uiCreateImageButton) {
             g_imgBtnHandle = uiCreateImageButton(
+                    g_inst,
                     "assets/images/cross_up.png",
                     "assets/images/cross_over.png",
                     "assets/images/cross_down.png",
@@ -320,33 +325,33 @@ static void createAllControls() {
             if (g_imgBtnHandle) {
                 printf("OK: created ImageButton\n");
                 if (uiSetCallback)
-                    uiSetCallback(g_imgBtnHandle, "click", onButtonClick, nullptr);
-                uiAddChildControl(g_panelHandle, g_imgBtnHandle);
+                    uiSetCallback(g_inst, g_imgBtnHandle, "click", onButtonClick, nullptr);
+                uiAddChildControl(g_inst, g_panelHandle, g_imgBtnHandle);
             }
         }
 
         if (uiCreateButton && uiSetString) {
-            g_aniBtnHandle = uiCreateButton("Ani Test", 210, 175, 200, 30);
+            g_aniBtnHandle = uiCreateButton(g_inst, "Ani Test", 210, 175, 200, 30);
             if (g_aniBtnHandle) {
                 printf("OK: created Animation Button\n");
-                uiSetString(g_aniBtnHandle, "animation",
+                uiSetString(g_inst, g_aniBtnHandle, "animation",
                     "assets/animations/rotateBtn/rotateBtn.jsonc");
                 if (uiSetCallback)
-                    uiSetCallback(g_aniBtnHandle, "click", onButtonClick, nullptr);
-                uiAddChildControl(g_panelHandle, g_aniBtnHandle);
+                    uiSetCallback(g_inst, g_aniBtnHandle, "click", onButtonClick, nullptr);
+                uiAddChildControl(g_inst, g_panelHandle, g_aniBtnHandle);
             }
         }
 
         if (uiCreateButton) {
             g_btnHandle = uiCreateButton(
-                "Read TextArea Content", 555, 175, 200, 30);
+                g_inst, "Read TextArea Content", 555, 175, 200, 30);
             if (g_btnHandle) {
                 printf("OK: created Button (in Panel)\n");
                 if (uiSetColor)
-                    uiSetColor(g_btnHandle, "background", UIColor{100, 149, 237, 255});
+                    uiSetColor(g_inst, g_btnHandle, "background", UIColor{100, 149, 237, 255});
                 if (uiSetCallback)
-                    uiSetCallback(g_btnHandle, "click", onButtonClick, nullptr);
-                uiAddChildControl(g_panelHandle, g_btnHandle);
+                    uiSetCallback(g_inst, g_btnHandle, "click", onButtonClick, nullptr);
+                uiAddChildControl(g_inst, g_panelHandle, g_btnHandle);
                 printf("OK: added Button to Panel\n");
             }
         }
@@ -359,23 +364,23 @@ static void updateStatusLabels() {
 
     if (g_checkHandle && uiGetBool && g_chkStatus && uiSetString) {
         int st = 0;
-        uiGetBool(g_checkHandle, "checked", &st);
+        uiGetBool(g_inst, g_checkHandle, "checked", &st);
         const char* label = "Unchecked";
         if (st == 1) label = "Checked";
         snprintf(buf, sizeof(buf), "CheckBox: %s", label);
-        uiSetString(g_chkStatus, "caption", buf);
+        uiSetString(g_inst, g_chkStatus, "caption", buf);
     }
 
     if (g_progressHandle && uiGetFloat && g_prgStatus && uiSetString) {
         float v = 0.0f;
-        uiGetFloat(g_progressHandle, "value", &v);
+        uiGetFloat(g_inst, g_progressHandle, "value", &v);
         snprintf(buf, sizeof(buf), "Progress: %.1f%%", v);
-        uiSetString(g_prgStatus, "caption", buf);
+        uiSetString(g_inst, g_prgStatus, "caption", buf);
     }
 
     if (g_editHandle && uiGetString && g_edtStatus && uiSetString) {
         char text[4096] = "";
-        uiGetString(g_editHandle, "text", text, sizeof(text));
+        uiGetString(g_inst, g_editHandle, "text", text, sizeof(text));
         size_t tlen = strlen(text);
         if (tlen > 32) {
             memcpy(buf, text, 32);
@@ -384,27 +389,27 @@ static void updateStatusLabels() {
         } else {
             snprintf(buf, sizeof(buf), "Edit: %s", text);
         }
-        uiSetString(g_edtStatus, "caption", buf);
+        uiSetString(g_inst, g_edtStatus, "caption", buf);
     }
 
     if (g_sliderHandle && uiGetFloat) {
         float sv = 0.0f;
-        uiGetFloat(g_sliderHandle, "value", &sv);
+        uiGetFloat(g_inst, g_sliderHandle, "value", &sv);
     }
 
     if (g_nudHandle && uiGetFloat) {
         float nv = 0.0f;
-        uiGetFloat(g_nudHandle, "value", &nv);
+        uiGetFloat(g_inst, g_nudHandle, "value", &nv);
     }
 
     if (g_colorPickerHandle && uiGetString) {
         char hex[16];
-        uiGetString(g_colorPickerHandle, "color", hex, sizeof(hex));
+        uiGetString(g_inst, g_colorPickerHandle, "color", hex, sizeof(hex));
     }
 
     if (g_splitterHandle && uiGetFloat) {
         float sr = 0.0f;
-        uiGetFloat(g_splitterHandle, "ratio", &sr);
+        uiGetFloat(g_inst, g_splitterHandle, "ratio", &sr);
     }
 }
 
@@ -413,22 +418,22 @@ static void doFrame() {
 
     if (g_progressHandle && uiSetFloat) {
         float p = ((g_frameCount % 120) / 120.0f) * 100.0f;
-        uiSetFloat(g_progressHandle, "value", p);
+        uiSetFloat(g_inst, g_progressHandle, "value", p);
     }
 
-    uiProcessEvents();
-    uiClear();
-    uiUpdate(1.0 / 60.0);
+    uiProcessEvents(g_inst);
+    uiClear(g_inst);
+    uiUpdate(g_inst, 1.0 / 60.0);
 
     updateStatusLabels();
 
-    uiRender();
+    uiRender(g_inst);
 }
 
 static void shutdownApp() {
-    if (g_uiInitialized && uiShutdown) {
-        uiShutdown();
-        g_uiInitialized = false;
+    if (g_inst && uiDestroyInstance) {
+        uiDestroyInstance(g_inst);
+        g_inst = nullptr;
     }
     if (g_uiDll) {
         FreeLibrary(g_uiDll);
@@ -450,9 +455,9 @@ static int runTest(const char* shortName, const char* displayName) {
         return 1;
     }
 
-    void* cbs = GetUIBackendCallbacks();
-    if (!cbs || !initCABI(cbs, 800, 550)) {
-        printf("FAIL: UICornerstone_Init\n");
+    UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
+    if (!callbacks || !initCABI(callbacks, 800, 550)) {
+        printf("FAIL: UICornerstone_CreateInstance\n");
         FreeLibrary(g_uiDll);
         return 1;
     }
@@ -462,9 +467,9 @@ static int runTest(const char* shortName, const char* displayName) {
     createAllControls();
     printf("Starting frame loop...\n"); fflush(stdout);
 
-    while (!uiIsQuit()) {
+    while (!uiIsQuit(g_inst)) {
         doFrame();
-        uiPresent();
+        uiPresent(g_inst);
     }
 
     printf("Done, %d frames\n", g_frameCount); fflush(stdout);

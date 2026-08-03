@@ -1,6 +1,6 @@
 ﻿# C ABI 多实例支持改造设计
 
-> 对应 Phase 16ii | 编制 2026-07-30 | 修订 2026-07-31 | 状态: **草案**
+> 对应 Phase 16ii | 编制 2026-07-30 | 修订 2026-07-31 | **2026-08-03 实施完成（核心框架），状态：已实施**
 
 ## 目录
 
@@ -29,7 +29,9 @@
 
 ## 1. 问题
 
-当前 C ABI 通过**文件作用域静态变量**和**类静态单例**共享状态，进程生命周期内只能存在一个 UICornerstone 实例。
+> **实施状态（2026-08-03）**：本节描述的历史问题已全部解决——14 个全局变量已迁入 `UIContext`（UIContext.h），5 个单例改为实例持有，C ABI 全部函数已加 `UIInstance` 首参。保留本节作为改造动机的记录。
+
+当前 C ABI 曾通过**文件作用域静态变量**和**类静态单例**共享状态，进程生命周期内只能存在一个 UICornerstone 实例。
 
 ```cpp
 // src/UICornerstoneAPI.cpp — 14 个全局变量（修订：补 g_menuPool；static char buf[256] 在 GetControlId 函数体内，非全局，见 §2.1）
@@ -57,6 +59,8 @@ DataContext::getInstance()   → static shared_ptr<DataContext> s_instance
 | 从两个线程同时操作 | 无锁，数据竞争 |
 
 ## 2. 全局状态清单
+
+> **实施状态（2026-08-03）**：以下清单为改造前状态。14 项已全部迁入 `UIContext` 结构体成员（UIContext.h），5 个单例已实例化，宏已改为 `GET_CONTEXT` 版本。**遗留未实施项**：后端插件 3 个 DLL 的静态缓存仍保留（§2.4/§5.6，不影响多实例隔离——BackendManager 单实例缓存窗口对象，子视口共享；仅"同时多窗口"场景受限），`test_multi_instance.cpp` / `test_multiviewport.cpp` 尚未创建。
 
 ### 2.1 UICornerstoneAPI.cpp（实例上下文，14 项）
 
@@ -162,6 +166,12 @@ flowchart LR
 
 ### 5.1 UIContext — 实例上下文
 
+> **实施状态（2026-08-03）**：`include/UIContext.h` / `src/UIContext.cpp` 已按本设计实现，与实际代码的差异如下（均为实施时的细化，非设计偏离）：
+> - 新增实例配置字段：`windowTitle` / `windowWidth` / `windowHeight` / `windowFlags` / `resourceRoot`（`UIInstanceConfig` 透传，见 §5.2）
+> - 新增静态辅助：`getLastInstance()`/`setLastInstance()`（浮层控件无 parent 归属时的兜底解析，Dialog.cpp:108 使用）、`registerActive()`/`unregisterActive()`/`isActive()`（实例活跃注册表，进程退出期残留控件析构守卫，见 §5.11.3 修订）
+> - 下方伪代码中的 `pathPrefix` 注释字段未实施（`ConstDef::pathPrefix` 保持静态，per-instance 覆盖由 `UIInstanceConfig.resourceRoot` 提供，见 §7.2 非风险表 g_pathPrefix 行）
+> - `initialize()` 实际顺序与下方伪代码不同：`EventQueue`/`DataContext` 在 `MainWindow` 之前创建（Bench 构造绑定 `ctx->eventQueue`，须先建）；`FocusManager` + `Bench` 为最后一步；子视口（`ownsBackend=false`）跳过 Backend/MainWindow，从 owner 继承全部后端指针
+
 新增头文件，聚合一个实例的全部状态：
 
 ```cpp
@@ -237,65 +247,118 @@ struct UIContext {
 };
 ```
 
-`initialize()` 的实现（不接收外部参数，callbacks 已在创建时由 C ABI 填写）：
+`initialize()` 的实际实现（src/UIContext.cpp，与上方伪代码的差异见修订说明）：
 
 ```cpp
 // src/UIContext.cpp
 bool UIContext::initialize() {
-    backendManager = new BackendManager();
-    if (!backendManager->initialize(callbacks)) {
-        delete backendManager;
-        backendManager = nullptr;
-        return false;
+    instanceId = s_nextInstanceId++;
+    setLastInstance(this);
+    registerActive(this);
+    if (debugLabel.empty()) {
+        debugLabel = "Instance_" + std::to_string(instanceId);
     }
-    window          = backendManager->window();
-    renderDevice    = backendManager->renderDevice();
-    inputBackend    = backendManager->inputBackend();
-    textRenderer    = backendManager->textRenderer();
 
-    mainWindow   = new MainWindow(this);
-    bench        = new Bench(this);
-    eventQueue   = new EventQueue();
-    dataContext  = new DataContext();
+    // 步骤 1: Backend（仅 owner 创建；子视口共享 owner 后端）
+    if (ownsBackend) {
+        backendManager = new BackendManager();
+        const char* title = windowTitle.empty() ? nullptr : windowTitle.c_str();
+        if (!backendManager->initialize(callbacks, title,
+                                        windowWidth, windowHeight, windowFlags)) {
+            delete backendManager;
+            backendManager = nullptr;
+            return false;
+        }
+        window = backendManager->window();
+        renderDevice = backendManager->renderDevice();
+        inputBackend = backendManager->inputBackend();
+        textRenderer = backendManager->textRenderer();
+    } else if (owner) {
+        backendManager = owner->backendManager;
+        window = owner->window;
+        renderDevice = owner->renderDevice;
+        inputBackend = owner->inputBackend;
+        textRenderer = owner->textRenderer;
+        resourceProvider = owner->resourceProvider;
+        viewport = owner->viewport;  // 兜底；CreateViewport 已在创建时写入
+    }
 
-    // resourceProvider 从 MainWindow 获取
-    resourceProvider = mainWindow->getResourceProvider();
+    // 步骤 2: EventQueue / DataContext（Bench 构造绑定 ctx->eventQueue，须先建）
+    eventQueue = new EventQueue();
+    dataContext = new DataContext();
+
+    // 步骤 3: MainWindow（仅 owner 创建；子视口共享 owner 的 ResourceProvider）
+    if (ownsBackend) {
+        mainWindow = new MainWindow(this);
+        if (!mainWindow->getResourceProvider()) {
+            delete mainWindow;
+            mainWindow = nullptr;
+            goto rollback;
+        }
+        resourceProvider = mainWindow->getResourceProvider();
+    }
+
+    // 步骤 4: FocusManager + Bench（控件树根）
+    focusManager = new FocusManager();
+    bench = new Bench(this);
+    bench->show();
 
     initialized = true;
     quit = false;
     return true;
-}
-```
 
-`destroy()` 逆序析构：
-
-```cpp
-void UIContext::destroy() {
-    quit = true;
-    popupPool.clear();
-    controlsById.clear();
-    actions.clear();
-
+rollback:
     delete dataContext;     dataContext = nullptr;
     delete eventQueue;      eventQueue = nullptr;
-    delete bench;           bench = nullptr;
-    delete mainWindow;      mainWindow = nullptr;
-
     if (backendManager) {
         backendManager->shutdown();
         delete backendManager;
         backendManager = nullptr;
     }
-
-    window          = nullptr;
-    renderDevice    = nullptr;
-    inputBackend    = nullptr;
-    textRenderer    = nullptr;
+    window = nullptr;
+    renderDevice = nullptr;
+    inputBackend = nullptr;
+    textRenderer = nullptr;
     resourceProvider = nullptr;
-    callbacks       = nullptr;
-    initialized     = false;
+    return false;
 }
 ```
+
+`destroy()` 的实际实现（逆序析构 + 活跃注册表摘除）：
+
+```cpp
+// src/UIContext.cpp
+void UIContext::destroy() {
+    quit = true;
+    popupPool.clear();
+    menuPool.clear();
+    controlsById.clear();
+    actions.clear();
+    while (!queuedEvents.empty()) queuedEvents.pop();
+
+    delete dataContext;     dataContext = nullptr;
+    delete eventQueue;      eventQueue = nullptr;
+    delete bench;           bench = nullptr;
+    delete mainWindow;      mainWindow = nullptr;
+    delete focusManager;    focusManager = nullptr;
+
+    if (ownsBackend && backendManager) {
+        backendManager->shutdown();
+        delete backendManager;
+    }
+    backendManager = nullptr;
+    window = nullptr;
+    renderDevice = nullptr;
+    inputBackend = nullptr;
+    textRenderer = nullptr;
+    resourceProvider = nullptr;
+    callbacks = nullptr;
+    initialized = false;
+    unregisterActive(this);
+}
+```
+
+> 注：`destroy()` 不负责子视口（`children`）的销毁——由 `UICornerstone_DestroyInstance` 在调用 `destroy()` 前快照遍历递归销毁（见 §5.2/§5.13.5）。
 
 ### 5.2 C ABI 新签名
 
@@ -310,22 +373,28 @@ typedef struct UIContext* UIInstance;
 
 ```c
 typedef struct {
-    uint32_t    structSize;         // sizeof(UIInstanceConfig)
-    const char* debugLabel;         // 调试标签（复核修订：§5.11.1 有、此处原缺，已补齐，见下）
+    uint32_t    structSize;         // 必须填 sizeof(UIInstanceConfig)
+    const char* debugLabel;         // 调试标签
     const char* resourceRoot;       // 资源根目录，null→默认
     const char* windowTitle;        // 窗口标题，null→"UICornerstone"
     int         windowWidth;        // 0→默认
     int         windowHeight;       // 0→默认
+    uint32_t    windowFlags;        // 跨后端统一窗口标志（UIWindowFlags，值对齐 SDL_WINDOW_*）
     uint32_t    reserved[6];        // 未来扩展预留
 } UIInstanceConfig;
 
 #define UI_INSTANCE_CONFIG_DEFAULT \
-    { sizeof(UIInstanceConfig), NULL, NULL, NULL, 0, 0, {0} }
+    { sizeof(UIInstanceConfig), NULL, NULL, NULL, 0, 0, 0, {0} }
 ```
 
-> 修订说明（2026-07-31）：原稿在 §5.2 与 §5.11.1 出现两处不一致定义（`reserved[8]` vs `structSize + reserved[6]`）。本处统一为带 `structSize` 的版本（与 §7.2 的版本兼容策略一致）。
->
-> 复核修订（2026-07-31）：统一并不彻底——§5.11.1 的定义比此处多出 `debugLabel` 字段且插在 `structSize` 之后。**两处字段顺序必须完全一致**（`structSize → debugLabel → resourceRoot → windowTitle → windowWidth → windowHeight → reserved[6]`），否则同一结构体在文档两处定义不同，实现时无从取舍。已在本处补齐 `debugLabel`（字段偏移随之变化），`UI_INSTANCE_CONFIG_DEFAULT` 宏已同步为 7 个初值。
+> **实施状态（2026-08-03）**：实际 `UIInstanceConfig`（UICornerstoneAPI.h:36-46）比原稿多出 `windowFlags` 字段（第 7 个，位于 `windowHeight` 与 `reserved[6]` 之间），`UI_INSTANCE_CONFIG_DEFAULT` 为 7 个初值。`CreateInstance` 读取该字段时按 `structSize` 守卫（旧客户端 structSize 更小时不读取，保证向后兼容）：
+> ```cpp
+> if (config->structSize >= offsetof(UIInstanceConfig, windowFlags) + sizeof(config->windowFlags)) {
+>     ctx->windowFlags = config->windowFlags;
+> }
+> ```
+
+> **修订说明（2026-07-31）**：原稿在 §5.2 与 §5.11.1 出现两处不一致定义（`reserved[8]` vs `structSize + reserved[6]`）。本处统一为带 `structSize` 的版本（与 §7.2 的版本兼容策略一致）。**2026-08-03 已实施**：§5.11.1 的定义已与本处完全一致（实际定义见上，含 `windowFlags`）。
 
 实例生命周期——只有两个函数，没有独立的 Init/Shutdown：
 
@@ -444,21 +513,29 @@ UICORNERSTONE_API int      UICornerstone_Debug_IsControlFocused(UIInstance insta
 
 > **控件句柄归属校验**：`UIControlHandle` 是裸指针，C ABI 层无法判断句柄属于哪个实例。建议所有带句柄的函数入口校验：句柄为空 → 直接返回 0/NULL；句柄非本实例（遍历 `instance->controlsById` 或控件树，O(n)，仅 Debug 构建开启）→ 断言。Release 构建不做归属校验（性能优先），行为由调用方保证，见 §7 风险 5。
 
-**`CreateInstance` 内部流程**：
+**`CreateInstance` 内部流程**（实际实现，src/UICornerstoneAPI.cpp:228-271）：
 
 ```c
 UIInstance UICornerstone_CreateInstance(
     const UIBackendCallbacks* callbacks,
     const UIInstanceConfig* config) {
 
-    if (!callbacks) return NULL;
+    if (!callbacks || callbacks->version != 1) return NULL;
 
     auto* ctx = new UIContext();
     ctx->callbacks = callbacks;
 
     // 应用配置
     if (config) {
-        // 将 config 中的字段写入 ctx（例如路径前缀、窗口尺寸等）
+        if (config->debugLabel) ctx->debugLabel = config->debugLabel;
+        if (config->resourceRoot) ctx->resourceRoot = config->resourceRoot;
+        if (config->windowTitle) ctx->windowTitle = config->windowTitle;
+        ctx->windowWidth  = config->windowWidth;
+        ctx->windowHeight = config->windowHeight;
+        // windowFlags 为新增字段：旧客户端 structSize 更小，按大小守卫读取
+        if (config->structSize >= offsetof(UIInstanceConfig, windowFlags) + sizeof(config->windowFlags)) {
+            ctx->windowFlags = config->windowFlags;
+        }
     }
 
     if (!ctx->initialize()) {
@@ -466,16 +543,84 @@ UIInstance UICornerstone_CreateInstance(
         return NULL;
     }
 
+    // 初始化视口为窗口尺寸，并通知控件树
+    if (ctx->window) {
+        SSize sz = ctx->window->getSize();
+        ctx->viewport = SRect(0, 0, sz.width, sz.height);
+        ctx->bench->resized(ctx->viewport);
+    }
+
+    // 一次空的 clear+present，确保 OpenGL context 激活（后续纹理创建需要）
+    if (ctx->renderDevice) {
+        ctx->renderDevice->setDrawColor(SColor(0, 0, 0, 0));
+        ctx->renderDevice->clear();
+        ctx->renderDevice->present();
+    }
+
+    registerInstance(ctx);
+    printf("[%s] created\n", ctx->debugLabel.c_str());
     return ctx;
 }
 ```
 
-**`DestroyInstance` 内部流程**：
+**`CreateViewport` 内部流程**（实际实现，cpp:273-297）：
+
+```c
+UIInstance UICornerstone_CreateViewport(UIInstance parent, UIRect rect) {
+    if (!parent || !parent->initialized || parent->destroying) return NULL;
+    if (!parent->ownsBackend) return NULL;  // 只能从 owner 创建
+
+    auto* vp = new UIContext();
+    vp->owner = parent;
+    vp->ownsBackend = false;
+    vp->callbacks = parent->callbacks;
+    vp->viewport = SRect(rect.x, rect.y, rect.w, rect.h);
+
+    if (!vp->initialize()) {
+        delete vp;
+        return NULL;
+    }
+    vp->bench->resized(vp->viewport);
+
+    parent->children.push_back(vp);
+    // 首个子视口自动设为活动视口（键盘事件投递目标）
+    if (!parent->activeViewport) parent->activeViewport = vp;
+
+    registerInstance(vp);
+    return vp;
+}
+```
+
+**`DestroyInstance` 内部流程**（实际实现，cpp:299-327，含快照遍历 + destroying 防重入 + owner 摘除）：
 
 ```c
 void UICornerstone_DestroyInstance(UIInstance instance) {
-    if (!instance) return;
+    if (!instance || instance->destroying) return;
+    instance->destroying = true;  // 置位：回调重入的 C ABI 入口直接短路
+    unregisterInstance(instance);
+
+    // 快照遍历：子视口销毁时会从 owner->children 摘除自身
+    auto snapshot = instance->children;
+    for (auto* child : snapshot) {
+        if (instance->activeViewport == child) {
+            instance->activeViewport = NULL;
+        }
+        UICornerstone_DestroyInstance(child);
+    }
+    instance->children.clear();
+
     instance->destroy();
+
+    // 从 owner 摘除 + 清 activeViewport 引用（直接销毁子视口路径）
+    if (instance->owner) {
+        if (instance->owner->activeViewport == instance) {
+            instance->owner->activeViewport = NULL;
+        }
+        auto& cs = instance->owner->children;
+        cs.erase(std::remove(cs.begin(), cs.end(), instance), cs.end());
+    }
+
+    printf("[%s] destroyed\n", instance->debugLabel.c_str());
     delete instance;
 }
 ```
@@ -486,6 +631,8 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
 
 #### BackendManager
 
+> **实施状态（2026-08-03）**：实际 `BackendManager`（BackendPlugin.h:33-67）与下方伪代码的差异：`initialize` 有**两个重载**——`initialize(const std::string& backendName = "sdl3")`（静态链接路径）与 `initialize(const UIBackendCallbacks* callbacks, const char* title, int w, int h, uint32_t flags)`（插件/实例路径）；保留了 `m_initialized` 标志（非移除）。`registerBackend`/`s_registeredAPI` 仍为 static，与设计一致。
+
 ```cpp
 // include/BackendPlugin.h
 class BackendManager {
@@ -493,7 +640,9 @@ public:
     BackendManager();
     ~BackendManager();
 
-    bool initialize(const UIBackendCallbacks* callbacks);
+    bool initialize(const std::string& backendName = "sdl3");
+    bool initialize(const UIBackendCallbacks* callbacks,
+                    const char* title, int w, int h, uint32_t flags);
     void shutdown();
 
     Window* window() const { return m_window; }
@@ -510,6 +659,7 @@ private:
     RenderDevice* m_renderDevice = nullptr;
     InputBackend* m_inputBackend = nullptr;
     TextRenderer* m_textRenderer = nullptr;
+    bool m_initialized = false;
 
     static BackendAPI s_registeredAPI;  // 进程级，只读
 };
@@ -518,10 +668,12 @@ private:
 **变化**：
 - 构造函数不再调用 `initialize`
 - `initialize/shutdown` 改为实例方法（原为类静态方法）
-- `s_initialized` 移除，初始化状态由 `UIContext::initialized` 体现
+- 实例初始化状态由 `m_initialized` 体现；实例级就绪状态由 `UIContext::initialized` 体现
 - `s_registeredAPI` 仍为 static（后端 DLL 加载后写入一次，后续只读）
 
 #### MainWindow / Bench
+
+> **实施状态（2026-08-03）**：实际 `MainWindow`（MainWindow.h:14-67）已取消单例（`explicit MainWindow(UIContext* ctx)`），`getFocusManager()` 已移除，窗口尺寸/资源解析均经 `m_context` 转发（子视口共享 owner 后端）。`Bench`（Bench.h:19-38）已改为 `explicit Bench(UIContext* ctx)` 显式构造，静态 `getInstance()` 单例与无参构造已删除。注意 `MainWindow` 保留了 `run(AppCallbacks*)` / `processEvents(AppCallbacks*)` 等 AppCallbacks 驱动的旧模式（内部经 `m_context` 解析，多实例下仅操作本实例的 Bench/EventQueue）。
 
 ```cpp
 // include/MainWindow.h
@@ -531,9 +683,10 @@ public:
     ~MainWindow();
 
     ResourceProvider* getResourceProvider() { return m_resourceProvider.get(); }
-    // 复核修订：FocusManager 已移入 UIContext（§5.13.4/§6 第 28-29 项），
-    // 不再由 MainWindow 持有；访问经 CONTEXT->focusManager（§5.5 宏）或 instance->focusManager
+    // 窗口/后端资源经 m_context 解析（子视口共享 owner 后端）
+    Window* getWindow(void) { return m_context ? m_context->window : nullptr; }
     // ...
+    // FocusManager 已移入 UIContext，访问经 GET_FOCUSMANAGER（§5.5 宏）或 instance->focusManager
 
 private:
     UIContext* m_context;
@@ -542,12 +695,11 @@ private:
 ```
 
 ```cpp
-// include/Bench.h — 修订说明（2026-07-31）：Bench 本身就是控件树根，
-// 继承 Panel + TopControl（Bench.h:11），不存在 getRootControl()/m_rootControl；
-// 其私有构造 + 静态 getInstance() 单例（Bench.h:31-38）改为显式 UIContext 构造
+// include/Bench.h — 实施状态：Bench 即控件树根（继承 Panel + TopControl），
+// 私有构造 + 静态 getInstance() 单例已改为显式 UIContext 构造（Bench.h:19-38）
 class Bench : public Panel, public TopControl {
 public:
-    explicit Bench(UIContext* ctx);   // 改造后：替换私有构造 + getInstance()
+    explicit Bench(UIContext* ctx);
     ~Bench();
 
     // getContext() 由 Control 基类提供（§5.4），无需重复持有 m_context
@@ -556,6 +708,8 @@ public:
 ```
 
 #### EventQueue / DataContext
+
+> **实施状态（2026-08-03）**：均已去掉单例（EventQueue 无 `getInstance()`，DataContext 无 `s_instance`），实例由 UIContext 持有。
 
 ```cpp
 // EventQueue.h — 去掉 getInstance()
@@ -576,6 +730,12 @@ public:
 ```
 
 ### 5.4 Control 层适配
+
+> **实施状态（2026-08-03）**：`Control` 基类已加 `UIContext* m_context` 成员与 `getContext()`/`setContext()`（ControlBase.h）。实际 `ControlImpl::setContext`（ControlBase.cpp:110-129）比下方伪代码多两项行为：
+> 1. **focusManager 补注册**：`setContext` 时若 `m_focusable && ctx->focusManager` 则 `registerControl(this)`（两阶段创建期间 setFocusable 时 context 为空导致漏注册，Tab 遍历不到）
+> 2. **recreate 递归**：自身 `recreate()` + 递归子控件 `setContext(ctx)` + `recreate()`（两阶段创建补建，各派生 create 内部以 `GET_CONTEXT` 守卫决定是否真正补建）
+>
+> `ControlImpl::addControl`（ControlBase.cpp:335-357）已实现上下文继承：`if (!child->getContext()) child->setContext(m_context)`，并两阶段传播 render device。
 
 基类增加 `UIContext* m_context`：
 
@@ -602,13 +762,12 @@ protected:
 >    ```cpp
 >    void Control::setContext(UIContext* ctx) {
 >        m_context = ctx;
->        // 复核修订：UIContext::eventQueue 是指针成员（EventQueue*，见 §5.13.4），
->        // 原稿 `&ctx->eventQueue` 得 EventQueue**，类型错误；直接赋指针本身
 >        m_eventQueueInstance = ctx ? ctx->eventQueue : nullptr;
 >    }
 >    ```
-> 3. `ControlImpl` 析构中的 `MAINWIN` 引用同样经 `m_context` 解析（`m_context->mainWindow` 或该实例的控件注册表），杜绝跨实例访问旧单例；
-> 4. `Bench::getInstance()` 中 `static Bench instance = Bench(nullptr, ...)`（Bench.h:35）创建的匿名根控件树在改造后必须实例化——`CreateInstance` 时显式 `new Bench(ctx)`，删除该静态对象（Bench 无参构造路径同时删除）。
+>    **实施状态（2026-08-03）**：已实现（ControlBase.cpp:110-129，`Control::setContext` 同步 `m_eventQueueInstance`，并追加 focusManager 补注册 + recreate 递归，见本节顶部说明）。
+> 3. `ControlImpl` 析构中的 `MAINWIN` 引用同样经 `m_context` 解析（`m_context->mainWindow` 或该实例的控件注册表），杜绝跨实例访问旧单例；**实施状态**：析构路径经 `UIContext::isActive` 守卫（进程退出期残留控件安全析构，见 §5.11.3）；
+> 4. `Bench::getInstance()` 中 `static Bench instance = Bench(nullptr, ...)`（Bench.h:35）创建的匿名根控件树在改造后必须实例化——`CreateInstance` 时显式 `new Bench(ctx)`，删除该静态对象（Bench 无参构造路径同时删除）。**实施状态**：已实现。
 
 控件树中的传播规则：
 
@@ -617,33 +776,34 @@ protected:
 auto* btn = new Button(ctx);
 
 // 方式 2：addControl 时从父控件继承
-// 复核修订（2026-07-31 第五轮）：必须经 setContext 而非直赋 m_context——
-// 直赋会绕过 m_eventQueueInstance 同步（见上修订说明），事件投递仍指向旧实例
-// 复核修订（2026-07-31 第六轮）：真实方法是 ControlImpl::addControl(shared_ptr<Control>)
-// （ControlBase.cpp:304-317，含 setParent + setRenderDevice(getRenderDevice())），
-// 非文档原 addChild 命名；多实例化需在此补 setContext 同步，
-// setRenderDevice(getRenderDevice()) 经 §5.5 宏重定义自动指向 CONTEXT->renderDevice
+// 实施状态（2026-08-03）：实际实现（ControlBase.cpp:335-357），
+// 经 setContext（同步 m_eventQueueInstance + focusManager 补注册 + recreate）继承，
+// render device 两阶段传播（父未挂树时不传播，context 就绪后经 parent 链重查）
 void ControlImpl::addControl(shared_ptr<Control> child) {
     if (child == nullptr) return;
-    if (!child->m_context) {
-        child->setContext(m_context);  // 继承父控件上下文，同时同步 m_eventQueueInstance
+    if (std::find(m_children.begin(), m_children.end(), child) != m_children.end()) return;
+
+    if (!child->getContext()) {
+        child->setContext(m_context);  // 继承父控件上下文
     }
     m_children.push_back(child);
     child->setParent(this);
-    child->setRenderDevice(getRenderDevice());
+
+    if (m_context && m_context->renderDevice) {
+        child->setRenderDevice(m_context->renderDevice);
+    }
     stabilizeTopmostChildren();
 }
 
 // 方式 3：C ABI 层创建时由 UIContext 设置
-// 修订说明（2026-07-31）：不存在通用 CreateControl(type) 工厂，
-// 每个控件一个具体工厂（见 §5.2 迁移表），统一创建收口：
+// 实施状态（2026-08-03）：实际各工厂先 new 控件 → setContext(instance) → 挂到 bench
 // src/UICornerstoneAPI.cpp — 以 CreateButton 为例
 UIControlHandle UICornerstone_CreateButton(
     UIInstance instance, const char* text,
     float x, float y, float w, float h) {
     auto* ctl = new Button(text, SRect{x, y, w, h});
-    ctl->setContext(instance);   // 同时同步 m_eventQueueInstance（见上）
-    instance->bench->addControl(shared_ptr<Control>(ctl));  // 或由布局/容器接管
+    ctl->setContext(instance);   // 同时同步 m_eventQueueInstance + focusManager 补注册
+    instance->bench->addControl(shared_ptr<Control>(ctl));
     return (UIControlHandle)ctl;
 }
 ```
@@ -662,16 +822,19 @@ UIControlHandle UICornerstone_CreateButton(
 #define GET_RESOURCEPROVIDER (MAINWIN->getResourceProvider())
 #define GET_FOCUSMANAGER   (MAINWIN->getFocusManager())
 
-// 改造后（ControlBase.h 中定义）
-#define CONTEXT            (m_context)
-#define BENCH              (CONTEXT->bench)
-#define MAINWIN            (CONTEXT->mainWindow)
-#define GET_RENDERDEVICE   (CONTEXT->renderDevice)
-#define GET_TEXTRENDERER   (CONTEXT->textRenderer)
-#define GET_INPUTBACKEND   (CONTEXT->inputBackend)
-#define GET_RESOURCEPROVIDER (CONTEXT->resourceProvider)
-#define GET_FOCUSMANAGER   (CONTEXT->focusManager)   // 修订：FocusManager 移入 UIContext（见 §5.13.6）
+// 改造后（ControlBase.h:556-566 中定义，实际实现）
+// 注意：不能命名为 CONTEXT——winnt.h 在 AMD64 下定义 #define CONTEXT 会冲突
+#define GET_CONTEXT        (m_context)
+#define BENCH              (GET_CONTEXT ? (GET_CONTEXT)->bench : nullptr)
+#define MAINWIN            (GET_CONTEXT ? (GET_CONTEXT)->mainWindow : nullptr)
+#define GET_RENDERDEVICE   (GET_CONTEXT ? (GET_CONTEXT)->renderDevice : nullptr)
+#define GET_TEXTRENDERER   (GET_CONTEXT ? (GET_CONTEXT)->textRenderer : nullptr)
+#define GET_INPUTBACKEND   (GET_CONTEXT ? (GET_CONTEXT)->inputBackend : nullptr)
+#define GET_RESOURCEPROVIDER (GET_CONTEXT ? (GET_CONTEXT)->resourceProvider : nullptr)
+#define GET_FOCUSMANAGER   (GET_CONTEXT ? (GET_CONTEXT)->focusManager : nullptr)
 ```
+
+> **实施状态（2026-08-03）**：实际宏名为 `GET_CONTEXT` 而非原稿的 `CONTEXT`——winnt.h 在 AMD64 下已定义 `#define CONTEXT`（ControlBase.h:556 注释），直接覆盖会破坏 Windows 系统头。且所有宏带 null 守卫（`GET_CONTEXT ? ... : nullptr`），两阶段创建期间 `m_context` 未就绪时安全返回空值。
 
 所有使用了这些宏的 `.cpp` 文件**无需修改源码**，只需确保：
 - 宏在 `ControlBase.h` 中定义，所有 Control 派生类包含该头文件
@@ -681,17 +844,19 @@ UIControlHandle UICornerstone_CreateButton(
 
 ### 5.6 后端插件改造
 
+> **实施状态（2026-08-03）**：**本小节未实施**。三个后端（SDL3/SFML/raylib）的 `BackendPlugin.cpp` 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存（创建函数 `if (!g_pluginXxx) ...` 单例化返回）。当前 `CreateInstance` 单实例场景下 BackendManager 每个 owner 只创建一次后端对象，静态缓存与其不冲突（第二次 CreateInstance 拿到的仍是同一窗口，即"多窗口同时"受限）。若未来需要真正多窗口（多个 owner 各自独立窗口），须按下方方案移除静态缓存。**destroy 回调已确认接线**（`bridge_destroyWindow` 等已在回调表，见下方 §5.6 修订说明）。
+
 #### 移除静态缓存
 
 ```cpp
-// 改造前
+// 改造前（当前实现，静态缓存仍在）
 static Window* g_pluginWin = nullptr;
 UIWindowHandle bridge_createWindow(...) {
     if (!g_pluginWin) g_pluginWin = new SDL3Window(title, w, h, flags);
     return (UIWindowHandle)g_pluginWin;
 }
 
-// 改造后
+// 改造后（待实施）
 UIWindowHandle bridge_createWindow(const char* title, int w, int h,
                                     uint32_t flags) {
     return (UIWindowHandle) new SDL3Window(title, w, h, flags);
@@ -720,15 +885,15 @@ typedef struct {
 } UIBackendCallbacks;
 ```
 
-因此**不再需要方案选择**：销毁路径直接使用回调表内的 5 个 `destroyXxx`，`DestroyInstance` 时按创建逆序逐个调用。需要核实的只有一点——**当前 `UICornerstoneAPI.cpp` 的旧 `Shutdown()` 是否实际调用过这些回调**（历史上对象由插件静态变量持有、进程结束时随 DLL 卸载销毁，destroy 回调可能未接线）；改造后必须接线并在 `DestroyInstance` 中调用，同时保留 `Plugin_Shutdown` 作为 DLL 卸载兜底（防御：跳过已销毁对象）。
+因此**不再需要方案选择**：销毁路径直接使用回调表内的 5 个 `destroyXxx`，`DestroyInstance` 时按创建逆序逐个调用。**实施状态（2026-08-03）**：destroy 回调已全部接线（三个后端 BackendPlugin.cpp 的 `cb.destroyWindow` 等），`BackendManager::shutdown()` 在 `UIContext::destroy()` 中经 `ownsBackend` 判断后调用。
 
 #### 静态缓存移除（复核修订：本小节与上文"移除静态缓存"内容重复，已删除原重复块）
 
-> 改造前后对比如上（见"移除静态缓存"）。要点：`UIBackendCallbacks` 中 **5 个创建函数 + 5 个销毁回调均成对存在**（createWindow↔destroyWindow、createRenderDevice↔destroyRenderDevice、createInputBackend↔destroyInputBackend、createTextRenderer↔destroyTextRenderer、createResourceProvider↔destroyResourceProvider，UICornerstoneAPI.h:86-153），改造只移除静态缓存，不增删回调。
+> 改造前后对比如上（见"移除静态缓存"）。要点：`UIBackendCallbacks` 中 **5 个创建函数 + 5 个销毁回调均成对存在**（createWindow↔destroyWindow、createRenderDevice↔destroyRenderDevice、createInputBackend↔destroyInputBackend、createTextRenderer↔destroyTextRenderer、createResourceProvider↔destroyResourceProvider，UICornerstoneAPI.h:86-153），改造只移除静态缓存，不增删回调。**实施状态**：静态缓存移除**未实施**（见本节顶部标注）。
 
 #### 影响范围
 
-3 个后端（SDL3 / SFML / raylib）× **5 个创建函数**（含 `createResourceProvider`）= **15 个静态变量需移除**，每个后端需维护各自的 `s_windows`/`s_devices` 等列表（或直接依赖 destroy 回调，不保留任何静态持有）。
+3 个后端（SDL3 / SFML / raylib）× **5 个创建函数**（含 `createResourceProvider`）= **15 个静态变量需移除**，每个后端需维护各自的 `s_windows`/`s_devices` 等列表（或直接依赖 destroy 回调，不保留任何静态持有）。**实施状态**：待实施（当前静态缓存仍保留，单实例场景不受影响）。
 
 ### 5.7 Surface / Cursor 工厂
 
@@ -747,6 +912,8 @@ Cursor::registerFactories(backend->createSystemCursor,
 由于工厂函数指针是 `static`，多次赋值等于最后一次生效。但实际上所有实例使用同一后端 DLL，工厂指针相同，**多次赋值幂等**。
 
 **结论**：工厂保持静态（进程级），不做实例化改造。
+
+> **实施状态（2026-08-03）**：结论成立——`g_createFn`（Surface.cpp:8）与 `g_createSystemFn`（Cursor.cpp:8）确为 static 进程级，未实例化。注册位置的细化：**Cursor** 在 `BackendManager::initialize`（回调路径 BackendManager.cpp:144-149；静态路径经 `RegisterXXXCursorFactories()`，BackendManager.cpp:33/44/55）注册；**Surface** 不在 BackendManager 中直接注册——静态路径经 `RegisterXXXSurfaceFactories()`（BackendManager.cpp:32/43/54）同点调用，回调路径在**后端插件的 `createRenderDevice` bridge 内部**注册（sdl3/RenderDevice.cpp:471、sfml/RenderDevice.cpp:652、raylib/RenderDevice.cpp:239，即 `createRenderDevice` 回调执行时）。功能等效：初始化完成后两套工厂均已就绪。
 
 ### 5.8 生命周期时序
 
@@ -778,7 +945,7 @@ sequenceDiagram
     activate CAPI
     Note over CAPI: new UIContext, store callbacks & config
 
-    CAPI->>BM: initialize(callbacks)
+    CAPI->>BM: initialize(callbacks, title, w, h, flags)
     activate BM
     Note over BM: load DLL, registerFactories, createWindow/Device
     BM-->>CAPI: backend pointers
@@ -789,13 +956,14 @@ sequenceDiagram
     MW-->>CAPI: ok
     deactivate MW
 
-    CAPI->>B: Bench(ctx)
+    CAPI->>B: Bench(ctx) + FocusManager(ctx)
     activate B
     Note over B: Bench 即控件树根（Panel+TopControl），setContext(ctx)
     B-->>CAPI: ok
     deactivate B
 
-    Note over CAPI: new EventQueue, DataContext, initialized=true
+    Note over CAPI: new EventQueue, DataContext; viewport=window 尺寸;
+    Note over CAPI: bench->resized(viewport); dummy clear+present 激活 GL context
     CAPI-->>User: UIInstance
     deactivate CAPI
 
@@ -829,10 +997,12 @@ sequenceDiagram
 
     User->>CAPI: DestroyInstance(instance)
     activate CAPI
-    Note over CAPI: clear popupPool, actions, controlsById
+    Note over CAPI: destroying=true（防重入）; 快照遍历销毁子视口;
+    Note over CAPI: clear popupPool, menuPool, actions, controlsById, queuedEvents
 
     CAPI->>B: delete Bench (递归释放控件树)
     CAPI->>MW: delete MainWindow
+    CAPI->>FM: delete FocusManager
 
     CAPI->>BM: shutdown()
     activate BM
@@ -840,7 +1010,8 @@ sequenceDiagram
     BM-->>CAPI: done
     deactivate BM
 
-    Note over CAPI: delete EventQueue, DataContext, BackendManager, UIContext
+    Note over CAPI: delete EventQueue, DataContext; unregisterActive;
+    Note over CAPI: 若为子视口：从 owner->children 摘除 + 清 owner->activeViewport
     CAPI-->>User: done
     deactivate CAPI
 ```
@@ -849,81 +1020,95 @@ sequenceDiagram
 
 `UIContext::initialize()` 是"全有或全无"的——中间任何一步失败，必须回滚全部已分配的资源。
 
+> **实施状态（2026-08-03）**：实际实现见 §5.1（步骤顺序为 Backend → EventQueue/DataContext → MainWindow → FocusManager+Bench；子视口跳过 Backend/MainWindow）。回滚路径经 `goto rollback` 释放已建对象后置空指针。下方为实际代码的结构示意：
+
 ```cpp
 bool UIContext::initialize() {
-    // 步骤 1: BackendManager
-    backendManager = new BackendManager();
-    if (!backendManager->initialize(callbacks)) {
-        delete backendManager;
-        backendManager = nullptr;
-        return false;
+    instanceId = s_nextInstanceId++;
+    setLastInstance(this);
+    registerActive(this);
+    if (debugLabel.empty())
+        debugLabel = "Instance_" + std::to_string(instanceId);
+
+    // 步骤 1: Backend（仅 owner）
+    if (ownsBackend) {
+        backendManager = new BackendManager();
+        if (!backendManager->initialize(callbacks, title, windowWidth, windowHeight, windowFlags)) {
+            delete backendManager;
+            backendManager = nullptr;
+            return false;
+        }
+        window = backendManager->window();
+        renderDevice = backendManager->renderDevice();
+        inputBackend = backendManager->inputBackend();
+        textRenderer = backendManager->textRenderer();
+    } else if (owner) {
+        // 子视口：从 owner 继承全部后端指针
+        backendManager = owner->backendManager;
+        window = owner->window;
+        // ...
     }
 
-    // 缓存后端指针（此时后端已初始化成功）
-    window          = backendManager->window();
-    renderDevice    = backendManager->renderDevice();
-    inputBackend    = backendManager->inputBackend();
-    textRenderer    = backendManager->textRenderer();
-
-    // 步骤 2: MainWindow
-    mainWindow = new MainWindow(this);
-    if (!mainWindow->getResourceProvider()) {
-        // MainWindow 构造失败（例如资源加载失败）
-        delete mainWindow;
-        mainWindow = nullptr;
-        goto rollback_bm;
-    }
-    resourceProvider = mainWindow->getResourceProvider();
-
-    // 步骤 3: Bench
-    bench = new Bench(this);
-    // 修订说明（2026-07-31）：Bench 即控件树根（继承 Panel + TopControl），
-    // 无 getRootControl()；校验改为控件树状态（addControl 可用）或省略
-    if (!bench) {
-        goto rollback_mw;
-    }
-
-    // 步骤 4: EventQueue / DataContext（轻量，不可能失败）
+    // 步骤 2: EventQueue / DataContext（Bench 构造绑定 ctx->eventQueue，须先建）
     eventQueue = new EventQueue();
     dataContext = new DataContext();
+
+    // 步骤 3: MainWindow（仅 owner）
+    if (ownsBackend) {
+        mainWindow = new MainWindow(this);
+        if (!mainWindow->getResourceProvider()) {
+            delete mainWindow;
+            mainWindow = nullptr;
+            goto rollback;
+        }
+        resourceProvider = mainWindow->getResourceProvider();
+    }
+
+    // 步骤 4: FocusManager + Bench
+    focusManager = new FocusManager();
+    bench = new Bench(this);
+    bench->show();
 
     initialized = true;
     return true;
 
-rollback_mw:
-    delete mainWindow;
-    mainWindow = nullptr;
-rollback_bm:
-    backendManager->shutdown();
-    delete backendManager;
-    backendManager = nullptr;
-    window = renderDevice = inputBackend = textRenderer = nullptr;
+rollback:
+    delete dataContext;  dataContext = nullptr;
+    delete eventQueue;   eventQueue = nullptr;
+    if (backendManager) {
+        backendManager->shutdown();
+        delete backendManager;
+        backendManager = nullptr;
+    }
+    window = renderDevice = inputBackend = textRenderer = resourceProvider = nullptr;
     return false;
 }
 ```
 
 ### 5.10 所有权模型
 
+> **实施状态（2026-08-03）**：已按下方结构实现，另含 `menuPool`（菜单保活池）、`strBuf`（GetControlId 输出缓冲）、`children`（子视口列表，由 DestroyInstance 级联销毁）。`destroy()` 中 `delete focusManager` 与 `unregisterActive(this)` 已补充（见 §5.1）。
+
 ```
 UIContext (owner)
-  ├── BackendManager*    → new/delete in initialize/destroy
+  ├── BackendManager*    → new/delete in initialize/destroy（仅 ownsBackend）
   │     └── 后端对象 (Window, RenderDevice, ...) → 由 BackendManager::shutdown 释放
-  ├── MainWindow*        → new/delete in initialize/destroy
+  ├── MainWindow*        → new/delete in initialize/destroy（仅 ownsBackend）
   │     └── ResourceProvider (unique_ptr)  → auto
-  ├── FocusManager*      → 复核修订：自 MainWindow 移入 UIContext 直接持有（§5.13.4/§6 第 28-29 项），
-  │                        每实例一个，跨视口焦点转移/键盘路由用（5.13.5）
+  ├── FocusManager*      → new/delete in initialize/destroy（自 MainWindow 移入，每实例一个）
   ├── Bench*             → new/delete in initialize/destroy
   │     └── Control 树 (raw ptr)           → Bench 管理析构
   ├── EventQueue*        → new/delete in initialize/destroy
   ├── DataContext*       → new/delete in initialize/destroy
-  └── popupPool          → shared_ptr, clear() in destroy
+  ├── popupPool          → shared_ptr, clear() in destroy
+  └── menuPool           → shared_ptr, clear() in destroy
 ```
 
 **规则**：
 - `UIContext` 是唯一 owner，持有所有子系统指针
 - 子系统之间通过 `UIContext*` 互相引用（非拥有）
-- 后端对象（Window/RenderDevice/InputBackend/TextRenderer）由 `BackendManager` 通过 `shutdown()` 释放
-- 销毁顺序严格逆序：Bench → MainWindow → BackendManager → 最后 delete UIContext
+- 后端对象（Window/RenderDevice/InputBackend/TextRenderer）由 `BackendManager` 通过 `shutdown()` 释放（仅 ownsBackend 实例）
+- 销毁顺序严格逆序：子视口 → Bench → FocusManager → MainWindow → BackendManager → 最后 delete UIContext
 - `g_controlsById` 和 `g_actions` 直接用容器值成员（非指针），destructor 自动清理
 
 ### 5.11 调试与诊断支持
@@ -934,6 +1119,8 @@ UIContext (owner)
 
 每个 `UIInstance` 关联一个调试标签，在 `UIInstanceConfig` 中传入：
 
+> **实施状态（2026-08-03）**：已按本节实现——`instanceId`/`debugLabel` 为 UIContext 成员（UIContext.h:82-83），`s_nextInstanceId` 全局原子计数器（UIContext.cpp:12），`initialize()` 中 `instanceId = s_nextInstanceId++` 且 `debugLabel` 为空时置 `"Instance_" + instanceId`（UIContext.cpp:28-32）。`CreateInstance` 从 `config->debugLabel` 赋值（UICornerstoneAPI.cpp:238）。`UI_LOG`（§5.11.2）与 LeakDetector 输出均带该标签。
+
 ```c
 typedef struct {
     uint32_t structSize;
@@ -942,6 +1129,7 @@ typedef struct {
     const char* windowTitle;
     int windowWidth;
     int windowHeight;
+    uint32_t windowFlags;       // 实施补充：跨后端统一窗口标志（§5.2）
     uint32_t reserved[6];
 } UIInstanceConfig;
 ```
@@ -979,20 +1167,17 @@ bool UIContext::initialize() {
 所有内部日志输出增加实例标签前缀。封装一个日志宏或辅助函数：
 
 ```cpp
-// include/UIContext.h — 日志辅助
+// include/UIContext.h — 日志辅助（实际实现，UIContext.h:109-114）
+// 实施状态（2026-08-03）：实际只定义了 UI_LOG 一个宏，无 UI_LOGI/UI_LOGW/UI_LOGE 变体
 #define UI_LOG(instance, fmt, ...) \
     do { \
-        if ((instance) && (instance)->debugLabel.size()) { \
+        if ((instance) && !(instance)->debugLabel.empty()) { \
             printf("[%s] " fmt "\n", (instance)->debugLabel.c_str(), ##__VA_ARGS__); \
         } \
     } while(0)
-
-// 或支持级别（复核修订：原稿 `UI_LOG(ctx, "INFO", __VA_ARGS__)` 会把 "INFO" 当作格式串、
-// 消息内容当多余参数丢弃；级别应作为 fmt 前缀拼接）
-#define UI_LOGI(ctx, fmt, ...) UI_LOG(ctx, "[INFO] " fmt, ##__VA_ARGS__)
-#define UI_LOGW(ctx, fmt, ...) UI_LOG(ctx, "[WARN] " fmt, ##__VA_ARGS__)
-#define UI_LOGE(ctx, fmt, ...) UI_LOG(ctx, "[ERROR] " fmt, ##__VA_ARGS__)
 ```
+
+> 原稿的 `UI_LOGI/UI_LOGW/UI_LOGE` 变体（`UI_LOG(ctx, "[INFO] " fmt, ##__VA_ARGS__)` 形式）未实施——当前日志调用直接使用 `UI_LOG` 或裸 `printf`。若后续需要级别前缀，按原稿方式补充。
 
 输出示例：
 
@@ -1007,10 +1192,14 @@ bool UIContext::initialize() {
 
 #### 5.11.3 实例注册表（调试器辅助）
 
+> **实施状态（2026-08-03）**：`s_aliveInstances` 注册表实际位于 **src/UICornerstoneAPI.cpp:44-75**（非原稿的 UIContext.cpp），且 `registerInstance`/`unregisterInstance`/`LeakDetector` 均以 `_DEBUG` 守卫（Release 为空实现）。`CreateInstance`/`CreateViewport` 末尾调用 `registerInstance(ctx)`，`DestroyInstance` 开头调用 `unregisterInstance(instance)`（保证 `DestroyInstance` 内部再销毁子视口时不重复注册）。Debug 辅助 API（§5.2）实现于 UICornerstoneAPI.cpp:532-562，Release 下返回 0/NULL。
+>
+> 另有一套**独立的**析构守卫注册表（`UIContext::registerActive`/`unregisterActive`/`isActive`，UIContext.h:93-105，UIContext.cpp:17-25）——`isActive` 在 Control 析构路径中确认实例仍存活（残留 shared_ptr 控件在进程退出期析构时 m_context 可能已释放），与下方调试注册表职责不同、共存不冲突。
+
 维护一个全局的"存活实例表"，用于调试器 watch 和崩溃后分析：
 
 ```cpp
-// src/UIContext.cpp — 调试用全局表
+// src/UICornerstoneAPI.cpp — 调试用全局表（实际位置，UICornerstoneAPI.cpp:44-75）
 #include <vector>
 #include <mutex>
 
@@ -1018,36 +1207,46 @@ bool UIContext::initialize() {
 static std::mutex s_registryMutex;
 static std::vector<UIInstance> s_aliveInstances;
 
-void registerInstance(UIInstance instance) {
-    std::lock_guard lock(s_registryMutex);
+static void registerInstance(UIInstance instance) {
+    std::lock_guard<std::mutex> lock(s_registryMutex);
     s_aliveInstances.push_back(instance);
 }
 
-void unregisterInstance(UIInstance instance) {
-    std::lock_guard lock(s_registryMutex);
-    // C++17 项目（CMakeLists.txt 标准为 C++17），不可用 std::erase（C++20）
+static void unregisterInstance(UIInstance instance) {
+    std::lock_guard<std::mutex> lock(s_registryMutex);
     s_aliveInstances.erase(
         std::remove(s_aliveInstances.begin(), s_aliveInstances.end(), instance),
         s_aliveInstances.end());
 }
+#else
+static inline void registerInstance(UIInstance) {}
+static inline void unregisterInstance(UIInstance) {}
+#endif
+```
 
-// 在调试器中可以调用此函数列出所有存活实例
-extern "C" __declspec(dllexport) int UICornerstone_Debug_GetAliveCount() {
-    std::lock_guard lock(s_registryMutex);
+Debug 辅助 API（实际在 UICornerstoneAPI.cpp:532-562）：
+
+```cpp
+int UICornerstone_Debug_GetAliveCount(void) {
+#ifdef _DEBUG
+    std::lock_guard<std::mutex> lock(s_registryMutex);
     return (int)s_aliveInstances.size();
+#else
+    return 0;
+#endif
 }
 
-extern "C" __declspec(dllexport) UIInstance UICornerstone_Debug_GetAliveInstance(int index) {
-    std::lock_guard lock(s_registryMutex);
+UIInstance UICornerstone_Debug_GetAliveInstance(int index) {
+#ifdef _DEBUG
+    std::lock_guard<std::mutex> lock(s_registryMutex);
     if (index >= 0 && index < (int)s_aliveInstances.size())
         return s_aliveInstances[index];
-    return NULL;
-}
+    return nullptr;
 #else
-// Release: 注册表摘除，零开销
-#define registerInstance(x)
-#define unregisterInstance(x)
+    (void)index;
+    return nullptr;
 #endif
+}
 ```
 
 #### 5.11.4 泄漏检测
@@ -1055,9 +1254,8 @@ extern "C" __declspec(dllexport) UIInstance UICornerstone_Debug_GetAliveInstance
 进程退出时若仍有未销毁的实例，自动断言或输出警告：
 
 ```cpp
-// UIContext.cpp — 静态析构检查
-// 复核修订：s_aliveInstances 仅在 _DEBUG 定义（§5.11.3），LeakDetector 须同样包裹，
-// 否则 Release 编译报"未定义标识符"；原稿"Release 保留、无开销"自相矛盾
+// UICornerstoneAPI.cpp — 静态析构检查（实际位置，UICornerstoneAPI.cpp:60-71；
+// s_aliveInstances 仅 _DEBUG 定义，LeakDetector 同样包裹）
 #ifdef _DEBUG
 struct LeakDetector {
     ~LeakDetector() {
@@ -1079,6 +1277,8 @@ static LeakDetector s_leakCheck;
 ```
 
 #### 5.11.5 窗口标题标记
+
+> **实施状态（2026-08-03）**：**未实施**——`BackendManager::initialize` 创建窗口时直接使用 `title ? title : "UICornerstone"`（BackendManager.cpp:103-106），未在 Debug 下追加 `debugLabel`（多实例调试识别靠 §5.11.2 日志前缀与 §5.11.3 注册表，窗口标题不区分实例）。下方方案若需要可随时补充，仅涉及 `createWindow` 调用处。
 
 如果后端允许，在窗口标题中追加实例标签（仅 Debug 构建）：
 
@@ -1151,7 +1351,11 @@ UICornerstone_DestroyInstance(inst);
 
 所有现有测试（约 15 个 `test_xxx.cpp` + `test_xxx_cabi.cpp` + 4 个 samples）需按此模式改写。这是测试层面的最大工作量。
 
+> **实施状态（2026-08-03）**：现有测试已通过 `test/TestInstance.h` 统一适配实例模式（`UICornerstone_CreateInstance(GetUIBackendCallbacks(), &cfg)` + 帧循环 + `DestroyInstance`），各 `test_xxx.cpp` 不再直接依赖单例。`test_api.c` 与各 `test_xxx_cabi.cpp`（LoadLibrary 场景）已改用 `UICornerstone_CreateInstanceFromPlugin` / `GetProcAddress("UICornerstone_CreateInstance")`。4 个 samples（hello_uicornerstone/sample_programmatic/sample_fromsource/sample_loadlibrary）均已适配新签名。
+
 #### 5.12.2 新增：多实例 C ABI 测试
+
+> **实施状态（2026-08-03）**：**未创建** `test/test_multi_instance.cpp`。下述测试 1-5 的方案仍有效，作为后续补充时的依据（多实例隔离已在现有测试的 TestInstance 单实例模式下隐式覆盖部分场景；专门的"双实例/事件隔离/Action 隔离/销毁再创建"用例待补）。
 
 新建 `test/test_multi_instance.cpp`，专测多实例隔离性。编译为独立可执行文件，与现有测试并列。
 
@@ -1276,7 +1480,11 @@ flowchart TD
 | 销毁再创建 | LeakDetector | — | 三个后端 |
 | 空值容错 | 崩溃即失败 | — | 三个后端 |
 
+> **实施状态（2026-08-03）**：§5.12.2/5.12.3 的专项多实例测试**未创建**，待补充。
+
 ### 5.13 扩展分析：单窗口多 BENCH 视口
+
+> **实施状态（2026-08-03）**：本扩展分析已按 §5.13.4/5.13.5 完整实施（`CreateViewport`、`owner/children/activeViewport/ownsBackend`、坐标路由、焦点转移、Ctrl+Tab 智能路由、`getVisibleBoundaryCount`）。`test_multiviewport.cpp`（§5.13.7）**未创建**。§5.13.4 的 UIContext 结构体与 §5.1 相同（实施时统一为一处定义）。
 
 > 这是多实例的**主要应用场景**——一个应用程序/一个窗口内同时显示多个独立的 UI 视口（如编辑器多面板、仪表盘多区块）。当前设计假设 1:1 的"一个 UIInstance = 一个窗口 + 一个控制树"，无法覆盖此场景。
 
@@ -1419,7 +1627,8 @@ struct UIContext {
     // 复核修订：GetControlId 静态输出缓冲迁入（原 static char buf[256]，cpp:637，见 §2.1）
     std::string strBuf;
 
-    // ── 资源路径（从 ConstDef 迁入，与 §5.1 定义保持一致，见 §7 风险 4） ──
+    // ── 资源路径（复核修订：与 §5.1 一致——未迁入 UIContext，ConstDef::pathPrefix
+    //    保持静态，per-instance 覆盖由 UIInstanceConfig.resourceRoot 提供，见 §7.2 非风险表） ──
     // std::string pathPrefix;
 
     // ── 调试 ──
@@ -1565,6 +1774,13 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
 }
 ```
 
+> **实施状态（2026-08-03）**：实际实现（UICornerstoneAPI.cpp:398-494）与上方伪代码的差异：
+> 1. **入口守卫**：增加 `if (!instance || !instance->initialized || instance->destroying) return;`（destroying 防重入，见 §7 风险 4）
+> 2. **TextInput 分支**（伪代码未列出）：轮询通路中 `EventType::TextInput` 直接发到当前活动视口（`activeViewport ? activeViewport : instance`）——文本输入跟随键盘焦点
+> 3. **dispatchToBench 辅助**：实际实现用 `static void dispatchToBench(UIInstance, const Event&)`（cpp:219-223）统一封装 `bench->inputControl(std::make_shared<Event>(evt))`，轮询与注入两条通路共用
+> 4. 伪代码中 `evt.mousePos.x = mx - target->viewport.x` 对应的实际为 `evt.mousePos.x = mx - target->viewport.left`（SRect 字段名）
+> 5. `tryViewportScopeSwitch`/`findViewportByCoord`/`nextViewport`/`prevViewport` 均已实现（cpp:173-216），`countVisibleBoundaries` 实现为 `cur->focusManager->getVisibleBoundaryCount()`（FocusManager.h:32 / FocusManager.cpp:53）
+
 > **注意**（复核修订 2026-07-31）：owner 轮询的输入事件已**直接 dispatch** 到目标视口的 bench，不依赖子视口是否调用 `ProcessEvents`。`queuedEvents` 仅承载**外部注入**（`PushUIEvent(inst, ...)`）的事件，须由各实例自己的 `ProcessEvents` 消费——若外部向子视口 `PushUIEvent(vpA, ...)` 而从不调用 `ProcessEvents(vpA)`，注入事件会积压；owner 轮询输入不受影响。
 
 **`findViewportByCoord` 实现**：
@@ -1709,7 +1925,8 @@ flowchart TD
 
 **countVisibleBoundaries 实现**：遍历 `activeViewport->focusManager` 的 `m_boundaries`，统计 `isVisible()` 的项数。
 > 复核修订（2026-07-31 第七轮）：入参判空——`nullptr`（activeViewport 为 null）返回 0，供 `tryViewportScopeSwitch` 判空后调用（第六轮"焦点回 owner 树"后该场景可达）。
-> 复核修订（2026-07-31 第七轮复核）：`m_boundaries` 为 `FocusManager` 私有成员（FocusManager.h:40），当前仅有 `registerBoundary`/`unregisterBoundary`（FocusManager.h:27/29），**无遍历访问器**——实现时须在 `FocusManager` 新增 `int getVisibleBoundaryCount() const`（或声明 `countVisibleBoundaries` 为友元），C ABI 层不可直接访问。
+> 复核修订（2026-07-31 第七轮复核）：`m_boundaries` 为 `FocusManager` 私有成员（FocusManager.h:43），当前仅有 `registerBoundary`/`unregisterBoundary`（FocusManager.h:27/29），**无遍历访问器**——实现时须在 `FocusManager` 新增 `int getVisibleBoundaryCount() const`（或声明 `countVisibleBoundaries` 为友元），C ABI 层不可直接访问。
+> **实施状态（2026-08-03）**：已实现为 `FocusManager::getVisibleBoundaryCount()`（FocusManager.h:32，FocusManager.cpp:53 统计 `m_boundaries` 中 `isVisible()` 项数），C ABI 层 `tryViewportScopeSwitch` 直接调用。
 
 **`nextViewport`/`prevViewport` 实现**（复核修订 2026-07-31 第七轮：原稿仅引用未定义）：
 
@@ -1815,6 +2032,8 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
 
 #### 5.13.6 对现有设计的影响
 
+> **实施状态（2026-08-03）**：以下表格所列修改**均已实施**（CreateViewport、owner/children/activeViewport/ownsBackend、焦点转移、Ctrl+Tab 智能路由、`GET_FOCUSMANAGER`、`getWindowSize` 迁移）。表中"需修改"一列已不再是待办，作为实施记录保留。
+
 | 现有章节 | 需要修改 | 原因 |
 |---------|---------|------|
 | 5.1 UIContext | 新增 `owner`、`ownsBackend`、`children`、`activeViewport` 字段；`FocusManager` 从 MainWindow 移入作为指针成员 | 层级关系 + 跨视口焦点追踪 |
@@ -1830,7 +2049,11 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
 | — | ProcessEvents 输入路由实现 | 坐标类事件按 rect 分发到子视口（C++ `Event` 层，§5.13.5）；键盘事件发到 activeViewport；跨视口点击清旧焦点 | 新增 |
 | — | `Dialog/ColorPicker/ComboBox` 中 `MAINWIN->getWindowSize()` → `m_context->viewport` | 弹出窗口定位改为视口相对 |
 
+> **实施状态（2026-08-03）**：表格中"5.5 宏"一行实际实现为 `#define GET_FOCUSMANAGER (GET_CONTEXT ? (GET_CONTEXT)->focusManager : nullptr)`（ControlBase.h:566，同样带 null 守卫）；"getWindowSize 迁移"一行已 grep 验证——`getWindowSize` 现仅存在于 `CallbackAdapters.cpp:18` / `BackendBridge.h:31` / 三个后端插件（`cb.getWindowSize = bridge_getWindowSize`），Dialog/ColorPicker/ComboBox 等控件层已无 `MAINWIN->getWindowSize()` 直接调用（弹出窗口定位均已改用 `m_context->viewport` 视口相对坐标）。
+
 #### 5.13.7 新增测试：单窗口多视口
+
+> **实施状态（2026-08-03）**：`test/test_multiviewport.cpp` **未创建**（K1-K8 用例与下述测试桩保留为后续补充依据）。所需调试辅助 API 已实现：`UICornerstone_Debug_GetActiveViewport` / `UICornerstone_Debug_IsControlFocused`（UICornerstoneAPI.cpp:553-562，Debug 构建有效，Release 返回 nullptr/0）。
 
 新建 `test/test_multiviewport.cpp`：
 
@@ -1944,6 +2167,8 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 
 ## 6. 实施清单
 
+> **实施状态（2026-08-03）**：除以下 3 项外，**清单 1-32 已全部实施**。未实施项：**#17**（三后端 BackendPlugin.cpp 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存，未改为每次 new，见 §5.6）、**#19**（`g_pathPrefix` 未迁入 UIContext，`resourceRoot` 覆盖由 UIInstanceConfig 提供，见 §5.1）、**#27**（`test_multiviewport.cpp` 未创建，见 §5.13.7）。"影响范围汇总"表内"新增 3 个文件"相应调整为 2 个（test_multiviewport.cpp 未创建）。
+
 | 序号 | 文件 | 操作 | 工作量 |
 |------|------|------|--------|
 | 1 | 新增 `include/UIContext.h` | 定义 `UIContext` 结构体 + `initialize()/destroy()` 声明 | 小 |
@@ -1974,7 +2199,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 26 | `include/UIContext.h` / `src/UIContext.cpp` | `destroy()` 区分 ownsBackend；`CreateViewport` 的 `initialize()` 跳过 BackendManager | 小 |
 | 26a | `src/UICornerstoneAPI.cpp` | 实现 `tryViewportScopeSwitch`（Ctrl+Tab 智能路由）+ `countVisibleBoundaries`（内部经 `FocusManager::getVisibleBoundaryCount()`，见 26b——m_boundaries 为私有成员，C ABI 层不可直接访问，复核修订 2026-07-31 第八轮）；在键盘事件进入视口前预拦截 | 中 |
 | 26b | `src/UICornerstoneAPI.cpp` | `CreateViewport` 创建首个子视口时自动设为 `owner->activeViewport`；兜底点击（未命中子视口）清 `activeViewport` 置 nullptr + 清旧视口焦点；键盘 fallback 在 `activeViewport==nullptr` 时退回 owner bench；`DestroyInstance` 置 `destroying` 标志 + 可重入 C ABI 入口增加 `destroying` 短路守卫（复核修订 2026-07-31 第五/六/七轮） | 小 |
-| 26c | `include/FocusManager.h` / `src/FocusManager.cpp` | 新增 `int getVisibleBoundaryCount() const`（统计 `m_boundaries` 中 `isVisible()` 项数，m_boundaries 是私有成员 FocusManager.h:40，现有仅 registerBoundary/unregisterBoundary :27/29） | 小 |
+| 26c | `include/FocusManager.h` / `src/FocusManager.cpp` | 新增 `int getVisibleBoundaryCount() const`（统计 `m_boundaries` 中 `isVisible()` 项数，m_boundaries 是私有成员 FocusManager.h:43，现有仅 registerBoundary/unregisterBoundary :27/29） | 小 |
 | 27 | 新增 `test/test_multiviewport.cpp` | 1 窗口 + 2 视口：独立控制树、事件隔离、渲染区域隔离、销毁顺序（含直接销毁子视口后 owner 继续运行的悬垂防护，复核修订 2026-07-31 第九轮）+ 键盘导航测试（K1-K8） | 中 |
 | 28 | `include/MainWindow.h` | 移除 `m_focusManager` 值成员；移除 `getFocusManager()` | 小 |
 | 29 | `include/UIContext.h` | 新增 `FocusManager* focusManager` 指针成员（自 MainWindow 的 `unique_ptr` 移入） | 小 |
@@ -1984,14 +2209,16 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 
 ### 影响范围汇总
 
+> **实施状态（2026-08-03）**：下表已按实际实施调整——`test_multiviewport.cpp` **未创建**（新增 3 → 2）；`FocusManager.h` 实际有改动（新增 `getVisibleBoundaryCount()` 声明，FocusManager.h:32）；`ConstDef.cpp` 未改动（`g_pathPrefix` 未迁入，#19 未实施）。
+
 | 类别 | 文件数 | 修改性质 |
 |------|--------|---------|
-| 新增 | 3 | `UIContext.h/.cpp`、`test_multiviewport.cpp` |
+| 新增 | 2 | `UIContext.h/.cpp`（`test_multiviewport.cpp` 未创建） |
 | 核心修改 | 8 | `UICornerstoneAPI.h/.cpp`、`ControlBase.h`、`BackendPlugin.h`、`MainWindow.h/.cpp`、`Bench.h/.cpp` |
-| 小修改 | 10 | `EventQueue.h/.cpp`、`DataContext.h/.cpp`、`BackendManager.cpp`、`PlatformUtils.h`、`ConstDef.cpp`、`Dialog.cpp`、`ColorPicker.cpp`、`ComboBox.cpp`、`FocusManager.h`（无改动）|
-| 后端插件 | ~6 | 3 个后端的创建/销毁逻辑 |
+| 小修改 | 11 | `EventQueue.h/.cpp`、`DataContext.h/.cpp`、`BackendManager.cpp`、`PlatformUtils.h`、`Dialog.cpp`、`ColorPicker.cpp`、`ComboBox.cpp`、`FocusManager.h/.cpp`（新增 getVisibleBoundaryCount，FocusManager.h:32 / FocusManager.cpp:53）|
+| 后端插件 | ~6 | 3 个后端的创建/销毁逻辑（静态缓存移除**未实施**，见 §5.6/#17）|
 | 零修改 | ~20 | 控件业务 .cpp（宏自动适配）|
-| 总改动文件 | ~48 | 含 3 个新增 |
+| 总改动文件 | ~47 | 含 2 个新增（`ConstDef.cpp` 未动——g_pathPrefix 未迁入） |
 
 ## 7. 风险与注意事项
 
@@ -2020,6 +2247,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 - Release 中 `if (m_context) { ... }` 跳过
 - 所有 Control 构造函数在完成 `setContext` 前不调用依赖上下文的函数
 - `addControl` 中自动 setContext，减少遗漏窗口（复核修订 2026-07-31 第六/七轮：现有实现 ControlBase.cpp:304-317 无 setContext，多实例化改造时在正行补同步，见 §5.4 方式 2）
+> **实施状态（2026-08-03）**：已按 §5.4 方式 2 补齐——`addControl`（ControlBase.cpp:335-357）自动 setContext 并递归下发 renderDevice；`setContext`（ControlBase.cpp:110-129）含 FocusManager 补注册与 recreate 递归，与"两阶段创建"配合后宏空指针问题仅在极端调用序下出现（宏均有 null 守卫，ControlBase.h:556-566）。
 
 #### 3. 跨实例 IME 输入法冲突（修订新增）
 
@@ -2032,6 +2260,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 `DestroyInstance` 逆序析构控件时，`onFocusLost`/`onDestroy` 等回调可能执行用户代码（如 `SetCallback` 注册的 handler），用户代码若回调 `ProcessEvents`/`Render` 或销毁其他实例，会访问已析构对象。
 
 **缓解**（复核修订 2026-07-31 第五轮）：`DestroyInstance` 全程设置 `instance->destroying` 标志（字段已并入 §5.13.4 结构体）；可被回调重入的 C ABI 入口（`ProcessEvents`/`Render`/`Update`/`PushUIEvent`/`SetCallback`/Debug 辅助等）入口若发现 `destroying` 直接返回（防重入短路）；回调执行顺序在析构控件树之前完成（先通知、后析构）。
+> **实施状态（2026-08-03）**：已实施——`DestroyInstance` 开头置 `destroying`（UICornerstoneAPI.cpp:299-327），`ProcessEvents`/`Render` 等入口带 `destroying` 短路（cpp:398-494 实际实现含该守卫）。
 
 #### 5. 裸指针句柄无归属校验（修订新增）
 

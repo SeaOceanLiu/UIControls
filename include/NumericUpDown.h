@@ -1,4 +1,4 @@
-#ifndef NumericUpDownH
+﻿#ifndef NumericUpDownH
 #define NumericUpDownH
 
 #include <functional>

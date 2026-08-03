@@ -14,64 +14,177 @@
 
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
-// ===== C ABI function pointer types =====
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef int   (*UILoadLayoutFn)(const char*);
-typedef void* (*UIFindControlFn)(const char*);
-typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
-typedef int  (*UISetStringFn)(void*, const char*, const char*);
-typedef int  (*UIGetStringFn)(void*, const char*, char*, int);
-typedef int  (*UIGetIntFn)(void*, const char*, int*);
-typedef void (*UISetComboItemsFn)(void*,const char*);
+// ===== C ABI function pointer types（当前 API：多实例，函数均带 UIInstance 参数）=====
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void       (*UIDestroyInstanceFn)(UIInstance);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
+typedef void* (*UIFindControlFn)(UIInstance,const char*);
+typedef void  (*UIRegisterActionFn)(UIInstance,const char*,void(*)(void*,void*),void*);
+typedef int  (*UISetStringFn)(UIInstance,void*,const char*,const char*);
+typedef int  (*UIGetStringFn)(UIInstance,void*,const char*,char*,int);
+typedef int  (*UIGetIntFn)(UIInstance,void*,const char*,int*);
+typedef void (*UIPushUIEventFn)(UIInstance,const UIEvent*);
 
-static UIInitFn             uiInit                 = nullptr;
-static UISetViewportFn      uiSetViewport          = nullptr;
-static UIProcessEventsFn    uiProcessEvents        = nullptr;
-static UIUpdateFn           uiUpdate               = nullptr;
-static UIClearFn            uiClear                = nullptr;
-static UIRenderFn           uiRender               = nullptr;
-static UIPresentFn          uiPresent              = nullptr;
-static UIIsQuitFn           uiIsQuitRequested      = nullptr;
-static UIShutdownFn         uiShutdown             = nullptr;
-static UILoadLayoutFn       uiLoadLayout           = nullptr;
-static UIFindControlFn      uiFindControl          = nullptr;
-static UIRegisterActionFn   uiRegisterAction       = nullptr;
-static UISetStringFn       uiSetString            = nullptr;
-static UIGetStringFn       uiGetString            = nullptr;
-static UIGetIntFn          uiGetInt               = nullptr;
-static UISetComboItemsFn   uiSetComboItems        = nullptr;
+static UICreateInstanceFn  uiCreateInstance      = nullptr;
+static UIDestroyInstanceFn uiDestroyInstance     = nullptr;
+static UISetViewportFn     uiSetViewport         = nullptr;
+static UIProcessEventsFn   uiProcessEvents       = nullptr;
+static UIUpdateFn          uiUpdate              = nullptr;
+static UIClearFn           uiClear               = nullptr;
+static UIRenderFn          uiRender              = nullptr;
+static UIPresentFn         uiPresent             = nullptr;
+static UIIsQuitFn          uiIsQuitRequested     = nullptr;
+static UILoadLayoutFn      uiLoadLayout          = nullptr;
+static UIFindControlFn     uiFindControl         = nullptr;
+static UIRegisterActionFn  uiRegisterAction      = nullptr;
+static UISetStringFn       uiSetString           = nullptr;
+static UIGetStringFn       uiGetString           = nullptr;
+static UIGetIntFn          uiGetInt              = nullptr;
+static UIPushUIEventFn     uiPushUIEvent         = nullptr;
 
 static HMODULE g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
+
+// ===== 注入模拟（--sim-inject）：进程内事件注入（走 queuedEvents 通路），
+// 不依赖窗口焦点，用于验证 comboEditable 打字 + 回车匹配 =====
+static bool g_simInject = false;
+static int g_simPhase = 0;
+static ULONGLONG g_simNextTick = 0;
+
+static void injectMouseClick(float x, float y) {
+    UIEvent down; memset(&down, 0, sizeof(down));
+    down.type = UI_EVENT_MOUSE_DOWN;
+    *(float*)down.data = x; *(float*)(down.data + 4) = y; *(int*)(down.data + 8) = 1; // Left
+    uiPushUIEvent(g_inst, &down);
+    UIEvent up; memset(&up, 0, sizeof(up));
+    up.type = UI_EVENT_MOUSE_UP;
+    *(float*)up.data = x; *(float*)(up.data + 4) = y; *(int*)(up.data + 8) = 1;
+    uiPushUIEvent(g_inst, &up);
+}
+
+static void injectText(const char* s) {
+    UIEvent ev; memset(&ev, 0, sizeof(ev));
+    ev.type = UI_EVENT_TEXT_INPUT;
+    strncpy((char*)ev.data, s, UI_TEXT_MAX);
+    uiPushUIEvent(g_inst, &ev);
+}
+
+static void injectKeyDownUp(int code) {
+    UIEvent down; memset(&down, 0, sizeof(down));
+    down.type = UI_EVENT_KEY_DOWN;
+    *(int*)down.data = code; *(uint16_t*)(down.data + 4) = 0;
+    uiPushUIEvent(g_inst, &down);
+    UIEvent up; memset(&up, 0, sizeof(up));
+    up.type = UI_EVENT_KEY_UP;
+    *(int*)up.data = code; *(uint16_t*)(up.data + 4) = 0;
+    uiPushUIEvent(g_inst, &up);
+}
+
+static void injectClose() {
+    UIEvent ev; memset(&ev, 0, sizeof(ev));
+    ev.type = UI_EVENT_WINDOW_CLOSE;
+    uiPushUIEvent(g_inst, &ev);
+}
+
+static void runSimInject() {
+    ULONGLONG now = GetTickCount64();
+    if (now < g_simNextTick) return;
+    printf("[inject] phase %d\n", g_simPhase);
+    switch (g_simPhase) {
+    case 0: injectMouseClick(170, 156); break; // 点击 comboEditable 正文（可编辑模式 → 聚焦）
+    case 1: injectText("b"); break;
+    case 2: injectText("e"); break;
+    case 3: injectKeyDownUp(0x0D); break;      // Return → 精确匹配 "be" → Beijing
+    case 4: injectMouseClick(170, 72); break;  // 点击 comboMain（只读 → 打开下拉）
+    case 5: injectText("x"); break;            // 只读模式 TextInput → 应被拦截
+    case 6: injectKeyDownUp(0x1B); break;      // Escape → 关闭下拉
+    case 7: injectMouseClick(170, 156); break; // 重新聚焦 comboEditable
+    case 8:
+        // 清空编辑框（set "text" 属性）后输入无匹配内容
+        uiSetString(g_inst, uiFindControl(g_inst, "comboEditable"), "text", "");
+        injectText("zzz");
+        break;
+    case 9: injectKeyDownUp(0x0D); break;      // Return → 无匹配 → 保留输入、index=-1
+    case 10: injectMouseClick(425, 156); break; // 点击 Dump 按钮 → 属性 CAPI 读取（视觉验证）
+    case 11: injectMouseClick(310, 156); break; // 点 comboEditable 三角（打开下拉）
+    case 12: injectMouseClick(310, 156); break; // 再点三角 → 应收起（修复前会关闭后重开）
+    case 13: injectMouseClick(170, 187); break; // 点列表第一项位置：若已收起则无选中；若重开则 Selected #0
+    case 14: injectMouseClick(425, 156); break; // 再次 Dump → 验证 text 仍为 'zzz'（收起不清空）
+    default:
+        {
+            char buf[256] = "";
+            char val[256] = "";
+            int idx = -2;
+            void* ctl = uiFindControl(g_inst, "comboEditable");
+            if (ctl) {
+                uiGetString(g_inst, ctl, "text", buf, sizeof(buf));
+                uiGetString(g_inst, ctl, "selected-value", val, sizeof(val));
+                uiGetInt(g_inst, ctl, "selected-index", &idx);
+            }
+            printf("[inject] comboEditable text='%s' selected-value='%s' selected-index=%d (expect text=zzz, index=-1)\n", buf, val, idx);
+            g_simInject = false;
+            injectClose();
+            return;
+        }
+    }
+    g_simPhase++;
+    g_simNextTick = now + 350;
+}
 
 // ===== 选中回调 =====
 static char g_selectionInfo[128] = "Selected: (none)";
 
 static void onSelectionChanged(void* ctl, void* user) {
-    (void)ctl; (void)user;
+    (void)user;
     int idx = -1;
-    uiGetInt(uiFindControl("comboMain"), "selected-index", &idx);
+    uiGetInt(g_inst, ctl, "selected-index", &idx);
     char labelBuf[256] = "";
-    uiGetString(uiFindControl("comboMain"), "selected-value", labelBuf, sizeof(labelBuf));
+    uiGetString(g_inst, ctl, "text", labelBuf, sizeof(labelBuf));
     const char* label = labelBuf;
     snprintf(g_selectionInfo, sizeof(g_selectionInfo), "Selected: #%d = %s", idx, label ? label : "(null)");
-    void* lbl = uiFindControl("lblStatus");
-    if (lbl) uiSetString(lbl, "text", g_selectionInfo);
+    void* lbl = uiFindControl(g_inst, "lblStatus");
+    if (lbl) uiSetString(g_inst, lbl, "caption", g_selectionInfo);
     printf("%s\n", g_selectionInfo);
+}
+
+// ===== Dump 按钮回调：通过属性 CAPI 读取两个 ComboBox 的输入内容/选中状态 =====
+static void onDumpCombo(void* ctl, void* user) {
+    (void)user;
+    printf("=== Dump Combo State (via property CAPI) ===\n");
+    char editableInfo[256] = "";
+    const char* ids[] = { "comboMain", "comboEditable" };
+    for (int i = 0; i < 2; i++) {
+        void* c = uiFindControl(g_inst, ids[i]);
+        if (!c) continue;
+        char text[256] = "";
+        char val[256] = "";
+        int idx = -2;
+        uiGetString(g_inst, c, "text", text, sizeof(text));
+        uiGetString(g_inst, c, "selected-value", val, sizeof(val));
+        uiGetInt(g_inst, c, "selected-index", &idx);
+        printf("[dump] %s: text='%s' selected-value='%s' selected-index=%d\n", ids[i], text, val, idx);
+        if (strcmp(ids[i], "comboEditable") == 0) {
+            snprintf(editableInfo, sizeof(editableInfo),
+                     "Editable: text='%s' val='%s' idx=%d", text, val, idx);
+        }
+    }
+    void* lbl = uiFindControl(g_inst, "lblStatus");
+    if (lbl && editableInfo[0]) uiSetString(g_inst, lbl, "caption", editableInfo);
 }
 
 static void loadAllProcs(HMODULE dll) {
 #define RESOLVE(name) \
     *(void**)&ui##name = GetProcAddress(dll, "UICornerstone_" #name)
 
-    RESOLVE(Init);
+    RESOLVE(CreateInstance);
+    RESOLVE(DestroyInstance);
     RESOLVE(SetViewport);
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -79,14 +192,13 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
-    RESOLVE(Shutdown);
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
     RESOLVE(SetString);
     RESOLVE(GetString);
     RESOLVE(GetInt);
-    RESOLVE(SetComboItems);
+    RESOLVE(PushUIEvent);
 #undef RESOLVE
 }
 
@@ -98,16 +210,22 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: loaded UICornerstone.dll\n");
 
     loadAllProcs(g_uiDll);
-    if (!uiInit) { printf("FAIL: GetProcAddress(Init)\n"); FreeLibrary(g_uiDll); return 1; }
+    if (!uiCreateInstance) { printf("FAIL: GetProcAddress(CreateInstance)\n"); FreeLibrary(g_uiDll); return 1; }
 
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) { printf("FAIL: GetUIBackendCallbacks\n"); FreeLibrary(g_uiDll); return 1; }
 
-    if (!uiInit(callbacks)) { printf("FAIL: Init\n"); FreeLibrary(g_uiDll); return 1; }
-    uiSetViewport(0, 0, 540, 320);
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_combobox_cabi";
+    cfg.windowWidth = 540;
+    cfg.windowHeight = 320;
+    g_inst = uiCreateInstance(callbacks, &cfg);
+    if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
+    uiSetViewport(g_inst, 0, 0, 540, 320);
     printf("OK: initialized\n");
 
-    uiRegisterAction("onSelectionChanged", onSelectionChanged, nullptr);
+    uiRegisterAction(g_inst, "onSelectionChanged", onSelectionChanged, nullptr);
+    uiRegisterAction(g_inst, "onDumpCombo", onDumpCombo, nullptr);
 
     const char* layoutJson = R"json({
         "version": "1.0",
@@ -155,10 +273,38 @@ static int runTest(const char* shortName, const char* displayName) {
                         "textColor": [180, 200, 220]
                     },
                     {
+                        "id": "comboEditable",
+                        "type": "ComboBox",
+                        "rect": { "x": 20, "y": 140, "w": 300, "h": 32 },
+                        "fontSize": 16,
+                        "editable": true,
+                        "placeholder": "Type to filter...",
+                        "items": [
+                            { "label": "Beijing",   "value": "beijing" },
+                            { "label": "Shanghai",  "value": "shanghai" },
+                            { "label": "Guangzhou", "value": "guangzhou" },
+                            { "label": "Shenzhen",  "value": "shenzhen" },
+                            { "label": "Chengdu",   "value": "chengdu" },
+                            { "label": "Wuhan",     "value": "wuhan", "disabled": true },
+                            { "label": "Xi'an",     "value": "xian" },
+                            { "label": "Hangzhou",  "value": "hangzhou" },
+                            { "label": "Nanjing",   "value": "nanjing" },
+                            { "label": "Chongqing", "value": "chongqing" }
+                        ],
+                        "events": { "onSelectionChanged": "onSelectionChanged" }
+                    },
+                    {
+                        "id": "btnDump",
+                        "type": "Button",
+                        "rect": { "x": 340, "y": 140, "w": 170, "h": 32 },
+                        "caption": "Dump Combo",
+                        "events": { "onClick": "onDumpCombo" }
+                    },
+                    {
                         "id": "lblHint",
                         "type": "Label",
-                        "rect": { "x": 20, "y": 140, "w": 500, "h": 140 },
-                        "caption": "Click the ComboBox to open the dropdown.\nSelect an item to see its index and label.\n\nItems that are disabled (e.g. Wuhan)\ncannot be selected.\n\nPress the close button to exit.",
+                        "rect": { "x": 20, "y": 196, "w": 500, "h": 110 },
+                        "caption": "Mode 1 (read-only): click anywhere to open the dropdown.\nMode 2 (editable): type text + Enter to select the\nmatching item; unmatched text is kept as the content.\nDisabled items (e.g. Wuhan) cannot be selected.\n\nPress 'Dump Combo' to read text/selected-value/selected-index\nvia property CAPI (unmatched input is kept in 'text').",
                         "fontSize": 12,
                         "textColor": [140, 140, 160]
                     }
@@ -167,23 +313,30 @@ static int runTest(const char* shortName, const char* displayName) {
         ]
     })json";
 
-    if (!uiLoadLayout(layoutJson)) { printf("FAIL: LoadLayout\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    if (!uiLoadLayout(g_inst, layoutJson)) { printf("FAIL: LoadLayout\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("OK: layout loaded\n");
 
     printf("Frame loop... (interact with the ComboBox or close the window)\n");
-    while (!uiIsQuitRequested()) {
-        uiProcessEvents();
-        uiUpdate(1.0 / 60.0);
-        uiClear();
-        uiRender();
-        uiPresent();
+    while (!uiIsQuitRequested(g_inst)) {
+        if (g_simInject) runSimInject();
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
     }
 
-    uiShutdown();
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
     g_uiDll = nullptr;
     printf("test_combobox_cabi_%s: done\n", shortName);
     return 0;
 }
 
-int main() { return runTest(BACKEND_SHORT_NAME, BACKEND_DISPLAY_NAME); }
+int main(int argc, char* argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--sim-inject") == 0) g_simInject = true;
+    }
+    return runTest(BACKEND_SHORT_NAME, BACKEND_DISPLAY_NAME);
+}

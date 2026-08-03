@@ -6,6 +6,7 @@
 #include "MainWindow.h"
 #include "Bench.h"
 #include "AppCallbacks.h"
+#include "TestInstance.h"
 
 using namespace std;
 using namespace GraphTool;
@@ -465,6 +466,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    GraphToolApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<GraphToolApp>(argc, argv);
 }

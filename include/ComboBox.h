@@ -61,6 +61,7 @@ private:
     bool m_arrowHovered = false;
     bool m_watcherRegistered = false;
     bool m_cycleEnabled = true;
+    bool m_editable = false;
 
 private:
     // ── Popup 控制 ──
@@ -81,6 +82,7 @@ private:
     void cycleSelection(int direction);
     int findFirstEnabled(int start) const;
     int findLastEnabled() const;
+    int findItemByText(const string& text) const;
 
     // ── 文本辅助 ──
     float getStringWidth(const string& text);
@@ -115,6 +117,12 @@ public:
     void removeItem(int index);
     const vector<ComboBoxItem>& getItems() const { return m_items; }
     int getItemCount() const { return (int)m_items.size(); }
+
+    // ── 模式 ──
+    // 只读模式（默认）：仅可从下拉列表选择，不允许键盘输入；
+    // 可编辑模式：允许键盘输入，回车时匹配列表项，无匹配则输入内容保留
+    void setEditable(bool editable) { m_editable = editable; }
+    bool isEditable() const { return m_editable; }
 
     // ── 选中 ──
     void setSelectedIndex(int index);

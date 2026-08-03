@@ -16,31 +16,31 @@
 
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef int   (*UILoadLayoutFn)(const char*);
-typedef void* (*UIFindControlFn)(const char*);
-typedef void  (*UIRegisterActionFn)(const char*, void(*)(void*,void*), void*);
-typedef int   (*UISetStringFn)(void*, const char*, const char*);
-typedef int   (*UIGetStringFn)(void*, const char*, char*, int);
-typedef int   (*UIGetPtrFn)(void*, const char*, void**);
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void       (*UIDestroyInstanceFn)(UIInstance);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
+typedef void* (*UIFindControlFn)(UIInstance,const char*);
+typedef void  (*UIRegisterActionFn)(UIInstance, const char*, void(*)(void*,void*), void*);
+typedef int   (*UISetStringFn)(UIInstance, void*, const char*, const char*);
+typedef int   (*UIGetStringFn)(UIInstance, void*, const char*, char*, int);
+typedef int   (*UIGetPtrFn)(UIInstance, void*, const char*, void**);
 
-static UIInitFn               uiInit               = nullptr;
-static UISetViewportFn        uiSetViewport        = nullptr;
-static UIProcessEventsFn      uiProcessEvents      = nullptr;
-static UIUpdateFn             uiUpdate             = nullptr;
-static UIClearFn              uiClear              = nullptr;
-static UIRenderFn             uiRender             = nullptr;
-static UIPresentFn            uiPresent            = nullptr;
-static UIIsQuitFn             uiIsQuit             = nullptr;
-static UIShutdownFn           uiShutdown           = nullptr;
+static UICreateInstanceFn      uiCreateInstance       = nullptr;
+static UISetViewportFn         uiSetViewport          = nullptr;
+static UIProcessEventsFn       uiProcessEvents        = nullptr;
+static UIUpdateFn              uiUpdate               = nullptr;
+static UIClearFn               uiClear                = nullptr;
+static UIRenderFn              uiRender               = nullptr;
+static UIPresentFn             uiPresent              = nullptr;
+static UIIsQuitFn              uiIsQuit               = nullptr;
+static UIDestroyInstanceFn     uiDestroyInstance      = nullptr;
 static UILoadLayoutFn         uiLoadLayout         = nullptr;
 static UIFindControlFn        uiFindControl        = nullptr;
 static UIRegisterActionFn     uiRegisterAction     = nullptr;
@@ -51,6 +51,7 @@ static void*                  g_labelHandle        = nullptr;
 static void*                  g_treeHandle         = nullptr;
 
 static HMODULE g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
 
 // ---- JSON layout ----
 // TreeView with deep hierarchy + long labels (horizontal scroll trigger)
@@ -127,11 +128,11 @@ static void onTreeNodeSelected(void* ctl, void* userData) {
     char idBuf[128] = "";
     char udBuf[128] = "";
     if (uiGetString) {
-        uiGetString(ctl, "selected-id", idBuf, (int)sizeof(idBuf));
+        uiGetString(g_inst, ctl, "selected-id", idBuf, (int)sizeof(idBuf));
     }
     if (uiGetPtr) {
         void* ud = nullptr;
-        if (uiGetPtr(ctl, "selected-user-data", &ud) && ud) {
+        if (uiGetPtr(g_inst, ctl, "selected-user-data", &ud) && ud) {
             auto* s = static_cast<std::string*>(ud);
             _snprintf_s(udBuf, sizeof(udBuf), _TRUNCATE, "%s", s->c_str());
         }
@@ -145,11 +146,11 @@ static void onTreeNodeSelected(void* ctl, void* userData) {
     else
         _snprintf_s(buf, sizeof(buf), _TRUNCATE, "(deselected)");
 
-    uiSetString(g_labelHandle, "caption", buf);
+    uiSetString(g_inst, g_labelHandle, "caption", buf);
 }
 
 static void loadFunctions() {
-    uiInit           = (UIInitFn)             GetProcAddress(g_uiDll, "UICornerstone_Init");
+    uiCreateInstance = (UICreateInstanceFn)   GetProcAddress(g_uiDll, "UICornerstone_CreateInstance");
     uiSetViewport    = (UISetViewportFn)      GetProcAddress(g_uiDll, "UICornerstone_SetViewport");
     uiProcessEvents  = (UIProcessEventsFn)    GetProcAddress(g_uiDll, "UICornerstone_ProcessEvents");
     uiUpdate         = (UIUpdateFn)           GetProcAddress(g_uiDll, "UICornerstone_Update");
@@ -157,7 +158,7 @@ static void loadFunctions() {
     uiRender         = (UIRenderFn)           GetProcAddress(g_uiDll, "UICornerstone_Render");
     uiPresent        = (UIPresentFn)          GetProcAddress(g_uiDll, "UICornerstone_Present");
     uiIsQuit         = (UIIsQuitFn)           GetProcAddress(g_uiDll, "UICornerstone_IsQuitRequested");
-    uiShutdown       = (UIShutdownFn)         GetProcAddress(g_uiDll, "UICornerstone_Shutdown");
+    uiDestroyInstance= (UIDestroyInstanceFn)  GetProcAddress(g_uiDll, "UICornerstone_DestroyInstance");
     uiLoadLayout     = (UILoadLayoutFn)       GetProcAddress(g_uiDll, "UICornerstone_LoadLayout");
     uiFindControl    = (UIFindControlFn)      GetProcAddress(g_uiDll, "UICornerstone_FindControl");
     uiRegisterAction = (UIRegisterActionFn)   GetProcAddress(g_uiDll, "UICornerstone_RegisterAction");
@@ -173,7 +174,7 @@ int main() {
     if (!g_uiDll) { printf("FAIL: LoadLibrary\n"); return 1; }
 
     loadFunctions();
-    if (!uiInit || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetString || !uiIsQuit) {
+    if (!uiCreateInstance || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetString || !uiIsQuit) {
         printf("FAIL: GetProcAddress\n");
         FreeLibrary(g_uiDll);
         return 1;
@@ -182,36 +183,42 @@ int main() {
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) { printf("FAIL: GetUIBackendCallbacks\n"); FreeLibrary(g_uiDll); return 1; }
 
-    if (!uiInit(callbacks)) { printf("FAIL: UICornerstone_Init\n"); FreeLibrary(g_uiDll); return 1; }
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_treeview_cabi";
+    cfg.windowWidth = 800;
+    cfg.windowHeight = 600;
+    g_inst = uiCreateInstance(callbacks, &cfg);
+    if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
+    uiSetViewport(g_inst, 0, 0, 800, 600);
     printf("Init OK\n");
 
-    uiSetViewport(0, 0, 800, 600);
-
     // Register the onSelect action BEFORE loading layout
-    uiRegisterAction("onTreeSelect", onTreeNodeSelected, nullptr);
+    uiRegisterAction(g_inst, "onTreeSelect", onTreeNodeSelected, nullptr);
 
-    if (uiLoadLayout(LAYOUT_JSON) == 0) { printf("FAIL: LoadLayout\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    if (uiLoadLayout(g_inst, LAYOUT_JSON) == 0) { printf("FAIL: LoadLayout\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("LoadLayout OK\n");
 
-    g_treeHandle = uiFindControl("controlTree");
-    if (!g_treeHandle) { printf("FAIL: FindControl(controlTree)\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    g_treeHandle = uiFindControl(g_inst, "controlTree");
+    if (!g_treeHandle) { printf("FAIL: FindControl(controlTree)\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("FindControl(controlTree) OK\n");
 
-    g_labelHandle = uiFindControl("lblSelection");
-    if (!g_labelHandle) { printf("FAIL: FindControl(lblSelection)\n"); uiShutdown(); FreeLibrary(g_uiDll); return 1; }
+    g_labelHandle = uiFindControl(g_inst, "lblSelection");
+    if (!g_labelHandle) { printf("FAIL: FindControl(lblSelection)\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("FindControl(lblSelection) OK\n");
 
     printf("Frame loop running - click nodes in the TreeView, close window to exit\n");
-    while (!uiIsQuit()) {
-        uiProcessEvents();
-        uiUpdate(1.0 / 60.0);
-        uiClear();
-        uiRender();
-        uiPresent();
+    while (!uiIsQuit(g_inst)) {
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
     }
 
-    uiShutdown();
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
+    g_uiDll = nullptr;
     printf("=== TreeView C ABI Test PASSED ===\n");
     return 0;
 }

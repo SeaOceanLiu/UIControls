@@ -51,16 +51,17 @@ static const char* LAYOUT_JSON =
 int main(void) {
     printf("=== UICornerstone C ABI Controls Demo ===\n"); fflush(stdout);
 
-    if (!UICornerstone_InitFromPlugin(UICORNERSTONE_BACKEND_NAME)) {
-        printf("FAIL: InitFromPlugin (%s)\n", UICORNERSTONE_BACKEND_NAME); return 1;
+    UIInstance inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
+    if (!inst) {
+        printf("FAIL: CreateInstanceFromPlugin (%s)\n", UICORNERSTONE_BACKEND_NAME); return 1;
     }
-    UICornerstone_SetViewport(0, 0, 800, 480);
-    UICornerstone_RegisterAction("onBtnClick", onBtnClick, NULL);
+    UICornerstone_SetViewport(inst, 0, 0, 800, 480);
+    UICornerstone_RegisterAction(inst, "onBtnClick", onBtnClick, NULL);
 
     printf("Loading layout...\n"); fflush(stdout);
-    if (!UICornerstone_LoadLayout(LAYOUT_JSON)) {
+    if (!UICornerstone_LoadLayout(inst, LAYOUT_JSON)) {
         printf("FAIL: LoadLayout\n");
-        UICornerstone_Shutdown(); return 1;
+        UICornerstone_DestroyInstance(inst); return 1;
     }
     printf("Layout loaded\n"); fflush(stdout);
 
@@ -74,22 +75,22 @@ int main(void) {
         "panel_label","panel_btn",
         "hint_textarea","ta_demo"};
     for (int i = 0; i < (int)(sizeof(ids)/sizeof(ids[0])); i++) {
-        if (UICornerstone_FindControl(ids[i])) nF++;
+        if (UICornerstone_FindControl(inst, ids[i])) nF++;
         else printf("  Missing: %s\n", ids[i]);
     }
     printf("  FindControl: %d/%zu found\n", nF, sizeof(ids)/sizeof(ids[0])); fflush(stdout);}
 
     printf("  Frame loop running (close window to exit)...\n"); fflush(stdout);
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0 / 60.0);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(inst)) {
+        UICornerstone_ProcessEvents(inst);
+        UICornerstone_Update(inst, 1.0 / 60.0);
+        UICornerstone_Clear(inst);
+        UICornerstone_Render(inst);
+        UICornerstone_Present(inst);
     }
 
     printf("  Window closed by user\n");
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(inst);
     printf("  === PASS ===\n"); fflush(stdout);
     return 0;
 }

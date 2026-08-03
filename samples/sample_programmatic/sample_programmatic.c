@@ -34,6 +34,7 @@
 
 static int g_clickCount = 0;
 static UIControlHandle g_statusLabel = NULL;   // 保存句柄，供回调中更新
+static UIInstance g_inst;
 
 static void onBtnClick(UIControlHandle ctl, const UIEventData* evt, void* user) {
     (void)ctl; (void)evt; (void)user;
@@ -45,15 +46,16 @@ static void onBtnClick(UIControlHandle ctl, const UIEventData* evt, void* user) 
     // g_statusLabel 在 main 中赋值后保持不变。
     // 如果控件可能在运行时被销毁，需先检查句柄有效性。
     if (g_statusLabel)
-        UICornerstone_SetString(g_statusLabel, "caption", buf);
+        UICornerstone_SetString(g_inst, g_statusLabel, "caption", buf);
 }
 
 // ======== main ========
 
 int main(void) {
     // ── 初始化（与 JSON 示例完全相同） ──────────────────────────
-    if (!UICornerstone_InitFromPlugin(UICORNERSTONE_BACKEND_NAME)) return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    g_inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
     // ── 编程式创建控件树 ────────────────────────────────────────
     //
@@ -72,42 +74,42 @@ int main(void) {
     //   父控件裁剪子控件的绘制区域。
 
     // 1) 创建根 Panel（覆盖整个视口）
-    UIControlHandle root = UICornerstone_CreatePanel(0, 0, 800, 480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
 
     // 2) 创建标题标签并挂到根
     UIControlHandle title = UICornerstone_CreateLabel(
-        "UICornerstone Sample (Programmatic)", 18,
+        g_inst, "UICornerstone Sample (Programmatic)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChildControl(root, title);
+    UICornerstone_AddChildControl(g_inst, root, title);
 
     // 3) 创建按钮
-    UIControlHandle btn = UICornerstone_CreateButton("Click Me",
+    UIControlHandle btn = UICornerstone_CreateButton(g_inst, "Click Me",
         20, 60, 200, 80);
 
     // SetColor: 通过属性系统设置 background 色，自动生成 hover（变亮 ~30%）和
     // pressed（变暗 ~30%）。参数为 UIColor 结构体（RGBA 分量 0-255）。
-    UICornerstone_SetColor(btn, kBackground, (UIColor){74, 144, 217, 255});
+    UICornerstone_SetColor(g_inst, btn, kBackground, (UIColor){74, 144, 217, 255});
 
     // SetCallback: 通过属性系统绑定点击回调。
     // 第三个参数 userData 会透传给回调（本例传 NULL）。
-    UICornerstone_SetCallback(btn, kEventClick, onBtnClick, NULL);
-    UICornerstone_AddChildControl(root, btn);
+    UICornerstone_SetCallback(g_inst, btn, kEventClick, onBtnClick, NULL);
+    UICornerstone_AddChildControl(g_inst, root, btn);
 
     // 4) 创建状态标签（用于显示点击次数）
     g_statusLabel = UICornerstone_CreateLabel(
-        "Click the button above", 14,
+        g_inst, "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChildControl(root, g_statusLabel);
+    UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
     // ── 帧循环（与 JSON 示例完全相同） ──────────────────────────
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0f / 60.0f);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0f / 60.0f);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
 
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }

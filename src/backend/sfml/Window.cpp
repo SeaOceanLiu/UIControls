@@ -79,9 +79,12 @@ private:
 };
 
 Window* CreateSFMLWindow(const char* title, int width, int height, uint32_t flags) {
-    std::uint32_t style = sf::Style::Default;
+    // 跨后端统一窗口标志（UIWindowFlags）：显式组合样式，
+    // 无 Resizable 标志时不带可调边框（sf::Style::Default 恒含 Resize）
+    std::uint32_t style = sf::Style::Titlebar | sf::Style::Close;
+    if (flags & UIWindowFlags::Resizable) style |= sf::Style::Resize;
     sf::State winState = sf::State::Windowed;
-    if (flags & 0x01) winState = sf::State::Fullscreen;
+    if (flags & UIWindowFlags::Fullscreen) winState = sf::State::Fullscreen;
 
     sf::ContextSettings ctxSettings;
     ctxSettings.stencilBits = 8;

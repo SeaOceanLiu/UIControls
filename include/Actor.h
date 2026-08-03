@@ -17,6 +17,8 @@ private:
 protected:
     bool m_matchParentRect; //是否强制使用目标矩形
     ScaleType m_scaleType;
+    fs::path m_filePath;        // 延迟加载（两阶段创建）：挂树前保存加载参数
+    string m_resourceId;
 public:
     Actor(Control *parent, float xScale=1.0f, float yScale=1.0f);
     Actor(Control *parent, bool matchParentRect=false, float xScale=1.0f, float yScale=1.0f);
@@ -26,6 +28,7 @@ public:
     Actor& operator=(const Actor& other);
     void loadFromFile(fs::path filePath) override;
     void loadFromResource(string resourceId) override;
+    void create() override;   // 两阶段创建：context 就绪后由 setContext 触发加载
     void setParent(Control *parent) override;   // 由于要考虑匹配父控件绘图区域大小，所以需要重载该函数，以使其在设备父控件时匹配父控件绘图区域大小
     void loadTextureFromSurface(Surface* surface);
     Texture* getTexture() const { return m_texture.get(); }

@@ -8,6 +8,7 @@
 #include "EditBox.h"
 #include "AppCallbacks.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -133,6 +134,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    WinFrameApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<WinFrameApp>(argc, argv);
 }

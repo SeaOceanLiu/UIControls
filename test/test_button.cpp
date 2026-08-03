@@ -8,6 +8,7 @@
 #include "AppCallbacks.h"
 #include "TestUtils.h"
 #include "PlatformUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -192,6 +193,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    ButtonApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<ButtonApp>(argc, argv);
 }

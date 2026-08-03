@@ -53,13 +53,14 @@ extern UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 static int g_clickCount = 0;
 static UIControlHandle g_statusLabel = NULL;
+static UIInstance g_inst;
 
 static void onBtnClick(UIControlHandle ctl, const UIEventData* evt, void* user) {
     (void)ctl; (void)evt; (void)user;
     g_clickCount++;
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
-    if (g_statusLabel) UICornerstone_SetString(g_statusLabel, "caption", buf);
+    if (g_statusLabel) UICornerstone_SetString(g_inst, g_statusLabel, "caption", buf);
 }
 
 // ======== main ========
@@ -70,28 +71,29 @@ int main(void) {
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) return 1;
 
-    if (!UICornerstone_Init(callbacks)) return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    g_inst = UICornerstone_CreateInstance(callbacks, NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
     // ── 创建控件（C ABI 工厂函数，与静态模式完全一样） ──────────
 
-    UIControlHandle root = UICornerstone_CreatePanel(0, 0, 800, 480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
 
     UIControlHandle title = UICornerstone_CreateLabel(
-        "UICornerstone Sample (Hybrid)", 18,
+        g_inst, "UICornerstone Sample (Hybrid)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChildControl(root, title);
+    UICornerstone_AddChildControl(g_inst, root, title);
 
-    UIControlHandle btn = UICornerstone_CreateButton("Click Me",
+    UIControlHandle btn = UICornerstone_CreateButton(g_inst, "Click Me",
         20, 60, 200, 80);
-    UICornerstone_SetColor(btn, kBackground, (UIColor){74, 144, 217, 255});
-    UICornerstone_SetCallback(btn, kEventClick, onBtnClick, NULL);
-    UICornerstone_AddChildControl(root, btn);
+    UICornerstone_SetColor(g_inst, btn, kBackground, (UIColor){74, 144, 217, 255});
+    UICornerstone_SetCallback(g_inst, btn, kEventClick, onBtnClick, NULL);
+    UICornerstone_AddChildControl(g_inst, root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
-        "Click the button above", 14,
+        g_inst, "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChildControl(root, g_statusLabel);
+    UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
     // ── 帧循环（与静态模式完全相同） ──────────────────────────
     //
@@ -102,14 +104,14 @@ int main(void) {
     //
     // 所有后端调用在 exe 内完成，不经过 DLL 桥接。
 
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0f / 60.0f);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0f / 60.0f);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
 
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }

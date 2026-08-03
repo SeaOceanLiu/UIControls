@@ -35,6 +35,7 @@
 // 在代码中，通过 UICornerstone_SetCallback(handle, "click", fn, userData) 绑定。
 
 static int g_clickCount = 0;
+static UIInstance g_inst;
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
     (void)ctl; (void)user;
@@ -43,9 +44,9 @@ static void onBtnClick(UIControlHandle ctl, void* user) {
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
 
-    // FindControl 通过 id 在全局控件注册表中查找控件句柄
-    UIControlHandle status = UICornerstone_FindControl("status");
-    if (status) UICornerstone_SetString(status, "caption", buf);
+    // FindControl 通过 id 在实例控件注册表中查找控件句柄
+    UIControlHandle status = UICornerstone_FindControl(g_inst, "status");
+    if (status) UICornerstone_SetString(g_inst, status, "caption", buf);
 }
 
 // ======== JSON 布局（声明式 UI） ========
@@ -95,31 +96,32 @@ static const char* LAYOUT =
 //   ⑤ Shutdown               → 释放所有资源
 
 int main(void) {
-    // InitFromPlugin(backendName) 自动加载后端插件。
+    // CreateInstanceFromPlugin(backendName) 自动加载后端插件。
     // UICORNERSTONE_BACKEND_NAME 由 CMake 编译宏定义。
-    if (!UICornerstone_InitFromPlugin(UICORNERSTONE_BACKEND_NAME)) return 1;
+    g_inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
+    if (!g_inst) return 1;
 
     // 视口：整个窗口的渲染区域（左上 x, 左上 y, 宽, 高）
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
     // 注册 JSON 中 onClick 引用的回调函数
-    UICornerstone_RegisterAction("onBtnClick", onBtnClick, NULL);
+    UICornerstone_RegisterAction(g_inst, "onBtnClick", onBtnClick, NULL);
 
     // 加载 JSON 布局（返回 1=成功，0=失败）
-    if (!UICornerstone_LoadLayout(LAYOUT)) {
-        UICornerstone_Shutdown();
+    if (!UICornerstone_LoadLayout(g_inst, LAYOUT)) {
+        UICornerstone_DestroyInstance(g_inst);
         return 1;
     }
 
     // 帧循环：6 个步骤顺序不可颠倒
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();    // 轮询输入事件并分发到控件树
-        UICornerstone_Update(1.0f / 60.0f); // 更新控件状态（dt = 帧时间，秒）
-        UICornerstone_Clear();            // 清除帧缓冲
-        UICornerstone_Render();           // 绘制控件树
-        UICornerstone_Present();          // 交换缓冲到屏幕
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);    // 轮询输入事件并分发到控件树
+        UICornerstone_Update(g_inst, 1.0f / 60.0f); // 更新控件状态（dt = 帧时间，秒）
+        UICornerstone_Clear(g_inst);            // 清除帧缓冲
+        UICornerstone_Render(g_inst);           // 绘制控件树
+        UICornerstone_Present(g_inst);          // 交换缓冲到屏幕
     }
 
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }

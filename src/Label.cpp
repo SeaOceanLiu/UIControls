@@ -56,6 +56,9 @@ void Label::releaseFont(void) {
 }
 
 void Label::releaseTexts(void) {
+    // 实例已销毁（静态/全局残留控件退出期析构）时 renderer 已释放，直接放弃
+    // 缓存的文本资源（进程退出回收），避免对悬垂 renderer 调用 destroyText
+    if (!UIContext::isActive(m_context)) return;
     TextRenderer* renderer = getTextRenderer();
     if (renderer) {
         for (auto* t : m_cachedTexts) {
@@ -66,7 +69,11 @@ void Label::releaseTexts(void) {
 }
 
 void Label::recreate() {
-    if(!m_isCreated) return;
+    if(!m_isCreated) {
+        // 两阶段创建：context 就绪后（挂树）由 setContext 触发，重试字体加载
+        create();
+        return;
+    }
 
     releaseTexts();
     m_lines.clear();
@@ -88,6 +95,7 @@ void Label::recreate() {
 }
 void Label::create(void) {
     if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建（字体依赖 context）
 
     loadFromResource(m_fontFile.string());
     createMultilineText();
@@ -272,6 +280,7 @@ float Label::getStringWidth(const string& text) {
 
 void Label::loadFromResource(string resourceId){
     if (m_font) return;
+    if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后由 create() 加载
 
     // 若字体数据已加载（setFontSize 后 releaseFont 释放了 m_font 但保留了数据），直接复用
     if (!m_fontData) {

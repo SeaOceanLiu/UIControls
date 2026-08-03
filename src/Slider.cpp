@@ -60,6 +60,7 @@ Slider::~Slider() {
 void Slider::create(void)
 {
     if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建（valueLabel 字体依赖 context）
     ControlImpl::create();
     if (m_showValueLabel && !m_valueLabel) {
         m_valueLabel = make_shared<Label>(this, SRect());
@@ -180,7 +181,7 @@ void Slider::setFocused(bool focused, bool byKeyboard)
     if (m_focused == focused) return;
     if (focused) {
         if (!m_focusWatcherRegistered) {
-            EventQueue::getInstance()->addBeforeEventHandlingWatcher(EventType::MouseDown, getThis());
+            m_context->eventQueue->addBeforeEventHandlingWatcher(EventType::MouseDown, getThis());
             m_focusWatcherRegistered = true;
         }
     }

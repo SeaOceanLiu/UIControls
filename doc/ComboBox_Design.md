@@ -55,6 +55,9 @@ ComboBox（下拉选择框）是一种允许用户从预定义选项列表中选
 | D7 | **空间不足自适应** | 选空间更大侧 → 调整 popup 高度适配可用空间 → 不足一个条目时拒显 | 避免弹出被裁切的列表，提升体验 |
 | D8 | **闭合态循环选择** | 聚焦时 ↑/↓/滚轮直接循环切换选中项（不弹出 Popup） | 无需展开即可快速切换，与 Windows 原生 ComboBox 一致 |
 | D9 | **ScrollBar 区域适配** | 方案 A：文本绘制 clip rect 缩减宽度，背景/高亮铺满全宽 | 视觉连贯，实现简洁 |
+| D10 | **双模式** | `m_editable` 布尔开关（默认 false=只读）：只读模式点击任意区域开/收下拉、禁键盘输入；可编辑模式点正文聚焦编辑、点箭头开/收下拉 | 属性编辑器需要只读枚举选择，也需要可输入自定义文本；与 Windows CBS_DROPDOWN/DROPDOWNLIST 对应 |
+| D11 | **type-ahead 匹配** | 可编辑模式输入时 `findItemByText()` 先精确（忽略大小写）后前缀匹配，回车选中；无匹配保留输入且 `selectedIndex=-1` | 输入即匹配最常用，无匹配不清空用户输入 |
+| D12 | **展开态点击自身区域收起** | before watcher 在 `create()` 注册（先于 Popup clickOutside watcher），展开时点击自身区域（编辑模式箭头区/只读任意区域）直接收起并消费事件 | 避免 Popup 先关后 `togglePopup()` 又重开（关闭→立即重开的体验 bug） |
 
 ### 2.2 架构关系图
 
@@ -67,9 +70,15 @@ ComboBox（下拉选择框）是一种允许用户从预定义选项列表中选
 │  └── 箭头叠加绘制     → ▼ / ▲ (Unicode, m_margin.right 隔离)│
 │                                                      │
 │  [事件处理]                                          │
-│  ├── 箭头区域 MouseDown → togglePopup()              │
-│  ├── ↓/↑ KeyDown       → openPopup() (if focused)    │
-│  └── 其余事件          → EditBox::handleEvent()      │
+│  ├── 只读拦截        → TextInput 直接 return true    │
+│  ├── 点击分流        → 只读任意区域/可编辑箭头区 toggle│
+│  ├── ↓/↑ KeyDown     → openPopup()/闭合态循环切换    │
+│  ├── 可编辑输入      → EditBox 写入 + type-ahead 高亮 │
+│  └── 其余事件        → EditBox::handleEvent()        │
+│                                                      │
+│  [before watcher]  create() 注册 KeyDown+MouseDown   │
+│  ├── 展开态键盘导航 → ↑/↓/Enter/Esc/PageUp/Home/End  │
+│  └── 展开态点击自身 → closePopup() + return true     │
 │                                                      │
 │  m_popup ─────────────────────────────────────────┐  │
 │  (shared_ptr<Popup>)                               │  │
@@ -107,7 +116,7 @@ ComboBox（下拉选择框）是一种允许用户从预定义选项列表中选
 | F1 | 下拉列表展示 | P0 | 点击箭头展开列表，显示所有选项 |
 | F2 | 选中高亮 | P0 | 当前选中的选项在列表中高亮显示 |
 | F3 | 闭合显示选中值 | P0 | 关闭时输入框中显示当前选中项的 label |
-| F4 | 手动输入文本 | P0 | 用户可直接键入任意文本（继承 EditBox） |
+| F4 | 手动输入文本 | P0 | 可编辑模式（`editable=true`）可键入任意文本，type-ahead 高亮匹配项；只读模式拦截输入 |
 | F5 | 键盘导航 | P1 | 展开后 ↑/↓ 移动高亮，Enter 选中，Esc 关闭 |
 | F6 | 搜索/过滤 | P2 | 输入文字自动过滤选项列表（后续版本） |
 | F7 | 禁用项 | P2 | 部分选项可标记为 disabled，灰色不可选 |
@@ -116,21 +125,22 @@ ComboBox（下拉选择框）是一种允许用户从预定义选项列表中选
 
 ### 3.2 交互行为
 
-| 操作 | 行为 |
-|------|------|
-| **点击箭头区域** | `togglePopup()` — 闭合时展开，展开时关闭 |
-| **点击文本区域** | 正常 EditBox 行为：设置光标位置、获得焦点 |
-| **↓/↑ 键（聚焦时）** | 展开下拉列表（如果已展开则移动高亮） |
-| **↓/↑ 键（聚焦+闭合时）** | **直接按列表项顺序切换选中项**（不展开 Popup），循环到首/尾后回卷 |
-| **MouseWheel（聚焦+闭合时）** | **等同于 ↑/↓ 键**，按列表项顺序切换选中项（不展开 Popup） |
-| **Enter 键（展开时）** | 选中当前高亮项 → 更新文本 → 关闭 Popup → 触发回调 |
-| **ESC 键（展开时）** | 关闭 Popup，文本恢复为展开前的值 |
-| **点击列表项** | 选中该项 → 文本更新为选中 label → 关闭 → 触发回调 |
-| **点击 Popup 外部** | 关闭 Popup，文本恢复为展开前的值 |
-| **MouseWheel（展开时）** | 滚动列表内容（超出 maxVisibleItems 时） |
-| **Tab 键（展开时）** | 关闭 Popup，焦点移到下一个控件 |
+| 操作 | 只读模式（`editable=false`，默认） | 可编辑模式（`editable=true`） |
+|------|------|------|
+| **点击任意区域** | `togglePopup()` — 闭合时展开，展开时**收起** | 仅点击箭头区 `togglePopup()`；点正文 → 聚焦进入文本编辑 |
+| **展开态点击自身区域** | 收起 Popup（不重新打开） | 点箭头区收起；点正文 → 聚焦编辑 |
+| **文本输入（TextInput）** | **拦截丢弃**（EditBox 仅检查 m_focused，不检查可编辑性，必须在此拦截） | 写入编辑框 + type-ahead：`findItemByText()` 先精确（忽略大小写）后前缀匹配，命中则高亮该项 |
+| **Enter 键（聚焦+闭合）** | — | 回车确认：精确/前缀匹配到项 → `selectItem`；无匹配 → `selectedIndex=-1`、输入内容保留 |
+| **↓/↑ 键（聚焦+闭合）** | 直接按列表项顺序切换选中项（不展开 Popup），循环回卷 | 同上 |
+| **MouseWheel（聚焦+闭合，且鼠标在控件内）** | 等同于 ↑/↓ 键 | 同上 |
+| **Enter 键（展开时）** | 选中当前高亮项 → 更新文本 → 关闭（Confirmed）→ 触发回调；高亮无效/禁用 → 仅关闭 | 同上 |
+| **ESC 键（展开时）** | 关闭 Popup，文本**恢复**为展开前的值 | 关闭 Popup，**保留当前输入**（含未匹配文本与选中状态） |
+| **点击列表项** | 选中该项 → 文本更新为选中 label → 关闭 → 触发回调 | 同上 |
+| **点击 Popup 外部** | 关闭 Popup，文本恢复为展开前的值 | 关闭 Popup，保留当前输入 |
+| **MouseWheel（展开时）** | 滚动列表内容（超出 maxVisibleItems 时） | 同上 |
+| **Tab 键（展开时）** | 关闭 Popup，焦点移到下一个控件 | 同上 |
 
-> **注意**：展开时文本不随悬停变化。只有在 Enter 或点击确认时文本才更新。ESC 或外部点击恢复原值。此行为与 Windows 原生 ComboBox 一致。
+> **注意**：展开时文本不随悬停变化。只有 Enter 或点击确认时文本才更新。ESC/外部点击按模式区分：只读恢复原值，可编辑保留输入。与 Windows 原生 ComboBox 的 DROPDOWNLIST / DROPDOWN 风格一致。
 
 ### 3.3 闭合态方向键/MouseWheel 循环选择
 
@@ -154,15 +164,22 @@ ComboBox（下拉选择框）是一种允许用户从预定义选项列表中选
 - `m_items` 为空时忽略
 - 循环选择不展开 Popup，不修改 `m_savedSelectedIndex`
 - 每切换一次触发一次 `onSelectionChanged`
+- 可通过 `setCycleEnabled(false)` 关闭（属性 `cycle-enabled`），关闭后 ↑/↓/滚轮不循环切换
 
-### 3.3 样式定义
+### 3.3 双模式（可编辑开关）
 
 ```cpp
-enum class ComboBoxStyle {
-    DropDown      // 可输入文本（默认，CBS_DROPDOWN 风格）
-    // DropDownList  // 只可选择（后续版本，CBS_DROPDOWNLIST 风格）
-};
+bool m_editable = false;   // 默认只读（CBS_DROPDOWNLIST 风格）
+void setEditable(bool editable);
+bool isEditable() const;
 ```
+
+| 模式 | 对应 Windows 风格 | 输入 | 点击 |
+|------|------------------|------|------|
+| 只读（默认） | CBS_DROPDOWNLIST | 禁止（TextInput 拦截） | 任意区域开/收下拉 |
+| 可编辑 | CBS_DROPDOWN | 允许 + type-ahead 匹配 | 正文编辑，箭头开/收下拉 |
+
+> 原设计中的 `ComboBoxStyle` 枚举未实现：双模式通过 `m_editable` 布尔开关（默认 false）区分，经 Builder/JSON/C ABI/属性系统均可配置。
 
 ---
 
@@ -196,8 +213,10 @@ private:
     vector<ComboBoxItem> m_items;
     int m_selectedIndex = -1;       // -1 = 无选中
     int m_hoveredIndex = -1;        // Popup 中悬停高亮
-    int m_savedSelectedIndex = -1;  // 展开前保存（ESC/外部点击时恢复）
+    int m_savedSelectedIndex = -1;  // 展开前保存（只读模式取消时恢复）
     string m_placeholder;
+    bool m_editable = false;        // 双模式开关（默认只读）
+    bool m_cycleEnabled = true;     // 闭合态 ↑/↓/滚轮循环选择
 
     // ── 视觉属性 ──
     float m_arrowWidth = 20.0f;         // 箭头区域宽度
@@ -238,9 +257,10 @@ private:
 
     // ── 选择 ──
     void selectItem(int index);             // 选中 + 更新文本 + 关闭 + 回调
-    void restorePreviousSelection();        // 恢复选中（取消时）
+    void restorePreviousSelection();        // 恢复选中（只读模式取消时）
 
     // ── 文本辅助 ──
+    int   findItemByText(const string& text) const;  // 精确→前缀匹配，忽略大小写
     string getTruncatedText(const string& text, float maxWidth) const;
 
     // ── 事件 ──
@@ -270,6 +290,10 @@ public:
     void setSelectedValue(const string& value);
     string getSelectedValue() const;
     string getSelectedLabel() const;
+
+    // ── 双模式 ──
+    void setEditable(bool editable);
+    bool isEditable() const;
 
     // ── 占位文本 ──
     void setPlaceholder(const string& text);
@@ -341,6 +365,7 @@ public:
 
     ComboBoxBuilder& setItems(const vector<ComboBoxItem>& items);
     ComboBoxBuilder& setSelectedIndex(int index);
+    ComboBoxBuilder& setEditable(bool editable);
     ComboBoxBuilder& setPlaceholder(const string& text);
     ComboBoxBuilder& setArrowWidth(float width);
     ComboBoxBuilder& setItemHeight(float height);
@@ -398,23 +423,31 @@ public:
 
 Enter 键（展开时）
   → 由 beforeEventHandlingWatcher 拦截 KeyDown/Enter
-    ├── if (m_hoveredIndex >= 0)
+    ├── if (m_hoveredIndex >= 0 且 未禁用)
     │     └── selectItem(m_hoveredIndex)
-    └── closePopup()
+    │     └── closePopup(DialogResult::Confirmed)
+    └── 高亮无效/禁用 → 仅 closePopup()（不选中）
 
 ↑/↓ 键（展开时）
   → 由 beforeEventHandlingWatcher 拦截 KeyDown
-    ├── 更新 m_hoveredIndex（循环或 clamp 到有效范围）
-    ├── 如果超出可见范围 → 调整 scrollOffset
+    ├── 更新 m_hoveredIndex（跳过禁用项）
+    ├── 如果超出可见范围 → scrollToItem()
     └── return true
 
-ESC 键 / 外部点击（展开时）
-  → Popup::beforeEventHandlingWatcher
-    ├── restorePreviousSelection()
-    │     ├── m_selectedIndex = m_savedSelectedIndex
-    │     └── setText(原选中项的 label 或 清空)
-    └── closePopup()
+ESC 键（展开时）
+  → beforeEventHandlingWatcher 拦截 → closePopup()
+
+关闭回调（setOnClose，Popup 关闭时统一处理恢复逻辑）
+  → Popup::setOnClose(result)
+    ├── result == Cancelled（ESC / 外部点击 / 点自身区域收起）
+    │     ├── 只读模式 → restorePreviousSelection()
+    │     │     ├── m_selectedIndex = m_savedSelectedIndex
+    │     │     └── setText(原选中项的 label 或 清空)
+    │     └── 可编辑模式 → 不恢复，保留当前输入（含未匹配文本与选中状态）
+    └── result == Confirmed（Enter/点击列表项选中）→ 不做恢复
 ```
+
+> 恢复逻辑集中在 `setOnClose` 回调而非事件分发处，保证 ESC、外部点击、点击自身区域收起三条路径行为一致。
 
 ### 5.2 弹窗定位（computePopupRect）
 
@@ -505,8 +538,10 @@ SRect ComboBox::computePopupRect() const {
 
 文本与 m_selectedIndex 的关系:
   - 用户从列表选中 → setText(label) + m_selectedIndex = index
-  - 用户手动输入 → m_selectedIndex = -1（无对应选项）
-  - 用户手动输入与某选项 label 匹配 → 可选项（P2 自动匹配）
+  - 用户手动输入（可编辑模式）→ type-ahead：
+    findItemByText(text) 先精确匹配（_stricmp，忽略大小写），
+    再前缀匹配（_strnicmp），命中则 m_hoveredIndex 高亮该项（不自动选中）
+  - 回车确认 → 命中项 selectItem(index)；无匹配 → m_selectedIndex = -1，输入内容保留
   - setSelectedIndex(n) → setText(items[n].label) + m_selectedIndex = n
 ```
 
@@ -773,53 +808,55 @@ void ComboBoxListPanel::draw() {
 
 | 键位 | 展开时 | 闭合时（聚焦） |
 |------|--------|---------------|
-| **↓** | 高亮下移一项（到底循环或 clamp） | **直接循环选中下一项**（不展开） |
-| **↑** | 高亮上移一项（到顶循环或 clamp） | **直接循环选中上一项**（不展开） |
-| **Enter** | 选中高亮项 → 更新文本 → 关闭 | 触发 EditBox::onEnter |
-| **Esc** | 恢复原值 → 关闭 | — |
+| **↓** | 高亮下移一项（跳过禁用项） | **直接循环选中下一项**（不展开） |
+| **↑** | 高亮上移一项（跳过禁用项） | **直接循环选中上一项**（不展开） |
+| **Enter** | 选中高亮项 → 更新文本 → 关闭(Confirmed) | 可编辑模式：匹配/前缀项选中，无匹配置 -1；只读模式无效果 |
+| **Esc** | 关闭（只读恢复原值 / 可编辑保留输入） | — |
 | **PageUp** | 上翻一页（maxVisibleItems 项） | — |
 | **PageDown** | 下翻一页 | — |
 | **Home** | 高亮跳转到第一项 | 文本光标到行首 |
 | **End** | 高亮跳转到最后一项 | 文本光标到行末 |
 
-### 8.2 键盘导航的 beforeEventHandlingWatcher
+### 8.2 展开态 beforeEventHandlingWatcher（键盘导航 + 点击收起）
 
-展开状态下的键盘事件由 `beforeEventHandlingWatcher` 拦截（注册在 ComboBox 上），在 EditBox 处理之前截获：
+展开状态下的 KeyDown/MouseDown 由 `beforeEventHandlingWatcher` 拦截（**在 `create()` 末尾注册** KeyDown + MouseDown 两个 watcher，早于任何 `popup->open()` 时注册的 clickOutside watcher）。此注册时机是点击自身区域收起的关键：watcher 按注册顺序执行，ComboBox 的先处理保证点击自身区域时 popup 先被收起并消费事件，不会落到 Popup 的 clickOutside 关闭后再由 handleEvent 重新打开：
 
 ```cpp
-bool ComboBox::beforeEventHandlingWatcher(shared_ptr<Event> event) {
+bool ComboBox::beforeEventHandlingWatcher(shared_ptr<Event> event)
+{
     if (!isPopupOpen()) return false;
+
+    // 展开态点击控件自身区域 → 直接收起并消费事件：
+    // 编辑模式仅箭头区（点正文用于聚焦编辑），只读模式任意区域
+    if (event->m_type == EventType::MouseDown &&
+        event->mouseButton.button == MouseButton::Left &&
+        isContainsPoint(event->mouseButton.x, event->mouseButton.y) &&
+        (!m_editable || isInArrowArea(event->mouseButton.x))) {
+        closePopup();
+        return true;
+    }
 
     if (event->m_type == EventType::KeyDown) {
         switch (event->keyEvent.keycode) {
         case KeyCode::Down:
-            moveHover(1);      // 下移
+            // 下移并跳过禁用项
             return true;
         case KeyCode::Up:
-            moveHover(-1);     // 上移
+            // 上移并跳过禁用项
             return true;
         case KeyCode::Return:
         case KeyCode::KPEnter:
-            selectItem(m_hoveredIndex);
-            closePopup();
+            // 高亮有效且未禁用 → selectItem + closePopup(Confirmed)；
+            // 否则仅 closePopup()
             return true;
         case KeyCode::Escape:
-            restorePreviousSelection();
-            closePopup();
+            closePopup();   // 恢复逻辑集中在 setOnClose 回调
             return true;
         case KeyCode::PageUp:
-            moveHover(-m_maxVisibleItems);
-            return true;
         case KeyCode::PageDown:
-            moveHover(m_maxVisibleItems);
-            return true;
         case KeyCode::Home:
-            m_hoveredIndex = findFirstEnabled(0);
-            scrollToItem(m_hoveredIndex);
-            return true;
         case KeyCode::End:
-            m_hoveredIndex = findLastEnabled();
-            scrollToItem(m_hoveredIndex);
+            // 移动高亮 + scrollToItem()
             return true;
         default:
             return false;  // 其他按键传递给 EditBox
@@ -867,14 +904,23 @@ bool ComboBox::isInArrowArea(float x) const {
 bool ComboBox::handleEvent(shared_ptr<Event> event) {
     if (!m_enable || !m_visible) return false;
 
-    // ═══ 箭头区域交互 ═══
+    // ═══ 只读模式：拦截文本输入 ═══
+    // EditBox 的 TextInput 处理只检查 m_focused 不检查可编辑性，
+    // 必须在最前拦截，防止文字写入编辑框
+    if (!m_editable && event->m_type == EventType::TextInput) {
+        return true;
+    }
+
+    // ═══ 箭头/正文区域点击 ═══
     if (event->m_type == EventType::MouseDown &&
         event->mouseButton.button == MouseButton::Left) {
+        // 只读：点击任意区域开/收下拉；可编辑：仅箭头区 togglePopup
         if (isContainsPoint(event->mouseButton.x, event->mouseButton.y) &&
-            isInArrowArea(event->mouseButton.x)) {
+            (!m_editable || isInArrowArea(event->mouseButton.x))) {
             togglePopup();
             return true;
         }
+        // 可编辑模式点正文：不拦截，落到 EditBox 聚焦编辑
     }
 
     if (event->m_type == EventType::MouseMove) {
@@ -884,21 +930,45 @@ bool ComboBox::handleEvent(shared_ptr<Event> event) {
         }
     }
 
-    // ═══ 闭合态（聚焦）: ↑/↓ 键循环切换选中项 ═══
+    // ═══ 闭合态（聚焦）: ↑/↓ 键循环切换选中项 + 回车匹配确认 ═══
     if (!isPopupOpen() && getFocused()) {
         if (event->m_type == EventType::KeyDown) {
             int delta = 0;
             if (event->keyEvent.keycode == KeyCode::Down) delta = 1;
             else if (event->keyEvent.keycode == KeyCode::Up) delta = -1;
 
-            if (delta != 0) {
+            if (delta != 0 && !m_items.empty()) {
                 cycleSelection(delta);   // 循环切换，跳过 disabled
+                return true;
+            }
+
+            // 可编辑模式：回车 → type-ahead 匹配确认
+            if (m_editable &&
+                (event->keyEvent.keycode == KeyCode::Return ||
+                 event->keyEvent.keycode == KeyCode::KPEnter)) {
+                int idx = findItemByText(m_text);
+                if (idx >= 0) {
+                    selectItem(idx);      // 匹配 → 选中
+                } else {
+                    m_selectedIndex = -1; // 无匹配 → 保留输入，视为无选中
+                }
                 return true;
             }
         }
 
-        // MouseWheel 也切换选中项
-        if (event->m_type == EventType::MouseWheel) {
+        // 可编辑模式：文字输入 → 写入 + type-ahead 高亮
+        if (m_editable && event->m_type == EventType::TextInput) {
+            EditBox::handleEvent(event);
+            if (!m_items.empty()) {
+                int idx = findItemByText(m_text);
+                if (idx >= 0) m_hoveredIndex = idx;
+            }
+            return true;
+        }
+
+        // MouseWheel 也切换选中项（须在控件范围内）
+        if (event->m_type == EventType::MouseWheel &&
+            isContainsPoint(event->mouseWheel.x, event->mouseWheel.y)) {
             int delta = (event->mouseWheel.deltaY > 0) ? -1 : 1;
             cycleSelection(delta);
             return true;
@@ -909,24 +979,18 @@ bool ComboBox::handleEvent(shared_ptr<Event> event) {
     return EditBox::handleEvent(event);
 }
 
-// 辅助方法：在闭合态循环切换选中项
-void ComboBox::cycleSelection(int direction) {
-    if (m_items.empty()) return;
-    int n = (int)m_items.size();
-    if (n == 1) return;  // 仅一条目，无需切换
-
-    int newIdx = m_selectedIndex;
-    int attempts = 0;
-    do {
-        newIdx = (newIdx + direction + n) % n;
-        attempts++;
-    } while (attempts < n && m_items[newIdx].disabled);
-
-    if (attempts >= n) return;  // 全部 disabled
-
-    if (newIdx != m_selectedIndex) {
-        selectItem(newIdx);  // 更新文本 + 触发回调（不打开 Popup）
-    }
+// 输入文字匹配：先精确匹配（忽略大小写），再前缀匹配；跳过禁用项
+int ComboBox::findItemByText(const string& text) const {
+    if (text.empty()) return -1;
+    for (size_t i = 0; i < m_items.size(); ++i)
+        if (!m_items[i].disabled &&
+            _stricmp(m_items[i].label.c_str(), text.c_str()) == 0)
+            return (int)i;   // 精确匹配
+    for (size_t i = 0; i < m_items.size(); ++i)
+        if (!m_items[i].disabled &&
+            _strnicmp(m_items[i].label.c_str(), text.c_str(), text.length()) == 0)
+            return (int)i;   // 前缀匹配
+    return -1;
 }
 ```
 
@@ -941,6 +1005,7 @@ void ComboBox::cycleSelection(int direction) {
   "rect": { "x": 10, "y": 10, "w": 150, "h": 24 },
   "scale": { "x": 1.0, "y": 1.0 },
   "selectedIndex": 0,
+  "editable": false,
   "maxVisibleItems": 8,
   "itemHeight": 24,
   "arrowWidth": 20,
@@ -990,6 +1055,8 @@ shared_ptr<ComboBox> LayoutParser::parseComboBox(
         cb->setPlaceholder(j["placeholder"].get<string>());
     if (j.contains("selectedIndex"))
         cb->setSelectedIndex(j["selectedIndex"].get<int>());
+    if (j.contains("editable"))
+        cb->setEditable(j["editable"].get<bool>());
 
     // 解析 items
     if (j.contains("items") && j["items"].is_array()) {
@@ -1060,6 +1127,23 @@ void UICornerstone_ComboBoxSetOnSelectionChanged(
     UIControlHandle handle, void (*callback)(UIControlHandle, int, const char*));
 ```
 
+### 11.1 属性系统访问（通用 C ABI）
+
+除上述专用函数外，ComboBox 通过通用属性 CAPI 暴露双模式与文本/选中状态：
+
+| 属性 | 类型 | 语义 |
+|------|------|------|
+| `editable` | bool | 双模式开关（可 get/set） |
+| `text` | string | 编辑框当前内容：输入中的文字 / 无匹配时保留的输入 / 选中后的项 label（可 get/set，set 经 `setText`） |
+| `selected-value` | string | 选中项的 `value`；`selectedIndex == -1`（未匹配）时返回编辑框保留的输入内容 |
+| `selected-index` | int | 选中项索引；`-1` 表示无匹配（用户输入了未匹配文本） |
+| `max-visible-items` / `item-height` / `arrow-width` | int/float | 视觉配置 |
+| `cycle-enabled` | bool | 闭合态 ↑/↓/滚轮循环选择开关 |
+| `items` | string(JSON) | 以 JSON 数组设置 items（label/value/disabled） |
+| `on-selection-changed` | callback | 选中变化回调 |
+
+> **selected-value 语义**：严格返回**项的 value 字段**（而非 label/文本），供属性编辑器回写；未匹配时返回输入内容，避免编辑器读取到空值。判定是否匹配统一用 `selected-index == -1`。
+
 ---
 
 ## 12. 常量定义
@@ -1110,8 +1194,8 @@ static const float   COMBOBOX_DROPDOWN_OFFSET;
 
 ### 13.5 焦点行为
 
-- ComboBox 获得焦点时，EditBox 显示光标（可输入）
-- Popup 展开时焦点保持在 ComboBox/EditBox（用户可继续输入过滤文本）
+- ComboBox 获得焦点时，EditBox 显示光标（可编辑模式下可输入）
+- Popup 展开时焦点保持在 ComboBox/EditBox（可编辑模式可继续输入，type-ahead 更新高亮）
 - Popup 的 `FocusBoundary` 确保 Tab 不会陷入列表项
 - 外部点击关闭 Popup 时焦点回到 ComboBox
 
@@ -1122,7 +1206,8 @@ static const float   COMBOBOX_DROPDOWN_OFFSET;
 | Filter（输入过滤） | EditBox 文本变化 → `onTextChanged` → 过滤 `m_items` → 重建 Popup |
 | ComboBoxItem::customHeight | `ComboBoxListPanel::getItemY()` / `hitTest()` 改为累加高度 |
 | ComboBoxItemRenderer | items 保存 `shared_ptr<Renderer>`，`draw()` 调用 `renderer->draw()` |
-| DropDownList 只选模式 | 继承 EditBox 后 `setEnabled(false)` 禁止输入，或新增 style 枚举 |
+
+> **DropDownList 只选模式已通过 `m_editable=false` 实现**（见 §3.3 双模式），不再作为 Phase 2 预留。
 
 ---
 
@@ -1138,6 +1223,7 @@ static const int     COMBOBOX_DEFAULT_MAX_VISIBLE_ITEMS = 6;
 static const float   COMBOBOX_DEFAULT_ITEM_HEIGHT       = 24.0f;
 static const float   COMBOBOX_DEFAULT_ARROW_WIDTH       = 20.0f;
 static const float   COMBOBOX_DROPDOWN_OFFSET           = 2.0f;
+static const float   COMBOBOX_ARROW_MARGIN              = 4.0f;   // 箭头右侧与控件右缘的间距
 static const float   COMBOBOX_LIST_PADDING              = 4.0f;   // 列表文本左侧间距
 static const float   COMBOBOX_ARROW_WIDTH_RATIO          = 0.35f;  // 箭头半宽 = max(arrowWidth, height) * 此比例
 static const float   COMBOBOX_ARROW_HEIGHT_RATIO         = 0.45f;  // 箭头半高 = max(arrowWidth, height) * 此比例
@@ -1186,7 +1272,7 @@ static const SColor  COMBOBOX_DEFAULT_LIST_BORDER_COLOR   {60, 60, 60, 255};
 | 闭合态滚轮选择 | 聚焦时滚轮滚动 | 等同 ↑/↓，选中项变化 |
 | 回卷循环 | 从头/尾按 ↑/↓ | 到底后回卷到首/尾 |
 | 箭头点击 | 点击箭头区域 | togglePopup 行为正常 |
-| 外部点击关闭 | 展开后点击外部 | Popup 关闭，文本恢复原值 |
+| 外部点击关闭 | 展开后点击外部 | Popup 关闭，只读恢复原值/可编辑保留输入 |
 | 空数据 | 空 items | 不崩溃，箭头点击不弹列表 |
 | 长文本 | 超长 label | 列表项显示 ... |
 | 禁用项 | disabled=true | 灰色不可选，↑/↓/鼠标点击跳过 |
@@ -1197,6 +1283,12 @@ static const SColor  COMBOBOX_DEFAULT_LIST_BORDER_COLOR   {60, 60, 60, 255};
 | 缩放 | scale=2 | 所有元素双倍大小，定位正确 |
 | 事件 | onSelectionChanged | 选中变化时触发回调 |
 | JSON 解析 | 全参数/缺省 | 解析正确 |
+| 双模式 | editable=true/false 对比 | 可编辑可输入+type-ahead；只读拦截输入 |
+| type-ahead 匹配 | 可编辑输入 "be" + Enter | 精确/前缀匹配选中；无匹配保留输入，index=-1 |
+| 只读输入拦截 | 只读模式展开后输入字符 | 文字不写入编辑框 |
+| 可编辑取消保留 | 可编辑输入未匹配文本后 ESC | 输入内容不被清除 |
+| 展开态点击自身区域 | 展开后点箭头/任意区域 | 收起且不重新打开 |
+| 属性读取 | 经属性 CAPI 读 text/selected-value/index | 未匹配时 selected-index=-1，text 保留输入 |
 
 ### 15.2 `test_combobox_cabi` 独立测试
 
@@ -1221,6 +1313,26 @@ static const SColor  COMBOBOX_DEFAULT_LIST_BORDER_COLOR   {60, 60, 60, 255};
 | 工厂+设 items | C ABI 链式调用 | 控件正常渲染 |
 | 选择+回调 | 点击选项触发回调 | onSelectionChanged 输出日志 |
 | 完整帧循环 | init→processEvents→update→render→shutdown | 运行 3 秒无崩溃 |
+| 双模式注入验证 | `--sim-inject` 进程内事件注入 | 见 15.4 |
+
+### 15.4 `--sim-inject` 进程内事件注入（双模式端到端验证）
+
+> 鼠标/键盘模拟工具不可靠：`keybd_event`/`SendKeys` 依赖窗口焦点（无前台窗口时 `GetForegroundWindow()` 返回 0，事件静默丢失）。`--sim-inject` 通过 `UICornerstone_PushUIEvent` → queuedEvents → `uiEventToEvent` → dispatchToBench 走**真实事件链路**，不依赖窗口焦点，可稳定驱动 15 阶段注入序列。
+
+| 阶段 | 注入内容 | 验证点 |
+|------|---------|--------|
+| 0 | 点击 comboEditable 正文 | 可编辑框获得焦点 |
+| 1-2 | 输入 "b"、"e" | type-ahead 高亮匹配项 |
+| 3 | Enter | 精确匹配 → `Selected: #0 = Beijing` |
+| 4 | 点击 comboMain（只读） | 展开 Popup |
+| 5 | 输入 "x" | 只读拦截，文字不写入 |
+| 6 | Escape | 只读恢复原值，Popup 关闭 |
+| 7-9 | 清空文本 + 输入 "zzz" + Enter | 无匹配 → text='zzz'，selected-index=-1 |
+| 10 | 点击 Dump 按钮 | 属性 CAPI 读回 text/selected-value/index 并打印 |
+| 11-12 | 点击箭头两次 | 先展开后收起（自身区域收起不重开） |
+| 13 | 点击列表项位置 | Popup 未重新打开 → 无选中事件 |
+| 14 | 再次 Dump | 关闭后输入内容保留（text 仍 'zzz'） |
+| 15 | Dump + injectClose | 最终状态校验，自动退出 |
 
 **15.2 与 15.3 的分工差异：**
 

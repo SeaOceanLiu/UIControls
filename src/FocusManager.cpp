@@ -1,4 +1,4 @@
-#include "FocusManager.h"
+﻿#include "FocusManager.h"
 #include "ControlBase.h"
 #include <algorithm>
 
@@ -48,6 +48,15 @@ void FocusManager::unregisterBoundary(Control* boundary)
     auto it = std::remove(m_boundaries.begin(), m_boundaries.end(), boundary);
     if (it != m_boundaries.end())
         m_boundaries.erase(it, m_boundaries.end());
+}
+
+int FocusManager::getVisibleBoundaryCount() const
+{
+    int count = 0;
+    for (Control* b : m_boundaries) {
+        if (b && b->getVisible()) count++;
+    }
+    return count;
 }
 
 void FocusManager::notifyControlFocused(Control* ctl, bool byKeyboard) {

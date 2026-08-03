@@ -110,6 +110,10 @@ void MenuItem::setChecked(bool checked) {
 void MenuItem::setSubMenu(shared_ptr<MenuPanel> panel) {
     m_subMenu = panel;
     m_type = MenuItemType::SubMenu;
+    if (panel) {
+        panel->setParent(this);
+        if (getContext()) panel->setContext(getContext());
+    }
 }
 
 void MenuItem::draw() {
@@ -237,6 +241,24 @@ MenuPanel::MenuPanel(Control *parent, float xScale, float yScale)
 
 MenuPanel::~MenuPanel() = default;
 
+void MenuPanel::setContext(UIContext* ctx) {
+    ControlImpl::setContext(ctx);
+    if (ctx) {
+        // 挂树前 addItem 时 context 未就绪，ensureFont 加载失败（m_font 为空），
+        // 菜单文字不显示、面板宽度按空文本计算过窄；context 就绪后补加载并重算
+        ensureFont();
+        updateItemsFont();
+        recalculateSize();
+    }
+    // 菜单项由 addItem 挂入 m_items（不在 m_children 中），需手动传播 context，
+    // 否则 MenuItem 的 m_context 为空，绘制时 GET_RENDERDEVICE 解引用崩溃
+    for (auto& item : m_items) {
+        item->setContext(ctx);
+        if (item->m_subMenu) item->m_subMenu->setContext(ctx);
+    }
+    if (m_openSubMenu) m_openSubMenu->setContext(ctx);
+}
+
 void MenuPanel::ensureFont() {
     if (m_font) return;
     m_font = loadMenuFont(this, m_fontName, m_fontSize);
@@ -285,6 +307,7 @@ void MenuPanel::addItem(shared_ptr<MenuItem> item) {
     item->setParent(this);
     item->setMenuFont(m_font, m_fontSize);
     m_items.push_back(item);
+    if (getContext()) item->setContext(getContext());
     recalculateSize();
 }
 
@@ -438,9 +461,11 @@ void MenuPanel::setHoveredIndex(int index) {
     if (m_hoveredIndex >= 0 && m_hoveredIndex < (int)m_items.size()) {
         auto& item = m_items[m_hoveredIndex];
         if (item->hasSubMenu()) {
-            SRect itemRect = item->getDrawRect();
             auto subMenu = item->getSubMenu();
-            subMenu->setPosition(itemRect.right(), itemRect.top);
+            // 子菜单的 parent 是 MenuItem，setPosition 使用相对 MenuItem 的坐标：
+            // x = item 完整宽度（紧贴右缘），y = 0（与 item 顶部对齐）。
+            // 传入绝对坐标（itemRect.right/top）会被父链偏移二次叠加导致错位
+            subMenu->setPosition(item->getRect().width, 0);
             setOpenSubMenu(subMenu);
         } else {
             setOpenSubMenu(nullptr);
@@ -616,6 +641,18 @@ MenuBar::MenuBar(Control *parent, float xScale, float yScale)
 
 MenuBar::~MenuBar() = default;
 
+void MenuBar::setContext(UIContext* ctx) {
+    ControlImpl::setContext(ctx);
+    if (ctx) {
+        // 挂树前 addMenu 时 context 未就绪，ensureFont 加载失败，菜单栏文字不显示
+        ensureFont();
+    }
+    // 下拉面板由 addMenu 挂入 m_entries（不在 m_children 中），需手动传播 context
+    for (auto& e : m_entries) {
+        e.panel->setContext(ctx);
+    }
+}
+
 void MenuBar::ensureFont() {
     if (m_font) return;
     m_font = loadMenuFont(this, m_fontName, m_menuTextSize);
@@ -643,6 +680,7 @@ void MenuBar::addMenu(const string& caption, shared_ptr<MenuPanel> panel) {
     entry.panel->setFontSize(m_menuTextSize);
     entry.panel->setItemHeightRatio(m_itemHeightRatio);
     entry.panel->hide();
+    if (getContext()) entry.panel->setContext(getContext());
 
     m_entries.push_back(std::move(entry));
     layoutEntries();

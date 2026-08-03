@@ -41,6 +41,9 @@ ComboBox::~ComboBox()
 // ═══════════════════════════════════════════════════════════════
 void ComboBox::create()
 {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
+
     EditBox::create();
 
     m_popup = make_shared<Popup>(nullptr, SRect(0, 0, 100, 100), m_xScale, m_yScale);
@@ -48,13 +51,19 @@ void ComboBox::create()
     m_popup->setTextRenderer(getTextRenderer());
     m_popup->setResourceProvider(getResourceProvider());
     m_popup->setInputBackend(getInputBackend());
+    // 浮层继承宿主实例上下文：Popup 以 nullptr 构造，无 setContext 传播路径
+    m_popup->setContext(GET_CONTEXT);
     m_popup->setCloseOnClickOutside(true);
     m_popup->setCloseOnEsc(false);
     m_popup->setBorderVisible(false);
     m_popup->setTransparent(false);
     m_popup->setOnClose([this](shared_ptr<Popup> popup, DialogResult result) {
         if (result == DialogResult::Cancelled) {
-            restorePreviousSelection();
+            // 只读模式：取消时恢复打开前的选择；
+            // 可编辑模式：保留当前输入内容（包括未匹配文本与选中状态）
+            if (!m_editable) {
+                restorePreviousSelection();
+            }
         }
     });
     m_popup->create();
@@ -67,6 +76,8 @@ void ComboBox::create()
     m_listPanel->setTextRenderer(getTextRenderer());
     m_listPanel->setResourceProvider(getResourceProvider());
     m_listPanel->setInputBackend(getInputBackend());
+    // 列表面板同浮层：以 nullptr 构造，需继承宿主实例上下文
+    m_listPanel->setContext(GET_CONTEXT);
     m_listPanel->create();
 
     m_scrollBar = make_shared<ScrollBar>(m_popup.get(),
@@ -84,6 +95,15 @@ void ComboBox::create()
 
     m_popup->addControl(m_listPanel);
     m_popup->addControl(m_scrollBar);
+
+    // 展开态事件 watcher：必须在此注册（早于任何 popup->open() 注册的
+    // clickOutside watcher），保证点击 combo 自身区域时先处理收起逻辑，
+    // 避免 popup 先关闭后 handleEvent 的 togglePopup 又重新打开
+    m_context->eventQueue->addBeforeEventHandlingWatcher(
+        EventType::KeyDown, getThis());
+    m_context->eventQueue->addBeforeEventHandlingWatcher(
+        EventType::MouseDown, getThis());
+    m_watcherRegistered = true;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -130,10 +150,18 @@ bool ComboBox::handleEvent(shared_ptr<Event> event)
 {
     if (!m_enable || !m_visible) return false;
 
+    // 只读模式：拦截文本输入，防止落到 EditBox::handleEvent 写入文字
+    // （EditBox 仅检查 m_focused，不检查可编辑性）
+    if (!m_editable && event->m_type == EventType::TextInput) {
+        return true;
+    }
+
     if (event->m_type == EventType::MouseDown &&
         event->mouseButton.button == MouseButton::Left) {
+        // 只读模式：点击控件任意区域（箭头或正文）都打开下拉；
+        // 编辑模式：仅点击箭头打开下拉，点正文进入文本编辑
         if (isContainsPoint(event->mouseButton.x, event->mouseButton.y) &&
-            isInArrowArea(event->mouseButton.x)) {
+            (!m_editable || isInArrowArea(event->mouseButton.x))) {
             togglePopup();
             return true;
         }
@@ -160,6 +188,30 @@ bool ComboBox::handleEvent(shared_ptr<Event> event)
                 cycleSelection(delta);
                 return true;
             }
+
+            // 编辑模式：输入文字后回车 → 选中匹配项；
+            // 无匹配 → 输入内容保留（视为无选中项）
+            if (m_editable &&
+                (event->keyEvent.keycode == KeyCode::Return ||
+                 event->keyEvent.keycode == KeyCode::KPEnter)) {
+                int idx = findItemByText(m_text);
+                if (idx >= 0) {
+                    selectItem(idx);
+                } else {
+                    m_selectedIndex = -1;
+                }
+                return true;
+            }
+        }
+
+        // 编辑模式：输入文字 → 写入编辑框并高亮首个匹配项（type-ahead）
+        if (m_editable && event->m_type == EventType::TextInput) {
+            EditBox::handleEvent(event);
+            if (!m_items.empty()) {
+                int idx = findItemByText(m_text);
+                if (idx >= 0) m_hoveredIndex = idx;
+            }
+            return true;
         }
 
         if (event->m_type == EventType::MouseWheel) {
@@ -178,11 +230,21 @@ bool ComboBox::handleEvent(shared_ptr<Event> event)
 }
 
 // ═══════════════════════════════════════════════════════════════
-// beforeEventHandlingWatcher — 展开态键盘导航
+// beforeEventHandlingWatcher — 展开态键盘导航 + 点击收起
 // ═══════════════════════════════════════════════════════════════
 bool ComboBox::beforeEventHandlingWatcher(shared_ptr<Event> event)
 {
     if (!isPopupOpen()) return false;
+
+    // 展开态点击控件自身区域 → 收起：
+    // 编辑模式仅箭头区（正文点击用于聚焦编辑），只读模式任意区域
+    if (event->m_type == EventType::MouseDown &&
+        event->mouseButton.button == MouseButton::Left &&
+        isContainsPoint(event->mouseButton.x, event->mouseButton.y) &&
+        (!m_editable || isInArrowArea(event->mouseButton.x))) {
+        closePopup();
+        return true;
+    }
 
     if (event->m_type == EventType::KeyDown) {
         switch (event->keyEvent.keycode) {
@@ -300,12 +362,6 @@ void ComboBox::openPopup()
 
     m_popup->setAbsolute(popupRect);
     m_popup->open();
-
-    if (!m_watcherRegistered) {
-        EventQueue::getInstance()->addBeforeEventHandlingWatcher(
-            EventType::KeyDown, getThis());
-        m_watcherRegistered = true;
-    }
 }
 
 void ComboBox::closePopup(DialogResult result)
@@ -341,8 +397,9 @@ SRect ComboBox::computePopupRect()
     float pw = dr.width;
     float fullPh = visibleCount * m_itemHeight * sy;
 
-    SSize ws = MAINWIN->getWindowSize();
-    float screenH = (float)ws.height;
+    // 视口相对定位（多视口场景下拉列表按视口区域钳制）
+    SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
+    float screenH = vp.height;
 
     float x = dr.left;
     float bestY = dr.bottom() + m_dropdownOffset * sy;
@@ -382,7 +439,7 @@ SRect ComboBox::computePopupRect()
 
     if (!found) return SRect();
 
-    float screenW = (float)MAINWIN->getWindowSize().width;
+    float screenW = vp.width;
     if (x + pw > screenW) x = screenW - pw;
     if (x < 0) x = 0;
 
@@ -523,6 +580,22 @@ int ComboBox::findLastEnabled() const
 {
     for (int i = (int)m_items.size() - 1; i >= 0; --i) {
         if (!m_items[i].disabled) return i;
+    }
+    return -1;
+}
+
+// 输入文字匹配：先精确匹配（忽略大小写），再前缀匹配
+int ComboBox::findItemByText(const string& text) const
+{
+    if (text.empty()) return -1;
+    for (size_t i = 0; i < m_items.size(); ++i) {
+        if (!m_items[i].disabled && _stricmp(m_items[i].label.c_str(), text.c_str()) == 0)
+            return (int)i;
+    }
+    for (size_t i = 0; i < m_items.size(); ++i) {
+        if (!m_items[i].disabled &&
+            _strnicmp(m_items[i].label.c_str(), text.c_str(), text.length()) == 0)
+            return (int)i;
     }
     return -1;
 }
@@ -858,6 +931,7 @@ int ComboBox::setColorProperty(const char* prop, SColor color) {
 
 int ComboBox::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kCycleEnabled) == 0) { setCycleEnabled(value != 0); return 1; }
+    if (strcmp(prop, "editable") == 0)                   { setEditable(value != 0); return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 
@@ -890,6 +964,11 @@ int ComboBox::setStringProperty(const char* prop, const char* value) {
             return 1;
         } catch (...) { return 0; }
     }
+    // 编辑框文本（可编辑模式下输入的内容 / 选中后的项 label）
+    if (strcmp(prop, PropertyNames::kTextContent) == 0) {
+        if (value) setText(value);
+        return 1;
+    }
     return ControlImpl::setStringProperty(prop, value);
 }
 
@@ -906,6 +985,7 @@ int ComboBox::getColorProperty(const char* prop, SColor& out) {
 
 int ComboBox::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kCycleEnabled) == 0) { out = m_cycleEnabled ? 1 : 0; return 1; }
+    if (strcmp(prop, "editable") == 0)                   { out = m_editable ? 1 : 0; return 1; }
     return ControlImpl::getBoolProperty(prop, out);
 }
 
@@ -922,7 +1002,20 @@ int ComboBox::getFloatProperty(const char* prop, float& out) {
 }
 
 int ComboBox::getStringProperty(const char* prop, const char*& out) {
-    if (strcmp(prop, PropertyNames::kSelectedValue) == 0) { out = m_text.c_str(); return 1; }
+    // selected-value：选中项的 value；无匹配时返回编辑框保留的输入内容
+    if (strcmp(prop, PropertyNames::kSelectedValue) == 0) {
+        if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_items.size()) {
+            out = m_items[m_selectedIndex].value.c_str();
+        } else {
+            out = m_text.c_str();
+        }
+        return 1;
+    }
+    // text：编辑框当前内容（输入中的文字 / 无匹配时保留的输入 / 选中后的项 label）
+    if (strcmp(prop, PropertyNames::kTextContent) == 0) {
+        out = m_text.c_str();
+        return 1;
+    }
     return ControlImpl::getStringProperty(prop, out);
 }
 

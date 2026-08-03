@@ -104,24 +104,25 @@ ResourceProvider* ResourceProvider::createFilesystem(const std::string& basePath
 // 每个指针对应 UICornerstone.dll 中的一个导出函数。
 // 全部在 main 中通过 GetProcAddress 解析。
 
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef void* (*UICreateButtonFn)(const char*,float,float,float,float);
-typedef void* (*UICreateLabelFn)(const char*,float,float,float,float,float);
-typedef void* (*UICreatePanelFn)(float,float,float,float);
-typedef int   (*UISetColorFn)(void*,const char*,UIColor);
-typedef int   (*UISetStringFn)(void*,const char*,const char*);
-typedef int   (*UISetCallbackFn)(void*,const char*,void(*)(void*,const void*,void*),void*);
-typedef void  (*UIAddChildFn)(void*,void*);
+typedef UIInstance (*UICreateInstanceFn)(void*, const void*);
+typedef void  (*UIDestroyInstanceFn)(void*);
+typedef void  (*UISetViewportFn)(void*,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(void*);
+typedef void  (*UIUpdateFn)(void*,double);
+typedef void  (*UIClearFn)(void*);
+typedef void  (*UIRenderFn)(void*);
+typedef void  (*UIPresentFn)(void*);
+typedef int   (*UIIsQuitFn)(void*);
+typedef void* (*UICreateButtonFn)(void*,const char*,float,float,float,float);
+typedef void* (*UICreateLabelFn)(void*,const char*,float,float,float,float,float);
+typedef void* (*UICreatePanelFn)(void*,float,float,float,float);
+typedef int   (*UISetColorFn)(void*,void*,const char*,UIColor);
+typedef int   (*UISetStringFn)(void*,void*,const char*,const char*);
+typedef int   (*UISetCallbackFn)(void*,void*,const char*,void(*)(void*,const void*,void*),void*);
+typedef void  (*UIAddChildFn)(void*,void*,void*);
 
-static UIInitFn            uiInit         = nullptr;
+static UICreateInstanceFn  uiCreateInstance = nullptr;
+static UIDestroyInstanceFn uiDestroyInstance= nullptr;
 static UISetViewportFn     uiSetViewport  = nullptr;
 static UIProcessEventsFn   uiProcessEvents= nullptr;
 static UIUpdateFn          uiUpdate       = nullptr;
@@ -129,7 +130,6 @@ static UIClearFn           uiClear        = nullptr;
 static UIRenderFn          uiRender       = nullptr;
 static UIPresentFn         uiPresent      = nullptr;
 static UIIsQuitFn          uiIsQuitRequested = nullptr;
-static UIShutdownFn        uiShutdown     = nullptr;
 static UICreateButtonFn    uiCreateButton  = nullptr;
 static UICreateLabelFn     uiCreateLabel   = nullptr;
 static UICreatePanelFn     uiCreatePanel   = nullptr;
@@ -139,6 +139,7 @@ static UISetCallbackFn     uiSetCallback   = nullptr;
 static UIAddChildFn        uiAddChild      = nullptr;
 
 static HMODULE      g_uiDll  = nullptr;   // LoadLibrary 返回的 DLL 句柄
+static UIInstance   g_inst   = nullptr;   // 当前实例
 static int          g_count  = 0;
 static void*        g_status = nullptr;   // 状态标签句柄
 
@@ -149,7 +150,7 @@ static void onBtnClick(void* ctl, const void* evt, void* user) {
     g_count++;
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_count);
-    if (g_status && uiSetString) uiSetString(g_status, "caption", buf);
+    if (g_status && uiSetString) uiSetString(g_inst, g_status, "caption", buf);
 }
 
 // ======== main ========
@@ -179,7 +180,8 @@ int main(void) {
 #define RESOLVE(name) \
     *(void**)&ui##name = GetProcAddress(g_uiDll, "UICornerstone_" #name)
 
-    RESOLVE(Init);
+    RESOLVE(CreateInstance);
+    RESOLVE(DestroyInstance);
     RESOLVE(SetViewport);
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -187,7 +189,6 @@ int main(void) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
-    RESOLVE(Shutdown);
     RESOLVE(CreateButton);
     RESOLVE(CreateLabel);
     RESOLVE(CreatePanel);
@@ -198,8 +199,8 @@ int main(void) {
     *(void**)&uiAddChild = GetProcAddress(g_uiDll, "UICornerstone_AddChildControl");
 #undef RESOLVE
 
-    if (!uiInit) {
-        printf("FAIL: GetProcAddress(UICornerstone_Init)\n");
+    if (!uiCreateInstance) {
+        printf("FAIL: GetProcAddress(UICornerstone_CreateInstance)\n");
         FreeLibrary(g_uiDll);
         return 1;
     }
@@ -221,16 +222,17 @@ int main(void) {
         return 1;
     }
 
-    // ── 第四步：初始化核心控件引擎 ──────────────────────────────
+    // ── 第四步：创建实例 ──────────────────────────────────────
     //
-    // 通过函数指针 uiInit 调用 DLL 中的 UICornerstone_Init。
+    // 通过函数指针 uiCreateInstance 调用 DLL 中的 UICornerstone_CreateInstance。
     // 这是函数指针调用（不是 ILT，不是直接链接）。
-    if (!uiInit(callbacks)) {
-        printf("FAIL: UICornerstone_Init\n");
+    g_inst = uiCreateInstance(callbacks, NULL);
+    if (!g_inst) {
+        printf("FAIL: UICornerstone_CreateInstance\n");
         FreeLibrary(g_uiDll);
         return 1;
     }
-    uiSetViewport(0, 0, 800, 480);
+    uiSetViewport(g_inst, 0, 0, 800, 480);
     printf("OK: initialized\n"); fflush(stdout);
 
     // ── 第五步：创建控件 ──────────────────────────────────────
@@ -239,34 +241,35 @@ int main(void) {
     // 注意：此处不能直接调用 UICornerstone_CreatePanel（那是 ILT 链接），
     // 必须通过 uiCreatePanel 函数指针。
 
-    void* root = uiCreatePanel(0, 0, 800, 480);
+    void* root = uiCreatePanel(g_inst, 0, 0, 800, 480);
 
-    void* title = uiCreateLabel("LoadLibrary + #include Backend Demo", 18,
+    void* title = uiCreateLabel(g_inst, "LoadLibrary + #include Backend Demo", 18,
                                 20, 10, 760, 30);
-    uiAddChild(root, title);
+    uiAddChild(g_inst, root, title);
 
-    void* btn = uiCreateButton("Click Me", 20, 60, 200, 80);
+    void* btn = uiCreateButton(g_inst, "Click Me", 20, 60, 200, 80);
     UIColor btnColor = {74, 144, 217, 255};
-    uiSetColor(btn, "background", btnColor);
-    uiSetCallback(btn, "click", onBtnClick, nullptr);
-    uiAddChild(root, btn);
+    uiSetColor(g_inst, btn, "background", btnColor);
+    uiSetCallback(g_inst, btn, "click", onBtnClick, nullptr);
+    uiAddChild(g_inst, root, btn);
 
-    g_status = uiCreateLabel("Click the button above", 14,
+    g_status = uiCreateLabel(g_inst, "Click the button above", 14,
                              20, 160, 400, 24);
-    uiAddChild(root, g_status);
+    uiAddChild(g_inst, root, g_status);
 
     printf("entering loop\n"); fflush(stdout);
     int frameCount = 0;
-    while (!uiIsQuitRequested()) {
+    while (!uiIsQuitRequested(g_inst)) {
         if (++frameCount <= 3) { printf("frame %d\n", frameCount); fflush(stdout); }
-        uiProcessEvents();
-        uiUpdate(1.0 / 60.0);
-        uiClear();
-        uiRender();
-        uiPresent();
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
     }
     // ── 清理 ──────────────────────────────────────────────────
-    uiShutdown();
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
     g_uiDll = nullptr;
     printf("Done\n");

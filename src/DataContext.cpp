@@ -1,16 +1,6 @@
 ﻿// 由AI(DeepSeek V4 Flash)生成，可能不完整或有错误，请自行检查和修改
 #include "DataContext.h"
 
-shared_ptr<DataContext> DataContext::s_instance = nullptr;
-
-shared_ptr<DataContext> DataContext::instance() {
-    if (!s_instance) {
-        struct make_shared_enabler : public DataContext {};
-        s_instance = make_shared<make_shared_enabler>();
-    }
-    return s_instance;
-}
-
 void DataContext::set(const string& key, const DataValue& value) {
     m_data[key] = value;
 

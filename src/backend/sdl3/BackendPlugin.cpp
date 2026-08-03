@@ -12,6 +12,12 @@
 static SDL_Window*   g_reuseWindow   = nullptr;
 static SDL_Renderer* g_reuseRenderer = nullptr;
 
+static bool g_sdl3Active = false;
+
+bool SDL3BackendIsActive(void) {
+    return g_sdl3Active;
+}
+
 void SDL3Backend_SetReuseWindow(SDL_Window* w, SDL_Renderer* r) {
     g_reuseWindow = w;
     g_reuseRenderer = r;
@@ -29,11 +35,13 @@ static bool sdl3Init() {
         printf("SDL_Init failed: %s\n", SDL_GetError());
         return false;
     }
+    g_sdl3Active = true;
     return true;
 }
 static void sdl3Destroy() {
     if (g_reuseWindow && g_reuseRenderer) return;
     SDL_Quit();
+    g_sdl3Active = false;
 }
 
 static RenderDevice* sdl3CreateRenderDevice(Window* window) {

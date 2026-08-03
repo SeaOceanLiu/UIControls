@@ -45,6 +45,7 @@ void TreeView::clearNodeRecursive(const shared_ptr<TreeNode>& node) {
 
 void TreeView::create() {
     if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
     ControlImpl::create();
 
     m_scrollBar = ScrollBarBuilder(this,

@@ -9,12 +9,6 @@
 // ============================================================
 
 BackendAPI BackendManager::s_registeredAPI = {};
-bool BackendManager::s_initialized = false;
-
-BackendManager* BackendManager::instance() {
-    static BackendManager mgr;
-    return &mgr;
-}
 
 void BackendManager::registerBackend(const BackendAPI& api) {
     s_registeredAPI = api;
@@ -23,7 +17,7 @@ void BackendManager::registerBackend(const BackendAPI& api) {
 bool BackendManager::initialize(const std::string& backendName,
                                 const char* title,
                                 int width, int height, uint32_t flags) {
-    if (s_initialized) return true;
+    if (m_initialized) return true;
 
     BackendAPI api = {};
     bool found = false;
@@ -91,12 +85,14 @@ bool BackendManager::initialize(const std::string& backendName,
     m_inputBackend = api.createInputBackend(m_window);
 
     m_api = api;
-    s_initialized = true;
+    m_initialized = true;
     return true;
 }
 
-bool BackendManager::initialize(const UIBackendCallbacks* callbacks) {
-    if (s_initialized) return true;
+bool BackendManager::initialize(const UIBackendCallbacks* callbacks,
+                                const char* title, int width, int height,
+                                uint32_t flags) {
+    if (m_initialized) return true;
     if (!callbacks || callbacks->version != 1) {
         printf("BackendManager: invalid callback table\n");
         return false;
@@ -104,7 +100,10 @@ bool BackendManager::initialize(const UIBackendCallbacks* callbacks) {
 
     UIWindowHandle winHandle = nullptr;
     if (callbacks->createWindow) {
-        winHandle = callbacks->createWindow("UICornerstone", 1024, 768, 0);
+        const char* winTitle = title ? title : "UICornerstone";
+        int w = (width > 0) ? width : 1024;
+        int h = (height > 0) ? height : 768;
+        winHandle = callbacks->createWindow(winTitle, w, h, flags);
         if (!winHandle) {
             printf("BackendManager: callback createWindow failed\n");
             return false;
@@ -150,12 +149,12 @@ bool BackendManager::initialize(const UIBackendCallbacks* callbacks) {
     }
 
     printf("BackendManager: initialized from callback table\n");
-    s_initialized = true;
+    m_initialized = true;
     return true;
 }
 
 void BackendManager::shutdown() {
-    if (!s_initialized) return;
+    if (!m_initialized) return;
 
     delete m_textRenderer;
     m_textRenderer = nullptr;
@@ -170,7 +169,7 @@ void BackendManager::shutdown() {
 
     if (m_api.destroy) m_api.destroy();
     m_api = {};
-    s_initialized = false;
+    m_initialized = false;
 }
 
 BackendManager::~BackendManager() {

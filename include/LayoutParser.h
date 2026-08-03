@@ -37,8 +37,11 @@ namespace fs = std::filesystem;
 
 class LayoutParser {
 public:
-    LayoutParser();
+    explicit LayoutParser(DataContext* dataContext = nullptr);
     ~LayoutParser() = default;
+
+    // 延迟绑定数据上下文（实例创建后才可调用）
+    void setDataContext(DataContext* dataContext) { m_dataContext = dataContext; }
 
     shared_ptr<Control> parseLayout(const string& jsonContent);
     shared_ptr<Control> parseLayoutFile(const fs::path& jsonPath);
@@ -66,6 +69,8 @@ public:
 
 private:
     Theme m_theme;
+    // 数据绑定上下文（多实例：每个实例传入自己的 DataContext）
+    DataContext* m_dataContext;
 
     unordered_map<string, shared_ptr<Control>> m_controlsById;
     unordered_map<string, function<void(shared_ptr<Control>)>> m_handlers;

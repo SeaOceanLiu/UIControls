@@ -92,6 +92,7 @@ public:
     MenuPanel(Control *parent, float xScale = 1.0f, float yScale = 1.0f);
     ~MenuPanel() override;
 
+    void setContext(UIContext* ctx) override;
     void draw() override;
     bool handleEvent(shared_ptr<Event> event) override;
     bool isContainsPoint(float x, float y) override;
@@ -178,6 +179,7 @@ public:
     bool isContainsPoint(float x, float y) override;
     void setParent(Control *parent) override;
     void setRect(SRect rect) override;
+    void setContext(UIContext* ctx) override;
 
     // 添加顶级菜单
     void addMenu(const string& caption, shared_ptr<MenuPanel> panel);

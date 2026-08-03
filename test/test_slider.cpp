@@ -8,6 +8,7 @@
 #include "AppCallbacks.h"
 #include "PlatformUtils.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -279,6 +280,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    SliderApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<SliderApp>(argc, argv);
 }

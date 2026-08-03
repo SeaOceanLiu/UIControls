@@ -23,6 +23,9 @@ Popup::~Popup() {
 }
 
 void Popup::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建（open() 挂树后重建）
+
     Panel::create();
     setTransparent(false);
     setBorderVisible(true);
@@ -47,9 +50,10 @@ void Popup::layoutContent() {
 SRect Popup::computeTargetRect() {
     float sx = getScaleXX();
     float sy = getScaleYY();
-    SSize ws = MAINWIN->getWindowSize();
-    float screenW = (float)ws.width;
-    float screenH = (float)ws.height;
+    // 视口相对定位（多视口场景弹出层按视口区域钳制）
+    SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
+    float screenW = vp.width;
+    float screenH = vp.height;
 
     switch (m_anchorMode) {
     case AnchorMode::Centered: {
@@ -78,9 +82,9 @@ SRect Popup::computeTargetRect() {
 
 void Popup::registerWatcher() {
     if (m_watcherRegistered) return;
-    EventQueue::getInstance()->addBeforeEventHandlingWatcher(
+    m_context->eventQueue->addBeforeEventHandlingWatcher(
         EventType::KeyDown, getThis());
-    EventQueue::getInstance()->addBeforeEventHandlingWatcher(
+    m_context->eventQueue->addBeforeEventHandlingWatcher(
         EventType::MouseDown, getThis());
     m_watcherRegistered = true;
 }
@@ -98,11 +102,18 @@ void Popup::focusFirstContent() {
 
 void Popup::open() {
     if (getVisible()) return;
+    // 无 parent 归属的浮层（测试直接 make_shared<Popup>(nullptr,...)）：
+    // 挂树前先归属最近实例，保证 BENCH/GET_CONTEXT/事件队列有效
+    if (GET_CONTEXT == nullptr) {
+        UIContext* ctx = UIContext::getLastInstance();
+        if (ctx) setContext(ctx);
+    }
     SRect target = computeTargetRect();
     setRect(target);
     layoutContent();
     setVisible(true);
-    BENCH->addControl(static_pointer_cast<Control>(getThis()));
+    auto self = static_pointer_cast<Control>(getThis());
+    BENCH->addControl(self);
     registerWatcher();
     GET_FOCUSMANAGER->registerBoundary(this);
     m_result = DialogResult::None;
@@ -134,10 +145,14 @@ void Popup::setContent(shared_ptr<ControlImpl> content) {
     m_content = content;
     if (m_content) {
         m_content->setParent(this);
-        m_content->setRenderDevice(getRenderDevice());
-        m_content->setTextRenderer(getTextRenderer());
-        m_content->setResourceProvider(getResourceProvider());
-        m_content->setInputBackend(getInputBackend());
+        // 两阶段：context 未就绪（未挂树）时不传播 renderDevice 等（避免空值缓存
+        // 与错误日志），挂树后由 Popup::create / inheritRenderer 补齐
+        if (GET_CONTEXT) {
+            m_content->setRenderDevice(getRenderDevice());
+            m_content->setTextRenderer(getTextRenderer());
+            m_content->setResourceProvider(getResourceProvider());
+            m_content->setInputBackend(getInputBackend());
+        }
         addControl(m_content);
     }
 }
@@ -221,6 +236,9 @@ ConfirmPopup::ConfirmPopup(Control* parent, SRect rect,
 }
 
 void ConfirmPopup::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
+
     Popup::create();
     if (m_showConfirmButton)
         createConfirmButton();
@@ -310,6 +328,9 @@ Dialog::Dialog(Control* parent, SRect rect,
 }
 
 void Dialog::create() {
+    if (m_isCreated) return;
+    if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
+
     ConfirmPopup::create();
     createCancelButton();
     layoutContent();

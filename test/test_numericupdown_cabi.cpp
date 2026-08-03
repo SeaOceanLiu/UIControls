@@ -14,37 +14,37 @@
 
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
-// ===== C ABI function pointer types =====
-typedef int   (*UIInitFn)(void*);
-typedef void  (*UISetViewportFn)(float,float,float,float);
-typedef void  (*UIProcessEventsFn)(void);
-typedef void  (*UIUpdateFn)(double);
-typedef void  (*UIClearFn)(void);
-typedef void  (*UIRenderFn)(void);
-typedef void  (*UIPresentFn)(void);
-typedef int   (*UIIsQuitFn)(void);
-typedef void  (*UIShutdownFn)(void);
-typedef int   (*UILoadLayoutFn)(const char*);
-typedef void* (*UIFindControlFn)(const char*);
-typedef void  (*UIRegisterActionFn)(const char*,void(*)(void*,void*),void*);
+// ===== C ABI function pointer types（当前 API：多实例，函数均带 UIInstance 参数）=====
+typedef UIInstance (*UICreateInstanceFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+typedef void       (*UIDestroyInstanceFn)(UIInstance);
+typedef void  (*UISetViewportFn)(UIInstance,float,float,float,float);
+typedef void  (*UIProcessEventsFn)(UIInstance);
+typedef void  (*UIUpdateFn)(UIInstance,double);
+typedef void  (*UIClearFn)(UIInstance);
+typedef void  (*UIRenderFn)(UIInstance);
+typedef void  (*UIPresentFn)(UIInstance);
+typedef int   (*UIIsQuitFn)(UIInstance);
+typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
+typedef void* (*UIFindControlFn)(UIInstance,const char*);
+typedef void  (*UIRegisterActionFn)(UIInstance,const char*,void(*)(void*,void*),void*);
 
-typedef int  (*UISetFloatFn)(void*, const char*, float);
-typedef int  (*UIGetFloatFn)(void*, const char*, float*);
-typedef int  (*UISetStringFn)(void*, const char*, const char*);
-typedef int  (*UISetCallbackFn)(void*, const char*, void (*)(void*, const void*, void*), void*);
+typedef int  (*UISetFloatFn)(UIInstance,void*,const char*,float);
+typedef int  (*UIGetFloatFn)(UIInstance,void*,const char*,float*);
+typedef int  (*UISetStringFn)(UIInstance,void*,const char*,const char*);
+typedef int  (*UISetCallbackFn)(UIInstance,void*,const char*,void (*)(void*, const void*, void*),void*);
 
-static UIInitFn                        uiInit                      = nullptr;
-static UISetViewportFn                 uiSetViewport               = nullptr;
-static UIProcessEventsFn               uiProcessEvents             = nullptr;
-static UIUpdateFn                      uiUpdate                    = nullptr;
-static UIClearFn                       uiClear                     = nullptr;
-static UIRenderFn                      uiRender                    = nullptr;
-static UIPresentFn                     uiPresent                   = nullptr;
-static UIIsQuitFn                      uiIsQuitRequested           = nullptr;
-static UIShutdownFn                    uiShutdown                  = nullptr;
-static UILoadLayoutFn                  uiLoadLayout                = nullptr;
-static UIFindControlFn                 uiFindControl               = nullptr;
-static UIRegisterActionFn              uiRegisterAction            = nullptr;
+static UICreateInstanceFn             uiCreateInstance          = nullptr;
+static UIDestroyInstanceFn            uiDestroyInstance         = nullptr;
+static UISetViewportFn                uiSetViewport             = nullptr;
+static UIProcessEventsFn              uiProcessEvents           = nullptr;
+static UIUpdateFn                     uiUpdate                  = nullptr;
+static UIClearFn                      uiClear                   = nullptr;
+static UIRenderFn                     uiRender                  = nullptr;
+static UIPresentFn                    uiPresent                 = nullptr;
+static UIIsQuitFn                     uiIsQuitRequested         = nullptr;
+static UILoadLayoutFn                 uiLoadLayout              = nullptr;
+static UIFindControlFn                uiFindControl             = nullptr;
+static UIRegisterActionFn             uiRegisterAction          = nullptr;
 
 static UISetFloatFn    uiSetFloat    = nullptr;
 static UIGetFloatFn    uiGetFloat    = nullptr;
@@ -52,12 +52,13 @@ static UISetStringFn   uiSetString   = nullptr;
 static UISetCallbackFn uiSetCallback = nullptr;
 
 static HMODULE g_uiDll = nullptr;
+static UIInstance g_inst = nullptr;
 
 static void loadAllProcs(HMODULE dll) {
 #define RESOLVE(name) \
     *(void**)&ui##name = GetProcAddress(dll, "UICornerstone_" #name)
 
-    RESOLVE(Init);
+    RESOLVE(CreateInstance);
     RESOLVE(SetViewport);
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -65,7 +66,7 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
-    RESOLVE(Shutdown);
+    RESOLVE(DestroyInstance);
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
     RESOLVE(RegisterAction);
@@ -80,17 +81,17 @@ static void loadAllProcs(HMODULE dll) {
 static void onNudValueChanged(void*, const void* evt, void* user) {
     float v = ((const UIEventData*)evt)->data.floatVal;
     printf("%s = %.2f\n", (const char*)user, (double)v);
-    void* status = uiFindControl("lblStatus");
+    void* status = uiFindControl(g_inst, "lblStatus");
     if (!status) return;
     char buf[128];
     float vi=0,vf=0,vo=0,vb=0,vp=0;
-    uiGetFloat(uiFindControl("nudInteger"), "value", &vi);
-    uiGetFloat(uiFindControl("nudFloat"), "value", &vf);
-    uiGetFloat(uiFindControl("nudReadOnly"), "value", &vo);
-    uiGetFloat(uiFindControl("nudBigStep"), "value", &vb);
-    uiGetFloat(uiFindControl("nudPageStep"), "value", &vp);
+    uiGetFloat(g_inst, uiFindControl(g_inst, "nudInteger"), "value", &vi);
+    uiGetFloat(g_inst, uiFindControl(g_inst, "nudFloat"), "value", &vf);
+    uiGetFloat(g_inst, uiFindControl(g_inst, "nudReadOnly"), "value", &vo);
+    uiGetFloat(g_inst, uiFindControl(g_inst, "nudBigStep"), "value", &vb);
+    uiGetFloat(g_inst, uiFindControl(g_inst, "nudPageStep"), "value", &vp);
     snprintf(buf, sizeof(buf), "int=%.0f  float=%.2f  ro=%.0f  big=%.0f  page=%.0f", vi, vf, vo, vb, vp);
-    uiSetString(status, "caption", buf);
+    uiSetString(g_inst, status, "caption", buf);
 }
 
 static int runTest(const char* shortName, const char* displayName) {
@@ -102,13 +103,18 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: loaded UICornerstone.dll\n");
 
     loadAllProcs(g_uiDll);
-    if (!uiInit) { printf("FAIL: GetProcAddress(Init)\n"); FreeLibrary(g_uiDll); return 1; }
+    if (!uiCreateInstance) { printf("FAIL: GetProcAddress(CreateInstance)\n"); FreeLibrary(g_uiDll); return 1; }
 
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) { printf("FAIL: GetUIBackendCallbacks\n"); FreeLibrary(g_uiDll); return 1; }
 
-    if (!uiInit(callbacks)) { printf("FAIL: Init\n"); FreeLibrary(g_uiDll); return 1; }
-    uiSetViewport(0, 0, 600, 480);
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
+    cfg.windowTitle = "test_numericupdown_cabi";
+    cfg.windowWidth = 600;
+    cfg.windowHeight = 480;
+    g_inst = uiCreateInstance(callbacks, &cfg);
+    if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
+    uiSetViewport(g_inst, 0, 0, 600, 480);
     printf("OK: initialized\n");
 
     const char* layoutJson = R"json({
@@ -223,9 +229,9 @@ static int runTest(const char* shortName, const char* displayName) {
         ]
     })json";
 
-    if (!uiLoadLayout(layoutJson)) {
+    if (!uiLoadLayout(g_inst, layoutJson)) {
         printf("FAIL: LoadLayout\n");
-        uiShutdown();
+        uiDestroyInstance(g_inst);
         FreeLibrary(g_uiDll);
         return 1;
     }
@@ -233,34 +239,35 @@ static int runTest(const char* shortName, const char* displayName) {
 
     static const char* nudIds[] = {"nudInteger","nudFloat","nudReadOnly","nudBigStep","nudPageStep"};
     for (int i = 0; i < 5; i++) {
-        void* ctl = uiFindControl(nudIds[i]);
-        if (ctl) uiSetCallback(ctl, "value-changed", onNudValueChanged, (void*)nudIds[i]);
+        void* ctl = uiFindControl(g_inst, nudIds[i]);
+        if (ctl) uiSetCallback(g_inst, ctl, "value-changed", onNudValueChanged, (void*)nudIds[i]);
     }
 
-    void* nudFloat = uiFindControl("nudFloat");
+    void* nudFloat = uiFindControl(g_inst, "nudFloat");
     if (nudFloat && uiSetFloat) {
-        uiSetFloat(nudFloat, "value", 0.8f);
+        uiSetFloat(g_inst, nudFloat, "value", 0.8f);
         float v = 0.0f;
-        uiGetFloat(nudFloat, "value", &v);
+        uiGetFloat(g_inst, nudFloat, "value", &v);
         printf("OK: nudFloat set to %.2f, get=%.2f\n", 0.8, (double)v);
     }
 
-    void* nudPageStep = uiFindControl("nudPageStep");
+    void* nudPageStep = uiFindControl(g_inst, "nudPageStep");
     if (nudPageStep && uiSetFloat) {
-        uiSetFloat(nudPageStep, "page-step", 50.0f);
+        uiSetFloat(g_inst, nudPageStep, "page-step", 50.0f);
         printf("OK: nudPageStep pageStep set to 50\n");
     }
 
     printf("Frame loop... (interact with NumericUpDown controls or close the window)\n");
-    while (!uiIsQuitRequested()) {
-        uiProcessEvents();
-        uiUpdate(1.0 / 60.0);
-        uiClear();
-        uiRender();
-        uiPresent();
+    while (!uiIsQuitRequested(g_inst)) {
+        uiProcessEvents(g_inst);
+        uiUpdate(g_inst, 1.0 / 60.0);
+        uiClear(g_inst);
+        uiRender(g_inst);
+        uiPresent(g_inst);
     }
 
-    uiShutdown();
+    uiDestroyInstance(g_inst);
+    g_inst = nullptr;
     FreeLibrary(g_uiDll);
     g_uiDll = nullptr;
     printf("test_numericupdown_cabi_%s: done\n", shortName);

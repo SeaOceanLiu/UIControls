@@ -13,10 +13,10 @@ class RaylibWindow : public Window {
 public:
     RaylibWindow(const char* title, int w, int h, uint32_t flags)
     {
-        // Apply config flags
+        // Apply config flags（跨后端统一标志，值对齐 SDL_WINDOW_*）
         unsigned int rlFlags = 0;
-        // 0x00000020 = SDL_WINDOW_RESIZABLE → FLAG_WINDOW_RESIZABLE
-        if (flags & 0x00000020) rlFlags |= FLAG_WINDOW_RESIZABLE;
+        if (flags & UIWindowFlags::Resizable) rlFlags |= FLAG_WINDOW_RESIZABLE;
+        if (flags & UIWindowFlags::Fullscreen) rlFlags |= FLAG_FULLSCREEN_MODE;
         if (rlFlags) SetConfigFlags(rlFlags);
 
         InitWindow(w, h, title);

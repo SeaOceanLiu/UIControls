@@ -5,8 +5,7 @@
 #include "Label.h"
 #include "WinFrame.h"
 #include "LuotiAni.h"
-
-#define BENCH (Bench::getInstance())
+#include "UIContext.h"
 
 class Bench: public Panel, public TopControl
 {
@@ -28,14 +27,8 @@ private:
     int m_isExiting;
     OnInitialHandler m_onInitial;
 
-    Bench(Control *parent, SRect rect, float xScale=1.0f, float yScale=1.0f);
-
 public:
-    static Bench* getInstance(void){
-        static Bench instance = Bench(nullptr, {0, 0, INITIAL_WIDTH, INITIAL_HEIGHT}); // 静态局部变量，程序运行期间只会被初始化一次
-        instance.create(); // 确保在第一次获取实例时调用create方法进行初始化
-        return &instance;
-    }
+    explicit Bench(UIContext* ctx);
     void initial(void);
     void inputControl(shared_ptr<Event> event);
     void repeatTrigger(void);

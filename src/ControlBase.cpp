@@ -34,7 +34,13 @@ ControlImpl::ControlImpl(Control *parent, float xScale, float yScale):
     m_rect({0, 0, 0, 0}),
     m_mouseInside(false)
 {
-    m_eventQueueInstance = EventQueue::getInstance();
+    // 构造时从父控件继承实例上下文：浮层控件（Dialog/Popup 等）以 parent 构造但
+    // 不在父的 children 中，无 setContext 传播路径，必须在此继承，否则 open() 时
+    // BENCH/GET_CONTEXT 为 null
+    if (parent != nullptr && m_context == nullptr) {
+        m_context = parent->getContext();
+    }
+    m_eventQueueInstance = m_context ? m_context->eventQueue : nullptr;
     // if (m_parent != nullptr){
         inheritRenderer();
     // }
@@ -101,13 +107,38 @@ ControlImpl& ControlImpl::operator=(const ControlImpl &other){
     return *this;
 }
 
-void ControlImpl::recreate(void) {
-    if(!m_isCreated) return;
-    m_isCreated = false;
-
-    if (typeid(*this) == typeid(ControlImpl)) {
-        create();
+void ControlImpl::setContext(UIContext* ctx) {
+    Control::setContext(ctx);
+    if (ctx) {
+        // 补注册焦点：两阶段创建期间 setFocusable(true) 时 context 为空，
+        // FocusManager::registerControl 未执行，Tab 遍历不到该控件
+        if (m_focusable && ctx->focusManager)
+            ctx->focusManager->registerControl(this);
+        // 自身两阶段创建：Builder::build 在 context 未就绪时可能已提前 create（m_isCreated=true），
+        // 故此处无条件 recreate，由各派生 create 内部的 GET_CONTEXT 守卫决定是否真正补建
+        recreate();
     }
+    // 递归传播：子控件以 null context 创建（两阶段），挂树后统一重建
+    for (auto& child : m_children) {
+        child->setContext(ctx);
+        if (ctx) {
+            auto impl = dynamic_pointer_cast<ControlImpl>(child);
+            if (impl) impl->recreate();
+        }
+    }
+}
+
+void ControlImpl::recreate(void) {
+    if(!m_isCreated) {
+        // 两阶段创建：此前因无实例上下文被守卫延迟，现在 context 就绪，直接创建
+        create();
+        return;
+    }
+    m_isCreated = false;
+    // 虚调用：派生类的 create override（Button 状态 Actor、EditBox 字体、
+    // CheckBox caption 等）在首次 create 时因 context 未就绪被守卫延迟，
+    // 挂树后需重跑补建
+    create();
 }
 
 void ControlImpl::create(void){
@@ -124,8 +155,8 @@ void ControlImpl::update(void){
     if (getVisible() && getEnable()) {
         // 获取当前鼠标位置
         float mouseX = 0, mouseY = 0;
-        if (MAINWIN && MAINWIN->getWindow()) {
-            MAINWIN->getWindow()->getMousePosition(mouseX, mouseY);
+        if (m_context && m_context->window) {
+            m_context->window->getMousePosition(mouseX, mouseY);
         }
 
         SRect drawRect = getDrawRect();
@@ -308,10 +339,19 @@ void ControlImpl::addControl(shared_ptr<Control> child){
     if (std::find(m_children.begin(), m_children.end(), child) != m_children.end()){
         return;
     }
+    // 继承父控件上下文（同时同步 m_eventQueueInstance）
+    if (!child->getContext()) {
+        child->setContext(m_context);
+    }
     m_children.push_back(child);
 
     child->setParent(this);
-    child->setRenderDevice(getRenderDevice());
+    // 两阶段创建：父未挂树（m_context 无 render device）时不传播（避免触发
+    // getRenderDevice 错误日志与空值缓存），由 getRenderDevice() 在 context
+    // 就绪后经 parent 链重查
+    if (m_context && m_context->renderDevice) {
+        child->setRenderDevice(m_context->renderDevice);
+    }
 
     stabilizeTopmostChildren();
 }
@@ -345,6 +385,11 @@ void ControlImpl::removeControl(shared_ptr<Control> child){
 // - 示例如 Label::setParent
 void ControlImpl::setParent(Control *parent){
     m_parent = parent;
+    // 继承父控件的实例上下文：非 children 挂载（如按钮的状态 Actor）无法经 setContext 传播，
+    // 需在 setParent 时补齐，否则两阶段加载永远得不到触发时机
+    if (parent != nullptr && m_context == nullptr) {
+        m_context = parent->getContext();
+    }
     inheritRenderer();
     m_xxScale = (parent==nullptr?m_xScale:m_xScale*parent->getScaleXX());
     m_yyScale = (parent==nullptr?m_yScale:m_yScale*parent->getScaleYY());
@@ -436,13 +481,16 @@ RenderDevice* ControlImpl::getRenderDevice(void) {
     }
     if (m_parent != nullptr) {
         m_renderDevice = m_parent->getRenderDevice();
-    } else {
-        m_renderDevice = GET_RENDERDEVICE;
-        if (m_renderDevice == nullptr) {
-            Platform::Log("ControlImpl::getRenderDevice: No render device found!");
-            return nullptr;
-        }
+        return m_renderDevice;
     }
+    // 不缓存 null：两阶段创建下 context 可能尚未就绪，后续可重查
+    if (!UIContext::isActive(m_context)) return nullptr;
+    auto rd = m_context->renderDevice;
+    if (rd == nullptr) {
+        Platform::Log("ControlImpl::getRenderDevice: No render device found! [%s ctx=%p]", typeid(*this).name(), (void*)m_context);
+        return nullptr;
+    }
+    m_renderDevice = rd;
     return m_renderDevice;
 }
 
@@ -461,12 +509,14 @@ TextRenderer* ControlImpl::getTextRenderer(void) {
     }
     if (m_parent != nullptr) {
         m_textRenderer = m_parent->getTextRenderer();
-    } else {
-        m_textRenderer = GET_RENDERDEVICE ? MAINWIN->getTextRenderer() : nullptr;
-        if (m_textRenderer == nullptr) {
-            Platform::Log("ControlImpl::getTextRenderer: No text renderer found!");
-            return nullptr;
-        }
+        return m_textRenderer;
+    }
+    // 不缓存 null：context 可能尚未就绪（两阶段创建），后续可重查
+    if (!UIContext::isActive(m_context)) return nullptr;
+    m_textRenderer = m_context->textRenderer;
+    if (m_textRenderer == nullptr) {
+        Platform::Log("ControlImpl::getTextRenderer: No text renderer found!");
+        return nullptr;
     }
     return m_textRenderer;
 }
@@ -486,12 +536,14 @@ InputBackend* ControlImpl::getInputBackend(void) {
     }
     if (m_parent != nullptr) {
         m_inputBackend = m_parent->getInputBackend();
-    } else {
-        m_inputBackend = GET_RENDERDEVICE ? MAINWIN->getInputBackend() : nullptr;
-        if (m_inputBackend == nullptr) {
-            Platform::Log("ControlImpl::getInputBackend: No input backend found!");
-            return nullptr;
-        }
+        return m_inputBackend;
+    }
+    // 不缓存 null：context 可能尚未就绪（两阶段创建），后续可重查
+    if (!UIContext::isActive(m_context)) return nullptr;
+    m_inputBackend = m_context->inputBackend;
+    if (m_inputBackend == nullptr) {
+        Platform::Log("ControlImpl::getInputBackend: No input backend found!");
+        return nullptr;
     }
     return m_inputBackend;
 }
@@ -511,9 +563,11 @@ ResourceProvider* ControlImpl::getResourceProvider(void) {
     }
     if (m_parent != nullptr) {
         m_resourceProvider = m_parent->getResourceProvider();
-    } else {
-        m_resourceProvider = MAINWIN->getResourceProvider();
+        return m_resourceProvider;
     }
+    // 不缓存 null：context 可能尚未就绪（两阶段创建），后续可重查
+    if (!UIContext::isActive(m_context)) return nullptr;
+    m_resourceProvider = m_context->resourceProvider;
     return m_resourceProvider;
 }
 
@@ -659,8 +713,10 @@ void ControlImpl::triggerEvent(shared_ptr<Event> event){
 }
 
 ControlImpl::~ControlImpl() {
-    if (m_focusable) {
-        FocusManager* fm = MAINWIN ? MAINWIN->getFocusManager() : nullptr;
+    // 静态/全局残留控件在进程退出阶段析构时 m_context 可能已随
+    // DestroyInstance 释放（悬垂），必须经 isActive 确认实例存活后再访问。
+    if (m_focusable && UIContext::isActive(m_context)) {
+        FocusManager* fm = m_context->focusManager;
         if (fm) fm->unregisterControl(this);
     }
 }
@@ -674,14 +730,14 @@ void ControlImpl::setFocused(bool focused, bool byKeyboard) {
     } else {
         onFocusLost();
     }
-    FocusManager* fm = MAINWIN ? MAINWIN->getFocusManager() : nullptr;
+    FocusManager* fm = m_context ? m_context->focusManager : nullptr;
     if (fm) fm->notifyControlFocused(this, byKeyboard);
 }
 
 void ControlImpl::setFocusable(bool focusable) {
     if (m_focusable == focusable) return;
     m_focusable = focusable;
-    FocusManager* fm = MAINWIN ? MAINWIN->getFocusManager() : nullptr;
+    FocusManager* fm = m_context ? m_context->focusManager : nullptr;
     if (fm) {
         if (focusable)
             fm->registerControl(this);
@@ -769,13 +825,13 @@ void ControlImpl::inheritRenderer(void) {
         m_renderDevice = GET_RENDERDEVICE;
     }
     if (m_textRenderer == nullptr) {
-        m_textRenderer = MAINWIN->getTextRenderer();
+        m_textRenderer = GET_CONTEXT ? GET_CONTEXT->textRenderer : nullptr;
     }
     if (m_inputBackend == nullptr) {
-        m_inputBackend = MAINWIN->getInputBackend();
+        m_inputBackend = GET_CONTEXT ? GET_CONTEXT->inputBackend : nullptr;
     }
     if (m_resourceProvider == nullptr) {
-        m_resourceProvider = MAINWIN->getResourceProvider();
+        m_resourceProvider = GET_CONTEXT ? GET_CONTEXT->resourceProvider : nullptr;
     }
 }
 

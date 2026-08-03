@@ -8,6 +8,7 @@
 #include "TestUtils.h"
 #include "HandleControl.h"
 #include "Cursor.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -118,6 +119,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    HandleApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<HandleApp>(argc, argv);
 }

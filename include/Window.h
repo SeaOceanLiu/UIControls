@@ -6,6 +6,14 @@
 
 class RenderDevice;
 
+// 跨后端统一窗口标志（值对齐 SDL_WINDOW_*，各后端自行映射：
+// raylib 按 SDL_WINDOW_RESIZABLE=0x20 约定，sfml 按 0x01=Fullscreen 约定）
+namespace UIWindowFlags {
+    constexpr uint32_t None       = 0x00000000;
+    constexpr uint32_t Fullscreen = 0x00000001; // SDL_WINDOW_FULLSCREEN
+    constexpr uint32_t Resizable  = 0x00000020; // SDL_WINDOW_RESIZABLE
+}
+
 class Window {
 public:
     virtual ~Window() = default;

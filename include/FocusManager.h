@@ -1,4 +1,4 @@
-#ifndef FocusManagerH
+﻿#ifndef FocusManagerH
 #define FocusManagerH
 
 #include <vector>
@@ -27,6 +27,9 @@ public:
     void registerBoundary(Control* boundary);
 
     void unregisterBoundary(Control* boundary);
+
+    // 统计已注册 boundary 中 isVisible() 的项数（Ctrl+Tab 跨视口智能路由用）
+    int getVisibleBoundaryCount() const;
 
     void notifyControlFocused(Control* ctl, bool byKeyboard);
     void clearFocus();

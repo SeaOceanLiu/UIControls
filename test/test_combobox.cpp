@@ -8,6 +8,7 @@
 #include "AppCallbacks.h"
 #include "PlatformUtils.h"
 #include "TestUtils.h"
+#include "TestInstance.h"
 
 using namespace std;
 
@@ -167,6 +168,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    ComboBoxApp app;
-    return MAINWIN->run(&app);
+    return TestRunMain<ComboBoxApp>(argc, argv);
 }

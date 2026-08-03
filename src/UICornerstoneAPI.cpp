@@ -1,4 +1,5 @@
 ﻿#include "UICornerstoneAPI.h"
+#include "UIContext.h"
 #include "SColor.h"
 #include "CallbackAdapters.h"
 #include "BackendPlugin.h"
@@ -25,6 +26,7 @@
 #include "PlatformUtils.h"
 #include "Actor.h"
 #include "LuotiAni.h"
+#include "EventTypes.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -33,192 +35,71 @@
 #include <queue>
 #include <vector>
 #include <algorithm>
+#include <atomic>
+#include <mutex>
 
 // ============================================================
-// 全局状态
+// 调试：实例注册表（仅 _DEBUG 构建；Release 零开销）
 // ============================================================
-namespace {
+#ifdef _DEBUG
+static std::mutex s_registryMutex;
+static std::vector<UIInstance> s_aliveInstances;
 
-const UIBackendCallbacks* g_callbacks = nullptr;
-Window*                   g_window = nullptr;
-RenderDevice*             g_renderDevice = nullptr;
-InputBackend*             g_inputBackend = nullptr;
-TextRenderer*             g_textRenderer = nullptr;
-CallbackResourceProvider* g_resourceProvider = nullptr;
-bool g_initialized = false;
-bool g_quit = false;
-
-SRect g_viewport(0, 0, 1024, 768);
-
-std::unordered_map<std::string, std::pair<UIActionCallback, void*>> g_actions;
-std::unordered_map<std::string, UIControlHandle> g_controlsById;
-std::queue<UIEvent> g_queuedEvents;
-
-// 保持 Dialog/Popup 生命期：CreateDialog 中创建后立即加入，
-// close() 的 onClose 回调中自动清理。
-static std::vector<std::shared_ptr<Popup>> g_popupPool;
-
-// Menu 生命周期：MenuItem/MenuPanel 创建后先入池保活（裸指针无法
-// 恢复 shared_ptr），挂载到 MenuBar 链时从池中取出转移所有权。
-static std::vector<std::shared_ptr<Control>> g_menuPool;
-
-static void menuPoolKeep(std::shared_ptr<Control> ctl) {
-    g_menuPool.push_back(std::move(ctl));
+static void registerInstance(UIInstance instance) {
+    std::lock_guard<std::mutex> lock(s_registryMutex);
+    s_aliveInstances.push_back(instance);
 }
 
-static std::shared_ptr<Control> menuPoolTake(UIControlHandle ctl) {
-    if (!ctl) return nullptr;
-    for (auto it = g_menuPool.begin(); it != g_menuPool.end(); ++it) {
+static void unregisterInstance(UIInstance instance) {
+    std::lock_guard<std::mutex> lock(s_registryMutex);
+    s_aliveInstances.erase(
+        std::remove(s_aliveInstances.begin(), s_aliveInstances.end(), instance),
+        s_aliveInstances.end());
+}
+
+struct LeakDetector {
+    ~LeakDetector() {
+        if (!s_aliveInstances.empty()) {
+            printf("LEAK: %zu UICornerstone instance(s) not destroyed!\n", s_aliveInstances.size());
+            for (auto* inst : s_aliveInstances) {
+                printf("  - %s (ID=%u)\n", inst->debugLabel.c_str(), inst->instanceId);
+            }
+            __debugbreak();
+        }
+    }
+};
+static LeakDetector s_leakCheck;
+#else
+static inline void registerInstance(UIInstance) {}
+static inline void unregisterInstance(UIInstance) {}
+#endif
+
+// ============================================================
+// 实例内辅助（menuPool / controlsById）
+// ============================================================
+static void menuPoolKeep(UIInstance instance, std::shared_ptr<Control> ctl) {
+    if (instance) instance->menuPool.push_back(std::move(ctl));
+}
+
+static std::shared_ptr<Control> menuPoolTake(UIInstance instance, UIControlHandle ctl) {
+    if (!instance || !ctl) return nullptr;
+    auto& pool = instance->menuPool;
+    for (auto it = pool.begin(); it != pool.end(); ++it) {
         if (static_cast<Control*>(ctl) == it->get()) {
             auto sp = *it;
-            g_menuPool.erase(it);
+            pool.erase(it);
             return sp;
         }
     }
     return nullptr;
 }
 
-static void registerControlById(const std::string& id, UIControlHandle ctl) {
-    if (!id.empty()) g_controlsById[id] = ctl;
-}
-
-} // anonymous namespace
-
-// ============================================================
-// UICornerstone_Init / Shutdown
-// ============================================================
-int UICornerstone_Init(const UIBackendCallbacks* callbacks) {
-    if (g_initialized) return 1;
-    if (!callbacks || callbacks->version != 1) return 0;
-
-    g_callbacks = callbacks;
-    g_quit = false;
-
-    if (!BackendManager::instance()->initialize(callbacks)) {
-        printf("UICornerstone: BackendManager::initialize(callbacks) failed\n");
-        return 0;
-    }
-
-    auto* bm = BackendManager::instance();
-    g_window = bm->window();
-    g_renderDevice = bm->renderDevice();
-    g_textRenderer = bm->textRenderer();
-    g_inputBackend = bm->inputBackend();
-
-    if (callbacks->createResourceProvider) {
-        std::string rpBasePath = Platform::GetBasePath() + "assets";
-        UIResourceProviderHandle rpHandle = callbacks->createResourceProvider(rpBasePath.c_str());
-        g_resourceProvider = new CallbackResourceProvider(callbacks, rpHandle);
-    }
-
-    BENCH->setRenderDevice(g_renderDevice);
-    BENCH->setTextRenderer(g_textRenderer);
-    BENCH->setInputBackend(g_inputBackend);
-    if (g_resourceProvider) BENCH->setResourceProvider(g_resourceProvider);
-
-    if (g_window) {
-        SSize sz = g_window->getSize();
-        g_viewport = SRect(0, 0, sz.width, sz.height);
-    }
-    BENCH->resized(g_viewport);
-
-    // Perform a dummy clear+present to ensure the OpenGL context is active
-    // for subsequent texture creation (relevant for OpenGL-based backends).
-    // Without this, textures created during init have no valid GPU data.
-    if (g_renderDevice) {
-        g_renderDevice->setDrawColor(SColor(0, 0, 0, 0));
-        g_renderDevice->clear();
-        g_renderDevice->present();
-    }
-
-    g_initialized = true;
-    return 1;
-}
-
-void UICornerstone_Shutdown(void) {
-    if (!g_initialized) return;
-
-    g_controlsById.clear();
-    g_actions.clear();
-
-    // 清理所有 Dialog/Popup，确保在 BackendManager shutdown 前析构
-    g_popupPool.clear();
-
-    // 销毁整个控制树，确保所有控件析构时后端仍存活。
-    // 避免 FreeLibrary 触发静态析构时 ~Splitter/~Actor 等访问已释放的后端资源。
-    BENCH->removeAllControls();
-
-    delete g_resourceProvider; g_resourceProvider = nullptr;
-
-    BackendManager::instance()->shutdown();
-    g_window = nullptr;
-    g_renderDevice = nullptr;
-    g_textRenderer = nullptr;
-    g_inputBackend = nullptr;
-
-    g_callbacks = nullptr;
-    g_initialized = false;
-    printf("UICornerstone shutdown\n");
-}
-
-#if !UICORNERSTONE_BUILD_SHARED
-extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
-#endif
-
-int UICornerstone_InitFromPlugin(const char* pluginName) {
-    if (!pluginName || !pluginName[0]) return 0;
-
-    char dllName[128];
-    snprintf(dllName, sizeof(dllName), "UIBackend_%s.dll", pluginName);
-    HMODULE dll = LoadLibraryA(dllName);
-    if (!dll) {
-#if !UICORNERSTONE_BUILD_SHARED
-        printf("UICornerstone: InitFromPlugin(%s) — LoadLibrary failed, trying static...\n", pluginName);
-        UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
-        if (callbacks) {
-            printf("UICornerstone: static GetUIBackendCallbacks ready\n");
-            return UICornerstone_Init(callbacks);
-        }
-#endif
-        printf("UICornerstone: InitFromPlugin(%s) — LoadLibrary failed\n", pluginName);
-        return 0;
-    }
-
-    auto getter = (UIBackendCallbacks*(*)())GetProcAddress(dll, "GetUIBackendCallbacks");
-    if (!getter) {
-        printf("UICornerstone: %s has no GetUIBackendCallbacks\n", dllName);
-        FreeLibrary(dll);
-        return 0;
-    }
-
-    UIBackendCallbacks* callbacks = getter();
-    if (!callbacks) {
-        printf("UICornerstone: %s GetUIBackendCallbacks returned null\n", dllName);
-        FreeLibrary(dll);
-        return 0;
-    }
-
-    printf("UICornerstone: loaded %s\n", dllName);
-    return UICornerstone_Init(callbacks);
+static void registerControlById(UIInstance instance, const std::string& id, UIControlHandle ctl) {
+    if (instance && !id.empty()) instance->controlsById[id] = ctl;
 }
 
 // ============================================================
-// 视口控制
-// ============================================================
-void UICornerstone_SetViewport(float x, float y, float w, float h) {
-    g_viewport = SRect(x, y, w, h);
-    BENCH->resized(g_viewport);
-}
-
-void UICornerstone_GetViewport(float* x, float* y, float* w, float* h) {
-    if (x) *x = g_viewport.left;
-    if (y) *y = g_viewport.top;
-    if (w) *w = g_viewport.width;
-    if (h) *h = g_viewport.height;
-}
-
-// ============================================================
-// 帧循环
+// 事件转换（UIEvent → C++ Event）
 // ============================================================
 static bool uiEventToEvent(const UIEvent& ue, Event& event) {
     event = Event();
@@ -286,90 +167,410 @@ static bool uiEventToEvent(const UIEvent& ue, Event& event) {
     }
 }
 
-void UICornerstone_PushUIEvent(const UIEvent* ue) {
-    if (ue) g_queuedEvents.push(*ue);
+// ============================================================
+// 多视口路由辅助
+// ============================================================
+static UIInstance findViewportByCoord(UIInstance owner, float x, float y) {
+    for (auto* child : owner->children) {
+        auto& r = child->viewport;
+        if (x >= r.left && x < r.left + r.width
+         && y >= r.top && y < r.top + r.height) {
+            return child;
+        }
+    }
+    return nullptr;
 }
 
-void UICornerstone_ProcessEvents(void) {
-    // 处理外部注入的队列事件
-    while (!g_queuedEvents.empty()) {
-        UIEvent ue = g_queuedEvents.front();
-        g_queuedEvents.pop();
+static UIInstance nextViewport(UIInstance owner, UIInstance cur) {
+    auto& cs = owner->children;
+    if (cs.empty()) return nullptr;
+    if (!cur) return cs.front();
+    auto it = std::find(cs.begin(), cs.end(), cur);
+    return (it != cs.end() && ++it != cs.end()) ? *it : cs.front();
+}
+
+static UIInstance prevViewport(UIInstance owner, UIInstance cur) {
+    auto& cs = owner->children;
+    if (cs.empty()) return nullptr;
+    if (!cur) return cs.back();
+    auto it = std::find(cs.begin(), cs.end(), cur);
+    return (it != cs.begin()) ? *std::prev(it) : cs.back();
+}
+
+// Ctrl+Tab 智能路由：跨视口切换。返回 true 表示事件已消费。
+static bool tryViewportScopeSwitch(UIInstance owner, Event& keyEvent) {
+    KeyCode code = keyEvent.keyEvent.keycode;
+    KeyMod  mod  = keyEvent.keyEvent.mod;
+    if (code != KeyCode::Tab || !isModSet(mod, KeyMod::Ctrl)) return false;
+    if (owner->children.size() <= 1) return false;  // 单视口：交给视口内处理
+
+    UIInstance cur = owner->activeViewport;
+    if (cur && cur->focusManager->getVisibleBoundaryCount() >= 1) return false;
+
+    if (cur) cur->focusManager->clearFocus();
+    bool shift = isModSet(mod, KeyMod::Shift);
+    owner->activeViewport = shift ? prevViewport(owner, cur) : nextViewport(owner, cur);
+    if (!owner->activeViewport) return false;
+    owner->activeViewport->focusManager->focusFirstInScope(owner->activeViewport->bench);
+    return true;
+}
+
+// 将事件分发到指定实例的 bench（供 ProcessEvents 两条通路共用）
+static void dispatchToBench(UIInstance instance, const Event& event) {
+    if (instance && instance->bench) {
+        instance->bench->inputControl(std::make_shared<Event>(event));
+    }
+}
+
+// ============================================================
+// UICornerstone_CreateInstance / DestroyInstance / CreateViewport
+// ============================================================
+UIInstance UICornerstone_CreateInstance(
+    const UIBackendCallbacks* callbacks,
+    const UIInstanceConfig* config)
+{
+    if (!callbacks || callbacks->version != 1) return nullptr;
+
+    auto* ctx = new UIContext();
+    ctx->callbacks = callbacks;
+
+    if (config) {
+        if (config->debugLabel) ctx->debugLabel = config->debugLabel;
+        if (config->resourceRoot) ctx->resourceRoot = config->resourceRoot;
+        if (config->windowTitle) ctx->windowTitle = config->windowTitle;
+        ctx->windowWidth = config->windowWidth;
+        ctx->windowHeight = config->windowHeight;
+        // windowFlags 为新增字段：旧客户端 structSize 更小，按大小守卫读取
+        if (config->structSize >= offsetof(UIInstanceConfig, windowFlags) + sizeof(config->windowFlags)) {
+            ctx->windowFlags = config->windowFlags;
+        }
+    }
+
+    if (!ctx->initialize()) {
+        delete ctx;
+        return nullptr;
+    }
+
+    if (ctx->window) {
+        SSize sz = ctx->window->getSize();
+        ctx->viewport = SRect(0, 0, sz.width, sz.height);
+        ctx->bench->resized(ctx->viewport);
+    }
+
+    // Perform a dummy clear+present to ensure the OpenGL context is active
+    // for subsequent texture creation (relevant for OpenGL-based backends).
+    if (ctx->renderDevice) {
+        ctx->renderDevice->setDrawColor(SColor(0, 0, 0, 0));
+        ctx->renderDevice->clear();
+        ctx->renderDevice->present();
+    }
+
+    registerInstance(ctx);
+    printf("[%s] created\n", ctx->debugLabel.c_str());
+    return ctx;
+}
+
+UIInstance UICornerstone_CreateViewport(UIInstance parent, UIRect rect) {
+    if (!parent || !parent->initialized || parent->destroying) return nullptr;
+    if (!parent->ownsBackend) return nullptr;  // 只能从 owner 创建
+
+    auto* vp = new UIContext();
+    vp->owner = parent;
+    vp->ownsBackend = false;
+    vp->callbacks = parent->callbacks;
+    vp->viewport = SRect(rect.x, rect.y, rect.w, rect.h);
+
+    if (!vp->initialize()) {
+        delete vp;
+        return nullptr;
+    }
+    vp->bench->resized(vp->viewport);
+
+    parent->children.push_back(vp);
+    // 首个子视口自动设为活动视口（键盘事件投递目标）
+    if (!parent->activeViewport) parent->activeViewport = vp;
+
+    registerInstance(vp);
+    printf("[%s] created (viewport %g,%g %gx%g)\n", vp->debugLabel.c_str(),
+        vp->viewport.left, vp->viewport.top, vp->viewport.width, vp->viewport.height);
+    return vp;
+}
+
+void UICornerstone_DestroyInstance(UIInstance instance) {
+    if (!instance || instance->destroying) return;
+    instance->destroying = true;  // 置位：回调重入的 C ABI 入口直接短路
+    unregisterInstance(instance);
+
+    // 快照遍历：子视口销毁时会从 owner->children 摘除自身
+    auto snapshot = instance->children;
+    for (auto* child : snapshot) {
+        if (instance->activeViewport == child) {
+            instance->activeViewport = nullptr;
+        }
+        UICornerstone_DestroyInstance(child);
+    }
+    instance->children.clear();
+
+    instance->destroy();
+
+    // 从 owner 摘除 + 清 activeViewport 引用（直接销毁子视口路径）
+    if (instance->owner) {
+        if (instance->owner->activeViewport == instance) {
+            instance->owner->activeViewport = nullptr;
+        }
+        auto& cs = instance->owner->children;
+        cs.erase(std::remove(cs.begin(), cs.end(), instance), cs.end());
+    }
+
+    printf("[%s] destroyed\n", instance->debugLabel.c_str());
+    delete instance;
+}
+
+#if !UICORNERSTONE_BUILD_SHARED
+extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
+#endif
+
+UIInstance UICornerstone_CreateInstanceFromPlugin(
+    const char* pluginName,
+    const UIInstanceConfig* config)
+{
+    if (!pluginName || !pluginName[0]) return nullptr;
+
+    char dllName[128];
+    snprintf(dllName, sizeof(dllName), "UIBackend_%s.dll", pluginName);
+    HMODULE dll = LoadLibraryA(dllName);
+    if (!dll) {
+#if !UICORNERSTONE_BUILD_SHARED
+        printf("UICornerstone: CreateInstanceFromPlugin(%s) — LoadLibrary failed, trying static...\n", pluginName);
+        UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
+        if (callbacks) {
+            printf("UICornerstone: static GetUIBackendCallbacks ready\n");
+            return UICornerstone_CreateInstance(callbacks, config);
+        }
+#endif
+        printf("UICornerstone: CreateInstanceFromPlugin(%s) — LoadLibrary failed\n", pluginName);
+        return nullptr;
+    }
+
+    auto getter = (UIBackendCallbacks*(*)())GetProcAddress(dll, "GetUIBackendCallbacks");
+    if (!getter) {
+        printf("UICornerstone: %s has no GetUIBackendCallbacks\n", dllName);
+        FreeLibrary(dll);
+        return nullptr;
+    }
+
+    UIBackendCallbacks* callbacks = getter();
+    if (!callbacks) {
+        printf("UICornerstone: %s GetUIBackendCallbacks returned null\n", dllName);
+        FreeLibrary(dll);
+        return nullptr;
+    }
+
+    printf("UICornerstone: loaded %s\n", dllName);
+    return UICornerstone_CreateInstance(callbacks, config);
+}
+
+// ============================================================
+// 视口控制
+// ============================================================
+void UICornerstone_SetViewport(UIInstance instance, float x, float y, float w, float h) {
+    if (!instance || instance->destroying) return;
+    instance->viewport = SRect(x, y, w, h);
+    if (instance->bench) instance->bench->resized(instance->viewport);
+}
+
+void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w, float* h) {
+    if (!instance) return;
+    if (x) *x = instance->viewport.left;
+    if (y) *y = instance->viewport.top;
+    if (w) *w = instance->viewport.width;
+    if (h) *h = instance->viewport.height;
+}
+
+// ============================================================
+// 帧循环
+// ============================================================
+void UICornerstone_PushUIEvent(UIInstance instance, const UIEvent* ue) {
+    if (!instance || !instance->initialized || instance->destroying) return;
+    if (ue) instance->queuedEvents.push(*ue);
+}
+
+void UICornerstone_ProcessEvents(UIInstance instance) {
+    if (!instance || !instance->initialized || instance->destroying) return;
+
+    if (instance->ownsBackend) {
+        // 窗口级别：轮询输入并分发到子视口（产出 C++ Event）
+        if (instance->inputBackend) {
+            instance->inputBackend->newFrame();
+            Event evt;
+            while (instance->inputBackend->pollEvent(evt)) {
+                switch (evt.m_type) {
+                case EventType::MouseMove:
+                case EventType::MouseDown:
+                case EventType::MouseUp:
+                case EventType::MouseWheel: {
+                    float mx = (evt.m_type == EventType::MouseWheel)
+                        ? evt.mouseWheel.x : evt.mousePos.x;
+                    float my = (evt.m_type == EventType::MouseWheel)
+                        ? evt.mouseWheel.y : evt.mousePos.y;
+                    UIInstance target = findViewportByCoord(instance, mx, my);
+                    if (!target) {
+                        // 兜底：点击 owner 区域视为焦点回到 owner 树
+                        if (instance->activeViewport
+                            && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
+                            instance->activeViewport->focusManager->clearFocus();
+                            instance->activeViewport = nullptr;
+                        }
+                        dispatchToBench(instance, evt);
+                        break;
+                    }
+                    // 跨视口焦点转移（仅按下/抬起触发）
+                    if (target != instance->activeViewport
+                        && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
+                        if (instance->activeViewport) {
+                            instance->activeViewport->focusManager->clearFocus();
+                        }
+                        instance->activeViewport = target;
+                    }
+                    // 转视口本地坐标后 dispatch 到目标视口
+                    evt.mousePos.x = mx - target->viewport.left;
+                    evt.mousePos.y = my - target->viewport.top;
+                    dispatchToBench(target, evt);
+                    break;
+                }
+                case EventType::KeyDown:
+                case EventType::KeyUp:
+                    // 键盘事件：先经 Ctrl+Tab 智能路由，未消费则发到当前活动视口
+                    // （activeViewport 为 null 时回退 owner 自身 bench）
+                    if (!tryViewportScopeSwitch(instance, evt)) {
+                        UIInstance kbdTarget = instance->activeViewport
+                            ? instance->activeViewport : instance;
+                        dispatchToBench(kbdTarget, evt);
+                    }
+                    break;
+                case EventType::TextInput:
+                    // 文本输入事件：直接发到当前活动视口（焦点控件处理）
+                    {
+                        UIInstance kbdTarget = instance->activeViewport
+                            ? instance->activeViewport : instance;
+                        dispatchToBench(kbdTarget, evt);
+                    }
+                    break;
+                default:
+                    // 窗口事件 → owner 自身处理
+                    if (evt.m_type == EventType::WindowClose) {
+                        instance->quit = true;
+                    } else if (evt.m_type == EventType::WindowResize) {
+                        instance->bench->resized(SRect(0, 0,
+                            (float)evt.resizeEvent.width, (float)evt.resizeEvent.height));
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // 注入队列通路（UIEvent → Event）：所有实例（owner 和 viewport）都处理自己的 queuedEvents
+    while (!instance->queuedEvents.empty()) {
+        UIEvent ue = instance->queuedEvents.front();
+        instance->queuedEvents.pop();
 
         Event event;
         if (!uiEventToEvent(ue, event)) continue;
 
         if (event.m_type == EventType::WindowClose) {
-            g_quit = true;
+            instance->quit = true;
         } else if (event.m_type == EventType::WindowResize) {
-            BENCH->resized(SRect(0, 0, (float)event.resizeEvent.width, (float)event.resizeEvent.height));
-        } else {
-            auto sharedEvent = std::make_shared<Event>(event);
-            BENCH->inputControl(sharedEvent);
-        }
-    }
-
-    // 后备：从 InputBackend 轮询事件（非回调模式使用）
-    if (!g_inputBackend) return;
-    g_inputBackend->newFrame();
-
-    Event event;
-    while (g_inputBackend->pollEvent(event)) {
-        switch (event.m_type) {
-        case EventType::WindowClose:
-            g_quit = true;
-            break;
-        case EventType::WindowResize:
-            BENCH->resized(SRect(0, 0, (float)event.resizeEvent.width, (float)event.resizeEvent.height));
-            break;
-        default:
-            {
-                auto sharedEvent = std::make_shared<Event>(event);
-                BENCH->inputControl(sharedEvent);
+            instance->bench->resized(SRect(0, 0,
+                (float)event.resizeEvent.width, (float)event.resizeEvent.height));
+        } else if (event.m_type == EventType::KeyDown || event.m_type == EventType::KeyUp) {
+            if (!tryViewportScopeSwitch(instance, event)) {
+                dispatchToBench(instance, event);
             }
-            break;
+        } else {
+            dispatchToBench(instance, event);
         }
     }
 }
 
-void UICornerstone_Update(double deltaTime) {
+void UICornerstone_Update(UIInstance instance, double deltaTime) {
     (void)deltaTime;
-    BENCH->eventLoopEntry();
-    BENCH->update();
+    if (!instance || !instance->initialized || instance->destroying) return;
+    if (instance->bench) {
+        instance->bench->eventLoopEntry();
+        instance->bench->update();
+    }
 }
 
-void UICornerstone_Render(void) {
-    if (!g_renderDevice) return;
-    g_renderDevice->pushClipRect(g_viewport);
-    BENCH->draw();
-    g_renderDevice->popClipRect();
+void UICornerstone_Render(UIInstance instance) {
+    if (!instance || !instance->initialized || instance->destroying) return;
+    if (!instance->renderDevice || !instance->bench) return;
+    instance->renderDevice->pushClipRect(instance->viewport);
+    instance->bench->draw();
+    instance->renderDevice->popClipRect();
 }
 
-void UICornerstone_Clear(void) {
-    if (!g_renderDevice) return;
-    g_renderDevice->setDrawColor(SColor(0.2f, 0.2f, 0.22f, 1.0f));
-    g_renderDevice->clear();
+void UICornerstone_Clear(UIInstance instance) {
+    if (!instance || !instance->initialized || instance->destroying) return;
+    if (!instance->renderDevice) return;
+    instance->renderDevice->setDrawColor(SColor(0.2f, 0.2f, 0.22f, 1.0f));
+    instance->renderDevice->clear();
 }
 
-void UICornerstone_Present(void) {
-    if (!g_renderDevice) return;
-    g_renderDevice->present();
+void UICornerstone_Present(UIInstance instance) {
+    if (!instance || !instance->initialized || instance->destroying) return;
+    if (instance->renderDevice) instance->renderDevice->present();
 }
 
-int UICornerstone_IsQuitRequested(void) {
-    return g_quit ? 1 : 0;
+int UICornerstone_IsQuitRequested(UIInstance instance) {
+    return (instance && instance->quit) ? 1 : 0;
+}
+
+// ============================================================
+// Debug 辅助
+// ============================================================
+int UICornerstone_Debug_GetAliveCount(void) {
+#ifdef _DEBUG
+    std::lock_guard<std::mutex> lock(s_registryMutex);
+    return (int)s_aliveInstances.size();
+#else
+    return 0;
+#endif
+}
+
+UIInstance UICornerstone_Debug_GetAliveInstance(int index) {
+#ifdef _DEBUG
+    std::lock_guard<std::mutex> lock(s_registryMutex);
+    if (index >= 0 && index < (int)s_aliveInstances.size())
+        return s_aliveInstances[index];
+    return nullptr;
+#else
+    (void)index;
+    return nullptr;
+#endif
+}
+
+UIInstance UICornerstone_Debug_GetActiveViewport(UIInstance instance) {
+    if (!instance || instance->destroying) return nullptr;
+    return instance->activeViewport;
+}
+
+int UICornerstone_Debug_IsControlFocused(UIInstance instance, UIControlHandle control) {
+    if (!instance || instance->destroying || !control) return 0;
+    auto* c = static_cast<Control*>(control);
+    return c->getFocused() ? 1 : 0;
 }
 
 // ============================================================
 // 布局系统
 // ============================================================
-int UICornerstone_LoadLayout(const char* jsonContent) {
-    if (!jsonContent) return 0;
+int UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent) {
+    if (!instance || !instance->initialized || instance->destroying || !jsonContent) return 0;
 
-    LayoutParser parser;
+    LayoutParser parser(instance->dataContext);
 
-    // 注册所有 g_actions 到 LayoutParser
-    for (auto& [name, pair] : g_actions) {
+    // 注册所有 actions 到 LayoutParser
+    for (auto& [name, pair] : instance->actions) {
         UIActionCallback cb = pair.first;
         void* userData = pair.second;
         parser.registerHandler(name, [cb, userData](shared_ptr<Control> ctl) {
@@ -380,214 +581,227 @@ int UICornerstone_LoadLayout(const char* jsonContent) {
     auto root = parser.parseLayout(std::string(jsonContent));
     if (!root) return 0;
 
-    BENCH->addControl(root);
+    instance->bench->addControl(root);
 
     for (auto& mb : parser.getMenuBars()) {
-        BENCH->addControl(mb);
+        instance->bench->addControl(mb);
     }
 
-    // 将 JSON 定义的 Dialog 加入 g_popupPool 保持生命期
+    // 将 JSON 定义的 Dialog 加入 popupPool 保持生命期
     for (auto& pop : parser.getDialogs()) {
-        g_popupPool.push_back(pop);
+        instance->popupPool.push_back(pop);
     }
 
     for (auto& id : parser.getAllControlIds()) {
         auto ctl = parser.findControlById(id);
-        if (ctl) g_controlsById[id] = reinterpret_cast<UIControlHandle>(ctl.get());
+        if (ctl) instance->controlsById[id] = reinterpret_cast<UIControlHandle>(ctl.get());
     }
 
-    printf("UICornerstone: LoadLayout OK (%zu control ids, %zu menu bars, %zu dialogs)\n",
-           parser.getAllControlIds().size(), parser.getMenuBars().size(),
-           parser.getDialogs().size());
+    printf("[%s] LoadLayout OK (%zu control ids, %zu menu bars, %zu dialogs)\n",
+           instance->debugLabel.c_str(), parser.getAllControlIds().size(),
+           parser.getMenuBars().size(), parser.getDialogs().size());
     return 1;
 }
 
-int UICornerstone_LoadLayoutFromFile(const char* filePath) {
-    if (!filePath) return 0;
-    if (!g_resourceProvider) {
+int UICornerstone_LoadLayoutFromFile(UIInstance instance, const char* filePath) {
+    if (!instance || !filePath) return 0;
+    if (!instance->resourceProvider) {
         printf("UICornerstone: LoadLayoutFromFile requires ResourceProvider\n");
         return 0;
     }
-    auto data = g_resourceProvider->readFile(filePath);
+    auto data = instance->resourceProvider->readFile(filePath);
     if (!data || data->empty()) return 0;
     data->push_back('\0');
-    return UICornerstone_LoadLayout(data->data());
+    return UICornerstone_LoadLayout(instance, data->data());
 }
 
-UIControlHandle UICornerstone_FindControl(const char* id) {
-    if (!id) return nullptr;
-    auto it = g_controlsById.find(id);
-    return (it != g_controlsById.end()) ? it->second : nullptr;
+UIControlHandle UICornerstone_FindControl(UIInstance instance, const char* id) {
+    if (!instance || !id) return nullptr;
+    auto it = instance->controlsById.find(id);
+    return (it != instance->controlsById.end()) ? it->second : nullptr;
 }
 
-void UICornerstone_RegisterAction(const char* name, UIActionCallback cb, void* userData) {
-    if (name) g_actions[name] = {cb, userData};
+void UICornerstone_RegisterAction(UIInstance instance, const char* name, UIActionCallback cb, void* userData) {
+    if (instance && name) instance->actions[name] = {cb, userData};
 }
 
 // ============================================================
 // 控件工厂
 // ============================================================
-UIControlHandle UICornerstone_CreateButton(const char* text,
+UIControlHandle UICornerstone_CreateButton(UIInstance instance, const char* text,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<Button>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h));
     if (text) ctl->setCaption(text);
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateLabel(const char* text, float fontSize,
+UIControlHandle UICornerstone_CreateLabel(UIInstance instance, const char* text, float fontSize,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<Label>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<Label>(instance->bench, SRect(x, y, w, h));
     if (text) ctl->setCaption(text);
     ctl->setFont(FontName::HarmonyOS_Sans_SC_Regular);
     if (fontSize > 0) ctl->setFontSize((int)fontSize);
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateCheckBox(const char* text,
+UIControlHandle UICornerstone_CreateCheckBox(UIInstance instance, const char* text,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<CheckBox>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<CheckBox>(instance->bench, SRect(x, y, w, h));
     ctl->createCaption();
     if (text) ctl->getCaption()->setCaption(text);
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateEditBox(
+UIControlHandle UICornerstone_CreateEditBox(UIInstance instance,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<EditBox>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(ctl);
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<EditBox>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateProgressBar(
+UIControlHandle UICornerstone_CreateProgressBar(UIInstance instance,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<ProgressBar>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(ctl);
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<ProgressBar>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateSlider(
+UIControlHandle UICornerstone_CreateSlider(UIInstance instance,
     float x, float y, float w, float h, float min, float max, float value)
 {
-    auto ctl = std::make_shared<Slider>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<Slider>(instance->bench, SRect(x, y, w, h));
     ctl->setRange(min, max);
     ctl->setValue(value);
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreatePanel(
+UIControlHandle UICornerstone_CreatePanel(UIInstance instance,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<Panel>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(ctl);
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<Panel>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateTextArea(
+UIControlHandle UICornerstone_CreateTextArea(UIInstance instance,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<TextArea>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(ctl);
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<TextArea>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateWinFrame(
+UIControlHandle UICornerstone_CreateWinFrame(UIInstance instance,
     const char* title, float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<WinFrame>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<WinFrame>(instance->bench, SRect(x, y, w, h));
     if (title) ctl->setTitle(title);
     ctl->setTitleTextColor(SColor(0, 0, 0, 255));
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->show();
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateMenuBar(float x, float y, float w, float h) {
-    auto bar = make_shared<MenuBar>(BENCH, 1.0f, 1.0f);
+UIControlHandle UICornerstone_CreateMenuBar(UIInstance instance, float x, float y, float w, float h) {
+    if (!instance || !instance->initialized) return nullptr;
+    auto bar = make_shared<MenuBar>(instance->bench, 1.0f, 1.0f);
     bar->setRect(SRect(x, y, w, h));
-    BENCH->addControl(bar);
+    instance->bench->addControl(bar);
     bar->create();
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(bar.get()));
 }
 
-UIControlHandle UICornerstone_CreateMenuPanel(void) {
+UIControlHandle UICornerstone_CreateMenuPanel(UIInstance instance) {
+    if (!instance || !instance->initialized) return nullptr;
     auto panel = make_shared<MenuPanel>(nullptr, 1.0f, 1.0f);
     panel->create();
     auto* p = reinterpret_cast<UIControlHandle>(static_cast<Control*>(panel.get()));
-    menuPoolKeep(panel);
+    menuPoolKeep(instance, panel);
     return p;
 }
 
-UIControlHandle UICornerstone_CreateMenuItem(const char* caption, int type) {
+UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* caption, int type) {
+    if (!instance || !instance->initialized) return nullptr;
     if (type < 0 || type > 2) return nullptr;
     auto item = make_shared<MenuItem>(nullptr, static_cast<MenuItemType>(type), 1.0f, 1.0f);
     if (caption) item->setCaption(caption);
     item->create();
     auto* p = reinterpret_cast<UIControlHandle>(static_cast<Control*>(item.get()));
-    menuPoolKeep(item);
+    menuPoolKeep(instance, item);
     return p;
 }
 
-void UICornerstone_MenuBarAddMenu(UIControlHandle bar, const char* caption, UIControlHandle panel) {
-    if (!bar || !panel) return;
-    auto sp = menuPoolTake(panel);
+void UICornerstone_MenuBarAddMenu(UIInstance instance, UIControlHandle bar, const char* caption, UIControlHandle panel) {
+    if (!instance || !bar || !panel) return;
+    auto sp = menuPoolTake(instance, panel);
     if (!sp) return;
     auto* mb = dynamic_cast<MenuBar*>(static_cast<Control*>(bar));
     if (mb) mb->addMenu(caption ? caption : "", std::dynamic_pointer_cast<MenuPanel>(sp));
 }
 
-void UICornerstone_MenuPanelAddItem(UIControlHandle panel, UIControlHandle item) {
-    if (!panel || !item) return;
-    auto sp = menuPoolTake(item);
+void UICornerstone_MenuPanelAddItem(UIInstance instance, UIControlHandle panel, UIControlHandle item) {
+    if (!instance || !panel || !item) return;
+    auto sp = menuPoolTake(instance, item);
     if (!sp) return;
     auto* pnl = dynamic_cast<MenuPanel*>(static_cast<Control*>(panel));
     if (pnl) pnl->addItem(std::dynamic_pointer_cast<MenuItem>(sp));
 }
 
-void UICornerstone_MenuPanelAddSeparator(UIControlHandle panel) {
-    if (!panel) return;
+void UICornerstone_MenuPanelAddSeparator(UIInstance instance, UIControlHandle panel) {
+    if (!instance || !panel) return;
     auto* pnl = dynamic_cast<MenuPanel*>(static_cast<Control*>(panel));
     if (pnl) pnl->addSeparator();
 }
 
-void UICornerstone_MenuItemSetSubMenu(UIControlHandle item, UIControlHandle panel) {
-    if (!item || !panel) return;
-    auto sp = menuPoolTake(panel);
+void UICornerstone_MenuItemSetSubMenu(UIInstance instance, UIControlHandle item, UIControlHandle panel) {
+    if (!instance || !item || !panel) return;
+    auto sp = menuPoolTake(instance, panel);
     if (!sp) return;
     auto* it = dynamic_cast<MenuItem*>(static_cast<Control*>(item));
     if (it) it->setSubMenu(std::dynamic_pointer_cast<MenuPanel>(sp));
 }
 
-UIControlHandle UICornerstone_CreateImageButton(
+UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
     const char* normalImage, const char* hoverImage, const char* pressedImage,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<Button>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h));
     if (normalImage) {
         auto actor = std::make_shared<Actor>(ctl.get(), fs::path(normalImage), true);
         ctl->setNormalStateActor(actor);
@@ -600,7 +814,7 @@ UIControlHandle UICornerstone_CreateImageButton(
         auto actor = std::make_shared<Actor>(ctl.get(), fs::path(pressedImage), true);
         ctl->setPressedStateActor(actor);
     }
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
@@ -609,12 +823,13 @@ UIControlHandle UICornerstone_CreateImageButton(
 // ============================================================
 // 控件通用操作
 // ============================================================
-void UICornerstone_SetRect(UIControlHandle ctl, float x, float y, float w, float h) {
-    if (ctl) static_cast<Control*>(ctl)->setRect(SRect(x, y, w, h));
+void UICornerstone_SetRect(UIInstance instance, UIControlHandle ctl, float x, float y, float w, float h) {
+    if (!instance || !ctl) return;
+    static_cast<Control*>(ctl)->setRect(SRect(x, y, w, h));
 }
 
-void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, float* h) {
-    if (!ctl) return;
+void UICornerstone_GetRect(UIInstance instance, UIControlHandle ctl, float* x, float* y, float* w, float* h) {
+    if (!instance || !ctl) return;
     SRect r = static_cast<Control*>(ctl)->getRect();
     if (x) *x = r.left;
     if (y) *y = r.top;
@@ -622,41 +837,39 @@ void UICornerstone_GetRect(UIControlHandle ctl, float* x, float* y, float* w, fl
     if (h) *h = r.height;
 }
 
-void UICornerstone_AddChildControl(UIControlHandle parent, UIControlHandle child) {
-    if (!parent || !child) return;
+void UICornerstone_AddChildControl(UIInstance instance, UIControlHandle parent, UIControlHandle child) {
+    if (!instance || !parent || !child) return;
     auto* ctlImpl = dynamic_cast<ControlImpl*>(static_cast<Control*>(child));
     auto* panel = dynamic_cast<Panel*>(static_cast<Control*>(parent));
     if (!ctlImpl || !panel) return;
     auto sp = ctlImpl->shared_from_this();
-    BENCH->removeControl(sp);
+    instance->bench->removeControl(sp);
     panel->addControl(sp);
 }
 
-const char* UICornerstone_GetControlId(UIControlHandle ctl) {
-    if (!ctl) return "";
-    static char buf[256];
-    for (const auto& pair : g_controlsById) {
+const char* UICornerstone_GetControlId(UIInstance instance, UIControlHandle ctl) {
+    if (!instance || !ctl) return "";
+    for (const auto& pair : instance->controlsById) {
         if (pair.second == ctl) {
-            strncpy(buf, pair.first.c_str(), sizeof(buf) - 1);
-            buf[sizeof(buf) - 1] = '\0';
-            return buf;
+            instance->strBuf = pair.first;
+            return instance->strBuf.c_str();
         }
     }
-    buf[0] = '\0';
-    return buf;
+    instance->strBuf.clear();
+    return instance->strBuf.c_str();
 }
 
-void UICornerstone_DestroyControl(UIControlHandle ctl) {
-    if (!ctl) return;
+void UICornerstone_DestroyControl(UIInstance instance, UIControlHandle ctl) {
+    if (!instance || !ctl) return;
     auto* ctrl = dynamic_cast<ControlImpl*>(static_cast<Control*>(ctl));
     if (!ctrl) return;
     try {
         auto sp = ctrl->shared_from_this();
         Control* parent = ctrl->getParent();
-        if (parent && parent != BENCH) {
+        if (parent && parent != instance->bench) {
             parent->removeControl(sp);
         } else {
-            BENCH->removeControl(sp);
+            instance->bench->removeControl(sp);
         }
     } catch (...) {}
 }
@@ -664,12 +877,13 @@ void UICornerstone_DestroyControl(UIControlHandle ctl) {
 // ============================================================
 // ColorPicker
 // ============================================================
-UIControlHandle UICornerstone_CreateColorPicker(
+UIControlHandle UICornerstone_CreateColorPicker(UIInstance instance,
     float x, float y, float w, float h, const char* color)
 {
-    auto ctl = std::make_shared<ColorPicker>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<ColorPicker>(instance->bench, SRect(x, y, w, h));
     if (color) ctl->setColor(color);
-    BENCH->addControl(ctl);
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
@@ -678,11 +892,12 @@ UIControlHandle UICornerstone_CreateColorPicker(
 // ============================================================
 // ComboBox
 // ============================================================
-UIControlHandle UICornerstone_CreateComboBox(
+UIControlHandle UICornerstone_CreateComboBox(UIInstance instance,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<ComboBox>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(ctl);
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<ComboBox>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
@@ -691,27 +906,29 @@ UIControlHandle UICornerstone_CreateComboBox(
 // ============================================================
 // Dialog / Popup
 // ============================================================
-UIControlHandle UICornerstone_CreateDialog(
+UIControlHandle UICornerstone_CreateDialog(UIInstance instance,
     const char* confirmText, const char* cancelText,
     float x, float y, float w, float h)
 {
-    auto ctl = std::make_shared<Dialog>(BENCH, SRect(x, y, w, h));
+    if (!instance || !instance->initialized) return nullptr;
+    auto ctl = std::make_shared<Dialog>(instance->bench, SRect(x, y, w, h));
     if (confirmText) ctl->setConfirmButtonText(confirmText);
     if (cancelText) ctl->setCancelButtonText(cancelText);
     ctl->setCentered();
     ctl->create();
 
-    // 保持 Dialog 生命期：加入 g_popupPool，close() 时自动清理
-    g_popupPool.push_back(ctl);
+    // 保持 Dialog 生命期：加入 popupPool，close() 时自动清理
+    instance->popupPool.push_back(ctl);
 
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
 // ── NumericUpDown C ABI ──
 
-UIControlHandle UICornerstone_CreateNumericUpDown(float x, float y, float w, float h) {
-    auto nud = make_shared<NumericUpDown>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(nud);
+UIControlHandle UICornerstone_CreateNumericUpDown(UIInstance instance, float x, float y, float w, float h) {
+    if (!instance || !instance->initialized) return nullptr;
+    auto nud = make_shared<NumericUpDown>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(nud);
     nud->create();
     nud->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(nud.get()));
@@ -719,35 +936,38 @@ UIControlHandle UICornerstone_CreateNumericUpDown(float x, float y, float w, flo
 
 // ── Splitter C ABI ──
 
-UIControlHandle UICornerstone_CreateSplitter(float x, float y, float w, float h, int orientation) {
-    auto sp = make_shared<Splitter>(BENCH, SRect(x, y, w, h));
+UIControlHandle UICornerstone_CreateSplitter(UIInstance instance, float x, float y, float w, float h, int orientation) {
+    if (!instance || !instance->initialized) return nullptr;
+    auto sp = make_shared<Splitter>(instance->bench, SRect(x, y, w, h));
     sp->setOrientation(orientation != 0);
-    BENCH->addControl(sp);
+    instance->bench->addControl(sp);
     sp->create();
     sp->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sp.get()));
 }
 
-UIControlHandle UICornerstone_CreateScrollBar(float x, float y, float w, float h, int orientation) {
-    auto sb = make_shared<ScrollBar>(BENCH, SRect(x, y, w, h),
+UIControlHandle UICornerstone_CreateScrollBar(UIInstance instance, float x, float y, float w, float h, int orientation) {
+    if (!instance || !instance->initialized) return nullptr;
+    auto sb = make_shared<ScrollBar>(instance->bench, SRect(x, y, w, h),
         orientation != 0 ? ScrollBarOrientation::Horizontal : ScrollBarOrientation::Vertical);
-    BENCH->addControl(sb);
+    instance->bench->addControl(sb);
     sb->create();
     sb->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sb.get()));
 }
 
-UIControlHandle UICornerstone_CreateTreeView(float x, float y, float w, float h) {
-    auto tv = make_shared<TreeView>(BENCH, SRect(x, y, w, h));
-    BENCH->addControl(tv);
+UIControlHandle UICornerstone_CreateTreeView(UIInstance instance, float x, float y, float w, float h) {
+    if (!instance || !instance->initialized) return nullptr;
+    auto tv = make_shared<TreeView>(instance->bench, SRect(x, y, w, h));
+    instance->bench->addControl(tv);
     tv->create();
     tv->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(tv.get()));
 }
 
-UIControlHandle UICornerstone_CreateHandleControl(
+UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
     UIControlHandle target, float x, float y, float w, float h) {
-    if (!target) return nullptr;
+    if (!instance || !target) return nullptr;
     auto hc = make_shared<HandleControl>();
     hc->setRect(SRect(x, y, w, h));
     hc->create();
@@ -759,15 +979,15 @@ UIControlHandle UICornerstone_CreateHandleControl(
 // Property system (string-based, multi-type)
 // ============================================================
 
-int UICornerstone_SetColor(UIControlHandle ctl, const char* prop, UIColor value) {
+int UICornerstone_SetColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIColor value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setColorProperty(prop, SColor(value.r, value.g, value.b, value.a));
 }
 
-int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateColor value) {
+int UICornerstone_SetStateColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIStateColor value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setStateColorProperty(prop,
         StateColor(
             SColor(value.normal.r, value.normal.g, value.normal.b, value.normal.a),
@@ -777,57 +997,57 @@ int UICornerstone_SetStateColor(UIControlHandle ctl, const char* prop, UIStateCo
         ));
 }
 
-int UICornerstone_SetInt(UIControlHandle ctl, const char* prop, int value) {
+int UICornerstone_SetInt(UIInstance instance, UIControlHandle ctl, const char* prop, int value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setIntProperty(prop, value);
 }
 
-int UICornerstone_SetFloat(UIControlHandle ctl, const char* prop, float value) {
+int UICornerstone_SetFloat(UIInstance instance, UIControlHandle ctl, const char* prop, float value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setFloatProperty(prop, value);
 }
 
-int UICornerstone_SetString(UIControlHandle ctl, const char* prop, const char* value) {
+int UICornerstone_SetString(UIInstance instance, UIControlHandle ctl, const char* prop, const char* value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setStringProperty(prop, value);
 }
 
-int UICornerstone_SetBool(UIControlHandle ctl, const char* prop, int value) {
+int UICornerstone_SetBool(UIInstance instance, UIControlHandle ctl, const char* prop, int value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setBoolProperty(prop, value);
 }
 
-int UICornerstone_SetEnum(UIControlHandle ctl, const char* prop, const char* value) {
+int UICornerstone_SetEnum(UIInstance instance, UIControlHandle ctl, const char* prop, const char* value) {
+    if (!instance || !ctl || !prop || !value) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !value) return 0;
     return c->setEnumProperty(prop, value);
 }
 
-int UICornerstone_SetPtr(UIControlHandle ctl, const char* prop, void* value) {
+int UICornerstone_SetPtr(UIInstance instance, UIControlHandle ctl, const char* prop, void* value) {
+    if (!instance || !ctl || !prop) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop) return 0;
     return c->setPtrProperty(prop, value);
 }
 
-int UICornerstone_GetPtr(UIControlHandle ctl, const char* prop, void** out) {
+int UICornerstone_GetPtr(UIInstance instance, UIControlHandle ctl, const char* prop, void** out) {
+    if (!instance || !ctl || !prop || !out) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out) return 0;
     return c->getPtrProperty(prop, *out);
 }
 
-int UICornerstone_SetCallback(UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
+int UICornerstone_SetCallback(UIInstance instance, UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
+    if (!instance || !ctl || !event) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !event) return 0;
     return c->setCallbackProperty(event, reinterpret_cast<void(*)(void*, const void*, void*)>(cb), userData);
 }
 
-int UICornerstone_GetColor(UIControlHandle ctl, const char* prop, UIColor* out) {
+int UICornerstone_GetColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIColor* out) {
+    if (!instance || !ctl || !prop || !out) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out) return 0;
     SColor s;
     if (!c->getColorProperty(prop, s)) return 0;
     out->r = s.redByte(); out->g = s.greenByte();
@@ -835,9 +1055,9 @@ int UICornerstone_GetColor(UIControlHandle ctl, const char* prop, UIColor* out) 
     return 1;
 }
 
-int UICornerstone_GetStateColor(UIControlHandle ctl, const char* prop, UIStateColor* out) {
+int UICornerstone_GetStateColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIStateColor* out) {
+    if (!instance || !ctl || !prop || !out) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out) return 0;
     SColor def = SColor();
     StateColor sc{def, def, def, def};
     if (!c->getStateColorProperty(prop, sc)) return 0;
@@ -848,42 +1068,38 @@ int UICornerstone_GetStateColor(UIControlHandle ctl, const char* prop, UIStateCo
     return 1;
 }
 
-int UICornerstone_GetBool(UIControlHandle ctl, const char* prop, int* out) {
+int UICornerstone_GetBool(UIInstance instance, UIControlHandle ctl, const char* prop, int* out) {
+    if (!instance || !ctl || !prop || !out) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out) return 0;
     return c->getBoolProperty(prop, *out);
 }
 
-int UICornerstone_GetInt(UIControlHandle ctl, const char* prop, int* out) {
+int UICornerstone_GetInt(UIInstance instance, UIControlHandle ctl, const char* prop, int* out) {
+    if (!instance || !ctl || !prop || !out) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out) return 0;
     return c->getIntProperty(prop, *out);
 }
 
-int UICornerstone_GetFloat(UIControlHandle ctl, const char* prop, float* out) {
+int UICornerstone_GetFloat(UIInstance instance, UIControlHandle ctl, const char* prop, float* out) {
+    if (!instance || !ctl || !prop || !out) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out) return 0;
     return c->getFloatProperty(prop, *out);
 }
 
-int UICornerstone_GetString(UIControlHandle ctl, const char* prop, char* out, int maxLen) {
+int UICornerstone_GetString(UIInstance instance, UIControlHandle ctl, const char* prop, char* out, int maxLen) {
+    if (!instance || !ctl || !prop || !out || maxLen <= 0) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out || maxLen <= 0) return 0;
     const char* s = nullptr;
     if (!c->getStringProperty(prop, s) || !s) return 0;
     strncpy_s(out, maxLen, s, _TRUNCATE);
     return 1;
 }
 
-int UICornerstone_GetEnum(UIControlHandle ctl, const char* prop, char* out, int maxLen) {
+int UICornerstone_GetEnum(UIInstance instance, UIControlHandle ctl, const char* prop, char* out, int maxLen) {
+    if (!instance || !ctl || !prop || !out || maxLen <= 0) return 0;
     auto* c = static_cast<Control*>(ctl);
-    if (!c || !prop || !out || maxLen <= 0) return 0;
     const char* s = nullptr;
     if (!c->getEnumProperty(prop, s) || !s) return 0;
     strncpy_s(out, maxLen, s, _TRUNCATE);
     return 1;
 }
-
-
-
-
