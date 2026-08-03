@@ -21,7 +21,10 @@ public:
     }
 
     ~SFMLWindow() override {
-        delete m_renderDevice;
+        // Render device is owned and deleted by BackendManager
+        // (SFMLWindow 内部的 m_renderDevice 与 BackendManager 持有的是同一对象，
+        // 此处仅清指针，避免 double delete；与 SDL3 后端所有权约定一致)
+        m_renderDevice = nullptr;
         delete m_window;
     }
 

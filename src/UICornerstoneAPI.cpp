@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include <cassert>
 
 // ============================================================
 // 调试：实例注册表（仅 _DEBUG 构建；Release 零开销）
@@ -72,6 +73,47 @@ static LeakDetector s_leakCheck;
 #else
 static inline void registerInstance(UIInstance) {}
 static inline void unregisterInstance(UIInstance) {}
+#endif
+
+// ============================================================
+// 句柄归属校验（仅 _DEBUG；Release 直接透传）
+// 跨实例句柄误用是调用方 bug（§7 风险 5）：Debug 下 O(n) 遍历
+// 控件树 + popupPool/menuPool 确认句柄属于本实例，否则断言失败
+// ============================================================
+#ifdef _DEBUG
+static bool treeContains(Control* root, Control* target) {
+    auto* impl = dynamic_cast<ControlImpl*>(root);
+    if (!impl) return false;
+    for (auto& child : impl->getChildren()) {
+        Control* c = child.get();
+        if (c == target) return true;
+        if (treeContains(c, target)) return true;
+    }
+    return false;
+}
+
+static bool instanceHoldsControl(UIInstance instance, Control* target) {
+    if (instance->bench && treeContains(instance->bench, target)) return true;
+    for (auto& sp : instance->popupPool)
+        if (sp.get() == target) return true;
+    for (auto& sp : instance->menuPool)
+        if (sp.get() == target) return true;
+    return false;
+}
+
+static Control* validateControl(UIInstance instance, UIControlHandle ctl) {
+    if (!instance || !ctl) return nullptr;
+    Control* target = static_cast<Control*>(ctl);
+    if (instanceHoldsControl(instance, target)) return target;
+    printf("UICornerstone: control handle %p NOT owned by instance [%s] (ID=%u)\n",
+           ctl, instance->debugLabel.c_str(), instance->instanceId);
+    assert(false && "UICornerstone: control handle not owned by this instance");
+    return nullptr;
+}
+#else
+static inline Control* validateControl(UIInstance, UIControlHandle ctl) {
+    return static_cast<Control*>(ctl);
+}
 #endif
 
 // ============================================================
@@ -284,6 +326,9 @@ UIInstance UICornerstone_CreateViewport(UIInstance parent, UIRect rect) {
         delete vp;
         return nullptr;
     }
+    // initialize() 内兜底 `viewport = owner->viewport` 会覆盖上文写入的区域，
+    // 此处须在 initialize 之后重写视口区域（§5.13.4）
+    vp->viewport = SRect(rect.x, rect.y, rect.w, rect.h);
     vp->bench->resized(vp->viewport);
 
     parent->children.push_back(vp);
@@ -768,31 +813,42 @@ UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* ca
 
 void UICornerstone_MenuBarAddMenu(UIInstance instance, UIControlHandle bar, const char* caption, UIControlHandle panel) {
     if (!instance || !bar || !panel) return;
+    Control* barV = validateControl(instance, bar);
+    Control* panelV = validateControl(instance, panel);
+    if (!barV || !panelV) return;
     auto sp = menuPoolTake(instance, panel);
     if (!sp) return;
-    auto* mb = dynamic_cast<MenuBar*>(static_cast<Control*>(bar));
+    auto* mb = dynamic_cast<MenuBar*>(barV);
     if (mb) mb->addMenu(caption ? caption : "", std::dynamic_pointer_cast<MenuPanel>(sp));
 }
 
 void UICornerstone_MenuPanelAddItem(UIInstance instance, UIControlHandle panel, UIControlHandle item) {
     if (!instance || !panel || !item) return;
+    Control* panelV = validateControl(instance, panel);
+    Control* itemV = validateControl(instance, item);
+    if (!panelV || !itemV) return;
     auto sp = menuPoolTake(instance, item);
     if (!sp) return;
-    auto* pnl = dynamic_cast<MenuPanel*>(static_cast<Control*>(panel));
+    auto* pnl = dynamic_cast<MenuPanel*>(panelV);
     if (pnl) pnl->addItem(std::dynamic_pointer_cast<MenuItem>(sp));
 }
 
 void UICornerstone_MenuPanelAddSeparator(UIInstance instance, UIControlHandle panel) {
     if (!instance || !panel) return;
-    auto* pnl = dynamic_cast<MenuPanel*>(static_cast<Control*>(panel));
+    Control* panelV = validateControl(instance, panel);
+    if (!panelV) return;
+    auto* pnl = dynamic_cast<MenuPanel*>(panelV);
     if (pnl) pnl->addSeparator();
 }
 
 void UICornerstone_MenuItemSetSubMenu(UIInstance instance, UIControlHandle item, UIControlHandle panel) {
     if (!instance || !item || !panel) return;
+    Control* itemV = validateControl(instance, item);
+    Control* panelV = validateControl(instance, panel);
+    if (!itemV || !panelV) return;
     auto sp = menuPoolTake(instance, panel);
     if (!sp) return;
-    auto* it = dynamic_cast<MenuItem*>(static_cast<Control*>(item));
+    auto* it = dynamic_cast<MenuItem*>(itemV);
     if (it) it->setSubMenu(std::dynamic_pointer_cast<MenuPanel>(sp));
 }
 
@@ -825,12 +881,16 @@ UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
 // ============================================================
 void UICornerstone_SetRect(UIInstance instance, UIControlHandle ctl, float x, float y, float w, float h) {
     if (!instance || !ctl) return;
-    static_cast<Control*>(ctl)->setRect(SRect(x, y, w, h));
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return;
+    ctlV->setRect(SRect(x, y, w, h));
 }
 
 void UICornerstone_GetRect(UIInstance instance, UIControlHandle ctl, float* x, float* y, float* w, float* h) {
     if (!instance || !ctl) return;
-    SRect r = static_cast<Control*>(ctl)->getRect();
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return;
+    SRect r = ctlV->getRect();
     if (x) *x = r.left;
     if (y) *y = r.top;
     if (w) *w = r.width;
@@ -839,8 +899,11 @@ void UICornerstone_GetRect(UIInstance instance, UIControlHandle ctl, float* x, f
 
 void UICornerstone_AddChildControl(UIInstance instance, UIControlHandle parent, UIControlHandle child) {
     if (!instance || !parent || !child) return;
-    auto* ctlImpl = dynamic_cast<ControlImpl*>(static_cast<Control*>(child));
-    auto* panel = dynamic_cast<Panel*>(static_cast<Control*>(parent));
+    Control* parentV = validateControl(instance, parent);
+    Control* childV = validateControl(instance, child);
+    if (!parentV || !childV) return;
+    auto* ctlImpl = dynamic_cast<ControlImpl*>(childV);
+    auto* panel = dynamic_cast<Panel*>(parentV);
     if (!ctlImpl || !panel) return;
     auto sp = ctlImpl->shared_from_this();
     instance->bench->removeControl(sp);
@@ -849,6 +912,8 @@ void UICornerstone_AddChildControl(UIInstance instance, UIControlHandle parent, 
 
 const char* UICornerstone_GetControlId(UIInstance instance, UIControlHandle ctl) {
     if (!instance || !ctl) return "";
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return "";
     for (const auto& pair : instance->controlsById) {
         if (pair.second == ctl) {
             instance->strBuf = pair.first;
@@ -861,7 +926,9 @@ const char* UICornerstone_GetControlId(UIInstance instance, UIControlHandle ctl)
 
 void UICornerstone_DestroyControl(UIInstance instance, UIControlHandle ctl) {
     if (!instance || !ctl) return;
-    auto* ctrl = dynamic_cast<ControlImpl*>(static_cast<Control*>(ctl));
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return;
+    auto* ctrl = dynamic_cast<ControlImpl*>(ctlV);
     if (!ctrl) return;
     try {
         auto sp = ctrl->shared_from_this();
@@ -968,10 +1035,12 @@ UIControlHandle UICornerstone_CreateTreeView(UIInstance instance, float x, float
 UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
     UIControlHandle target, float x, float y, float w, float h) {
     if (!instance || !target) return nullptr;
+    Control* targetV = validateControl(instance, target);
+    if (!targetV) return nullptr;
     auto hc = make_shared<HandleControl>();
     hc->setRect(SRect(x, y, w, h));
     hc->create();
-    hc->setTarget(static_cast<Control*>(target));
+    hc->setTarget(targetV);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(hc.get()));
 }
 
@@ -981,13 +1050,15 @@ UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
 
 int UICornerstone_SetColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIColor value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setColorProperty(prop, SColor(value.r, value.g, value.b, value.a));
 }
 
 int UICornerstone_SetStateColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIStateColor value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setStateColorProperty(prop,
         StateColor(
             SColor(value.normal.r, value.normal.g, value.normal.b, value.normal.a),
@@ -999,55 +1070,64 @@ int UICornerstone_SetStateColor(UIInstance instance, UIControlHandle ctl, const 
 
 int UICornerstone_SetInt(UIInstance instance, UIControlHandle ctl, const char* prop, int value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setIntProperty(prop, value);
 }
 
 int UICornerstone_SetFloat(UIInstance instance, UIControlHandle ctl, const char* prop, float value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setFloatProperty(prop, value);
 }
 
 int UICornerstone_SetString(UIInstance instance, UIControlHandle ctl, const char* prop, const char* value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setStringProperty(prop, value);
 }
 
 int UICornerstone_SetBool(UIInstance instance, UIControlHandle ctl, const char* prop, int value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setBoolProperty(prop, value);
 }
 
 int UICornerstone_SetEnum(UIInstance instance, UIControlHandle ctl, const char* prop, const char* value) {
     if (!instance || !ctl || !prop || !value) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setEnumProperty(prop, value);
 }
 
 int UICornerstone_SetPtr(UIInstance instance, UIControlHandle ctl, const char* prop, void* value) {
     if (!instance || !ctl || !prop) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setPtrProperty(prop, value);
 }
 
 int UICornerstone_GetPtr(UIInstance instance, UIControlHandle ctl, const char* prop, void** out) {
     if (!instance || !ctl || !prop || !out) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->getPtrProperty(prop, *out);
 }
 
 int UICornerstone_SetCallback(UIInstance instance, UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
     if (!instance || !ctl || !event) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->setCallbackProperty(event, reinterpret_cast<void(*)(void*, const void*, void*)>(cb), userData);
 }
 
 int UICornerstone_GetColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIColor* out) {
     if (!instance || !ctl || !prop || !out) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     SColor s;
     if (!c->getColorProperty(prop, s)) return 0;
     out->r = s.redByte(); out->g = s.greenByte();
@@ -1057,7 +1137,8 @@ int UICornerstone_GetColor(UIInstance instance, UIControlHandle ctl, const char*
 
 int UICornerstone_GetStateColor(UIInstance instance, UIControlHandle ctl, const char* prop, UIStateColor* out) {
     if (!instance || !ctl || !prop || !out) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     SColor def = SColor();
     StateColor sc{def, def, def, def};
     if (!c->getStateColorProperty(prop, sc)) return 0;
@@ -1070,25 +1151,29 @@ int UICornerstone_GetStateColor(UIInstance instance, UIControlHandle ctl, const 
 
 int UICornerstone_GetBool(UIInstance instance, UIControlHandle ctl, const char* prop, int* out) {
     if (!instance || !ctl || !prop || !out) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->getBoolProperty(prop, *out);
 }
 
 int UICornerstone_GetInt(UIInstance instance, UIControlHandle ctl, const char* prop, int* out) {
     if (!instance || !ctl || !prop || !out) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->getIntProperty(prop, *out);
 }
 
 int UICornerstone_GetFloat(UIInstance instance, UIControlHandle ctl, const char* prop, float* out) {
     if (!instance || !ctl || !prop || !out) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     return c->getFloatProperty(prop, *out);
 }
 
 int UICornerstone_GetString(UIInstance instance, UIControlHandle ctl, const char* prop, char* out, int maxLen) {
     if (!instance || !ctl || !prop || !out || maxLen <= 0) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     const char* s = nullptr;
     if (!c->getStringProperty(prop, s) || !s) return 0;
     strncpy_s(out, maxLen, s, _TRUNCATE);
@@ -1097,7 +1182,8 @@ int UICornerstone_GetString(UIInstance instance, UIControlHandle ctl, const char
 
 int UICornerstone_GetEnum(UIInstance instance, UIControlHandle ctl, const char* prop, char* out, int maxLen) {
     if (!instance || !ctl || !prop || !out || maxLen <= 0) return 0;
-    auto* c = static_cast<Control*>(ctl);
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
     const char* s = nullptr;
     if (!c->getEnumProperty(prop, s) || !s) return 0;
     strncpy_s(out, maxLen, s, _TRUNCATE);

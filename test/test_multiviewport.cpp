@@ -1,0 +1,245 @@
+﻿// test_multiviewport.cpp — 多视口测试（设计文档 §5.13.7 + K1-K8 键盘跨视口导航）
+// 静态链接后端（GetUIBackendCallbacks），Debug 构建运行（依赖 Debug 辅助 API）。
+// 注：真实鼠标点击清 activeViewport 属于轮询通路（ownsBackend 分支），
+// 注入通路（PushUIEvent → queuedEvents）不经过该逻辑，K8 改用
+// "直接销毁活动视口 → activeViewport 清空"验证 cur==nullptr 分支。
+#include "UICornerstoneAPI.h"
+#include "EventTypes.h"
+#include <cstdio>
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+
+extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
+
+#ifdef _MSC_VER
+#define DISABLE_ASSERT_DIALOG() _set_error_mode(_OUT_TO_STDERR), _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT)
+#else
+#define DISABLE_ASSERT_DIALOG() ((void)0)
+#endif
+
+// ── 事件注入辅助 ──
+static void injectKey(UIInstance inst, KeyCode code, KeyMod mod, bool down) {
+    UIEvent ev; memset(&ev, 0, sizeof(ev));
+    ev.type = down ? UI_EVENT_KEY_DOWN : UI_EVENT_KEY_UP;
+    UI_EVENT_KEY_CODE(&ev) = (int)code;
+    UI_EVENT_KEY_MOD(&ev) = (uint16_t)mod;
+    UICornerstone_PushUIEvent(inst, &ev);
+    UICornerstone_ProcessEvents(inst);
+    UICornerstone_Update(inst, 0.016);   // 事件入队后经 eventLoopEntry 分发
+}
+
+static void frame(UIInstance win, UIInstance vp1, UIInstance vp2) {
+    UICornerstone_ProcessEvents(win);
+    if (vp1) { UICornerstone_Update(vp1, 0.016); UICornerstone_Render(vp1); }
+    if (vp2) { UICornerstone_Update(vp2, 0.016); UICornerstone_Render(vp2); }
+}
+
+// ── 每用例独立窗口，避免状态纠缠 ──
+static void testK1() {
+    // K1：单视口（无子视口）+ 2 WinFrame，Ctrl+Tab 行为不变
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+    assert(win);
+    UIControlHandle wfA = UICornerstone_CreateWinFrame(win, "WinA", 10, 10, 300, 200);
+    UIControlHandle wfB = UICornerstone_CreateWinFrame(win, "WinB", 10, 240, 300, 200);
+    assert(wfA && wfB);
+    frame(win, NULL, NULL);
+
+    // children.size()==0 → tryViewportScopeSwitch 短路，Ctrl+Tab 原样进视口内 FocusManager
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == NULL);
+    injectKey(win, KeyCode::Tab, (KeyMod)(KeyMod::LCtrl | KeyMod::LShift), true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == NULL);
+
+    UICornerstone_DestroyInstance(win);
+    printf("PASS: K1 single viewport Ctrl+Tab\n");
+}
+
+static void testK2() {
+    // K2：双视口各 1 WinFrame；首次 Ctrl+Tab 视口内优先，隐藏后跨视口
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+    UIInstance vp1 = UICornerstone_CreateViewport(win, UIRect{0, 0, 640, 480});
+    UIInstance vp2 = UICornerstone_CreateViewport(win, UIRect{640, 0, 640, 480});
+    assert(vp1 && vp2 && vp1 != vp2);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);  // 首子视口自动 active
+
+    UIControlHandle editA = UICornerstone_CreateEditBox(vp1, 10, 10, 200, 30);
+    UIControlHandle wfA = UICornerstone_CreateWinFrame(vp1, "WinA", 10, 60, 300, 200);
+    UIControlHandle editB1 = UICornerstone_CreateEditBox(vp2, 10, 10, 200, 30);
+    assert(editA && wfA && editB1);
+    frame(win, vp1, vp2);
+
+    // 首次 Ctrl+Tab：vp1 有 1 个可见 boundary → 视口内优先，不跨视口
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);
+
+    // 隐藏 vp1 的 WinFrame → vp1 可见 boundary == 0 → 跨视口切 vp2，
+    // focusFirstInScope(vp2.bench) 聚焦第一个可聚焦控件 EditBox_B1
+    assert(UICornerstone_SetBool(vp1, wfA, "visible", 0) == 1);
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp2);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA) == 0);  // vp1 旧焦点被清
+
+    UICornerstone_DestroyInstance(vp2);
+    UICornerstone_DestroyInstance(vp1);
+    UICornerstone_DestroyInstance(win);
+    printf("PASS: K2 viewport-priority then cross-viewport\n");
+}
+
+static void testK3K4K5() {
+    // K3：vp1 内 2 WinFrame，Ctrl+Tab 在视口内切换；K4：全部隐藏后跨视口；K5：反向
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+    UIInstance vp1 = UICornerstone_CreateViewport(win, UIRect{0, 0, 640, 480});
+    UIInstance vp2 = UICornerstone_CreateViewport(win, UIRect{640, 0, 640, 480});
+    assert(vp1 && vp2);
+
+    UIControlHandle editA = UICornerstone_CreateEditBox(vp1, 10, 10, 200, 30);
+    UIControlHandle wfA1 = UICornerstone_CreateWinFrame(vp1, "WinA1", 10, 60, 300, 180);
+    UIControlHandle wfA2 = UICornerstone_CreateWinFrame(vp1, "WinA2", 10, 260, 300, 180);
+    UIControlHandle editB1 = UICornerstone_CreateEditBox(vp2, 10, 10, 200, 30);
+    assert(editA && wfA1 && wfA2 && editB1);
+    frame(win, vp1, vp2);
+
+    // K3：vp1 有 2 个可见 boundary → 视口内优先
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);
+
+    // K4：vp1 的 2 个 WinFrame 全部隐藏 → 跨视口跳 vp2
+    assert(UICornerstone_SetBool(vp1, wfA1, "visible", 0) == 1);
+    assert(UICornerstone_SetBool(vp1, wfA2, "visible", 0) == 1);
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp2);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 1);
+
+    // K5：Ctrl+Shift+Tab 反向：vp2 → vp1
+    injectKey(win, KeyCode::Tab, (KeyMod)(KeyMod::LCtrl | KeyMod::LShift), true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA) == 1);  // focusFirstInScope(vp1)
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 0);
+
+    UICornerstone_DestroyInstance(vp2);
+    UICornerstone_DestroyInstance(vp1);
+    UICornerstone_DestroyInstance(win);
+    printf("PASS: K3/K4/K5 in-viewport switch, cross on hidden, reverse\n");
+}
+
+static void testK6() {
+    // K6：Tab 只在当前 activeViewport 内循环，不进入 vp1（注入目标须为 vp2）
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+    UIInstance vp1 = UICornerstone_CreateViewport(win, UIRect{0, 0, 640, 480});
+    UIInstance vp2 = UICornerstone_CreateViewport(win, UIRect{640, 0, 640, 480});
+    assert(vp1 && vp2);
+
+    UIControlHandle editA = UICornerstone_CreateEditBox(vp1, 10, 10, 200, 30);
+    UIControlHandle editB1 = UICornerstone_CreateEditBox(vp2, 10, 10, 200, 30);
+    UIControlHandle editB2 = UICornerstone_CreateEditBox(vp2, 10, 50, 200, 30);
+    assert(editA && editB1 && editB2);
+    frame(win, vp1, vp2);
+
+    // 无焦点 → Tab 聚焦 vp2 第一个可聚焦控件 EditBox_B1
+    injectKey(vp2, KeyCode::Tab, KeyMod::None, true);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA) == 0);   // vp1 不受影响
+
+    // 再 Tab → B1 → B2，仍在 vp2 内
+    injectKey(vp2, KeyCode::Tab, KeyMod::None, true);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB2) == 1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 0);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA) == 0);
+
+    UICornerstone_DestroyInstance(vp2);
+    UICornerstone_DestroyInstance(vp1);
+    UICornerstone_DestroyInstance(win);
+    printf("PASS: K6 Tab stays inside active viewport\n");
+}
+
+static void testK7() {
+    // K7：焦点回跳——切回 vp1 时 focusFirstInScope 聚焦第一个可聚焦控件，不记忆原焦点
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+    UIInstance vp1 = UICornerstone_CreateViewport(win, UIRect{0, 0, 640, 480});
+    UIInstance vp2 = UICornerstone_CreateViewport(win, UIRect{640, 0, 640, 480});
+    assert(vp1 && vp2);
+
+    UIControlHandle editA1 = UICornerstone_CreateEditBox(vp1, 10, 10, 200, 30);
+    UIControlHandle editA2 = UICornerstone_CreateEditBox(vp1, 10, 50, 200, 30);
+    UIControlHandle editB1 = UICornerstone_CreateEditBox(vp2, 10, 10, 200, 30);
+    assert(editA1 && editA2 && editB1);
+    frame(win, vp1, vp2);
+
+    // 原焦点在 vp1 的 EditBox_A2
+    injectKey(vp1, KeyCode::Tab, KeyMod::None, true);   // → A1
+    injectKey(vp1, KeyCode::Tab, KeyMod::None, true);   // → A2
+    assert(UICornerstone_Debug_IsControlFocused(win, editA2) == 1);
+
+    // 跨视口切到 vp2（vp1 无 boundary）→ B1 聚焦，A2 失焦
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp2);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA2) == 0);
+
+    // 切回 vp1 → focusFirstInScope 聚焦 A1（不是记忆的 A2）
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA1) == 1);
+    assert(UICornerstone_Debug_IsControlFocused(win, editA2) == 0);
+
+    UICornerstone_DestroyInstance(vp2);
+    UICornerstone_DestroyInstance(vp1);
+    UICornerstone_DestroyInstance(win);
+    printf("PASS: K7 focus returns to first control in scope\n");
+}
+
+static void testK8() {
+    // K8：activeViewport 为 null 时（直接销毁活动视口后）Ctrl+Tab 从 children.front() 切入。
+    // 注意：children.size()<=1 时 tryViewportScopeSwitch 短路，故用 3 个视口，
+    // 销毁活动视口 vp1 后仍剩 2 个子视口，覆盖 cur==nullptr 分支
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    UIInstance win = UICornerstone_CreateInstance(cb, NULL);
+    UIInstance vp1 = UICornerstone_CreateViewport(win, UIRect{0, 0, 320, 480});
+    UIInstance vp2 = UICornerstone_CreateViewport(win, UIRect{320, 0, 320, 480});
+    UIInstance vp3 = UICornerstone_CreateViewport(win, UIRect{640, 0, 320, 480});
+    assert(vp1 && vp2 && vp3);
+
+    UIControlHandle editA = UICornerstone_CreateEditBox(vp1, 10, 10, 200, 30);
+    UIControlHandle editB1 = UICornerstone_CreateEditBox(vp2, 10, 10, 200, 30);
+    assert(editA && editB1);
+    frame(win, vp1, vp2);
+
+    // 直接销毁活动视口 vp1 → owner 将 activeViewport 置空（防悬垂）
+    UICornerstone_DestroyInstance(vp1);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == NULL);
+
+    // Ctrl+Tab：cur==nullptr 分支 → nextViewport 从 children.front()（vp2）切入，不崩溃
+    injectKey(win, KeyCode::Tab, KeyMod::LCtrl, true);
+    assert(UICornerstone_Debug_GetActiveViewport(win) == vp2);
+    assert(UICornerstone_Debug_IsControlFocused(win, editB1) == 1);
+
+    UICornerstone_DestroyInstance(vp3);
+    UICornerstone_DestroyInstance(vp2);
+    UICornerstone_DestroyInstance(win);
+    printf("PASS: K8 activeViewport==null after destroy, Ctrl+Tab re-enters\n");
+}
+
+int main() {
+    DISABLE_ASSERT_DIALOG();
+    UIBackendCallbacks* cb = GetUIBackendCallbacks();
+    assert(cb);
+    (void)cb;
+
+    testK1();
+    testK2();
+    testK3K4K5();
+    testK6();
+    testK7();
+    testK8();
+
+    assert(UICornerstone_Debug_GetAliveCount() == 0);
+    printf("ALL PASS: multiviewport + keyboard navigation\n");
+    return 0;
+}

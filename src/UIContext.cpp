@@ -35,7 +35,17 @@ bool UIContext::initialize() {
     // 步骤 1: Backend（仅 owner 创建；子视口共享 owner 后端）
     if (ownsBackend) {
         backendManager = new BackendManager();
+        // 窗口标题标记（仅 Debug）：追加实例标签，便于多窗口调试识别（§5.11.5）
+#ifdef _DEBUG
+        std::string titleStr;
+        if (!windowTitle.empty()) {
+            titleStr = windowTitle;
+            if (!debugLabel.empty()) titleStr += " [" + debugLabel + "]";
+        }
+        const char* title = titleStr.empty() ? nullptr : titleStr.c_str();
+#else
         const char* title = windowTitle.empty() ? nullptr : windowTitle.c_str();
+#endif
         if (!backendManager->initialize(callbacks, title, windowWidth, windowHeight, windowFlags)) {
             delete backendManager;
             backendManager = nullptr;

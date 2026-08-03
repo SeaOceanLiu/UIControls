@@ -66,6 +66,7 @@ set(CORE_SOURCES
     src/Surface.cpp
     src/TextArea.cpp
     src/Theme.cpp
+    src/UIContext.cpp
     src/UICornerstoneAPI.cpp
 )
 

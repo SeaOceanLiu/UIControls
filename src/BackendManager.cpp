@@ -113,7 +113,7 @@ bool BackendManager::initialize(const UIBackendCallbacks* callbacks,
 
     UIRenderDeviceHandle rdHandle = nullptr;
     if (callbacks->createRenderDevice) {
-        rdHandle = callbacks->createRenderDevice(nullptr);
+        rdHandle = callbacks->createRenderDevice(winHandle);
         if (!rdHandle) {
             printf("BackendManager: callback createRenderDevice failed\n");
             delete m_window; m_window = nullptr;

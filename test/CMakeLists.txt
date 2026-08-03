@@ -109,6 +109,8 @@ set(UI_TEST_EXECUTABLES
     test_layout
     test_layout_advanced
     test_winframe
+    test_multi_instance
+    test_multiviewport
 )
 
 foreach(test_name ${UI_TEST_EXECUTABLES})

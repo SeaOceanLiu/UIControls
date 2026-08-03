@@ -22,14 +22,20 @@ public:
         InitWindow(w, h, title);
         SetTraceLogLevel(LOG_WARNING);  // Suppress raylib's INFO spam (font/texture load logs)
         SetExitKey(0);                  // Don't let ESC close the window — UICornerstone handles it
-        // SetTargetFPS is NOT set — present() does its own 60 Hz timing.
+        // SetTargetFPS is NOT set — present() does its own 60 Hz timing.
 
         m_renderDevice = CreateRaylibRenderDevice();
     }
 
     ~RaylibWindow() override {
-        delete m_renderDevice;
-        CloseWindow();
+        // Render device is owned and deleted by BackendManager
+        // (与 SFML/SDL3 所有权约定一致，避免 double delete)
+        m_renderDevice = nullptr;
+        // raylib 是单窗口架构：全局 CORE 只跟踪最近一次 InitWindow 的窗口。
+        // 多实例并发时，先创建实例的窗口在后续 InitWindow 时已被覆盖，
+        // 其析构时 CORE 可能已指向/已关闭其他窗口——二次 CloseWindow 会崩溃，
+        // 故用 IsWindowReady() 守卫（窗口未就绪时跳过，避免重复关闭）。
+        if (IsWindowReady()) CloseWindow();
     }
 
     SSize getSize() const override {

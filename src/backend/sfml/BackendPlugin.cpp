@@ -67,27 +67,20 @@ BackendAPI g_sfmlBackend = {
   #define BACKEND_PLUGIN_EXPORT
 #endif
 
-static Window*      g_pluginWin = nullptr;
-static RenderDevice* g_pluginRD = nullptr;
-static TextRenderer* g_pluginTR = nullptr;
-static InputBackend* g_pluginIB = nullptr;
-
 static UIWindowHandle plugin_createWindow(const char* t, int w, int h, uint32_t f) {
-    if (g_pluginWin) return (UIWindowHandle)g_pluginWin;
-    g_pluginWin = sfmlCreateWindow(t, w, h, f);
-    return (UIWindowHandle)g_pluginWin;
+    return (UIWindowHandle)sfmlCreateWindow(t, w, h, f);
 }
-static UIRenderDeviceHandle plugin_createRenderDevice(void*) {
-    if (!g_pluginRD && g_pluginWin) g_pluginRD = g_pluginWin->renderDevice();
-    return (UIRenderDeviceHandle)g_pluginRD;
+static UIRenderDeviceHandle plugin_createRenderDevice(void* nativeContext) {
+    Window* win = static_cast<Window*>(nativeContext);
+    return (UIRenderDeviceHandle)(win ? win->renderDevice() : nullptr);
 }
-static UITextRendererHandle plugin_createTextRenderer(UIRenderDeviceHandle) {
-    if (!g_pluginTR && g_pluginRD) g_pluginTR = CreateSFMLTextRenderer(g_pluginRD);
-    return (UITextRendererHandle)g_pluginTR;
+static UITextRendererHandle plugin_createTextRenderer(UIRenderDeviceHandle rd) {
+    if (!rd) return nullptr;
+    return (UITextRendererHandle)CreateSFMLTextRenderer(static_cast<RenderDevice*>(rd));
 }
-static UIInputBackendHandle plugin_createInputBackend(void*) {
-    if (!g_pluginIB && g_pluginWin) g_pluginIB = CreateSFMLInputBackend(g_pluginWin);
-    return (UIInputBackendHandle)g_pluginIB;
+static UIInputBackendHandle plugin_createInputBackend(void* nativeWindowHandle) {
+    if (!nativeWindowHandle) return nullptr;
+    return (UIInputBackendHandle)CreateSFMLInputBackend(static_cast<Window*>(nativeWindowHandle));
 }
 
 extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void) {

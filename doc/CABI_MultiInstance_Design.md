@@ -1,6 +1,6 @@
 ﻿# C ABI 多实例支持改造设计
 
-> 对应 Phase 16ii | 编制 2026-07-30 | 修订 2026-07-31 | **2026-08-03 实施完成（核心框架），状态：已实施**
+> 对应 Phase 16ii | 编制 2026-07-30 | 修订 2026-07-31 | **2026-08-03 实施完成（核心框架），状态：已实施** | **2026-08-04 收尾：专项测试 + #17 + 校验 + 标题标记全部落地（见各节 2026-08-04 实施状态注）**
 
 ## 目录
 
@@ -61,6 +61,8 @@ DataContext::getInstance()   → static shared_ptr<DataContext> s_instance
 ## 2. 全局状态清单
 
 > **实施状态（2026-08-03）**：以下清单为改造前状态。14 项已全部迁入 `UIContext` 结构体成员（UIContext.h），5 个单例已实例化，宏已改为 `GET_CONTEXT` 版本。**遗留未实施项**：后端插件 3 个 DLL 的静态缓存仍保留（§2.4/§5.6，不影响多实例隔离——BackendManager 单实例缓存窗口对象，子视口共享；仅"同时多窗口"场景受限），`test_multi_instance.cpp` / `test_multiviewport.cpp` 尚未创建。
+>
+> **实施状态（2026-08-04）**：§2.4 后端插件静态缓存（#17）已移除（三后端 BackendPlugin.cpp 每次 `new`，见 §5.6）；`test_multi_instance.cpp` / `test_multiviewport.cpp` 已创建并在三后端（SDL3/SFML/raylib）全部通过（见 §5.12.2/§5.13.7）。**遗留**：#19（`g_pathPrefix`）、#21（C++ Binding），见 §6。
 
 ### 2.1 UICornerstoneAPI.cpp（实例上下文，14 项）
 
@@ -512,6 +514,10 @@ UICORNERSTONE_API int      UICornerstone_Debug_IsControlFocused(UIInstance insta
 ```
 
 > **控件句柄归属校验**：`UIControlHandle` 是裸指针，C ABI 层无法判断句柄属于哪个实例。建议所有带句柄的函数入口校验：句柄为空 → 直接返回 0/NULL；句柄非本实例（遍历 `instance->controlsById` 或控件树，O(n)，仅 Debug 构建开启）→ 断言。Release 构建不做归属校验（性能优先），行为由调用方保证，见 §7 风险 5。
+>
+> **实施状态（2026-08-03）**：**未实施**——`UICornerstoneAPI.cpp` 无任何句柄归属校验（`_DEBUG` 仅用于实例注册表/LeakDetector，见 §5.11.3），Release 与 Debug 均不做。跨实例句柄误用属调用方责任（§7 风险 5）。
+>
+> **实施状态（2026-08-04）**：**已实施**——`_DEBUG` 下新增 `validateControl`（UICornerstoneAPI.cpp:78-116）：`treeContains` 遍历本实例 bench 控件树（`controlsById` + 后代 DFS）+ `popupPool`/`menuPool` 兜底，非法句柄直接 `assert`（Debug 断言，Release 返回 0/NULL 不崩溃）。已接入 27 个带句柄入口（SetRect/GetRect/AddChildControl/GetControlId/DestroyControl/CreateHandleControl/8 个属性 getter/9 个属性 setter/menu 系列 4 个）。Release 仍不做（性能优先），见 §7 风险 5。
 
 **`CreateInstance` 内部流程**（实际实现，src/UICornerstoneAPI.cpp:228-271）：
 
@@ -845,6 +851,8 @@ UIControlHandle UICornerstone_CreateButton(
 ### 5.6 后端插件改造
 
 > **实施状态（2026-08-03）**：**本小节未实施**。三个后端（SDL3/SFML/raylib）的 `BackendPlugin.cpp` 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存（创建函数 `if (!g_pluginXxx) ...` 单例化返回）。当前 `CreateInstance` 单实例场景下 BackendManager 每个 owner 只创建一次后端对象，静态缓存与其不冲突（第二次 CreateInstance 拿到的仍是同一窗口，即"多窗口同时"受限）。若未来需要真正多窗口（多个 owner 各自独立窗口），须按下方方案移除静态缓存。**destroy 回调已确认接线**（`bridge_destroyWindow` 等已在回调表，见下方 §5.6 修订说明）。
+>
+> **实施状态（2026-08-04）**：**本小节已实施（#17）**——三后端 `BackendPlugin.cpp` 的 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存已全部移除，创建函数改为每次 `new`（`plugin_createWindow` → `raylibCreateWindow` 等直接构造；`plugin_createRenderDevice`/`plugin_createTextRenderer`/`plugin_createInputBackend` 从传入的 nativeContext 派生，不再依赖模块级缓存）。`BackendManager::shutdown`（BackendManager.cpp:156-173）按 TR→IB→RD→Window 逆序释放，多实例隔离测试（§5.12.2 测试 4：销毁再创建 x100）已验证无泄漏。**新增 raylib 适配**（本项实施后暴露）：raylib 为单窗口架构，全局 `CORE` 仅跟踪最近一次 `InitWindow`；多实例并发时先创建实例的窗口会被后续实例覆盖，其析构二次 `CloseWindow` 会崩溃——`RaylibWindow::~RaylibWindow` 已加 `IsWindowReady()` 守卫（raylib/Window.cpp:30-40），其余两后端原生多窗口无此问题。
 
 #### 移除静态缓存
 
@@ -1279,6 +1287,8 @@ static LeakDetector s_leakCheck;
 #### 5.11.5 窗口标题标记
 
 > **实施状态（2026-08-03）**：**未实施**——`BackendManager::initialize` 创建窗口时直接使用 `title ? title : "UICornerstone"`（BackendManager.cpp:103-106），未在 Debug 下追加 `debugLabel`（多实例调试识别靠 §5.11.2 日志前缀与 §5.11.3 注册表，窗口标题不区分实例）。下方方案若需要可随时补充，仅涉及 `createWindow` 调用处。
+>
+> **实施状态（2026-08-04）**：**已实施**——`UIContext::initialize`（UIContext.cpp:38-48）在 `_DEBUG` 下拼 `windowTitle + " [" + debugLabel + "]"`（debugLabel 为空时不追加），Release 保持原标题；不设标题时传 `nullptr` 由后端兜底。子视口共享 owner 窗口（`ownsBackend == false` 分支不经过该逻辑）。
 
 如果后端允许，在窗口标题中追加实例标签（仅 Debug 构建）：
 
@@ -1356,6 +1366,8 @@ UICornerstone_DestroyInstance(inst);
 #### 5.12.2 新增：多实例 C ABI 测试
 
 > **实施状态（2026-08-03）**：**未创建** `test/test_multi_instance.cpp`。下述测试 1-5 的方案仍有效，作为后续补充时的依据（多实例隔离已在现有测试的 TestInstance 单实例模式下隐式覆盖部分场景；专门的"双实例/事件隔离/Action 隔离/销毁再创建"用例待补）。
+>
+> **实施状态（2026-08-04）**：**已创建并通过** `test/test_multi_instance.cpp`（test/CMakeLists.txt 已注册 `test_multi_instance` 目标）。SDL3/SFML/raylib 三后端全部 `ALL PASS: multi-instance isolation`。实施要点：测试通过 `extern "C" GetUIBackendCallbacks()` 静态链接后端（该声明不在测试 include 路径）；事件注入（`PushUIEvent` 入队）必须经 `ProcessEvents` + `Update(0.016)` 才由 `TopControl::eventLoopEntry` 分发；`MouseButton::Left == 1`（EventTypes.h:148-152）注入代码必须为 1；断言弹窗用 `_set_error_mode`/`_set_abort_behavior` 禁用；测试文件保持 UTF-8 with BOM（MSVC C4819）。测试 5 空值容错原文档位于测试 4 之后，实施时移至首位（不依赖实例、先测）。
 
 新建 `test/test_multi_instance.cpp`，专测多实例隔离性。编译为独立可执行文件，与现有测试并列。
 
@@ -1481,10 +1493,14 @@ flowchart TD
 | 空值容错 | 崩溃即失败 | — | 三个后端 |
 
 > **实施状态（2026-08-03）**：§5.12.2/5.12.3 的专项多实例测试**未创建**，待补充。
+>
+> **实施状态（2026-08-04）**：§5.12.2/5.12.3 专项测试**已创建并通过**（三后端）。§5.12.3 的注入/驱动方式与"测试 4 销毁再创建"共同验证了实例生命周期边界；raylib 后端的 `IsWindowReady` 守卫（§5.6）即由本测试暴露。
 
 ### 5.13 扩展分析：单窗口多 BENCH 视口
 
 > **实施状态（2026-08-03）**：本扩展分析已按 §5.13.4/5.13.5 完整实施（`CreateViewport`、`owner/children/activeViewport/ownsBackend`、坐标路由、焦点转移、Ctrl+Tab 智能路由、`getVisibleBoundaryCount`）。`test_multiviewport.cpp`（§5.13.7）**未创建**。§5.13.4 的 UIContext 结构体与 §5.1 相同（实施时统一为一处定义）。
+>
+> **实施状态（2026-08-04）**：`test_multiviewport.cpp`（§5.13.7）**已创建并通过**（三后端）。另修复一个测试暴露的真实 bug：`UICornerstone_CreateViewport` 中写入的 `vp->viewport` 会被 `UIContext::initialize` 的兜底 `viewport = owner->viewport` 覆盖（UIContext.cpp:65），导致视口 rect 恒为 owner 视口——现于 `initialize()` 后重新赋值 `vp->viewport = SRect(...)` 并 `vp->bench->resized(...)`（UICornerstoneAPI.cpp:315-339）。
 
 > 这是多实例的**主要应用场景**——一个应用程序/一个窗口内同时显示多个独立的 UI 视口（如编辑器多面板、仪表盘多区块）。当前设计假设 1:1 的"一个 UIInstance = 一个窗口 + 一个控制树"，无法覆盖此场景。
 
@@ -2054,6 +2070,8 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
 #### 5.13.7 新增测试：单窗口多视口
 
 > **实施状态（2026-08-03）**：`test/test_multiviewport.cpp` **未创建**（K1-K8 用例与下述测试桩保留为后续补充依据）。所需调试辅助 API 已实现：`UICornerstone_Debug_GetActiveViewport` / `UICornerstone_Debug_IsControlFocused`（UICornerstoneAPI.cpp:553-562，Debug 构建有效，Release 返回 nullptr/0）。
+>
+> **实施状态（2026-08-04）**：`test/test_multiviewport.cpp` **已创建并通过**（test/CMakeLists.txt 已注册 `test_multiviewport` 目标，三后端 `ALL PASS: multiviewport + keyboard navigation`）。K1-K8 全部按下文实现，实施时两处调整：①**K2 前提**——`WinFrame` 的 `visible=0` 隐藏后其注册的 focus boundary 不再计入 `getVisibleBoundaryCount`，跨视口切换按文档语义生效（隐藏 WinFrame 而非销毁）；②**K8 前提**——`tryViewportScopeSwitch` 对 `children.size() <= 1` 直接短路（单视口无需跨），故 K8 用 **3 个视口**：销毁活动视口 vp1 后仍剩 2 个子视口，`activeViewport==null` 时 Ctrl+Tab 从 `children.front()`（vp2）切入并 `focusFirstInScope` 聚焦 editB1。测试还发现并验证了 §5.13.4 注的视口 rect 覆盖 bug（见 §5.13 实施状态注）与 raylib 二次 `CloseWindow` 崩溃（§5.6）。
 
 新建 `test/test_multiviewport.cpp`：
 
@@ -2167,7 +2185,9 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 
 ## 6. 实施清单
 
-> **实施状态（2026-08-03）**：除以下 3 项外，**清单 1-32 已全部实施**。未实施项：**#17**（三后端 BackendPlugin.cpp 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存，未改为每次 new，见 §5.6）、**#19**（`g_pathPrefix` 未迁入 UIContext，`resourceRoot` 覆盖由 UIInstanceConfig 提供，见 §5.1）、**#27**（`test_multiviewport.cpp` 未创建，见 §5.13.7）。"影响范围汇总"表内"新增 3 个文件"相应调整为 2 个（test_multiviewport.cpp 未创建）。
+> **实施状态（2026-08-03）**：除以下 4 项外，**清单 1-32 已全部实施**。未实施项：**#17**（三后端 BackendPlugin.cpp 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存，未改为每次 new，见 §5.6）、**#19**（`g_pathPrefix` 未迁入 UIContext，`resourceRoot` 覆盖由 UIInstanceConfig 提供，见 §5.1）、**#21**（C++ Binding 未实现——仓库无 binding 文件、无 `class UICornerstone`，`doc/CppBinding_Design.md` 为草案；该功能有专门设计文档，待实际实施时随该文档一并刷新本文档）、**#27**（`test_multiviewport.cpp` 未创建，见 §5.13.7）。"影响范围汇总"表内"新增 3 个文件"相应调整为 2 个（test_multiviewport.cpp 未创建）。
+>
+> **实施状态（2026-08-04）**：未实施项减为 **2 项**：#19（`g_pathPrefix`，`resourceRoot` 覆盖由 UIInstanceConfig 提供）、#21（C++ Binding，见 `doc/CppBinding_Design.md` 草案）。**#17 已实施**（§5.6：三后端静态缓存移除 + raylib `IsWindowReady` 守卫）、**#27 已实施**（§5.13.7：`test_multiviewport.cpp` 创建并通过，K1-K8 三后端全过）。"影响范围汇总"表恢复"新增 3 个文件"（含 test_multiviewport.cpp），另增 `src/backend/raylib/Window.cpp` 一行（CloseWindow 守卫）。
 
 | 序号 | 文件 | 操作 | 工作量 |
 |------|------|------|--------|
@@ -2191,7 +2211,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 18 | `include/PlatformUtils.h` | 移除旧宏定义检查 | 小 |
 | 19 | `src/ConstDef.cpp` | 若需要实例独立路径，将 `g_pathPrefix` 迁入 `UIContext`（见 §7） | 小 |
 | 20 | 测试 + samples | 测试 1: `CreateInstance`×1 → 完整运行 → `DestroyInstance`；测试 2: `CreateInstance`×2 → 两个独立窗口循环 → `DestroyInstance`；**samples ×4（hello_uicornerstone/sample_programmatic/sample_fromsource/sample_loadlibrary）与 test_fromsource_cabi 按 §5.12.1 适配**（后两者走 `CreateInstanceFromPlugin`） | 中 |
-| 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员 | 小 |
+| 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员（**未实施**：仓库无 binding 文件，`doc/CppBinding_Design.md` 为草案，待实际实施时随该文档一并刷新本文档，见 §6 顶部注） | 小 |
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
 | 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, UIRect rect)`（复核修订：UIRect 为纯 C 结构体，UICornerstoneAPI.h:34；SRect 是 C++ 类型，C ABI 不可用） | 小 |
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport（nullptr 回退 owner，复核修订 2026-07-31 第六轮） | 中 |
@@ -2210,15 +2230,17 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 ### 影响范围汇总
 
 > **实施状态（2026-08-03）**：下表已按实际实施调整——`test_multiviewport.cpp` **未创建**（新增 3 → 2）；`FocusManager.h` 实际有改动（新增 `getVisibleBoundaryCount()` 声明，FocusManager.h:32）；`ConstDef.cpp` 未改动（`g_pathPrefix` 未迁入，#19 未实施）。
+>
+> **实施状态（2026-08-04）**：下表已更新——`test_multiviewport.cpp` 已创建（新增恢复为 3）；后端插件行改为已实施（#17），另增 `src/backend/raylib/Window.cpp` 一行（`IsWindowReady` 守卫，§5.6）；`ConstDef.cpp` 仍未动（#19 未实施）。
 
 | 类别 | 文件数 | 修改性质 |
 |------|--------|---------|
-| 新增 | 2 | `UIContext.h/.cpp`（`test_multiviewport.cpp` 未创建） |
+| 新增 | 3 | `UIContext.h/.cpp`、`test/test_multiviewport.cpp` |
 | 核心修改 | 8 | `UICornerstoneAPI.h/.cpp`、`ControlBase.h`、`BackendPlugin.h`、`MainWindow.h/.cpp`、`Bench.h/.cpp` |
-| 小修改 | 11 | `EventQueue.h/.cpp`、`DataContext.h/.cpp`、`BackendManager.cpp`、`PlatformUtils.h`、`Dialog.cpp`、`ColorPicker.cpp`、`ComboBox.cpp`、`FocusManager.h/.cpp`（新增 getVisibleBoundaryCount，FocusManager.h:32 / FocusManager.cpp:53）|
-| 后端插件 | ~6 | 3 个后端的创建/销毁逻辑（静态缓存移除**未实施**，见 §5.6/#17）|
+| 小修改 | 12 | `EventQueue.h/.cpp`、`DataContext.h/.cpp`、`BackendManager.cpp`、`PlatformUtils.h`、`Dialog.cpp`、`ColorPicker.cpp`、`ComboBox.cpp`、`FocusManager.h/.cpp`（新增 getVisibleBoundaryCount，FocusManager.h:32 / FocusManager.cpp:53）、`src/backend/raylib/Window.cpp`（CloseWindow 守卫，§5.6）|
+| 后端插件 | ~6 | 3 个后端的创建/销毁逻辑（静态缓存已移除，见 §5.6/#17）|
 | 零修改 | ~20 | 控件业务 .cpp（宏自动适配）|
-| 总改动文件 | ~47 | 含 2 个新增（`ConstDef.cpp` 未动——g_pathPrefix 未迁入） |
+| 总改动文件 | ~49 | 含 3 个新增（`ConstDef.cpp` 未动——g_pathPrefix 未迁入） |
 
 ## 7. 风险与注意事项
 
@@ -2265,6 +2287,9 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 #### 5. 裸指针句柄无归属校验（修订新增）
 
 `UIControlHandle` 是裸指针，C ABI 层无法判断句柄属于哪个实例；用户将实例 A 的句柄传入 `instance B 的函数`会造成跨实例野指针。Debug 构建可用 `controlsById`/控件树遍历做 O(n) 校验 + assert（§5.2 已述），Release 不做（性能优先）。
+> **实施状态（2026-08-03）**：**未实施**（Debug/Release 均无归属校验，见 §5.2 实施状态注）——当前靠调用方保证 + 泄漏检测间接暴露（跨实例句柄销毁会在注册表/LeakDetector 中显现异常）。
+>
+> **实施状态（2026-08-04）**：**已实施**（Debug 构建）——`validateControl` 归属校验已接入 27 个带句柄入口（§5.2 实施状态注），跨实例句柄在 Debug 下直接断言暴露。Release 仍不做（性能优先，行为由调用方保证）。
 
 ### 7.2 非风险（设计决策 / 已被方案规避）
 
