@@ -194,6 +194,7 @@ void LuotiAni::loadAniDesc(string resourceId){
 
 void LuotiAni::parseJsonDesc(){
     m_jsonAniDesc = json::parse(m_pJsonFileContent.get(), nullptr, false, true);
+    m_layerSegs.clear();
 
     json overview = m_jsonAniDesc["overview"];
     if (overview.is_null()) {
@@ -215,7 +216,9 @@ void LuotiAni::parseJsonDesc(){
     m_totalFrames = overview["totalFrames"].get<uint32_t>();
     m_loop = overview.at("loop").get<bool>();
 
-    for (const auto& layerData : m_jsonAniDesc["layers"]) {
+    const auto& layersData = m_jsonAniDesc["layers"];
+    for (size_t l = 0; l < layersData.size(); l++) {
+        const auto& layerData = layersData[l];
         auto layer = make_shared<Layer>();
         layer->setName(layerData.at("name").get<string>())
             ->setType(Layer::strToLayerType(layerData.at("type").get<string>()))
@@ -225,14 +228,30 @@ void LuotiAni::parseJsonDesc(){
                             SSize(0, 0)))
             ->setOpacity(layerData.at("opacity").get<float>() / 100.0f)
             ->setBlendMode(Layer::blendModeStrToBlendMode(layerData.at("blendMode").get<string>()));
+        m_layerSegs.push_back(map<uint32_t, SegmentInfo>());
         for (const auto& keyFrameData : layerData["keyFrames"]) {
             auto keyFrame = make_shared<KeyFrame>();
             uint32_t frameNumber = keyFrameData.at("frame").get<uint32_t>();
 
             auto operationsData = keyFrameData.at("operation");
+            SegmentInfo keyFrameSegInfo;
             for (const auto& operationData : operationsData) {
                 string type = operationData.at("type").get<string>();
                 Operation::OPERATION_TYPE opType = Operation::strToOperationType(type);
+
+                if (operationData.contains("easing") && operationData.at("easing").is_string()) {
+                    string easing = operationData.at("easing").get<string>();
+                    if (parseEasing(easing, keyFrameSegInfo) != 0) {
+                        printf("KeyFrame Operation: Unknown easing: %s, fallback to linear\n", easing.c_str());
+                    }
+                }
+                if (opType == Operation::OPERATION_TYPE::TRANSLATE && operationData.contains("path")) {
+                    if (!operationData.at("path").is_object()) {
+                        printf("KeyFrame Operation: 'path' must be an object, fallback to linear\n");
+                    } else if (parsePath(operationData.at("path"), keyFrameSegInfo) != 0) {
+                        printf("KeyFrame Operation: Unknown path type, fallback to linear\n");
+                    }
+                }
 
                 shared_ptr<Operation> operation = nullptr;
                 switch(opType) {
@@ -258,12 +277,158 @@ void LuotiAni::parseJsonDesc(){
                 if (operation == nullptr) continue;
                 keyFrame->addOperation(operation);
             }
+            m_layerSegs[l][frameNumber] = keyFrameSegInfo;
             layer->addKeyFrame(frameNumber, keyFrame);
         }
         m_layers.push_back(layer);
     }
 
     m_isLoaded = true;
+}
+
+int LuotiAni::parseEasing(const string& easing, SegmentInfo& segInfo){
+    if (easing == "linear") { segInfo.easeType = 0; return 0; }
+    if (easing == "ease-in") { segInfo.easeType = 1; return 0; }
+    if (easing == "ease-out") { segInfo.easeType = 2; return 0; }
+    if (easing == "ease-in-out") { segInfo.easeType = 3; return 0; }
+    if (easing == "quad") { segInfo.easeType = 4; return 0; }
+    if (easing == "sine") { segInfo.easeType = 5; return 0; }
+    if (easing.rfind("cubic-bezier(", 0) == 0 && easing.back() == ')') {
+        float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        if (sscanf(easing.c_str(), "cubic-bezier(%f,%f,%f,%f)", &x1, &y1, &x2, &y2) == 4) {
+            if (x1 >= 0.0f && x1 <= 1.0f && x2 >= 0.0f && x2 <= 1.0f) {
+                segInfo.easeType = 6;
+                segInfo.eCx1 = x1;
+                segInfo.eCy1 = y1;
+                segInfo.eCx2 = x2;
+                segInfo.eCy2 = y2;
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+int LuotiAni::parsePath(const json& path, SegmentInfo& segInfo){
+    string type = path.at("type").get<string>();
+    if (type == "bezier") {
+        segInfo.pathType = 1;
+        segInfo.p1 = path.value("c1x", 0.0f);
+        segInfo.p2 = path.value("c1y", 0.0f);
+        if (path.contains("c2x") && path.contains("c2y")) {
+            segInfo.bezierCubic = 1;
+            segInfo.p3 = path.value("c2x", 0.0f);
+            segInfo.p4 = path.value("c2y", 0.0f);
+        }
+        return 0;
+    }
+    if (type == "parabola") {
+        segInfo.pathType = 2;
+        segInfo.vx = path.value("vx", 0.0f);
+        segInfo.vy = path.value("vy", 0.0f);
+        return 0;
+    }
+    if (type == "catmull-rom") {
+        segInfo.pathType = 3;
+        if (path.contains("points") && path.at("points").is_array()) {
+            for (const auto& p : path.at("points")) {
+                segInfo.points.push_back(SPoint(p.at("x").get<float>(), p.at("y").get<float>()));
+            }
+        }
+        return 0;
+    }
+    return -1;
+}
+
+float LuotiAni::easeValue(const SegmentInfo& segInfo, float t){
+    switch (segInfo.easeType) {
+        case 1:
+            return t * t;
+        case 2:
+        {
+            float u = 1.0f - t;
+            return 1.0f - u * u;
+        }
+        case 3:
+            return 3.0f * t * t - 2.0f * t * t * t;
+        case 4:
+        {
+            if (t < 0.5f) return 2.0f * t * t;
+            float u = 1.0f - t;
+            return 1.0f - 2.0f * u * u;
+        }
+        case 5:
+            return 1.0f - cosf(t * M_PI / 2.0f);
+        case 6:
+        {
+            float lo = 0.0f, hi = 1.0f;
+            for (int i = 0; i < 24; i++) {
+                float mid = (lo + hi) / 2.0f;
+                float u = 1.0f - mid;
+                float bx = 3.0f * u * u * mid * segInfo.eCx1 + 3.0f * u * mid * mid * segInfo.eCx2 + mid * mid * mid;
+                if (bx < t) lo = mid; else hi = mid;
+            }
+            float tm = (lo + hi) / 2.0f;
+            float u = 1.0f - tm;
+            return 3.0f * u * u * tm * segInfo.eCy1 + 3.0f * u * tm * tm * segInfo.eCy2 + tm * tm * tm;
+        }
+        default:
+            return t;
+    }
+}
+
+SPoint LuotiAni::pathValue(const SegmentInfo& segInfo, SPoint start, SPoint end, float t){
+    if (segInfo.pathType == 1) {
+        float u = 1.0f - t;
+        SPoint c1(start.x + segInfo.p1, start.y + segInfo.p2);
+        if (segInfo.bezierCubic == 0) {
+            return SPoint(u * u * start.x + 2.0f * u * t * c1.x + t * t * end.x,
+                          u * u * start.y + 2.0f * u * t * c1.y + t * t * end.y);
+        }
+        SPoint c2(start.x + segInfo.p3, start.y + segInfo.p4);
+        return SPoint(u * u * u * start.x + 3.0f * u * u * t * c1.x + 3.0f * u * t * t * c2.x + t * t * t * end.x,
+                      u * u * u * start.y + 3.0f * u * u * t * c1.y + 3.0f * u * t * t * c2.y + t * t * t * end.y);
+    }
+    if (segInfo.pathType == 2) {
+        float gx = 2.0f * (end.x - start.x - segInfo.vx);
+        float gy = 2.0f * (end.y - start.y - segInfo.vy);
+        return SPoint(start.x + segInfo.vx * t + 0.5f * gx * t * t,
+                      start.y + segInfo.vy * t + 0.5f * gy * t * t);
+    }
+    if (segInfo.pathType == 3) {
+        vector<SPoint> chain;
+        chain.push_back(start);
+        for (const auto& p : segInfo.points) chain.push_back(p);
+        chain.push_back(end);
+        int n = (int)chain.size();
+        if (n < 3) {
+            return SPoint(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t);
+        }
+        float scaled = t * (float)(n - 1);
+        int segIdx = (int)scaled;
+        if (segIdx >= n - 1) segIdx = n - 2;
+        float ft = scaled - (float)segIdx;
+        SPoint p0 = chain[max(0, segIdx - 1)];
+        SPoint p1 = chain[segIdx];
+        SPoint p2 = chain[segIdx + 1];
+        SPoint p3 = chain[min(n - 1, segIdx + 2)];
+        float t2 = ft * ft;
+        float t3 = t2 * ft;
+        return SPoint(0.5f * (2.0f * p1.x + (-p0.x + p2.x) * ft + (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 + (-p0.x + 3.0f * p1.x - 3.0f * p2.x + p3.x) * t3),
+                      0.5f * (2.0f * p1.y + (-p0.y + p2.y) * ft + (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 + (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3));
+    }
+    return SPoint(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t);
+}
+
+LuotiAni::OpData LuotiAni::getFrameOpData(uint32_t layer, uint32_t frame) const {
+    if (layer >= m_frameOpData.size() || layer >= m_layers.size()) {
+        return OpData();
+    }
+    const vector<OpData>& layerData = m_frameOpData[layer];
+    if (frame >= layerData.size()) {
+        return OpData();
+    }
+    return layerData[frame];
 }
 
 
@@ -429,15 +594,27 @@ void LuotiAni::prepare(uint32_t startFrame){
                 OpData autoOpData;
                 float t = (float)f / (nextKeyFrame - previousKeyFrame);
 
+                SegmentInfo segInfo;
+                const auto& layerSegs = m_layerSegs[l];
+                auto segIt = layerSegs.find(nextKeyFrame);
+                if (segIt != layerSegs.end()) {
+                    segInfo = segIt->second;
+                }
+                float easedT = easeValue(segInfo, t);
+                SPoint translated = pathValue(segInfo,
+                                              SPoint(previousOpData.translate.x, previousOpData.translate.y),
+                                              SPoint(opData.translate.x, opData.translate.y),
+                                              easedT);
+
                 autoOpData.dRect        = previousOpData.dRect;
-                autoOpData.translate.x  = previousOpData.translate.x    + (opData.translate.x   - previousOpData.translate.x)   * t;
-                autoOpData.translate.y  = previousOpData.translate.y    + (opData.translate.y   - previousOpData.translate.y)   * t;
-                autoOpData.m.scaleX     = previousOpData.m.scaleX       + (opData.m.scaleX      - previousOpData.m.scaleX)      * t;
-                autoOpData.m.scaleY     = previousOpData.m.scaleY       + (opData.m.scaleY      - previousOpData.m.scaleY)      * t;
-                autoOpData.rotate       = previousOpData.rotate         + (opData.rotate        - previousOpData.rotate)        * t;
-                autoOpData.centerPos.x  = previousOpData.centerPos.x    + (opData.centerPos.x   - previousOpData.centerPos.x)   * t;
-                autoOpData.centerPos.y  = previousOpData.centerPos.y    + (opData.centerPos.y   - previousOpData.centerPos.y)   * t;
-                autoOpData.opacity      = previousOpData.opacity        + (opData.opacity       - previousOpData.opacity)       * t;
+                autoOpData.translate.x  = translated.x;
+                autoOpData.translate.y  = translated.y;
+                autoOpData.m.scaleX     = previousOpData.m.scaleX       + (opData.m.scaleX      - previousOpData.m.scaleX)      * easedT;
+                autoOpData.m.scaleY     = previousOpData.m.scaleY       + (opData.m.scaleY      - previousOpData.m.scaleY)      * easedT;
+                autoOpData.rotate       = previousOpData.rotate         + (opData.rotate        - previousOpData.rotate)        * easedT;
+                autoOpData.centerPos.x  = previousOpData.centerPos.x    + (opData.centerPos.x   - previousOpData.centerPos.x)   * easedT;
+                autoOpData.centerPos.y  = previousOpData.centerPos.y    + (opData.centerPos.y   - previousOpData.centerPos.y)   * easedT;
+                autoOpData.opacity      = previousOpData.opacity        + (opData.opacity       - previousOpData.opacity)       * easedT;
                 autoOpData.visible      = previousOpData.visible;
                 autoOpData.surface      = previousOpData.surface;
 
@@ -456,6 +633,8 @@ void LuotiAni::prepare(uint32_t startFrame){
         }
         allFrameOp[l] = frameOp;
     }
+
+    m_frameOpData = allFrameOp;
 
     for (uint32_t f = 0; f < m_totalFrames; f++) {
         SharedSurface canvas = Surface::create(m_canvasSize.width, m_canvasSize.height);

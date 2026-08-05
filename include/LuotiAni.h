@@ -212,6 +212,7 @@ public:
 
 class LuotiAni: public Material{
 friend class LuotiAniBuilder;
+public:
     class OpData{
     public:
         SRect dRect;
@@ -225,6 +226,26 @@ friend class LuotiAniBuilder;
         SharedSurface surface;
 
         OpData():dRect(), translate(0,0), m(1, 1), rotate(0), centerPos({0, 0}), opacity(255), visible(true), surface(nullptr) {}
+    };
+    OpData getFrameOpData(uint32_t layer, uint32_t frame) const;
+private:
+    struct SegmentInfo{
+        int easeType;
+        float eCx1, eCy1, eCx2, eCy2;
+        int pathType;
+        int bezierCubic;
+        float p1, p2, p3, p4;
+        float vx, vy;
+        vector<SPoint> points;
+
+        SegmentInfo():
+            easeType(0),
+            eCx1(0), eCy1(0), eCx2(0), eCy2(0),
+            pathType(0),
+            bezierCubic(0),
+            p1(0), p2(0), p3(0), p4(0),
+            vx(0), vy(0)
+        {}
     };
 private:
     int m_id;
@@ -249,6 +270,9 @@ private:
 
     vector<shared_ptr<Layer>>m_layers;
 
+    vector<map<uint32_t, SegmentInfo>>m_layerSegs;
+    vector<vector<OpData>>m_frameOpData;
+
     vector<shared_ptr<Actor>>m_frames;
     vector<SharedSurface> m_frameSurfaces;
 
@@ -262,6 +286,11 @@ private:
     static uint32_t bilinearInterpolation(Surface *surface, float x, float y);
     SharedSurface getImageFromResource(string resourceId);
     OpData keyFrameToOpData(shared_ptr<KeyFrame> keyFrame, OpData srcOpData);
+
+    static int parseEasing(const string& easing, SegmentInfo& segInfo);
+    static int parsePath(const json& path, SegmentInfo& segInfo);
+    static float easeValue(const SegmentInfo& segInfo, float t);
+    static SPoint pathValue(const SegmentInfo& segInfo, SPoint start, SPoint end, float t);
 
 
 public:
