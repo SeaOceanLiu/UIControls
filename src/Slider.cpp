@@ -221,6 +221,13 @@ void Slider::rebuildTickTexts()
 void Slider::destroyCachedTickTexts()
 {
     if (!m_cachedTickTexts.empty()) {
+        // 实例已销毁（静态/全局残留控件退出期析构）时 renderer 已释放，直接放弃
+        // 缓存的文本资源（进程退出回收），避免对悬垂 renderer 调用 destroyText
+        // （与 Label::releaseTexts 同一守卫模式）
+        if (!UIContext::isActive(m_context)) {
+            m_cachedTickTexts.clear();
+            return;
+        }
         for (void* t : m_cachedTickTexts) {
             if (t) getTextRenderer()->destroyText(t);
         }

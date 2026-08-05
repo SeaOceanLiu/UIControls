@@ -748,6 +748,8 @@ if (auto sp = dynamic_pointer_cast<Splitter>(ctrl)) {
 
 ## 8. C ABI（UICornerstoneAPI.h/.cpp）
 
+> **修订注记（2026-08-05）**：本节为早期设计快照，**仅作历史参考**。下述旧导出已随演进移除/迁移：工厂函数现带 `UIInstance` 首参；`SetSplitterLinkedControls`（`SetPtr(inst, ctl, "first-linked"/"second-linked", handle)`）、`SetSplitterMinSize`（`SetFloat(inst, ctl, "first-min"/"second-min", v)`）、`SetSplitterRatio`/`GetSplitterRatio`（`SetFloat(inst, ctl, "ratio", v)`/`GetFloat`）、`SetSplitterColor`（`SetColor`/`SetStateColor`）、`SetOnSplitterMoved`（`SetCallback(inst, ctl, "position-changed", cb, user)`）等专用导出由统一属性系统 API 替代。**当前 API 以 `include/UICornerstoneAPI.h` 为准**；现成可运行示例见 `test/test_splitter_cabi.cpp`。
+
 ### 8.1 工厂函数
 
 ```c

@@ -66,19 +66,10 @@ public:
     }
 
     bool pollEvent(Event& event) override {
-        // Detect frame boundary via GetTime() change
-        double now = GetTime();
-        if (now > m_lastFrameTime) {
-            m_lastFrameTime = now;
-            m_phase = Phase::Keyboard;
-            // Reset per-frame consumed flags so multiple keys/chars can be
-            // picked up one-per-call within a single frame of event processing.
-            m_keyConsumed = false;
-            m_charConsumed = false;
-            // m_consumedMouseButtons is NOT reset here — it persists across
-            // all pollEvent calls within a render frame, preventing infinite
-            // MouseDown loops.  It is reset in newFrame() instead.
-        }
+        // 相位由 newFrame() 每帧重置，此处不依赖 GetTime() 判断"新帧"：
+        // 浮点秒在同一渲染帧内多次调用 pollEvent 时也会跳动，会导致 phase
+        // 被反复重置、单帧内无限重放同一事件（如 WindowClose）→ 关闭窗口后
+        // while(pollEvent) 死循环，进程无法退出。
 
         int loopCount = 0;
         while (true) {

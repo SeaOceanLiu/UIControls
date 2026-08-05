@@ -2015,3 +2015,61 @@ Done, 180 frames                        # 帧循环正常完成
 **已核验排除**：句柄失效约定核对——CppBinding_Design.md:838 仅绑定层"自动失效检测"（经 FindControl 返回空间接感知），核心库无此约定，补入 5.13.7 验证点；销毁 activeViewport 视口后焦点丢失（不自动转移）符合"置 nullptr"约定，点击子视口或 Ctrl+Tab（front/back 切入）均可恢复，自洽无遗漏。
 
 **未提交**（用户指示更新但不提交）。
+
+### 2026-08-04: 标准测试全量验证 + test_slider 退出段错误修复 + 测试 DLL 同步修复（Complete）
+
+**背景**：三后端（sdl3/sfml/raylib）标准测试全部编译通过（0 error，31 个 exe 输出至 `build/{backend}/test/Debug/`），逐批运行视觉验证时发现两个问题。
+
+**1. test_slider 退出阶段段错误（EXIT=139，三后端均复现）——已修复**：
+
+- **现象**：`Slider test quit` / `[Instance_1] [INFO] destroyed` / `run returned 0, exiting` 全部打印完毕之后崩溃——即 main 正常返回后、全局 `shared_ptr<Slider>` 退出期析构阶段。
+- **根因**：`Slider::~Slider()` → `destroyCachedTickTexts()`（src/Slider.cpp:221-229）对 `m_cachedTickTexts` 中每个句柄调 `getTextRenderer()->destroyText(t)`，但**没有实例存活守卫**。test_slider 的 17 个 Slider 由全局 `shared_ptr` 持有，`DestroyInstance` 时控件计数未归零，析构推迟到 main 返回后——此时 `BackendManager::shutdown` 已释放 textRenderer，对**悬垂 renderer 调用 destroyText** 即崩溃。
+- **修复**：与 `Label::releaseTexts`（src/Label.cpp:58-68，早已有此守卫）同一模式，`destroyCachedTickTexts` 先查 `UIContext::isActive(m_context)`，实例已销毁则放弃缓存文本（进程退出回收）。
+- **验证**：三后端 `test_slider` 修复后均 **EXIT=0**（修复前 SDL3/SFML 均 EXIT=139）。
+
+**2. 标准测试 exe 的 DLL 同步缺失——已修复**：
+
+- **现象**：SFML test_layout_advanced 拉伸窗口后画面被整体缩放——`src/backend/sfml/InputBackend.cpp` 的 resize view 修复（**辅设计开发 Session 13:31 所做**，fromsource/C ABI 模式下 CallbackWindow 不转发 `Window::onResized`，SFML 需在 Resized 事件中自行 `setView`）未生效。
+- **根因**：测试实际以 DLL 模式运行（`UICORNERSTONE_BUILD_DLL=ON`），库代码编译进 `UICornerstone.dll`/`UIBackend_${backend}.dll`；但 **test/CMakeLists.txt 标准测试（UI_TEST_EXECUTABLES）foreach 块原本没有 DLL 拷贝 POST_BUILD**（仅 test_api/cabi 块有）→ test/Debug 下 DLL 长期陈旧（时间戳早于源码），view 修复未进入运行目录。
+- **修复**：test/CMakeLists.txt 标准测试 WIN32 分支新增 `UICORNERSTONE_BUILD_DLL` 守卫的 POST_BUILD，拷贝 `$<TARGET_FILE_DIR:UICornerstone_dll>/UICornerstone.dll` 与 `$<TARGET_FILE_DIR:UIBackend_${_BACKEND_LOWER}>/UIBackend_${_BACKEND_LOWER}.dll`。
+- **验证**：重新 cmake 配置 + 重建后 test/Debug DLL 同步为最新（时间戳对齐），test_layout_advanced EXIT=0、拉伸正常。
+
+**其他核验**：窗口标志链路完整——`CreateInstance` → `BackendManager::initialize` → `api.createWindow(title,width,height,flags)` → `CreateSFMLWindow`（src/backend/sfml/Window.cpp:84-103，`style = Titlebar|Close`，`Resizable` 标志才加 Resize）；UIWindowFlags（include/Window.h:11-15）None=0x0 / Fullscreen=0x1 / Resizable=0x20。SDK 全量重建后 `getTextRenderer`（ControlBase.cpp:506-522）确认：缓存命中直接返回、父链回溯、末级 `UIContext::isActive` 守卫，语义与守卫模式一致。
+
+**相关文件**：src/Slider.cpp（destroyCachedTickTexts 守卫）、test/CMakeLists.txt（标准测试 DLL 同步 POST_BUILD）、src/backend/sfml/InputBackend.cpp（view resize 修复，辅设计开发 Session 所做）。
+
+**未提交**（本会话改动：src/Slider.cpp、test/CMakeLists.txt；InputBackend.cpp 修复与多实例文档/测试同属待提交集合）。
+
+### 2026-08-05: C ABI 测试全套验证 + 实例归属断言修复 + raylib 关闭挂死根因修复（60/60 PASS）
+
+**背景**：对 sdl3/sfml/raylib 三后端**标准树 + _dll 专用树**共 6 棵构建树的 10 个 C ABI 测试（dialog/combobox/numericupdown/splitter/treeview/property/fromsource/api/multi_instance/multiviewport）做逐批运行验证（WM_CLOSE 自动化关闭），发现并修复 3 个真实缺陷。
+
+**1. test_dialog_cabi 实例归属断言（SDL3，后续 SFML 同样触发）——已修复**：
+
+- **现象**：`uiSetFloat` 触发断言 "UICornerstone: control handle not owned by this instance"（src/UICornerstoneAPI.cpp:109）。
+- **根因**：`instanceHoldsControl` 只检查 bench 树、popupPool 根、menuPool 根——**未递归检查 popup/menu 的子树**。Dialog 挂载于 popupPool，其子控件（rSlider/gSlider/bSlider/aSlider）位于 Dialog 子树内，验证失败。
+- **修复**：instanceHoldsControl 对 popupPool/menuPool 条目追加 `treeContains` 递归归属校验。
+- **验证**：SDK 重建后 SDL3/SFML test_dialog_cabi EXIT=0，对话框正常交互。
+
+**2. 测试树 DLL 拷贝竞态——已修复**：
+
+- **现象**：raylib 测试重建后 `test/Debug/UICornerstone.dll` 时间戳陈旧（早于源码）——POST_BUILD 拷贝先于核心 DLL 完成，`copy_if_different` 静默跳过。
+- **修复**：test/CMakeLists.txt 标准测试与 multi/multiviewport cabi 块均补 `add_dependencies(... UICornerstone_dll UIBackend_${_BACKEND_LOWER})`，构建顺序先库后拷贝。
+- **验证**：raylib test/Debug 下 DLL 时间戳与源码对齐。
+
+**3. raylib 关闭窗口后进程挂死（三后端中唯一复现）——已修复**：
+
+- **现象**：所有 raylib 测试对 WM_CLOSE 无响应、进程永不退出（探针统计：8807 次 newFrame vs 357891 次 CLOSE-DETECTED，即单帧内无限重放）。
+- **根因**：`InputBackend::pollEvent`（src/backend/raylib/InputBackend.cpp:69-81）用 `GetTime()` 浮点秒判断"新帧"来重置事件相位——同一渲染帧内多次调用 pollEvent 时浮点值也跳动 → 相位反复重置 → `WindowClose` 事件每次 pollEvent 调用都重新发出 → `ProcessEvents` 内 `while(pollEvent)` 死循环 → quit 标志永远检查不到。**附带 bug**：关闭前 GetTime 抖动还会单帧内重复弹窗/重复触发按键。
+- **修复**：移除 GetTime 相位重置块，相位仅由 `newFrame()` 每帧重置（帧级 consumed 标志同理）；同相位内连续按键由 `GetKeyPressed()==0` 自然截断，多键输入不受影响。
+- **验证**：WM_CLOSE 后 raylib 测试立即正常退出（CLOSE-DETECTED 恰 1 次，`done` 完整打印）。
+
+**4. _dll 专用树补齐 multi/multiviewport C ABI 测试**：
+
+- 三棵 `build/{backend}_dll/` 树 CMake 配置为 08-03 旧树，缺 multi_instance_cabi/multiviewport_cabi 目标、DLL 陈旧 → 重新 cmake 配置 + 全量构建补齐。
+
+**验证结果（全部 EXIT=0 / 全部 PASS）**：6 棵树 × 10 测试 = **60/60 通过**。其中 combobox 在早期 batch 中偶发一次 EXIT=139（环境残留），修复后稳定 done；multi_instance 在 raylib_dll 树需 ~60-120s（日志 669 行），timeout 60 曾误判 124。
+
+**相关文件**：src/UICornerstoneAPI.cpp（instanceHoldsControl 递归）、test/CMakeLists.txt（add_dependencies）、src/backend/raylib/InputBackend.cpp（pollEvent 相位重置移除）。
+
+**未提交**（本会话累计未提交集合：src/Slider.cpp、src/UICornerstoneAPI.cpp、src/backend/raylib/InputBackend.cpp、src/backend/sfml/InputBackend.cpp、test/CMakeLists.txt、test/test_dialog_cabi.cpp、include/UIContext.h、doc/CABI_MultiInstance_Design.md、doc/CppBinding_Design.md、doc/guidelines/build.md、doc/guidelines/history.md；未跟踪：test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp）。

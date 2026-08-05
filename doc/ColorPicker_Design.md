@@ -694,6 +694,8 @@ if (auto cp = dynamic_pointer_cast<ColorPicker>(ctrl)) {
 
 ## 13. C ABI (UICornerstoneAPI)
 
+> **修订注记（2026-08-05）**：本节为早期设计快照，**仅作历史参考**。下述旧导出已随演进移除/迁移：工厂函数现带 `UIInstance` 首参；`GetColorPickerColor`/`SetOnColorChanged` 及视觉属性专用导出由统一属性系统 API 替代（`GetString(inst, ctl, "color-hex", ...)`、`SetCallback(inst, ctl, "color-changed", cb, user)`、`SetFloat(inst, ctl, "closed-swatch-size"/"closed-font-size", ...)`、`SetString(inst, ctl, "closed-text-color"/"popup-bg-color", ...)`）。**当前 API 以 `include/UICornerstoneAPI.h` 为准**；现成可运行示例见 `test/test_colorpicker.cpp` 与 `test/test_dialog_cabi.cpp`。
+
 ColorPicker 可通过 C ABI 在纯 C 环境中使用：
 
 ### 13.1 工厂函数

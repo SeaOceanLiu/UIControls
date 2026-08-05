@@ -633,6 +633,10 @@ parser.registerHandler("showSettings", [dlg](shared_ptr<Control>) {
 
 ### 10.8 C ABI 风格
 
+> **修订注记（2026-08-05）**：本小节为早期设计快照，**仅作历史参考**。`UICornerstone_CreateDialog`（`Show`/`Close` 等旧导出）现已迁移：工厂函数带 `UIInstance` 首参，显示/关闭走 POPUP 池统一的 `uiShow`/`uiClose`（`UICornerstone_Show(inst, dlg)`/`Close(inst, dlg)` 保留为 16 个非属性导出之一），`SetDialogCentered`/`SetContent`/`SetConfirmButtonText`/`SetOnConfirm` 由属性系统 API 替代（`SetBool(inst, dlg, "centered", 1)`、`SetPtr(inst, dlg, "content", panel)`、`SetString(inst, dlg, "confirm-button-text", ...)`、`SetCallback(inst, dlg, "confirm", cb, user)`）。**当前用法以 `test/test_dialog_cabi.cpp` 为准**，**当前 API 以 `include/UICornerstoneAPI.h` 为准**。
+
+下面的代码为旧版示例（不可直接编译）：
+
 ```c
 UIControlHandle dlg = UICornerstone_CreateDialog(NULL, 0, 0, 400, 300);
 UICornerstone_SetDialogCentered(dlg, 1);

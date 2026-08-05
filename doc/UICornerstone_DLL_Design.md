@@ -300,6 +300,8 @@ gh repo rename UICornerstone
 
 ## 6. C ABI 公开 API 定义
 
+> **修订注记（2026-08-05）**：本节为本项目早期（DLL 化改造阶段）的 API 设计快照，**仅作历史参考**。其中 `UICornerstone_Init`/`UICornerstone_Shutdown`/`UICornerstone_InitFromPlugin` 及 `SetText`/`SetOnClick`/`SetBGColor` 等旧导出已在后续演进中**移除或迁移**：多实例改造后所有函数以 `UIInstance` 为首参（`CreateInstance`/`CreateInstanceFromPlugin`/`DestroyInstance` 管理生命周期），旧专用导出由统一属性系统 API（`SetString`/`SetColor`/`SetBool`/`SetFloat`/`SetCallback`…）替代。**当前 API 以 `include/UICornerstoneAPI.h` 为准**，多实例设计见 `doc/CABI_MultiInstance_Design.md`，属性系统见 `doc/CABI_Property_Design.md`。
+
 ### 6.1 回调表
 
 ```c
@@ -958,6 +960,12 @@ fromsource 测试已重构为单源文件模式，通过 `BACKEND_SHORT_NAME`/`B
 | `test/test_fromsource_cabi.cpp` | 三后端 C ABI 集成测试，`LoadLibrary` + `main()` 帧循环 |
 | `test/test_dialog_cabi.cpp` | 三后端 C ABI Dialog 测试，`LoadLibrary` + JSON dialogs |
 | `test/test_combobox_cabi.cpp` | 三后端 C ABI ComboBox 测试，`LoadLibrary` + JSON ComboBox |
+| `test/test_numericupdown_cabi.cpp` | 三后端 C ABI NumericUpDown 测试，`LoadLibrary` + JSON |
+| `test/test_splitter_cabi.cpp` | 三后端 C ABI Splitter 测试，`LoadLibrary` + JSON |
+| `test/test_treeview_cabi.cpp` | 三后端 C ABI TreeView 测试，`LoadLibrary` + JSON |
+| `test/test_property_cabi.cpp` | C ABI 通用属性系统测试（Set/Get 对称 + 边界条件） |
+| `test/test_multi_instance_cabi.cpp` | 三后端 C ABI 多实例隔离测试，`CreateInstanceFromPlugin` 动态加载 |
+| `test/test_multiviewport_cabi.cpp` | 三后端 C ABI 多视口 + 键盘跨视口导航测试（K1-K8） |
 
 CMake 通过 `add_fromsource_target` 宏统一创建目标，自动注入后端编译定义和链接库。
 

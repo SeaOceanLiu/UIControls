@@ -105,12 +105,36 @@ private:
     static std::unordered_set<UIContext*>& activeContexts();
 };
 
-// 日志辅助：实例标签前缀
-#define UI_LOG(instance, fmt, ...) \
+// 日志辅助：实例标签前缀 + 级别（I=Info / W=Warn / E=Error）
+// Debug 构建：三个级别全部输出；
+// Release 构建：INFO 编译为 no-op（发布版不刷信息日志），WARN/ERROR 保留（错误仍需可见）。
+// UI_LOG 为 UI_LOGI 的兼容别名（历史调用不受影响）。
+#ifdef _DEBUG
+#define UI_LOGP(instance, fmt, ...) \
     do { \
         if ((instance) && !(instance)->debugLabel.empty()) { \
             printf("[%s] " fmt "\n", (instance)->debugLabel.c_str(), ##__VA_ARGS__); \
         } \
     } while (0)
+#define UI_LOG(instance, fmt, ...)  UI_LOGP(instance, "[INFO] "  fmt, ##__VA_ARGS__)
+#define UI_LOGI(instance, fmt, ...) UI_LOGP(instance, "[INFO] "  fmt, ##__VA_ARGS__)
+#define UI_LOGW(instance, fmt, ...) UI_LOGP(instance, "[WARN] "  fmt, ##__VA_ARGS__)
+#define UI_LOGE(instance, fmt, ...) UI_LOGP(instance, "[ERROR] " fmt, ##__VA_ARGS__)
+#else
+#define UI_LOG(instance, fmt, ...)  ((void)0)
+#define UI_LOGI(instance, fmt, ...) ((void)0)
+#define UI_LOGW(instance, fmt, ...) \
+    do { \
+        if ((instance) && !(instance)->debugLabel.empty()) { \
+            printf("[%s] [WARN] " fmt "\n", (instance)->debugLabel.c_str(), ##__VA_ARGS__); \
+        } \
+    } while (0)
+#define UI_LOGE(instance, fmt, ...) \
+    do { \
+        if ((instance) && !(instance)->debugLabel.empty()) { \
+            printf("[%s] [ERROR] " fmt "\n", (instance)->debugLabel.c_str(), ##__VA_ARGS__); \
+        } \
+    } while (0)
+#endif
 
 #endif // UICONTEXT_H

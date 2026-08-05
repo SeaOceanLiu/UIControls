@@ -1,6 +1,6 @@
 # CAPI C++ Binding 设计
 
-> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）
+> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel
 
 ## 目录
 
@@ -231,9 +231,9 @@ public:
         std::string windowTitle    = "UICornerstone";
         int windowWidth  = 1024;
         int windowHeight = 768;
-        // 注意：UIInstanceConfig 暂无 windowFlags 字段（reserved[6] 预留）——
-        // 本期 windowFlags 不传递（见 §5.12），保留字段占位。
-        int windowFlags  = 0;
+        // windowFlags：跨后端统一窗口标志（UIWindowFlags，值对齐 SDL_WINDOW_*），
+        // 直接映射 UIInstanceConfig.windowFlags（UICornerstoneAPI.h:44）
+        uint32_t windowFlags = 0;
 
         Config& WithBackend(const std::string& name)
             { backend = name; return *this; }
@@ -243,6 +243,8 @@ public:
             { resourceRoot = root; return *this; }
         Config& WithWindow(const std::string& title, int w, int h)
             { windowTitle = title; windowWidth = w; windowHeight = h; return *this; }
+        Config& WithWindowFlags(uint32_t flags)
+            { windowFlags = flags; return *this; }
     };
 
     // 通过 Config 创建（默认路径 → CreateInstanceFromPlugin；自定义搜索路径 → 自加载 DLL + CreateInstance(callbacks)）
@@ -269,7 +271,7 @@ public:
     void Shutdown();
 
     // ── 子视口（多实例改造后新增，可选）──
-    // 在实例窗口中创建子视口：共享后端，独立控制树/事件队列
+    // 在实例窗口中创建子视口：共享后端，独立控制树/事件队列（C ABI: UICornerstone_CreateViewport(parent, UIRect)）
     std::unique_ptr<UICornerstone> CreateViewport(float x, float y, float w, float h);
 
     // ── 资源路径 ──
@@ -310,16 +312,22 @@ public:
                          float x, float y, float w, float h);
 
     // ── 控件工厂（多实例改造后补齐：菜单族 / 滚动条 / 树 / 句柄） ──
+    // 组装顺序（对齐 C ABI 注释，UICornerstoneAPI.h:255-263）：
+    //   panel = CreateMenuPanel(); item = CreateMenuItem("Open", 0);
+    //   MenuPanelAddItem(panel, item); MenuItemSetSubMenu(item, subPanel);
+    //   bar = CreateMenuBar(...); MenuBarAddMenu(bar, "File", panel);
+    // type: 0=Normal, 1=Separator, 2=SubMenu
+    // MenuItem 的 caption/checked/shortcut/click 走统一属性系统（事件名 "click"）
     Control CreateMenuBar(float x, float y, float w, float h);
-    Control CreateMenuPanel();                                   // MenuPanel（弹层）
-    Control CreateMenuItem(const std::string& caption, int type); // MenuItemType 枚举
-    void    MenuBarAddMenu(Control bar, Control menu);
+    Control CreateMenuPanel();                                     // MenuPanel（弹层）
+    Control CreateMenuItem(const std::string& caption, int type);  // 0=Normal,1=Separator,2=SubMenu
+    void    MenuBarAddMenu(Control bar, const std::string& caption, Control panel);
     void    MenuPanelAddItem(Control panel, Control item);
     void    MenuPanelAddSeparator(Control panel);
     void    MenuItemSetSubMenu(Control item, Control subMenu);
     Control CreateScrollBar(float x, float y, float w, float h, int orientation);
     Control CreateTreeView(float x, float y, float w, float h);
-    Control CreateHandleControl(float x, float y, float w, float h);
+    Control CreateHandleControl(Control target, float x, float y, float w, float h);
 
     // ── 视口 ──
     void SetViewport(float x, float y, float w, float h);
@@ -344,8 +352,9 @@ public:
     const std::string& GetLastError() const;
 
     // ── 调试（多实例改造后新增，可选）──
-    static int  DebugGetAliveCount();
-    static UIInstance DebugGetAliveInstance(int index);
+    static int  DebugGetAliveCount();                    // Release 构建返回 0
+    static UIInstance DebugGetAliveInstance(int index);  // Release 构建返回 NULL
+    static UIInstance DebugGetActiveViewport(UIInstance instance);  // owner 的当前焦点视口
     static bool DebugIsControlFocused(UIInstance instance, UIControlHandle control);
 
     UICornerstone(const UICornerstone&) = delete;
@@ -501,11 +510,12 @@ public:
     // "enter"（EditBox 回车）：无数据负载
     bool IsEnter() const;
 
-    // "select" / "expand" / "collapse"：strVal = 节点 id（TreeView）
+    // "select" / "expand" / "collapse"：treeNode { id, userData }（UIEventData 联合体）
     bool IsSelect() const;
     bool IsExpand() const;
     bool IsCollapse() const;
-    std::string GetNodeId() const;
+    std::string GetNodeId() const;   // treeNode.id
+    void* GetNodeUserData() const;   // treeNode.userData
 
     // ── 通用原始访问（必要时回退） ──
     const char* GetNameRaw() const { return m_raw ? m_raw->eventName : nullptr; }
@@ -706,7 +716,7 @@ flowchart TD
 
 #### 5.6.1 多实例支持（多实例改造完成后已解除限制）
 
-**现状（2026-08-01 实测）**：核心库 C ABI 已完成多实例改造——`UICornerstone_CreateInstance(callbacks, config)` 一次完成 alloc+init（UICornerstoneAPI.h:177），返回 `UIInstance` 句柄；`DestroyInstance` 级联销毁（:182）；`CreateInstanceFromPlugin` 支持插件加载（:186）；`CreateViewport(parent, rect)` 支持子视口（:192）。原"全局单实例（g_initialized）"限制**已不存在**。
+**现状（2026-08-01 实测）**：核心库 C ABI 已完成多实例改造并落地实施（提交 a0fcfa7/6064bd5）——`UICornerstone_CreateInstance(callbacks, config)` 一次完成 alloc+init（UICornerstoneAPI.h:178），返回 `UIInstance` 句柄（`struct UIContext*`，:34）；`DestroyInstance` 级联销毁子视口、owner 才 shutdown BackendManager（:183）；`CreateInstanceFromPlugin` 支持插件 DLL + 静态符号回退（:187，src/UICornerstoneAPI.cpp:377-414）；`CreateViewport(parent, rect)` 支持子视口（:193）。原"全局单实例（g_initialized）"限制**已不存在**。附加能力：`_DEBUG` 下句柄归属校验（跨实例误用断言，src/UICornerstoneAPI.cpp:79-116）、实例活跃注册表（析构守卫，UIContext.h:93-101）、Debug 辅助 4 件套（:220-226）。
 
 **Binding 设计**：
 
@@ -1134,10 +1144,10 @@ int UICornerstone::Run(FrameCallback update, RenderCallback onRender) {
 | `backendSearchPath` | 可选，空 → 核心库默认搜索顺序 | — |
 | `resourceRoot` | 非空 | `Create()` 返回 nullptr |
 | `windowTitle` | 非空（"UICornerstone" 默认） | 使用默认值 |
-| `windowWidth / windowHeight` | > 0 | 使用默认值（0 → 核心库默认 1280x720） |
-| `windowFlags` | 无校验 | 不传递（UIInstanceConfig 无对应字段，reserved[6] 预留，见 §5.13） |
+| `windowWidth / windowHeight` | > 0 | 使用默认值（0 → 核心库默认 1024x768） |
+| `windowFlags` | 无校验 | 直接映射（UIInstanceConfig.windowFlags，:44；核心库按 structSize 守卫兼容旧客户端，src/UICornerstoneAPI.cpp:285-286） |
 
-`windowFlags` 含义（与后端具体实现相关）：
+`windowFlags` 含义（跨后端统一标志，值对齐 SDL_WINDOW_*，核心库注释 :44）：
 
 | 后端 | 常见 flags |
 |------|-----------|
@@ -1145,7 +1155,7 @@ int UICornerstone::Run(FrameCallback update, RenderCallback onRender) {
 | SFML | 通常忽略 |
 | Raylib | 通常忽略 |
 
-Binding 不封装 flags 的符号常量，保持与核心库一致的裸值。
+Binding 不封装 flags 的符号常量，保持与核心库一致的裸值（`Config::WithWindowFlags`）。
 
 ### 5.13 CMake 构建集成
 
@@ -1193,7 +1203,7 @@ add_subdirectory(samples)
 
 ### 5.14 UIEvent 输入事件构造辅助（类型安全）
 
-C ABI 的 `UIEvent` 是 `UIEventType + data[128]` 字节缓冲，通过 `UI_EVENT_*` 便捷宏读写（UICornerstoneAPI.h:80-96：`UI_EVENT_MOUSE_X/Y`（float）、`UI_EVENT_BUTTON`（int, data+8）、`UI_EVENT_WHEEL_DELTA/X/Y`（float）、`UI_EVENT_KEY_CODE`（int）、`UI_EVENT_KEY_MOD`（uint16, data+4）、`UI_EVENT_TEXT`（data 即 char 缓冲 ≤ UI_TEXT_MAX=32）、`UI_EVENT_RESIZE_W/H`（int））。事件类型枚举 `UIEventType`（:62-75）：`UI_EVENT_MOUSE_MOVE/DOWN/UP/WHEEL/KEY_DOWN/KEY_UP/TEXT_INPUT/WINDOW_RESIZE/WINDOW_CLOSE/FOCUS_GAINED/LOST`。
+C ABI 的 `UIEvent` 是 `UIEventType + data[128]` 字节缓冲，通过 `UI_EVENT_*` 便捷宏读写（UICornerstoneAPI.h:87-97：`UI_EVENT_MOUSE_X/Y`（float）、`UI_EVENT_BUTTON`（int, data+8）、`UI_EVENT_WHEEL_DELTA/X/Y`（float）、`UI_EVENT_KEY_CODE`（int）、`UI_EVENT_KEY_MOD`（uint16, data+4）、`UI_EVENT_TEXT`（data 即 char 缓冲 ≤ UI_TEXT_MAX=32）、`UI_EVENT_RESIZE_W/H`（int））。事件类型枚举 `UIEventType`（:63-76）：`UI_EVENT_MOUSE_MOVE/DOWN/UP/WHEEL/KEY_DOWN/KEY_UP/TEXT_INPUT/WINDOW_RESIZE/WINDOW_CLOSE/FOCUS_GAINED/LOST`。
 
 Binding 提供类型安全构造函数，内部按上述宏布局填充字节：
 
@@ -1462,7 +1472,7 @@ int main() {
 | **P12** | `sample_cpp_hosted`：编程式创建 + `Run()` | 编译运行，按钮点击计数更新 Label |
 | **P13** | `sample_cpp_embed`：工厂创建 + 用户循环 + 分步渲染 | 编译运行，用户循环内 UI 交互正常 |
 
-> 依赖前置：P3 依赖核心库多实例 C ABI（已完成）；P10 依赖核心库菜单族/ScrollBar/TreeView/HandleControl 的 C ABI 工厂（当前缺口，见 §9 备注）；CreateImage/CreateAnimation 工厂待 Image/LuotiAni 控件化设计审核后并入 P5/P10。
+> 依赖前置：P3 依赖核心库多实例 C ABI（**已完成**：a0fcfa7/6064bd5 提交）；P10 依赖核心库菜单族/ScrollBar/TreeView/HandleControl 工厂（**已存在**：UICornerstoneAPI.h:264-288，无缺口）；CreateImage/CreateAnimation 工厂待 Image/LuotiAni 控件化设计审核后并入 P5/P10。
 
 ## 9. 与现有 C ABI 的关系
 
@@ -1498,10 +1508,17 @@ UICornerstone_CreateSplitter      ui.CreateSplitter(x, y, w, h, orientation)
 UICornerstone_CreateImageButton   ui.CreateImageButton(n, h, p, x, y, w, h)
 UICornerstone_CreateDialog        ui.CreateDialog(confirm, cancel, x, y, w, h)
 
-── 控件工厂（核心库缺口，Binding 预留） ───────────────────
-（MenuBar/MenuPanel/MenuItem/ScrollBar/TreeView/HandleControl
-  的 C ABI 工厂当前不存在——需在核心库 C ABI 补齐后实施，
-  Binding 侧签名已定义，见 §5.1）
+── 控件工厂（菜单族 / 滚动条 / 树 / 句柄，已存在 :264-288）──
+UICornerstone_CreateMenuBar       ui.CreateMenuBar(x, y, w, h)
+UICornerstone_CreateMenuPanel     ui.CreateMenuPanel()
+UICornerstone_CreateMenuItem      ui.CreateMenuItem(caption, type)  // 0=Normal,1=Separator,2=SubMenu
+UICornerstone_MenuBarAddMenu      ui.MenuBarAddMenu(bar, caption, panel)
+UICornerstone_MenuPanelAddItem    ui.MenuPanelAddItem(panel, item)
+UICornerstone_MenuPanelAddSeparator ui.MenuPanelAddSeparator(panel)
+UICornerstone_MenuItemSetSubMenu  ui.MenuItemSetSubMenu(item, subMenu)
+UICornerstone_CreateScrollBar     ui.CreateScrollBar(x, y, w, h, orientation)
+UICornerstone_CreateTreeView      ui.CreateTreeView(x, y, w, h)
+UICornerstone_CreateHandleControl ui.CreateHandleControl(target, x, y, w, h)
 
 ── 布局 ─────────────────────────────────────────────────────
 UICornerstone_LoadLayout(json)    ui.LoadLayout(json)
@@ -1536,7 +1553,15 @@ UICornerstone_GetControlId        ctl.GetId()
 ── 资源与配置 ───────────────────────────────────────────────
 UIInstanceConfig.resourceRoot     Config::resourceRoot（Create 时传入，无 SetResourceRoot）
 UIInstanceConfig.windowTitle/Width/Height  Config::WithWindow(...)
+UIInstanceConfig.windowFlags      Config::WithWindowFlags(...)
+UIInstanceConfig.debugLabel       Config 预留（调试标签，null → "Instance_<id>"）
 UIInstanceConfig.structSize       宏 UI_INSTANCE_CONFIG_DEFAULT 自动填充
+
+── Debug 辅助 ───────────────────────────────────────────────
+UICornerstone_Debug_GetAliveCount     DebugGetAliveCount()（Release 返回 0）
+UICornerstone_Debug_GetAliveInstance  DebugGetAliveInstance(i)（Release 返回 NULL）
+UICornerstone_Debug_GetActiveViewport DebugGetActiveViewport(inst)
+UICornerstone_Debug_IsControlFocused  DebugIsControlFocused(inst, ctl)
 
 ── 事件注入与动作注册 ─────────────────────────────────────
 UICornerstone_PushUIEvent         ui.PushEvent(event)（§5.14 构造辅助）
@@ -1550,4 +1575,5 @@ UICornerstone_RegisterAction      ui.RegisterAction("name", lambda)
 - `Control::Handle()` 暴露原始 `UIControlHandle`，需要时回退到 C API
 - Binding 状态封装在 `UICornerstone::Impl`（多实例安全，见 §5.6.1）
 - `include/UICornerstoneAPI.h` 是 Binding 的唯一头文件依赖（不 include 核心库 GPL 内部头）
-- `UIEventData`（:348-360）的 `treeNode` 联合体由 `Event` 类按事件名解析（§5.3）
+- `UIEventData`（:349-361）的 `treeNode` 联合体由 `Event` 类按事件名解析（§5.3）
+- 跨实例句柄误用：`_DEBUG` 下核心库断言失败（src/UICornerstoneAPI.cpp:79-116）——Binding 不做二次校验，以核心库为准

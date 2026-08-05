@@ -1477,6 +1477,8 @@ NumericUpDown 是 **单层扁平控件**（不弹窗），与 ComboBox/Dialog �
 
 ## 12. C ABI
 
+> **修订注记（2026-08-05）**：本节为早期设计快照，**仅作历史参考**。下述旧导出已随演进移除/迁移：工厂函数现带 `UIInstance` 首参（`UICornerstone_CreateNumericUpDown(instance, x, y, w, h)`）；`SetNumericUpDownValue/Range/Step/PageStep/Decimals/ReadOnly/Placeholder` 等专用导出由统一属性系统 API 替代（`SetFloat(inst, ctl, "value"/"min"/"max"/"step"/"page-step", ...)`、`SetInt(inst, ctl, "decimals"/"read-only", ...)`、`SetString(inst, ctl, "placeholder", ...)`，回调用 `SetCallback(inst, ctl, "value-changed", cb, user)`）。**当前 API 以 `include/UICornerstoneAPI.h` 为准**；现成可运行示例见 `test/test_numericupdown_cabi.cpp`。
+
 ### 12.1 工厂函数
 
 ```c

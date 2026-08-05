@@ -82,7 +82,7 @@ sample_fromsource.exe
   └── SDL3_ttf.lib
 ```
 
-数据流：`main()` → `GetUIBackendCallbacks()`(exe) → `UICornerstone_Init(callbacks)`(DLL) → 工厂函数(通过ILT调用DLL) → 控件树
+数据流：`main()` → `GetUIBackendCallbacks()`(exe) → `UICornerstone_CreateInstance(callbacks, NULL)`(DLL) → 工厂函数(通过ILT调用DLL) → 控件树
 
 输出路径：`build/sample/sample_fromsource/<backend>/Debug/`
 
@@ -107,7 +107,7 @@ sample_loadlibrary.exe
   └── 不链接 UICornerstone_dll.lib
 ```
 
-数据流：`main()` → `LoadLibrary` → `GetProcAddress`(每个函数) → `GetUIBackendCallbacks()`(exe内) → `uiInit(callbacks)`(函数指针→DLL)
+数据流：`main()` → `LoadLibrary` → `GetProcAddress`(每个函数) → `GetUIBackendCallbacks()`(exe内) → `pfnCreateInstance(cbs)`(函数指针→DLL)
 
 输出路径：`build/sample/sample_loadlibrary/<backend>/Debug/`
 
@@ -123,14 +123,15 @@ sample_loadlibrary.exe
 
 /* ======== 回调函数 ======== */
 static int g_clickCount = 0;
+static UIInstance g_inst;
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
     (void)ctl; (void)user;
     g_clickCount++;
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
-    UIControlHandle status = UICornerstone_FindControl("status");
-    if (status) UICornerstone_SetText(status, buf);
+    UIControlHandle status = UICornerstone_FindControl(g_inst, "status");
+    if (status) UICornerstone_SetString(g_inst, status, "caption", buf);
 }
 
 /* ======== JSON 布局 ======== */
@@ -155,23 +156,24 @@ static const char* LAYOUT =
 
 /* ======== main ======== */
 int main(void) {
-    if (!UICornerstone_InitFromPlugin(UICORNERSTONE_BACKEND_NAME)) return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
-    UICornerstone_RegisterAction("onBtnClick", onBtnClick, NULL);
+    g_inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
+    UICornerstone_RegisterAction(g_inst, "onBtnClick", onBtnClick, NULL);
 
-    if (!UICornerstone_LoadLayout(LAYOUT)) {
-        UICornerstone_Shutdown(); return 1;
+    if (!UICornerstone_LoadLayout(g_inst, LAYOUT)) {
+        UICornerstone_DestroyInstance(g_inst); return 1;
     }
 
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0 / 60.0);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0 / 60.0);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
 
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }
 ```
@@ -194,7 +196,7 @@ int main(void) {
 | UI 定义  | 内联 JSON 字符串                              | C ABI 工厂函数                                     |
 | 布局解析 | `LayoutParser::parseLayout()`                 | 无                                                 |
 | 控件查找 | `UICornerstone_FindControl` 按 ID             | 全局变量保存句柄                                   |
-| 按钮颜色 | JSON`colors.background`                       | `UICornerstone_SetBGColor`                         |
+| 按钮颜色 | JSON`colors.background`                       | `UICornerstone_SetColor`                           |
 | 代码量   | ~50 行                                        | ~45 行                                             |
 
 ### 代码结构（~45 行）
@@ -204,6 +206,7 @@ int main(void) {
 #include <stdio.h>
 
 static int g_clickCount = 0;
+static UIInstance g_inst;
 static UIControlHandle g_statusLabel = NULL;
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
@@ -212,40 +215,40 @@ static void onBtnClick(UIControlHandle ctl, void* user) {
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
     if (g_statusLabel)
-        UICornerstone_SetText(g_statusLabel, buf);
+        UICornerstone_SetString(g_inst, g_statusLabel, "caption", buf);
 }
 
 int main(void) {
-    if (!UICornerstone_InitFromPlugin(UICORNERSTONE_BACKEND_NAME))
-        return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    g_inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
-    UIControlHandle root = UICornerstone_CreatePanel(0,0,800,480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
 
     UIControlHandle title = UICornerstone_CreateLabel(
-        "UICornerstone Sample (Programmatic)", 18,
+        g_inst, "UICornerstone Sample (Programmatic)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChildControl(root, title);
+    UICornerstone_AddChildControl(g_inst, root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(
-        "Click Me", 20, 60, 200, 80);
-    UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
-    UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChildControl(root, btn);
+        g_inst, "Click Me", 20, 60, 200, 80);
+    UICornerstone_SetColor(g_inst, btn, "background", (UIColor){74, 144, 217, 255});
+    UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+    UICornerstone_AddChildControl(g_inst, root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
-        "Click the button above", 14,
+        g_inst, "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChildControl(root, g_statusLabel);
+    UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0 / 60.0);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0 / 60.0);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }
 ```
@@ -253,9 +256,9 @@ int main(void) {
 ### 关键差异说明
 
 1. **无 JSON**：控件通过 `UICornerstone_CreatePanel/CreateButton/CreateLabel` 直接创建
-2. **父子关系**：`UICornerstone_AddChildControl(root, child)` 将子控件挂到根 Panel
+2. **父子关系**：`UICornerstone_AddChildControl(inst, root, child)` 将子控件挂到根 Panel
 3. **句柄存储**：`g_statusLabel` 静态变量替代 `FindControl` 查找
-4. **按钮颜色**：`UICornerstone_SetBGColor` 自动生成 hover（变亮 30%）和 pressed（变暗 30%）状态
+4. **按钮颜色**：`UICornerstone_SetColor(inst, btn, "background", ...)` 设置背景色（属性系统 API，旧 `SetBGColor` 已移除）
 
 ## 6. sample_fromsource.c（混合集成——核心 DLL + 后端源码）
 
@@ -278,6 +281,7 @@ int main(void) {
 extern UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 static int g_clickCount = 0;
+static UIInstance g_inst;
 static UIControlHandle g_statusLabel = NULL;
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
@@ -286,42 +290,43 @@ static void onBtnClick(UIControlHandle ctl, void* user) {
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
     if (g_statusLabel)
-        UICornerstone_SetText(g_statusLabel, buf);
+        UICornerstone_SetString(g_inst, g_statusLabel, "caption", buf);
 }
 
 int main(void) {
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
     if (!callbacks) return 1;
 
-    if (!UICornerstone_Init(callbacks)) return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    g_inst = UICornerstone_CreateInstance(callbacks, NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
-    UIControlHandle root = UICornerstone_CreatePanel(0,0,800,480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
 
     UIControlHandle title = UICornerstone_CreateLabel(
-        "UICornerstone Sample (Hybrid)", 18,
+        g_inst, "UICornerstone Sample (Hybrid)", 18,
         20, 10, 760, 30);
-    UICornerstone_AddChildControl(root, title);
+    UICornerstone_AddChildControl(g_inst, root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(
-        "Click Me", 20, 60, 200, 80);
-    UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
-    UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChildControl(root, btn);
+        g_inst, "Click Me", 20, 60, 200, 80);
+    UICornerstone_SetColor(g_inst, btn, "background", (UIColor){74, 144, 217, 255});
+    UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+    UICornerstone_AddChildControl(g_inst, root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
-        "Click the button above", 14,
+        g_inst, "Click the button above", 14,
         20, 160, 400, 24);
-    UICornerstone_AddChildControl(root, g_statusLabel);
+    UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0 / 60.0);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0 / 60.0);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }
 ```
@@ -329,7 +334,7 @@ int main(void) {
 ### 关键差异说明
 
 1. **`GetUIBackendCallbacks()`**：来自编译进 exe 的 `BackendPlugin.cpp`，返回后端回调表
-2. **`UICornerstone_Init(callbacks)`**：通过 ILT（Import Library Thunk）调用 DLL 中的初始化函数
+2. **`UICornerstone_CreateInstance(callbacks, NULL)`**：通过 ILT（Import Library Thunk）调用 DLL 中的创建函数
 3. **ILT 隐式加载**：链接 `UICornerstone_dll.lib` 时编译器自动生成导入表，程序启动时自动加载 `UICornerstone.dll`
 4. **控件工厂**：`UICornerstone_CreateButton` 等函数同样通过 ILT 调用 DLL 中的实现
 5. **构建限制**：仅 `UICORNERSTONE_BUILD_DLL=ON` 模式可用，需 `build/sdl3_dll/` 目录
@@ -358,19 +363,20 @@ int main(void) {
 
 // 2) LoadLibrary 获取 C ABI 函数指针
 HMODULE dll = LoadLibraryA("UICornerstone.dll");
-uiInit = GetProcAddress(dll, "UICornerstone_Init");
-uiCreateButton = GetProcAddress(dll, "UICornerstone_CreateButton");
+pfnCreateInstanceFromPlugin = GetProcAddress(dll, "UICornerstone_CreateInstanceFromPlugin");
+pfnCreateButton = GetProcAddress(dll, "UICornerstone_CreateButton");
 // ...
 
-// 3) 从 TU 内获 BackendCallbacks，通过函数指针调用 Init
+// 3) 从 TU 内获 BackendCallbacks，创建实例（函数指针调用）
 UIBackendCallbacks* cbs = GetUIBackendCallbacks();
-uiInit(cbs);
+UIInstance inst = pfnCreateInstance(cbs, NULL);  // 或 pfnCreateInstanceFromPlugin("sdl3", NULL)
 
 // 4) 帧循环（全部通过函数指针）
-while (!uiIsQuitRequested()) {
-    uiProcessEvents(); uiUpdate(1/60.);
-    uiClear(); uiRender(); uiPresent();
+while (!pfnIsQuitRequested(inst)) {
+    pfnProcessEvents(inst); pfnUpdate(inst, 1./60.);
+    pfnClear(inst); pfnRender(inst); pfnPresent(inst);
 }
+pfnDestroyInstance(inst);
 FreeLibrary(dll);
 ```
 

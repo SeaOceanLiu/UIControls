@@ -1101,6 +1101,8 @@ if (auto cb = dynamic_pointer_cast<ComboBox>(ctrl)) {
 
 ## 11. C ABI
 
+> **修订注记（2026-08-05）**：本小节开头为早期设计快照，**仅作历史参考**。`UICornerstone_CreateComboBox`（已带 `UIInstance` 首参）与 11.1 通用属性系统 API 有效；`ComboBoxSetItems`/`ClearItems`/`SetSelectedIndex`/`GetSelectedIndex`/`SetMaxVisibleItems`/`SetItemHeight`/`SetOnSelectionChanged` 等专用导出已由属性系统 API 替代（`SetString(inst, ctl, "items", json)`、`SetInt(inst, ctl, "selected-index"/"max-visible-items", v)`、`SetFloat(inst, ctl, "item-height", v)`、`SetCallback(inst, ctl, "selection-changed", cb, user)`）。**当前 API 以 `include/UICornerstoneAPI.h` 为准**；现成可运行示例见 `test/test_combobox_cabi.cpp`。
+
 ```cpp
 // 工厂函数
 UIControlHandle UICornerstone_CreateComboBox(

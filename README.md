@@ -107,6 +107,12 @@ fromsource 测试使用单源文件 + 编译定义区分后端，后端源码作
 | test_fromsource_cabi | C ABI 编程式创建控件（Button/Label/CheckBox/EditBox/ProgressBar/Panel/Slider/ColorPicker...） |
 | test_dialog_cabi | JSON Dialog 颜色选择器（预设色 + RGB 滑块 + Hex 输入 + Dialog 确定/取消） |
 | test_combobox_cabi | JSON ComboBox（10 个城市选项，选中回调验证） |
+| test_numericupdown_cabi | JSON NumericUpDown（+/- 步进与回调验证） |
+| test_splitter_cabi | JSON Splitter（分割条拖动与布局验证） |
+| test_treeview_cabi | JSON TreeView（树节点展开/选中验证） |
+| test_property_cabi | C ABI 通用属性系统验证（Set/Get 对称 + 边界条件） |
+| test_multi_instance_cabi | 多实例隔离（CreateInstanceFromPlugin 动态加载，事件/Action/生命周期隔离） |
+| test_multiviewport_cabi | 多视口 + 键盘跨视口导航（K1-K8） |
 
 ## 项目结构
 

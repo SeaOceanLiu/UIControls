@@ -1,4 +1,5 @@
 ﻿#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <cstring>
 
@@ -110,6 +111,7 @@ public:
     SFMLInputBackend(sf::Window* window)
         : m_window(window)
     {
+        m_renderWindow = dynamic_cast<sf::RenderWindow*>(window);
     }
 
     void startTextInput() override { m_textInputActive = true; }
@@ -149,6 +151,14 @@ public:
             event.m_type = EventType::WindowResize;
             event.resizeEvent.width = static_cast<int>(resized->size.x);
             event.resizeEvent.height = static_cast<int>(resized->size.y);
+            // fromsource/C ABI 模式下 Window::onResized 无法到达本后端
+            // （CallbackWindow 未转发），SFML 必须自行更新 view，
+            // 否则窗口拉伸时画面会按旧 view 被整体缩放。
+            if (m_renderWindow) {
+                m_renderWindow->setView(sf::View(sf::FloatRect(
+                    {0.0f, 0.0f},
+                    {(float)event.resizeEvent.width, (float)event.resizeEvent.height})));
+            }
         }
         else if (const auto* keyPressed = sfmlEvent.getIf<sf::Event::KeyPressed>()) {
             event.m_type = EventType::KeyDown;
@@ -250,6 +260,7 @@ public:
 
 private:
     sf::Window* m_window;
+    sf::RenderWindow* m_renderWindow = nullptr;
     bool m_textInputActive = false;
 };
 

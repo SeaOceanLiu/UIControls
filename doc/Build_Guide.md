@@ -76,6 +76,12 @@ build_scripts\build_test.bat test_label raylib      # Raylib
 | `test_api` | 测试 | C ABI API 测试 |
 | `test_fromsource_cabi` | 测试 | 三后端 C ABI 集成测试（LoadLibrary + 编程式创建），单源文件，通过编译定义区分后端 |
 | `test_dialog_cabi` | 测试 | C ABI Dialog 集成测试（LoadLibrary + JSON dialogs），三后端共享 |
+| `test_numericupdown_cabi` | 测试 | C ABI NumericUpDown 集成测试（LoadLibrary + JSON），三后端共享 |
+| `test_splitter_cabi` | 测试 | C ABI Splitter 集成测试（LoadLibrary + JSON），三后端共享 |
+| `test_treeview_cabi` | 测试 | C ABI TreeView 集成测试（LoadLibrary + JSON），三后端共享 |
+| `test_property_cabi` | 测试 | C ABI 通用属性系统测试（Set/Get 对称 + 边界条件） |
+| `test_multi_instance_cabi` | 测试 | C ABI 多实例隔离测试（CreateInstanceFromPlugin 动态加载） |
+| `test_multiviewport_cabi` | 测试 | C ABI 多视口 + 键盘跨视口导航测试 |
 | `hello_uicornerstone` | 示例 | 纯 C 示例（JSON 布局），Button + Label 交互 |
 | `sample_programmatic` | 示例 | 纯 C 示例（编程式创建），Button + Label 交互 |
 | `sample_fromsource` | 示例 | 纯 C 示例（混合集成），Button + Label 交互，需 DLL 模式 |
@@ -106,6 +112,12 @@ build\sdl3_dll\test\Debug\
 ├── test_fromsource_cabi.exe    # fromsource 测试（后端独立 TU 编译）
 ├── test_dialog_cabi.exe
 ├── test_combobox_cabi.exe
+├── test_numericupdown_cabi.exe
+├── test_splitter_cabi.exe
+├── test_treeview_cabi.exe
+├── test_property_cabi.exe
+├── test_multi_instance_cabi.exe
+├── test_multiviewport_cabi.exe
 ├── UICornerstone.dll           # 核心 DLL（由 LoadLibrary 显式加载）
 ├── assets/                     # 字体等资源
 ├── SDL3.dll                    # 第三方依赖
@@ -152,6 +164,12 @@ cd build\sdl3_dll\test\Debug
 test_fromsource_cabi.exe
 test_dialog_cabi.exe
 test_combobox_cabi.exe
+test_numericupdown_cabi.exe
+test_splitter_cabi.exe
+test_treeview_cabi.exe
+test_property_cabi.exe
+test_multi_instance_cabi.exe
+test_multiviewport_cabi.exe
 ```
 
 ## DLL 模式构建
@@ -197,6 +215,12 @@ fromsource 将后端源码（Window/RenderDevice/TextRenderer/InputBackend/Curso
 | `sample_loadlibrary` | 纯 C++ 示例，`LoadLibrary` 显式加载 + `#include` 后端源码 |
 | `test_dialog_cabi` | 三后端 C ABI Dialog 测试，`LoadLibrary` + JSON dialogs，后端源码独立 TU 编译 |
 | `test_combobox_cabi` | 三后端 C ABI ComboBox 测试，`LoadLibrary` + JSON 布局，后端源码独立 TU 编译 |
+| `test_numericupdown_cabi` | 三后端 C ABI NumericUpDown 测试，`LoadLibrary` + JSON |
+| `test_splitter_cabi` | 三后端 C ABI Splitter 测试，`LoadLibrary` + JSON |
+| `test_treeview_cabi` | 三后端 C ABI TreeView 测试，`LoadLibrary` + JSON |
+| `test_property_cabi` | C ABI 通用属性系统测试 |
+| `test_multi_instance_cabi` | 三后端 C ABI 多实例隔离测试，`CreateInstanceFromPlugin` 动态加载 |
+| `test_multiviewport_cabi` | 三后端 C ABI 多视口 + 键盘导航测试（K1-K8） |
 
 ## 故障排除
 

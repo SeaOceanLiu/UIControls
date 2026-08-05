@@ -26,7 +26,7 @@ cmake --build build/raylib_dll --target test_treeview_cabi  # → build/raylib_d
 
 **Available tests (标准)**: test_menu, test_label, test_editbox, test_checkbox, test_progressbar, test_layout, test_layout_advanced, test_winframe, test_graphtool, test_button, test_slider, test_colorpicker, test_combobox, test_dialog, test_handlecontrol, test_numericupdown, test_splitter, test_treeview
 
-**Available tests (DLL 模式 C ABI)**: test_fromsource_cabi, test_api, test_dialog_cabi, test_combobox_cabi, test_numericupdown_cabi, test_splitter_cabi, test_treeview_cabi, test_property_cabi
+**Available tests (DLL 模式 C ABI)**: test_fromsource_cabi, test_api, test_dialog_cabi, test_combobox_cabi, test_numericupdown_cabi, test_splitter_cabi, test_treeview_cabi, test_property_cabi, test_multi_instance_cabi, test_multiviewport_cabi
 
 ## Running Tests
 
@@ -48,6 +48,7 @@ test_treeview_cabi.exe
 - Clone with `--recursive` to get all submodules
 - Build scripts automatically call VsDevCmd.bat - do not run from vanilla cmd.exe
 - Output directory is `build\{sdl3|sfml}\test\Debug\`, not `build\Debug`
+- 标准测试（DLL 模式下）自动拷贝 `UICornerstone.dll` 与 `UIBackend_${backend}.dll` 到输出目录（POST_BUILD，且已通过 `add_dependencies` 保证先构建库再拷贝），库代码改动直接生效；若运行时行为与源码不符，先检查 `test\Debug\` 下 DLL 时间戳是否最新
 - SDL3 backend DLLs (SDL3.dll, SDL3_ttf.dll, SDL3_image.dll, DebugInfoX64.dll) and assets/layouts folders are auto-copied to output
 - SFML backend DLLs and assets are auto-copied to `build\sfml\test\Debug\`
 - `NOMINMAX` must appear before any `#include` in files using `std::min`/`std::max` because SDL3 headers pull in `windows.h` transitively
@@ -69,7 +70,7 @@ test_treeview_cabi.exe
   | Raylib | `build/raylib/`   | `build/raylib/test/Debug/`   |
   | 构建   | `cmake --build build/sdl3 --target test_treeview` | |
 
-- **DLL 模式集成测试**（C ABI fromsource 测试，如 `test_*_cabi`）：使用 `build/{backend}_dll/` 构建目录
+- **DLL 模式集成测试**（C ABI 测试，如 `test_*_cabi`）：使用 `build/{backend}_dll/` 构建目录；多实例/多视口测试（test_multi_instance_cabi、test_multiviewport_cabi）经 `CreateInstanceFromPlugin` 动态加载后端 DLL
 
   | 后端   | 构建目录              | 测试输出目录                         |
   | ------ | --------------------- | ------------------------------------ |

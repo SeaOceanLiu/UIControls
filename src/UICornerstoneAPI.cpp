@@ -95,9 +95,9 @@ static bool treeContains(Control* root, Control* target) {
 static bool instanceHoldsControl(UIInstance instance, Control* target) {
     if (instance->bench && treeContains(instance->bench, target)) return true;
     for (auto& sp : instance->popupPool)
-        if (sp.get() == target) return true;
+        if (sp.get() == target || treeContains(sp.get(), target)) return true;
     for (auto& sp : instance->menuPool)
-        if (sp.get() == target) return true;
+        if (sp.get() == target || treeContains(sp.get(), target)) return true;
     return false;
 }
 
@@ -105,8 +105,7 @@ static Control* validateControl(UIInstance instance, UIControlHandle ctl) {
     if (!instance || !ctl) return nullptr;
     Control* target = static_cast<Control*>(ctl);
     if (instanceHoldsControl(instance, target)) return target;
-    printf("UICornerstone: control handle %p NOT owned by instance [%s] (ID=%u)\n",
-           ctl, instance->debugLabel.c_str(), instance->instanceId);
+    UI_LOGE(instance, "control handle %p NOT owned by instance", ctl);
     assert(false && "UICornerstone: control handle not owned by this instance");
     return nullptr;
 }
@@ -308,7 +307,7 @@ UIInstance UICornerstone_CreateInstance(
     }
 
     registerInstance(ctx);
-    printf("[%s] created\n", ctx->debugLabel.c_str());
+    UI_LOGI(ctx, "created");
     return ctx;
 }
 
@@ -336,7 +335,7 @@ UIInstance UICornerstone_CreateViewport(UIInstance parent, UIRect rect) {
     if (!parent->activeViewport) parent->activeViewport = vp;
 
     registerInstance(vp);
-    printf("[%s] created (viewport %g,%g %gx%g)\n", vp->debugLabel.c_str(),
+    UI_LOGI(vp, "created (viewport %g,%g %gx%g)",
         vp->viewport.left, vp->viewport.top, vp->viewport.width, vp->viewport.height);
     return vp;
 }
@@ -367,7 +366,7 @@ void UICornerstone_DestroyInstance(UIInstance instance) {
         cs.erase(std::remove(cs.begin(), cs.end(), instance), cs.end());
     }
 
-    printf("[%s] destroyed\n", instance->debugLabel.c_str());
+    UI_LOGI(instance, "destroyed");
     delete instance;
 }
 
@@ -642,9 +641,9 @@ int UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent) {
         if (ctl) instance->controlsById[id] = reinterpret_cast<UIControlHandle>(ctl.get());
     }
 
-    printf("[%s] LoadLayout OK (%zu control ids, %zu menu bars, %zu dialogs)\n",
-           instance->debugLabel.c_str(), parser.getAllControlIds().size(),
-           parser.getMenuBars().size(), parser.getDialogs().size());
+    UI_LOGI(instance, "LoadLayout OK (%zu control ids, %zu menu bars, %zu dialogs)",
+        parser.getAllControlIds().size(),
+        parser.getMenuBars().size(), parser.getDialogs().size());
     return 1;
 }
 

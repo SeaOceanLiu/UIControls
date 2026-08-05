@@ -67,14 +67,15 @@ assets/               ← 字体、图片资源
 #include <stdio.h>
 
 static int g_clickCount = 0;
+static UIInstance g_inst;
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
     (void)ctl; (void)user;
     g_clickCount++;
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
-    UIControlHandle status = UICornerstone_FindControl("status");
-    if (status) UICornerstone_SetText(status, buf);
+    UIControlHandle status = UICornerstone_FindControl(g_inst, "status");
+    if (status) UICornerstone_SetString(g_inst, status, "caption", buf);
 }
 
 static const char* LAYOUT =
@@ -97,20 +98,21 @@ static const char* LAYOUT =
 "  }]}";
 
 int main(void) {
-    if (!UICornerstone_InitFromPlugin("sdl3")) return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
-    UICornerstone_RegisterAction("onBtnClick", onBtnClick, NULL);
-    if (!UICornerstone_LoadLayout(LAYOUT)) {
-        UICornerstone_Shutdown(); return 1;
+    g_inst = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
+    UICornerstone_RegisterAction(g_inst, "onBtnClick", onBtnClick, NULL);
+    if (!UICornerstone_LoadLayout(g_inst, LAYOUT)) {
+        UICornerstone_DestroyInstance(g_inst); return 1;
     }
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0 / 60.0);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0 / 60.0);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }
 ```
@@ -157,6 +159,7 @@ myapp.exe
 #include <stdio.h>
 
 static int g_clickCount = 0;
+static UIInstance g_inst;
 static UIControlHandle g_statusLabel = NULL;
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
@@ -165,36 +168,37 @@ static void onBtnClick(UIControlHandle ctl, void* user) {
     char buf[64];
     snprintf(buf, sizeof(buf), "Clicked: %d", g_clickCount);
     if (g_statusLabel)
-        UICornerstone_SetText(g_statusLabel, buf);
+        UICornerstone_SetString(g_inst, g_statusLabel, "caption", buf);
 }
 
 int main(void) {
-    if (!UICornerstone_InitFromPlugin("sdl3")) return 1;
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    g_inst = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
-    UIControlHandle root = UICornerstone_CreatePanel(0, 0, 800, 480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
     UIControlHandle title = UICornerstone_CreateLabel(
-        "My App (Programmatic)", 18, 20, 10, 760, 30);
-    UICornerstone_AddChildControl(root, title);
+        g_inst, "My App (Programmatic)", 18, 20, 10, 760, 30);
+    UICornerstone_AddChildControl(g_inst, root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(
-        "Click Me", 20, 60, 200, 80);
-    UICornerstone_SetBGColor(btn, 74, 144, 217, 255);
-    UICornerstone_SetOnClick(btn, onBtnClick, NULL);
-    UICornerstone_AddChildControl(root, btn);
+        g_inst, "Click Me", 20, 60, 200, 80);
+    UICornerstone_SetColor(g_inst, btn, "background", (UIColor){74, 144, 217, 255});
+    UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+    UICornerstone_AddChildControl(g_inst, root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
-        "Click the button above", 14, 20, 160, 400, 24);
-    UICornerstone_AddChildControl(root, g_statusLabel);
+        g_inst, "Click the button above", 14, 20, 160, 400, 24);
+    UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
-    while (!UICornerstone_IsQuitRequested()) {
-        UICornerstone_ProcessEvents();
-        UICornerstone_Update(1.0 / 60.0);
-        UICornerstone_Clear();
-        UICornerstone_Render();
-        UICornerstone_Present();
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0 / 60.0);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
     }
-    UICornerstone_Shutdown();
+    UICornerstone_DestroyInstance(g_inst);
     return 0;
 }
 ```
@@ -203,11 +207,15 @@ int main(void) {
 
 | 函数 | 作用 |
 |------|------|
-| `UICornerstone_CreatePanel/CreateButton/CreateLabel` | 创建控件 |
-| `UICornerstone_AddChildControl(parent, child)` | 挂接父子关系 |
-| `UICornerstone_SetText(handle, text)` | 设置文本 |
-| `UICornerstone_SetBGColor(handle, r, g, b, a)` | 设置背景色（自动生成 hover/pressed） |
-| `UICornerstone_SetOnClick(handle, callback, user)` | 绑定点击事件 |
+| `UICornerstone_CreateInstanceFromPlugin("sdl3", NULL)` | 加载后端插件并创建实例 |
+| `UICornerstone_CreatePanel/CreateButton/CreateLabel` | 创建控件（首参为实例句柄） |
+| `UICornerstone_AddChildControl(inst, parent, child)` | 挂接父子关系 |
+| `UICornerstone_SetString(inst, handle, "caption", text)` | 设置文本（属性系统，见下） |
+| `UICornerstone_SetColor(inst, handle, "background", color)` | 设置颜色 |
+| `UICornerstone_SetCallback(inst, handle, "click", cb, user)` | 绑定点击事件 |
+| `UICornerstone_DestroyInstance(inst)` | 销毁实例并释放全部资源 |
+
+> 旧版 `SetText`/`SetBGColor`/`SetOnClick` 等专用导出已移除，统一由属性系统 API（`SetString`/`SetColor`/`SetBool`/`SetFloat`/`SetCallback`…）替代，属性名与 JSON 字段一致（如 Label 文本用 `"caption"`）。
 
 ## 5. 进阶：混合集成（核心 DLL + 后端源码）
 
@@ -218,7 +226,7 @@ int main(void) {
 ### 5.2 关键区别
 
 - 使用 `GetUIBackendCallbacks()` 获取后端回调查表
-- 通过 `UICornerstone_Init(callbacks)` 初始化（而非 `InitFromPlugin`）
+- 通过 `UICornerstone_CreateInstance(callbacks, NULL)` 创建实例（而非 `CreateInstanceFromPlugin`）
 - 需构建时启用 `UICORNERSTONE_BUILD_DLL=ON`
 
 ### 5.3 代码
@@ -231,10 +239,12 @@ extern UIBackendCallbacks* GetUIBackendCallbacks(void);
 
 int main(void) {
     UIBackendCallbacks* callbacks = GetUIBackendCallbacks();
-    if (!callbacks || !UICornerstone_Init(callbacks)) return 1;
+    UIInstance inst = UICornerstone_CreateInstance(callbacks, NULL);
+    if (!inst) return 1;
 
-    UICornerstone_SetViewport(0, 0, 800, 480);
+    UICornerstone_SetViewport(inst, 0, 0, 800, 480);
     // ... 创建控件，帧循环同前
+    UICornerstone_DestroyInstance(inst);
     return 0;
 }
 ```
@@ -301,10 +311,13 @@ ResourceProvider* ResourceProvider::createFilesystem(const string& base) {
 
 int main(void) {
     HMODULE dll = LoadLibraryA("UICornerstone.dll");
-    // GetProcAddress 解析所有 C ABI 函数...
+    // GetProcAddress 解析 C ABI 函数指针：
+    //   UICornerstone_CreateInstanceFromPlugin / CreateInstance /
+    //   DestroyInstance / SetViewport / LoadLayout / 帧循环五件套 ...
     UIBackendCallbacks* cbs = GetUIBackendCallbacks();
-    pfnInit(cbs);  // 通过函数指针调用
+    UIInstance inst = pfnCreateInstanceFromPlugin("sdl3", NULL);  // 或 pfnCreateInstance(cbs, NULL)
     // ... 帧循环 ...
+    pfnDestroyInstance(inst);
     FreeLibrary(dll);
     return 0;
 }
@@ -328,17 +341,52 @@ cmake -B build -DUICORNERSTONE_BACKEND=RAYLIB
 
 ## 8. 帧循环生命周期
 
-所有模式共享相同的帧循环结构：
+所有模式共享相同的帧循环结构（首参均为实例句柄）：
 
 ```c
-while (!UICornerstone_IsQuitRequested()) {
-    UICornerstone_ProcessEvents();   // 处理输入事件
-    UICornerstone_Update(dt);        // 更新控件状态
-    UICornerstone_Clear();           // 清空渲染目标
-    UICornerstone_Render();          // 绘制控件树
-    UICornerstone_Present();         // 交换缓冲区
+while (!UICornerstone_IsQuitRequested(inst)) {
+    UICornerstone_ProcessEvents(inst);   // 处理输入事件
+    UICornerstone_Update(inst, dt);      // 更新控件状态
+    UICornerstone_Clear(inst);           // 清空渲染目标
+    UICornerstone_Render(inst);          // 绘制控件树
+    UICornerstone_Present(inst);         // 交换缓冲区
 }
 ```
+
+## 8.1 多实例（C ABI 全面实例化）
+
+UICornerstone 为多实例架构：`UIInstance` 是根句柄（含窗口、控件树、事件队列、焦点与注册表），**可同时创建多个实例**，彼此完全隔离：
+
+- `UICornerstone_CreateInstance(callbacks, config)` — 以回调查表创建（混合集成模式）
+- `UICornerstone_CreateInstanceFromPlugin(backendName, config)` — 以后端名创建（自动加载插件，静态/fromsource/LoadLibrary 模式）
+- `UICornerstone_DestroyInstance(inst)` — 销毁实例，级联释放其全部控件与资源
+
+实例化后的规则：
+
+- **所有函数首参均为实例句柄**（`CreateButton(inst, ...)`、`LoadLayout(inst, json)`、`FindControl(inst, id)`、`SetString(inst, ctl, prop, val)`…），无全局隐式实例
+- 回调（`UIActionCallback`/`UIEventCallback`）不携带实例参数——如需在回调中操作控件，用全局变量保存 `UIInstance` 或经 `userData` 传递
+- 两个实例的事件、Action 注册表（`RegisterAction`）、控件 id 互不干扰；`ProcessEvents`/`Update` 分别驱动各自实例
+- Debug 构建下，跨实例句柄误用（把 A 实例的控件句柄传给 B 实例）会被归属校验断言捕获
+
+```c
+// 双实例示例（sdl3 后端，两个独立窗口）
+UIInstance win1 = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
+UIInstance win2 = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
+// ... 各自 SetViewport / LoadLayout / 创建控件 ...
+while (!UICornerstone_IsQuitRequested(win1) &&
+       !UICornerstone_IsQuitRequested(win2)) {
+    UICornerstone_ProcessEvents(win1);
+    UICornerstone_Update(win1, 1.0 / 60.0);
+    UICornerstone_Clear(win1);
+    UICornerstone_Render(win1);
+    UICornerstone_Present(win1);
+    // win2 同上……
+}
+UICornerstone_DestroyInstance(win1);
+UICornerstone_DestroyInstance(win2);
+```
+
+> 多实例隔离的完整设计见 `doc/CABI_MultiInstance_Design.md`，验证用例见 `test/test_multi_instance_cabi.cpp`（事件隔离/生命周期/销毁再创建 x100）与 `test/test_multiviewport_cabi.cpp`（多视口 + 键盘导航）。
 
 ## 9. 常见问题
 

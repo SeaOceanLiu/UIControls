@@ -130,6 +130,26 @@ foreach(test_name ${UI_TEST_EXECUTABLES})
                         $<TARGET_FILE_DIR:${test_name}>)
             endforeach()
 
+            if(UICORNERSTONE_BUILD_DLL)
+                # DLL 模式下标准测试运行需要核心 DLL 与后端插件 DLL：
+                # 与 test_api 一致，POST_BUILD 同步最新构建产物，
+                # 避免 test/Debug 下 DLL 陈旧导致版本错配（如 view/resize 行为差异）。
+                add_custom_command(TARGET ${test_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "$<TARGET_FILE_DIR:UICornerstone_dll>/UICornerstone.dll"
+                        "$<TARGET_FILE_DIR:${test_name}>")
+                add_custom_command(TARGET ${test_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "$<TARGET_FILE_DIR:UIBackend_${_BACKEND_LOWER}>/UIBackend_${_BACKEND_LOWER}.dll"
+                        "$<TARGET_FILE_DIR:${test_name}>")
+
+                # 标准测试静态链接 UICornerstone，不依赖 UICornerstone_dll 导入库；
+                # 若不强制顺序，MSBuild 并行下 POST_BUILD 可能在核心 DLL 构建完成前
+                # 执行（copy_if_different 读到旧文件视为相同而跳过），导致 test/Debug
+                # 长期同步不到最新库代码。add_dependencies 只约束构建顺序，不增加链接。
+                add_dependencies(${test_name} UICornerstone_dll UIBackend_${_BACKEND_LOWER})
+            endif()
+
             add_custom_command(TARGET ${test_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_directory
                     "${ASSETS_DIR}"
@@ -176,6 +196,50 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_api.c")
         target_link_libraries(test_api PRIVATE ${TEST_LIBS})
     endif()
 endif()
+
+# ============================================================
+# Multi-instance / multiviewport C ABI tests (pure DLL plugin loading)
+# Dynamic loading: LoadLibrary("UICornerstone.dll") + GetProcAddress,
+# create instances via CreateInstanceFromPlugin → core DLL loads
+# UIBackend_xxx.dll. Unlike test_api (import-lib link), these do NOT
+# link UICornerstone_dll — everything is resolved at runtime.
+# ============================================================
+foreach(cabi_test_name test_multi_instance_cabi test_multiviewport_cabi)
+    if(UICORNERSTONE_BUILD_DLL AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${cabi_test_name}.cpp")
+        add_executable(${cabi_test_name} ${cabi_test_name}.cpp)
+
+        target_include_directories(${cabi_test_name} PRIVATE ${TEST_INCLUDES})
+        string(TOLOWER "${UICORNERSTONE_BACKEND}" _BACKEND_LOWER)
+        target_compile_definitions(${cabi_test_name} PRIVATE
+            UICORNERSTONE_BACKEND_NAME="${_BACKEND_LOWER}"
+        )
+        # 动态加载方式（LoadLibrary + GetProcAddress）：不链接 UICornerstone_dll 导入库
+
+        if(WIN32)
+            # Copy UICornerstone.dll from the core DLL output dir
+            add_custom_command(TARGET ${cabi_test_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE_DIR:UICornerstone_dll>/UICornerstone.dll"
+                    "$<TARGET_FILE_DIR:${cabi_test_name}>")
+
+            # Copy the backend plugin DLL (e.g. UIBackend_sdl3.dll)
+            add_custom_command(TARGET ${cabi_test_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE_DIR:UIBackend_${_BACKEND_LOWER}>/UIBackend_${_BACKEND_LOWER}.dll"
+                    "$<TARGET_FILE_DIR:${cabi_test_name}>")
+
+            foreach(dll ${TEST_DLLS})
+                add_custom_command(TARGET ${cabi_test_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${dll}"
+                        "$<TARGET_FILE_DIR:${cabi_test_name}>")
+            endforeach()
+
+            # 与标准测试同理：动态加载不链接核心库，强制顺序避免 POST_BUILD 竞态
+            add_dependencies(${cabi_test_name} UICornerstone_dll UIBackend_${_BACKEND_LOWER})
+        endif()
+    endif()
+endforeach()
 
 # ============================================================
 # From-source build tests (DLL bridge + backend source compiled in)
