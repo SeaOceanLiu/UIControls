@@ -14,6 +14,8 @@ enum class ScaleType {
 class Actor: public Material{
 friend class ActorBuilder;
 private:
+    uint8_t m_alpha = 255;
+    bool m_explicitSize = false;   // setRect 显式设置过尺寸（w/h>0）→ 换图不再跟随自然尺寸
 protected:
     bool m_matchParentRect; //是否强制使用目标矩形
     ScaleType m_scaleType;
@@ -26,6 +28,7 @@ public:
     Actor(Control *parent, string resourceId, bool matchParentRect=false, float xScale=1.0f, float yScale=1.0f);
     Actor(const Actor& other);
     Actor& operator=(const Actor& other);
+    void setRect(SRect rect) override;   // 记录显式尺寸（w/h>0），供纹理加载时判断是否跟随自然尺寸
     void loadFromFile(fs::path filePath) override;
     void loadFromResource(string resourceId) override;
     void create() override;   // 两阶段创建：context 就绪后由 setContext 触发加载
@@ -39,6 +42,25 @@ public:
 
     void setScaleType(ScaleType type) { m_scaleType = type; }
     ScaleType getScaleType() const { return m_scaleType; }
+
+    void setMatchParentRect(bool match) { m_matchParentRect = match; }
+    void setAlpha(uint8_t alpha) { m_alpha = alpha; }
+    uint8_t getAlpha() const { return m_alpha; }
+
+    // 纯显示控件不参与事件命中与遮挡检测（Image 控件语义）
+    bool isContainsPoint(float x, float y) override { return false; }
+
+    // 属性系统重写（C ABI 属性分发，实现见 src/Actor.cpp）
+    int setStringProperty(const char* prop, const char* value) override;  // "image" / "image-resource"
+    int setBoolProperty(const char* prop, int value) override;            // "match-parent-rect"
+    int setIntProperty(const char* prop, int value) override;             // "alpha"
+    int setEnumProperty(const char* prop, const char* value) override;    // "scale-type" / "anchor"
+    int getEnumProperty(const char* prop, const char*& out) override;     // "scale-type" / "anchor"
+    int getBoolProperty(const char* prop, int& out) override;             // "match-parent-rect"
+    int getIntProperty(const char* prop, int& out) override;              // "alpha"
+    // image/image-resource 只写不读（m_filePath 为 fs::path，string() 临时对象会悬垂）
+
+    void draw(void) override;   // 使用成员 alpha（原走 Material::draw 默认 255）
 };
 
 class ActorBuilder{

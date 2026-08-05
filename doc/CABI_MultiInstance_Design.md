@@ -473,6 +473,7 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
 | `CreateTreeView(x,y,w,h)` | `CreateTreeView(UIInstance, ...)` |
 | `CreateHandleControl(target, x,y,w,h)` | `CreateHandleControl(UIInstance, UIControlHandle target, float x, float y, float w, float h)` |
 | `CreateImageButton(n,h,p, x,y,w,h)` | `CreateImageButton(UIInstance, const char*, const char*, const char*, float x, float y, float w, float h)` |
+| —（新增，无旧签名） | `CreateImage(UIInstance, const char* image, float x, float y, float w, float h)`——Image 图片控件（零架构改动复用 Actor，见 doc/Image_Design.md 2026-08-05）；image 可 NULL、w/h=0 → 纹理自然尺寸 |
 | `CreateDialog(confirm, cancel, x,y,w,h)` | `CreateDialog(UIInstance, const char* confirmText, const char* cancelText, float x, float y, float w, float h)` |
 
 **控件通用操作**：
@@ -2264,6 +2265,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 30 | `include/ControlBase.h` | `GET_FOCUSMANAGER` 宏改为 `(CONTEXT->focusManager)` | 小 |
 | 31 | `src/Dialog.cpp` / `ColorPicker.cpp` / `ComboBox.cpp` | `MAINWIN->getWindowSize()` → `m_context->viewport`（弹出定位改为视口相对） | 小 |
 | 32 | `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` | 新增 Debug 辅助 API：`Debug_GetActiveViewport`、`Debug_IsControlFocused`（供测试断言） | 小 |
+| 33 | `include/Actor.h` / `src/Actor.cpp` / `include/PropertyNames.h` / `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` / 新增 `test/test_image.cpp` | **已实施（2026-08-05）**：`UICornerstone_CreateImage` 工厂 + Actor rect 语义修正（显式尺寸保留、自然尺寸跟随新图、match-parent-rect 覆盖 w/h，见 doc/Image_Design.md §6.1）+ `isContainsPoint`=false 遮挡修正（§6.2）+ 属性分发（image/image-resource 只写不读、scale-type/anchor/alpha/match-parent-rect 可读）；test_image T1-T8 三后端 DLL 树全绿 | 中 |
 
 ### 影响范围汇总
 

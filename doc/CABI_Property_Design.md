@@ -924,7 +924,8 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | Dialog        | `"close-on-esc"`           | `setCloseOnEsc(bool)`                           | ✅                 | ✅ |
 > | ConfirmPopup  | `"confirm-visible"`        | `setConfirmButtonVisible(bool)`                 | ✅                 | ❌ |
 > | NumericUpDown | `"read-only"`              | `setReadOnly(bool)`                             | ✅                 | ✅ |
-> | MenuItem      | `"checked"`                | `setChecked(bool)`                              | ✅                 | ✅ |
+> | MenuItem      | `"checked"`                | `setChecked(bool)`                             | ✅                 | ✅ |
+> | Image        | `"match-parent-rect"`      | `setMatchParentRect(bool)` — 开启后 w/h 被父尺寸覆盖（Image_Design §6.1） | ✅ | ✅ |
 
 ### 6.5 Int 属性表
 
@@ -949,6 +950,7 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | MenuPanel     | `"hovered-index"`     | `setHoveredIndex(int)`        | ✅                | ✅ |
 > | NumericUpDown | `"decimals"`          | `setDecimals(int)`            | ✅                | ✅ |
 > | TreeView      | `"font-size"`         | `setFontSize(int)`            | ✅                | ✅ |
+> | Image        | `"alpha"`            | `setAlpha(int)`（0-255，默认 255）            | ✅                | ✅ |
 
 ### 6.6 Float 属性表
 
@@ -1029,6 +1031,8 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | Dialog      | `"confirm-text"`   | `setConfirmButtonText(string)` | ✅(通过`SetConfirmButtonText`)    | ✅ |
 > | Dialog      | `"cancel-text"`    | `setCancelButtonText(string)`  | ✅(通过`SetCancelButtonText`)     | ✅ |
 > | ColorPicker | `"color"`          | `setColor(string) — hex`      | ✅                                | ❌ |
+> | Image      | `"image"`          | `setStringProperty → loadFromFile（相对路径经基路径拼接）` | ✅ | ❌（只写不读，fs::path string() 悬垂） |
+> | Image      | `"image-resource"` | `setStringProperty → loadFromResource` | ✅ | ❌（只写不读） |
 
 ### 6.8 Enum 属性表
 
@@ -1054,6 +1058,8 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | EditBox     | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
 > | TreeView    | `"font"`           | 字体名      | ✅              | 28 字体 | ✅ |
 > | Popup       | `"centered-mode"`  | 弹窗定位模式 | ✅ | `centered` | ❌ |
+> | Image       | `"scale-type"`    | 缩放方式    | ✅ | `stretch`, `fit-center`, `center-crop`, `none`（不区分大小写） | ✅ |
+> | Image      | `"anchor"`         | 锚点（9 种，同 Label `align` 值域：`top-left`/`top-center`/`top-right`/`mid-left`/`center`/`mid-right`/`bottom-left`/`bottom-center`/`bottom-right`，无 `am-` 前缀） | ✅ | 同上 | ✅ |
 
 ### 6.9 Callback 事件表
 

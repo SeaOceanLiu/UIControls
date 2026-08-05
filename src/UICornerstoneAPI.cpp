@@ -875,6 +875,21 @@ UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
+UIControlHandle UICornerstone_CreateImage(UIInstance instance,
+    const char* image, float x, float y, float w, float h)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    // Actor 构造家族无 SRect 参数（Actor.h 仅 parent/xScale/yScale/filePath/resourceId），
+    // 用构造 + setRect（构造时已 setParent(bench)，Actor.cpp:10）
+    auto actor = std::make_shared<Actor>(instance->bench, 1.0f, 1.0f);
+    actor->setRect(SRect(x, y, w, h));                 // 显式 rect 优先（见 Image_Design §6.1）
+    if (image) actor->loadFromFile(fs::path(image));   // 两阶段：挂树后 create() 加载
+    instance->bench->addControl(actor);                // shared_ptr 生命周期安全
+    actor->create();
+    actor->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(actor.get()));
+}
+
 // ============================================================
 // 控件通用操作
 // ============================================================

@@ -175,6 +175,14 @@ PROP_CONSTEXPR const char* kTreeCollapse        = "collapse";
 PROP_CONSTEXPR const char* kSelectedId          = "selected-id";
 PROP_CONSTEXPR const char* kSelectedUserData    = "selected-user-data";
 
+// -- Image --
+PROP_CONSTEXPR const char* kImage             = "image";              // 文件路径（只写不读）
+PROP_CONSTEXPR const char* kImageResource     = "image-resource";     // 资源 ID（只写不读）
+PROP_CONSTEXPR const char* kScaleType         = "scale-type";         // 枚举
+PROP_CONSTEXPR const char* kMatchParentRect   = "match-parent-rect";  // 布尔
+PROP_CONSTEXPR const char* kAlpha             = "alpha";              // 整数 0-255
+PROP_CONSTEXPR const char* kAnchor            = "anchor";             // 枚举
+
 // -- Ptr 属性 --
 PROP_CONSTEXPR const char* kContent             = "content";
 PROP_CONSTEXPR const char* kFirstLinked         = "first-linked";

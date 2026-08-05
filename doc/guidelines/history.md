@@ -2073,3 +2073,22 @@ Done, 180 frames                        # 帧循环正常完成
 **相关文件**：src/UICornerstoneAPI.cpp（instanceHoldsControl 递归）、test/CMakeLists.txt（add_dependencies）、src/backend/raylib/InputBackend.cpp（pollEvent 相位重置移除）。
 
 **未提交**（本会话累计未提交集合：src/Slider.cpp、src/UICornerstoneAPI.cpp、src/backend/raylib/InputBackend.cpp、src/backend/sfml/InputBackend.cpp、test/CMakeLists.txt、test/test_dialog_cabi.cpp、include/UIContext.h、doc/CABI_MultiInstance_Design.md、doc/CppBinding_Design.md、doc/guidelines/build.md、doc/guidelines/history.md；未跟踪：test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp）。
+
+### 2026-08-05: Image 图片控件化（Image_Design.md 设计审核通过 + 实施，image-control 分支 d27ccca）
+
+**背景**：辅 Session 按 doc/Image_Design.md 在 image-control 分支实施零架构改动的 Image 图片控件（`UICornerstone_CreateImage` 直接复用 Actor）。主 Session 代提交代码（d27ccca，8 文件 +501/-34），辅 Session 完成验收与文档同步。
+
+**实施要点**：
+
+- `src/Actor.cpp`：加载 rect 语义修正——`loadTextureFromSurface` 与 `loadFromFile` fallback 分支不再无条件重置 `m_rect`（原实现 left/top 清零 + w/h 覆盖，导致 C ABI 传入 x/y/w/h 丢失）；新增 `m_explicitSize` 标记（`setRect` 传 w/h>0 时置位）：显式 rect 保留、自然尺寸模式换图后跟随新图、match-parent-rect 覆盖 w/h（父尺寸）。
+- `include/Actor.h`：`isContainsPoint` 重写返回 false（纯显示控件不参与事件命中与 covered 遮挡检测，先例 HandleControl.h:46）；`draw(void)` override 使用成员 `m_alpha`；新增 `setAlpha/getAlpha/setMatchParentRect`；属性分发 override 7 个（image/image-resource 只写不读——`fs::path::string()` 临时对象悬垂，不引入缓存成员；scale-type/anchor 枚举解析同 ProgressBar 惯例）。
+- `include/PropertyNames.h`：Image 段 6 常量（`image`/`image-resource`/`scale-type`/`match-parent-rect`/`alpha`/`anchor`）。
+- `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp`：`UICornerstone_CreateImage(instance, image, x, y, w, h)`——image 可 NULL、w/h=0 → 纹理自然尺寸；构造 + setRect + 两阶段 loadFromFile + addControl + create。
+- `test/test_image.cpp`：纯 DLL 动态加载模式（结构仿 test_multi_instance_cabi.cpp），T1-T8 全绿。
+
+**验证**：三棵 `_dll` 树（sdl3/sfml/raylib）test_image T1-T8 全部 PASS；三棵标准树编译 0 错误 + test_button/test_winframe 回归通过（Actor rect 修正向后兼容）。
+
+**相关文件**：include/Actor.h、src/Actor.cpp、include/PropertyNames.h、include/UICornerstoneAPI.h、src/UICornerstoneAPI.cpp、test/test_image.cpp、test/CMakeLists.txt、doc/Image_Design.md（状态→已审核）。
+
+**文档同步**（本会话补充）：doc/UICornerstone_DLL_Design.md（API 清单加 CreateImage）、doc/CABI_MultiInstance_Design.md（迁移表 + §6 清单 #33）、doc/CABI_Property_Design.md（Bool/Int/String/Enum 四表 Image 行）。
+

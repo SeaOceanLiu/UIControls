@@ -1,6 +1,6 @@
 # Image 图片控件设计文档
 
-> 状态：**待审核**（未审核通过前不做源码变更）
+> 状态：**已审核**（2026-08-05 验收通过，实现见 image-control 分支 d27ccca）
 
 ## 1. 概述
 
@@ -26,10 +26,9 @@ Image（图片控件）是用于**纯图片显示**的 UI 控件（无交互语�
 
 ### 2.2 现状缺口
 
-1. **C ABI 无纯图片控件**：20 个 `UICornerstone_Create*` 中唯一图片入口是 `CreateImageButton`（Button+状态 Actor，UICornerstoneAPI.cpp:787-809），含按钮交互语义，不适合背景/装饰/图标场景。
-2. **调试残留**：Actor.cpp:160-167 有 `static bool s_logged` 一次性调试 printf（暴露为公共控件前必须清理）。
-3. **属性系统未开放**：`m_matchParentRect` 私有（仅 ActorBuilder 可设，Actor.cpp:236-239）；无 alpha 成员（独立控件走 `draw(void)` 硬编码 alpha=255）；`setScaleType`/锚点仅 C++ 侧可达，C ABI 属性系统（`SetEnum`/`SetBool`/`SetInt`）无法设置。
-4. **Panel 贴图声明未实现**：`Panel::m_actors`（Panel.h:18）在全部 src 中无任何使用处，Panel 贴图功能实际不可用——本次不处理（与本设计正交）。LuotiAni 为 header-only（无独立 .cpp，实现内联于 include/LuotiAni.h）。
+1. **C ABI 无纯图片控件**：20 个 `UICornerstone_Create*` 中唯一图片入口是 `CreateImageButton`（Button+状态 Actor，UICornerstoneAPI.cpp:854），含按钮交互语义，不适合背景/装饰/图标场景。
+2. **属性系统未开放**：`m_matchParentRect` 私有（仅 ActorBuilder 可设，Actor.cpp:228-231）；无 alpha 成员（独立控件走 `draw(void)` 硬编码 alpha=255）；`setScaleType`/锚点仅 C++ 侧可达，C ABI 属性系统（`SetEnum`/`SetBool`/`SetInt`）无法设置。
+3. **Panel 贴图声明未实现**：`Panel::m_actors`（Panel.h:18）在全部 src 中无任何使用处，Panel 贴图功能实际不可用——本次不处理（与本设计正交）。LuotiAni 为 header-only（无独立 .cpp，实现内联于 include/LuotiAni.h）。
 
 ### 2.3 决策依据
 
@@ -73,7 +72,7 @@ Image（图片控件）是用于**纯图片显示**的 UI 控件（无交互语�
 - 不新增动图（LuotiAni 已存在）、不新增渲染后端、不改资源加载机制
 - 不修改 Button/WinFrame/Panel/LuotiAni 现有 Actor 用法
 - 不加点击/悬停等交互属性（如需交互用 CreateImageButton）
-- **LayoutParser JSON 布局接入（本期不做）**：parse 分发链（LayoutParser.cpp:221-266）新增 "Image" 类型属正交扩展，且工作区 LayoutParser.cpp 有主设计 Session 未提交改动（基线冲突风险），留待后续独立排期
+- **LayoutParser JSON 布局接入（本期不做）**：parse 分发链（LayoutParser.cpp:221-266）新增 "Image" 类型属正交扩展，留待后续独立排期
 
 ## 5. 接口设计
 
@@ -88,7 +87,7 @@ public:
     uint8_t getAlpha() const { return m_alpha; }
 
     // 事件命中：纯显示控件不参与事件命中与遮挡检测
-    // （ControlBase.cpp:301 的 covered 检测只看 visible+isContainsPoint、不看事件是否消费，
+    // （ControlBase.cpp:309-316 的 covered 检测只看 visible+isContainsPoint、不看事件是否消费，
     //  不重写的话 Image 会屏蔽其下层兄弟控件的事件——详见 §6.2）
     bool isContainsPoint(float x, float y) override { return false; }
 
@@ -114,7 +113,7 @@ private:
 
 要点：
 
-- `ActorBuilder::setMatchParentRect` 保留并委托到新公开方法（Actor.cpp:236-239 现直接访问私有成员，改造后调用 `setMatchParentRect`）。
+- `ActorBuilder::setMatchParentRect` 保留并委托到新公开方法（Actor.cpp:228-231 现直接访问私有成员，改造后调用 `setMatchParentRect`）。
 - `draw(void)` 实现：`draw(m_rect.left + m_anchorPoint.x, m_rect.top + m_anchorPoint.y, m_alpha);`（与 Material::draw 同构，Material.cpp:37-39）。
 - 枚举解析惯例同 ProgressBar.cpp:330-338（`_stricmp` 大小写不敏感，逐值匹配）。
 
@@ -141,7 +140,7 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImage(
     float x, float y, float w, float h);
 ```
 
-实现（仿 CreateImageButton，UICornerstoneAPI.cpp:787-809）：
+实现（仿 CreateImageButton，UICornerstoneAPI.cpp:854）：
 
 ```cpp
 UIControlHandle UICornerstone_CreateImage(UIInstance instance,
@@ -160,7 +159,7 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
 }
 ```
 
-声明插入位置：UICornerstoneAPI.h:292（CreateImageButton 之后）。
+声明插入位置：UICornerstoneAPI.h:289（CreateImageButton 之后）。
 
 ### 5.4 属性表（C ABI 侧）
 
@@ -198,7 +197,7 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
 ### 6.2 事件语义（含遮挡修正）
 
 - **不消费事件**：不重写 `handleEvent`（ControlImpl 默认只向子控件透传，ControlBase.cpp:276-314），自身点击无反应。
-- **遮挡修正（必须）**：`ControlImpl::handleEvent` 的 covered 检测（ControlBase.cpp:301）只看 `getVisible() && isContainsPoint()`、**不看事件是否消费**——若 Image 不重写 `isContainsPoint`，处于上层的 Image 会屏蔽其下层兄弟控件（如：先加 Button 再叠 Image，点击重叠区 Button 收不到事件）。**Actor 重写 `isContainsPoint` → false**（纯显示控件不参与事件命中），已列入 §5.1。isContainsPoint 的其余使用处（ComboBox/ColorPicker/TextArea/TreeView/Menu 等控件自身事件逻辑、Dialog 的 anchor 检测）均针对各自控件，不受影响。
+- **遮挡修正（必须）**：`ControlImpl::handleEvent` 的 covered 检测（ControlBase.cpp:309-316）只看 `getVisible() && isContainsPoint()`、**不看事件是否消费**——若 Image 不重写 `isContainsPoint`，处于上层的 Image 会屏蔽其下层兄弟控件（如：先加 Button 再叠 Image，点击重叠区 Button 收不到事件）。**Actor 重写 `isContainsPoint` → false**（纯显示控件不参与事件命中），已列入 §5.1。isContainsPoint 的其余使用处（ComboBox/ColorPicker/TextArea/TreeView/Menu 等控件自身事件逻辑、Dialog 的 anchor 检测）均针对各自控件，不受影响。
 - **非容器**：Image 不应挂子控件（`addControl` 子控件后，因 Image 的 isContainsPoint=false，子控件在其区域内的事件会被上层 covered 检测跳过）。
 - **渲染顺序**：按 `addControl` 添加顺序绘制（后加在上层，与 ControlImpl 惯例一致）。
 
@@ -212,7 +211,7 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
 
 ## 7. 测试计划
 
-新增 `test/test_image_cabi.cpp`（直接链接 C ABI，结构仿 test_winframe.cpp），注册到 `UI_TEST_EXECUTABLES`（test/CMakeLists.txt:100-112 列表，命名 test_image）：
+新增 `test/test_image.cpp`（纯 DLL 动态加载模式，结构仿 test_multi_instance_cabi.cpp），注册到 `UI_TEST_EXECUTABLES`（CMake 按 `${test_name}.cpp` 定位，test/CMakeLists.txt:117，命名 test_image）：
 
 | # | 用例 | 步骤 | 预期 |
 |---|------|------|------|
@@ -240,16 +239,14 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
 
 | 步骤 | 内容 | 验收标准 |
 |------|------|----------|
-| 1 | Actor 控件化：清理 printf（Actor.cpp:160-167）、新增 setMatchParentRect/setAlpha/getAlpha/isContainsPoint/draw(void)、**加载 rect 修正（§6.1，两处）**、属性重写（setter + getter）+ PropertyNames 常量 | 编译通过；test_button/test_winframe/LuotiAni 无回归（按钮状态图、关闭按钮行为不变） |
+| 1 | Actor 控件化：新增 setMatchParentRect/setAlpha/getAlpha/isContainsPoint/draw(void)、**加载 rect 修正（§6.1，两处）**、属性重写（setter + getter）+ PropertyNames 常量 | 编译通过；test_button/test_winframe/LuotiAni 无回归（按钮状态图、关闭按钮行为不变） |
 | 2 | C ABI 工厂 + 头文件声明 | 声明导出；编译链接通过 |
-| 3 | 测试 test_image_cabi.cpp + CMake 注册 | T1-T8 全绿 |
+| 3 | 测试 test_image.cpp + CMake 注册 | T1-T8 全绿 |
 | 4 | 文档同步 4 处 | 审核通过后合并 |
 
 ## 10. 风险与注意事项
 
-1. **基线冲突（先决条件）**：工作区当前有主设计开发 Session 的未提交源码改动（46 个文件 M + 新增 `include/UIContext.h`、`src/UIContext.cpp`、`test/TestInstance.h`）——**实施前必须与主设计 Session 对齐基线**，避免属性系统/ControlBase 相关文件改动冲突。Actor.cpp 当前未被改动（未提交列表中不含），冲突面小。
-2. **调试 printf 清理**：Actor.cpp:160-167 一次性日志（`[actor] texture=...`）必须随本设计删除，否则污染用户输出。
-3. **加载 rect 修正的回归面（§6.1）**：这是对现有 Actor 行为的两处代码修改（loadTextureFromSurface、loadFromFile fallback），虽向后兼容，但回归必须覆盖 test_button/test_winframe（LuotiAni 为 header-only，经 test_button 的 animation 属性用例覆盖）。
-4. **alpha 语义**：仅影响独立控件 `draw(void)` 路径；按钮状态 Actor 的 alpha 仍由 Button 绘制时传入，不受影响。
-5. **`image-resource` 依赖 ResourceProvider**：未配置 provider 时设置无效（现有行为，Actor.cpp:101-105），文档属性表注明。
-6. **isContainsPoint=false 的副作用面**：Image 不可作为容器（子控件事件被屏蔽）；若未来需要"可点击图片"，应新增交互控件而非放宽此限制。
+1. **加载 rect 修正的回归面（§6.1）**：这是对现有 Actor 行为的两处代码修改（loadTextureFromSurface、loadFromFile fallback），虽向后兼容，但回归必须覆盖 test_button/test_winframe（LuotiAni 为 header-only，经 test_button 的 animation 属性用例覆盖）。
+2. **alpha 语义**：仅影响独立控件 `draw(void)` 路径；按钮状态 Actor 的 alpha 仍由 Button 绘制时传入，不受影响。
+3. **`image-resource` 依赖 ResourceProvider**：未配置 provider 时设置无效（现有行为，Actor.cpp:101-105），文档属性表注明。
+4. **isContainsPoint=false 的副作用面**：Image 不可作为容器（子控件事件被屏蔽）；若未来需要"可点击图片"，应新增交互控件而非放宽此限制。

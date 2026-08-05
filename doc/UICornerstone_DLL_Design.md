@@ -426,6 +426,8 @@ UIControlHandle UICornerstone_CreateColorPicker(
 UIControlHandle UICornerstone_CreateImageButton(
     const char* normalImage, const char* hoverImage, const char* pressedImage,
     float x, float y, float w, float h);
+UIControlHandle UICornerstone_CreateImage(
+    const char* image, float x, float y, float w, float h);  // image 可 NULL；w/h=0 → 纹理自然尺寸
 
 /* ============ Menu 三件套 ============ */
 /* 生命周期：Create 函数创建的 MenuPanel/MenuItem 暂存于内部保活池；

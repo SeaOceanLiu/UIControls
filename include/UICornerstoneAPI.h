@@ -292,6 +292,14 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(UIInstance ins
     const char* pressedImage,
     float x, float y, float w, float h);
 
+/* ============ Image 图片控件 ============ */
+// image 为文件路径（可为 NULL，之后经 UICornerstone_SetString(inst, ctl, "image", path) 设置；
+// 资源 ID 经 "image-resource" 设置）。w/h 传 0 表示按纹理自然尺寸。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateImage(
+    UIInstance instance,
+    const char* image,
+    float x, float y, float w, float h);
+
 /* ============ 控件通用操作 ============ */
 UICORNERSTONE_API void UICornerstone_SetRect(UIInstance instance, UIControlHandle ctl, float x, float y, float w, float h);
 UICORNERSTONE_API void UICornerstone_GetRect(UIInstance instance, UIControlHandle ctl, float* x, float* y, float* w, float* h);
