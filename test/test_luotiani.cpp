@@ -85,11 +85,11 @@ static SPoint bezier3(const SPoint& p0, const SPoint& c1, const SPoint& c2, cons
 
 // ── JSON 构造工具 ──
 
-static json makeOverview(int totalFrames) {
+static json makeOverview(int totalFrames, int viewW = 100, int viewH = 100) {
     return {
         {"name", "test_luotiani"},
         {"version", "0.0.1"},
-        {"view", {{"width", 100}, {"height", 100}}},
+        {"view", {{"width", viewW}, {"height", viewH}}},
         {"frameRate", 10},
         {"totalFrames", totalFrames},
         {"loop", false}
@@ -134,9 +134,9 @@ static json makeLayerJson(const json& keyFrames) {
     };
 }
 
-static json makeDoc(int totalFrames, const json& layer) {
+static json makeDoc(int totalFrames, const json& layer, int viewW = 100, int viewH = 100) {
     return {
-        {"overview", makeOverview(totalFrames)},
+        {"overview", makeOverview(totalFrames, viewW, viewH)},
         {"layers", json::array({layer})}
     };
 }
@@ -179,7 +179,7 @@ void testL1Easing(void) {
         json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
         json kfN = {{"frame", 10}, {"operation", json::array({makeTranslateOp(100, 60, c.name)})}};
         string file = string("tl_L1_") + c.name + ".jsonc";
-        shared_ptr<LuotiAni> ani = loadAndPrepare(file, makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+        shared_ptr<LuotiAni> ani = loadAndPrepare(file, makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
         if (ani == nullptr) continue;
         for (int f = 1; f < 10; f++) {
             float t = (float)f / 10.0f;
@@ -199,7 +199,7 @@ void testL2Bezier(void) {
     {
         json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
         json kfN = {{"frame", 10}, {"operation", json::array({makeTranslateOp(100, 60, "", "bezier2")})}};
-        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L2_quad.jsonc", makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L2_quad.jsonc", makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
         if (ani == nullptr) return;
         for (int f = 1; f < 10; f++) {
             float t = (float)f / 10.0f;
@@ -214,7 +214,7 @@ void testL2Bezier(void) {
     {
         json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
         json kfN = {{"frame", 10}, {"operation", json::array({makeTranslateOp(100, 60, "", "bezier3")})}};
-        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L2_cubic.jsonc", makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L2_cubic.jsonc", makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
         if (ani == nullptr) return;
         for (int f = 1; f < 10; f++) {
             float t = (float)f / 10.0f;
@@ -233,7 +233,7 @@ void testL2Bezier(void) {
 void testL3Parabola(void) {
     json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
     json kfN = {{"frame", 20}, {"operation", json::array({makeTranslateOp(200, 0, "", "parabola")})}};
-    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L3.jsonc", makeDoc(20, makeLayerJson(json::array({kf0, kfN}))));
+    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L3.jsonc", makeDoc(21, makeLayerJson(json::array({kf0, kfN}))));
     if (ani == nullptr) return;
     float vx = 60.0f, vy = -30.0f;
     float gx = 2.0f * (200.0f - vx);
@@ -254,7 +254,7 @@ void testL3Parabola(void) {
 void testL4CatmullRom(void) {
     json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
     json kfN = {{"frame", 20}, {"operation", json::array({makeTranslateOp(300, 0, "", "catmull")})}};
-    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L4.jsonc", makeDoc(20, makeLayerJson(json::array({kf0, kfN}))));
+    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L4.jsonc", makeDoc(21, makeLayerJson(json::array({kf0, kfN}))));
     if (ani == nullptr) return;
     SPoint pts[] = {SPoint(50, -40), SPoint(150, 80), SPoint(250, -60)};
     float at[3] = {0.25f, 0.50f, 0.75f};
@@ -273,7 +273,7 @@ void testL4CatmullRom(void) {
 void testL5Backward(void) {
     json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
     json kfN = {{"frame", 10}, {"operation", json::array({makeTranslateOp(100, 60)})}};
-    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L5.jsonc", makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L5.jsonc", makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
     if (ani == nullptr) return;
     for (int f = 1; f < 10; f++) {
         float t = (float)f / 10.0f;
@@ -293,7 +293,7 @@ void testL5Backward(void) {
 void testL6Combined(void) {
     json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
     json kfN = {{"frame", 10}, {"operation", json::array({makeTranslateOp(100, 60, "ease-in-out", "bezier2")})}};
-    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L6.jsonc", makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L6.jsonc", makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
     if (ani == nullptr) return;
     for (int f = 1; f < 10; f++) {
         float t = (float)f / 10.0f;
@@ -322,7 +322,7 @@ void testL7OtherProps(void) {
     });
     json kf0 = {{"frame", 0}, {"operation", kf0Ops}};
     json kfN = {{"frame", 10}, {"operation", kfNOps}};
-    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L7.jsonc", makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L7.jsonc", makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
     if (ani == nullptr) return;
     for (int f = 1; f < 10; f++) {
         float t = (float)f / 10.0f;
@@ -343,7 +343,7 @@ void testL8MultiSegment(void) {
     json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
     json kf5 = {{"frame", 5}, {"operation", json::array({makeTranslateOp(100, 50, "ease-in")})}};
     json kf10 = {{"frame", 10}, {"operation", json::array({makeTranslateOp(200, -50, "", "bezierC")})}};
-    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L8.jsonc", makeDoc(10, makeLayerJson(json::array({kf0, kf5, kf10}))));
+    shared_ptr<LuotiAni> ani = loadAndPrepare("tl_L8.jsonc", makeDoc(11, makeLayerJson(json::array({kf0, kf5, kf10}))));
     if (ani == nullptr) return;
     // 段 1：0→5，ease-in 线性
     for (int f = 1; f < 5; f++) {
@@ -382,7 +382,7 @@ void testL9Tolerance(void) {
     for (const auto& c : cases) {
         json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0, 0)})}};
         json kfN = {{"frame", 10}, {"operation", json::array({makeTranslateOp(100, 60, c.easing, c.path)})}};
-        shared_ptr<LuotiAni> ani = loadAndPrepare(c.file, makeDoc(10, makeLayerJson(json::array({kf0, kfN}))));
+        shared_ptr<LuotiAni> ani = loadAndPrepare(c.file, makeDoc(11, makeLayerJson(json::array({kf0, kfN}))));
         if (ani == nullptr) continue;
         // 全部回退 linear（未知 easing / 非法 cubic-bezier / 未知 path）
         if (string(c.path) != "missingCtrl") {
@@ -477,6 +477,172 @@ void testL10Resources(void) {
     }
 }
 
+// ── 用例：L-PX  像素级渲染断言（真实资源 rotateBtn.svg，形状无关统计） ──
+// 三后端统一像素布局 ABGR：alpha 在最高字节 (p >> 24) & 0xFF（sdl3/sfml/raylib getPixel 实测）
+
+struct PixelStats {
+    uint64_t nonZero = 0;
+    double sumX = 0.0, sumY = 0.0;
+    uint8_t maxAlpha = 0;
+};
+
+static PixelStats scanCanvas(const SharedSurface& canvas, int cropW = -1) {
+    PixelStats s;
+    if (canvas == nullptr) return s;
+    int w = canvas->width();
+    int h = canvas->height();
+    if (cropW < 0) cropW = w;
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < cropW; x++) {
+            uint8_t a = (uint8_t)((canvas->getPixel(x, y) >> 24) & 0xFF);
+            if (a > 0) {
+                s.nonZero++;
+                s.sumX += x;
+                s.sumY += y;
+                if (a > s.maxAlpha) s.maxAlpha = a;
+            }
+        }
+    }
+    return s;
+}
+
+static double centroidDist(const PixelStats& s, double cx, double cy) {
+    if (s.nonZero == 0) return 1e9;
+    double mx = s.sumX / (double)s.nonZero;
+    double my = s.sumY / (double)s.nonZero;
+    return sqrt((mx - cx) * (mx - cx) + (my - cy) * (my - cy));
+}
+
+void testLuotianiPixel(void) {
+    // 画布 256×256，层 rotateBtn.svg（256×256，无宽高 → 1:1）
+    // P1：kf10 opacity=50（不越界）→ alphaMod 127 调制
+    {
+        json kf0 = {{"frame", 0}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", 0}, {"ty", 0}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        json kfN = {{"frame", 10}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", 0}, {"ty", 0}},
+            {{"type", "opacity"}, {"opacity", 50}},
+        })}};
+        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_P1.jsonc",
+            makeDoc(11, makeLayerJson(json::array({kf0, kfN})), 256, 256));
+        if (ani == nullptr) return;
+        PixelStats s0 = scanCanvas(ani->getFrameCanvas(0));
+        PixelStats s10 = scanCanvas(ani->getFrameCanvas(10));
+
+        CHECK(s0.nonZero > 500, "L-PX P1 image not empty");
+        CHECK(s0.maxAlpha == 255, "L-PX P1 opaque alpha==255");
+        CHECK(s10.nonZero > 500, "L-PX P1 opacity50 frame not empty");
+        CHECK(s10.maxAlpha < s0.maxAlpha, "L-PX P1 opacity50 lowers alpha");
+        CHECK(s10.maxAlpha >= 110 && s10.maxAlpha <= 150, "L-PX P1 opacity50 alpha~127");
+    }
+    // P2：translate(40,0)（画布 300×300，图像右缘 296 不越界）→ 像素区域整体右移
+    {
+        json kf0 = {{"frame", 0}, {"operation", json::array({{{"type", "translate"}, {"tx", 0}, {"ty", 0}}, {{"type", "opacity"}, {"opacity", 100}}})}};
+        json kfN = {{"frame", 10}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", 40}, {"ty", 0}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_P2.jsonc",
+            makeDoc(11, makeLayerJson(json::array({kf0, kfN})), 300, 256));
+        if (ani == nullptr) return;
+        PixelStats s0 = scanCanvas(ani->getFrameCanvas(0));
+        PixelStats s10 = scanCanvas(ani->getFrameCanvas(10));
+        double cx0 = s0.sumX / (double)s0.nonZero;
+        double cx10 = s10.sumX / (double)s10.nonZero;
+
+        CHECK(s10.nonZero == s0.nonZero, "L-PX P2 no clipping keeps full count");
+        CHECK(fabs((cx10 - cx0) - 40.0) <= 1.0, "L-PX P2 translate(40,0) centroid shifted by 40");
+        PixelStats left = scanCanvas(ani->getFrameCanvas(10), 40);
+        CHECK(left.nonZero == 0, "L-PX P2 shifted-out left strip empty");
+    }
+    // P3：visible=false → 整帧画布透明
+    {
+        json kf0 = {{"frame", 0}, {"operation", json::array({{{"type", "translate"}, {"tx", 0}, {"ty", 0}}})}};
+        json kfN = {{"frame", 10}, {"operation", json::array({{{"type", "visible"}, {"visible", false}}})}};
+        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_P3.jsonc",
+            makeDoc(11, makeLayerJson(json::array({kf0, kfN})), 256, 256));
+        if (ani == nullptr) return;
+        PixelStats s10 = scanCanvas(ani->getFrameCanvas(10));
+        CHECK(s10.nonZero == 0, "L-PX P3 visible=false fills empty canvas");
+    }
+    // P4：rotate 90°（绕中心，opacity 100 防 alpha≈1 全透明）
+    {
+        json kf0 = {{"frame", 0}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", 0}, {"ty", 0}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        json kfN = {{"frame", 10}, {"operation", json::array({
+            {{"type", "rotate"}, {"angle", 90}, {"cx", 128}, {"cy", 128}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        shared_ptr<LuotiAni> ani = loadAndPrepare("tl_P4.jsonc",
+            makeDoc(11, makeLayerJson(json::array({kf0, kfN})), 256, 256));
+        if (ani == nullptr) return;
+        PixelStats s0 = scanCanvas(ani->getFrameCanvas(0));
+        PixelStats s10 = scanCanvas(ani->getFrameCanvas(10));
+        double d0 = centroidDist(s0, 128.0, 128.0);
+        double d10 = centroidDist(s10, 128.0, 128.0);
+
+        CHECK(s10.nonZero > 500, "L-PX P4 rotate90 frame not empty");
+        CHECK(fabs(d0 - d10) <= 8.0, "L-PX P4 rotate90 centroid distance preserved");
+        double r = (double)s10.nonZero / (double)s0.nonZero;
+        CHECK(r > 0.7 && r < 1.3, "L-PX P4 rotate90 pixel count stable");
+    }
+}
+
+// ── 可见演示动画：挂载到屏幕供人工观察（真实资源 + easing/path 自定义）──
+
+static void showDemoAnimations(void) {
+    // 1) 真实资源 rotateBtn 循环旋转（左上方）
+    {
+        shared_ptr<LuotiAni> ani = LuotiAniBuilder(BENCH)
+            .loadAniDesc(string("animations/rotateBtn/rotateBtn.jsonc"))
+            .setRect(SRect(20, 20, 256, 256))
+            .prepare()
+            .setAutoStart()
+            .build();
+        ani->create();
+        BENCH->addControl(ani);
+    }
+    // 2) easing + bezier 曲线位移 + 旋转往返循环（右上方）
+    {
+        json kf0 = {{"frame", 0}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", 0}, {"ty", 0}},
+            {{"type", "rotate"}, {"angle", 0}, {"cx", 128}, {"cy", 128}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        json kf30 = {{"frame", 30}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", 120}, {"ty", 60}, {"easing", "ease-in-out"},
+             {"path", {{"type", "bezier"}, {"c1x", 80}, {"c1y", -120}, {"c2x", 200}, {"c2y", 150}}}},
+            {{"type", "rotate"}, {"angle", 180}, {"cx", 128}, {"cy", 128}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        json kf60 = {{"frame", 60}, {"operation", json::array({
+            {{"type", "translate"}, {"tx", -120}, {"ty", -60}, {"easing", "ease-in-out"}},
+            {{"type", "rotate"}, {"angle", 180}, {"cx", 128}, {"cy", 128}},
+            {{"type", "opacity"}, {"opacity", 100}},
+        })}};
+        json doc = {
+            {"overview", {{"name", "demo"}, {"version", "0.0.1"},
+                          {"view", {{"width", 256}, {"height", 256}}},
+                          {"frameRate", 30}, {"totalFrames", 60}, {"loop", true}}},
+            {"layers", json::array({makeLayerJson(json::array({kf0, kf30, kf60}))})}
+        };
+        writeCaseJson("tl_demo.jsonc", doc);
+        shared_ptr<LuotiAni> ani = LuotiAniBuilder(BENCH)
+            .loadAniDesc(fs::path("tl_demo.jsonc"))
+            .setRect(SRect(300, 20, 256, 256))
+            .prepare()
+            .setAutoStart()
+            .build();
+        ani->create();
+        BENCH->addControl(ani);
+    }
+    logOutput(u8"可见演示动画已挂载: rotateBtn 循环 + easing/bezier 自定义往返");
+}
+
 void testLuotianiInitialize(shared_ptr<Bench>) {
     TestUtil::log("testLuotianiInitialize");
 
@@ -490,6 +656,8 @@ void testLuotianiInitialize(shared_ptr<Bench>) {
     testL8MultiSegment();
     testL9Tolerance();
     testL10Resources();
+    testLuotianiPixel();
+    showDemoAnimations();
 
     if (g_failCount == 0) {
         logOutput(u8"test_luotiani: ALL PASS");

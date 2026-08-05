@@ -431,6 +431,13 @@ LuotiAni::OpData LuotiAni::getFrameOpData(uint32_t layer, uint32_t frame) const 
     return layerData[frame];
 }
 
+SharedSurface LuotiAni::getFrameCanvas(uint32_t frame) const {
+    if (frame >= m_frameSurfaces.size()) {
+        return nullptr;
+    }
+    return m_frameSurfaces[frame];
+}
+
 
 void LuotiAni::update(void) {
     if (!m_visible) return;

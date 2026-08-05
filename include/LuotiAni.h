@@ -228,6 +228,7 @@ public:
         OpData():dRect(), translate(0,0), m(1, 1), rotate(0), centerPos({0, 0}), opacity(255), visible(true), surface(nullptr) {}
     };
     OpData getFrameOpData(uint32_t layer, uint32_t frame) const;
+    SharedSurface getFrameCanvas(uint32_t frame) const;
 private:
     struct SegmentInfo{
         int easeType;

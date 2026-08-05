@@ -73,7 +73,7 @@ private:
 class RaylibSurface : public Surface {
 public:
     RaylibSurface(Image image)
-        : m_image(image)
+        : m_image(image), m_alphaMod(255)
     {
     }
 
@@ -114,7 +114,7 @@ public:
     }
 
     void setAlphaMod(uint8_t alpha) override {
-        (void)alpha;
+        m_alphaMod = alpha;
     }
 
     void blit(Surface* src, int srcX, int srcY, int srcW, int srcH,
@@ -125,7 +125,8 @@ public:
                              static_cast<float>(srcW), static_cast<float>(srcH) };
         Rectangle dstRec = { static_cast<float>(dstX), static_cast<float>(dstY),
                              static_cast<float>(dstW), static_cast<float>(dstH) };
-        ImageDraw(&m_image, rlSrc->m_image, srcRec, dstRec, WHITE);
+        Color tint = { 255, 255, 255, rlSrc->m_alphaMod };
+        ImageDraw(&m_image, rlSrc->m_image, srcRec, dstRec, tint);
     }
 
     void blit(Surface* src, int dstX, int dstY) override {
@@ -138,6 +139,7 @@ public:
 
 private:
     Image m_image;
+    uint8_t m_alphaMod;
 };
 
 #ifdef UICORNERSTONE_BUILD_SHARED
@@ -348,7 +350,9 @@ SharedSurface RaylibSurface::rotate(float angle, RenderDevice* device) {
         }
     }
 
-    return std::make_shared<RaylibSurface>(result);
+    auto out = std::make_shared<RaylibSurface>(result);
+    out->setAlphaMod(m_alphaMod);
+    return out;
 }
 
 // ============================================================
