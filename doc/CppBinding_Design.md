@@ -1,6 +1,6 @@
 # CAPI C++ Binding 设计
 
-> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel
+> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel | 修订 2026-08-06：**P1-P13 全部实施并验证**（sdl3/sfml/raylib 三后端构建+冒烟通过）
 
 ## 目录
 
@@ -1456,21 +1456,21 @@ int main() {
 
 ## 8. 实施计划
 
-| 阶段 | 内容 | 验收标准 |
-|------|------|---------|
-| **P1** | `binding/` 目录结构 + CMakeLists + MIT LICENSE | `cmake -B build/binding` 识别 binding 子项目 |
-| **P2** | `UICornerstone` 主类骨架：Config + 多实例 Create（默认/自定义搜索路径两种）+ ~dtor | 两种 Create 均工作；实例销毁走 DestroyInstance；多实例并存 |
-| **P3** | `UIInstanceConfig` 组装（structSize/resourceRoot/窗口参数）+ CreateViewport 转发 | 窗口尺寸/标题/资源根生效；CreateViewport 返回子实例 |
-| **P4** | `Control` + `ControlState` 共享状态 + 悬挂句柄检测 | Destroy 后 IsValid=false，SetXxx 静默跳过 |
-| **P5** | 全部属性转发（含 SetPtr/GetPtr/GetEnum） | 控件 Set/Get 17 种属性操作正常 |
-| **P6** | `Event` 包装 + SetCallback `std::function` 桥接 + Impl 级 userData 注册表 | lambda 绑定后事件触发、数据读取正确；临时 Control 场景无悬垂 |
-| **P7** | 双模式循环：`Run()` + tick API（ProcessEvents/Update/Present/Shutdown）+ IsQuitRequested | dt 上限 0.1s，两种模式均 60fps 正常运行 |
-| **P8** | `BackendResolver`：自定义搜索路径 DLL 加载 + 错误分支 | 切换 backend="sfml" 换后端；找不到 DLL 时 lastError 有内容 |
-| **P9** | `Impl` 封装：actions 注册表从全局 static 迁入 + `GetLastError` | 无全局 static 容器；error 可查询 |
-| **P10** | 工厂补全：菜单族（MenuBar/MenuPanel/MenuItem + 4 辅助）、ScrollBar、TreeView、HandleControl | 各工厂创建成功且事件可达 |
-| **P11** | UIEvent 输入构造辅助（§5.14）+ PushEvent 转发 | 外部输入系统可经 PushEvent 注入 |
-| **P12** | `sample_cpp_hosted`：编程式创建 + `Run()` | 编译运行，按钮点击计数更新 Label |
-| **P13** | `sample_cpp_embed`：工厂创建 + 用户循环 + 分步渲染 | 编译运行，用户循环内 UI 交互正常 |
+| 阶段 | 内容 | 验收标准 | 状态 |
+|------|------|---------|------|
+| **P1** | `binding/` 目录结构 + CMakeLists + MIT LICENSE | `cmake -B build/binding` 识别 binding 子项目 | ✅ 2026-08-06 |
+| **P2** | `UICornerstone` 主类骨架：Config + 多实例 Create（默认/自定义搜索路径两种）+ ~dtor | 两种 Create 均工作；实例销毁走 DestroyInstance；多实例并存 | ✅ 2026-08-06 |
+| **P3** | `UIInstanceConfig` 组装（structSize/resourceRoot/窗口参数）+ CreateViewport 转发 | 窗口尺寸/标题/资源根生效；CreateViewport 返回子实例 | ✅ 2026-08-06 |
+| **P4** | `Control` + `ControlState` 共享状态 + 悬挂句柄检测 | Destroy 后 IsValid=false，SetXxx 静默跳过 | ✅ 2026-08-06 |
+| **P5** | 全部属性转发（含 SetPtr/GetPtr/GetEnum） | 控件 Set/Get 17 种属性操作正常 | ✅ 2026-08-06 |
+| **P6** | `Event` 包装 + SetCallback `std::function` 桥接 + Impl 级 userData 注册表 | lambda 绑定后事件触发、数据读取正确；临时 Control 场景无悬垂 | ✅ 2026-08-06 |
+| **P7** | 双模式循环：`Run()` + tick API（ProcessEvents/Update/Present/Shutdown）+ IsQuitRequested | dt 上限 0.1s，两种模式均 60fps 正常运行 | ✅ 2026-08-06 |
+| **P8** | `BackendResolver`：自定义搜索路径 DLL 加载 + 错误分支 | 切换 backend="sfml" 换后端；找不到 DLL 时 lastError 有内容 | ✅ 2026-08-06 |
+| **P9** | `Impl` 封装：actions 注册表从全局 static 迁入 + `GetLastError` | 无全局 static 容器；error 可查询 | ✅ 2026-08-06 |
+| **P10** | 工厂补全：菜单族（MenuBar/MenuPanel/MenuItem + 4 辅助）、ScrollBar、TreeView、HandleControl | 各工厂创建成功且事件可达 | ✅ 2026-08-06 |
+| **P11** | UIEvent 输入构造辅助（§5.14）+ PushEvent 转发 | 外部输入系统可经 PushEvent 注入 | ✅ 2026-08-06 |
+| **P12** | `sample_cpp_hosted`：编程式创建 + `Run()` | 编译运行，按钮点击计数更新 Label | ✅ 2026-08-06 |
+| **P13** | `sample_cpp_embed`：工厂创建 + 用户循环 + 分步渲染 | 编译运行，用户循环内 UI 交互正常 | ✅ 2026-08-06 |
 
 > 依赖前置：P3 依赖核心库多实例 C ABI（**已完成**：a0fcfa7/6064bd5 提交）；P10 依赖核心库菜单族/ScrollBar/TreeView/HandleControl 工厂（**已存在**：UICornerstoneAPI.h:264-288，无缺口）；CreateImage/CreateAnimation 工厂待 Image/LuotiAni 控件化设计审核后并入 P5/P10。
 

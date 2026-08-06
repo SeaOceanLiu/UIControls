@@ -277,3 +277,4 @@ endif()
 
 add_subdirectory(test)
 add_subdirectory(samples)
+add_subdirectory(binding)
