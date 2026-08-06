@@ -113,6 +113,7 @@ set(UI_TEST_EXECUTABLES
     test_multiviewport
     test_luotiani
     test_animation
+    test_aniviewer
 )
 
 foreach(test_name ${UI_TEST_EXECUTABLES})
@@ -123,6 +124,13 @@ foreach(test_name ${UI_TEST_EXECUTABLES})
 
         target_include_directories(${test_name} PRIVATE ${TEST_INCLUDES})
         target_link_libraries(${test_name} PRIVATE ${TEST_LIBS})
+
+        if(${test_name} STREQUAL "test_aniviewer")
+            # 命令行视觉校验工具：CreateInstanceFromPlugin 需要后端名
+            string(TOLOWER "${UICORNERSTONE_BACKEND}" _BACKEND_LOWER)
+            target_compile_definitions(${test_name} PRIVATE
+                UICORNERSTONE_BACKEND_NAME="${_BACKEND_LOWER}")
+        endif()
 
         if(WIN32)
             foreach(dll ${TEST_DLLS})

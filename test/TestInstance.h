@@ -12,6 +12,10 @@
 #include "MainWindow.h"
 #include "Bench.h"
 #include "RenderDevice.h"
+#include <cstdlib>
+#include <cstring>
+#include <thread>
+#include <chrono>
 
 extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);
 
@@ -37,6 +41,23 @@ inline UIInstance g_uiInstance = nullptr;
 #define GET_RESOURCEPROVIDER (g_uiInstance ? g_uiInstance->resourceProvider : nullptr)
 #define GET_FOCUSMANAGER (g_uiInstance ? g_uiInstance->focusManager : nullptr)
 
+// 无人值守自动退出：argv[1] = "auto=<秒>" → 定时线程经 UICornerstone_PushUIEvent
+// 投递 WINDOW_CLOSE（互斥事件队列，实例销毁后 Push 走 null 安全路径，无悬垂访问）。
+// 用于自动化回归/CI：窗口无需人工关闭，达到时长后测试自行退出。
+inline void scheduleAutoQuit(int argc, char* argv[]) {
+    if (argc < 2 || strncmp(argv[1], "auto=", 5) != 0) return;
+    int sec = atoi(argv[1] + 5);
+    if (sec <= 0) return;
+    printf("[TestInstance] auto-quit scheduled in %ds (无人值守)\n", sec); fflush(stdout);
+    std::thread([sec]() {
+        std::this_thread::sleep_for(std::chrono::seconds(sec));
+        UIEvent ue;
+        std::memset(&ue, 0, sizeof(ue));
+        ue.type = UI_EVENT_WINDOW_CLOSE;
+        UICornerstone_PushUIEvent(g_uiInstance, &ue);
+    }).detach();
+}
+
 // main() 便捷封装：CreateInstance → run(&app) → DestroyInstance
 // 默认窗口 1400×900（部分测试布局延伸至 x=1250，超过 1024 默认宽），
 // 单测可用 TestRunMain<AppT, 宽, 高> 定制；Flags 为跨后端统一窗口标志（UIWindowFlags）。
@@ -52,6 +73,7 @@ int TestRunMain(int argc, char* argv[]) {
         printf("[TestInstance] CreateInstance failed\n");
         return 1;
     }
+    scheduleAutoQuit(argc, argv);
     AppT app;
     int rc = g_uiInstance->mainWindow->run(&app);
     UICornerstone_DestroyInstance(g_uiInstance);

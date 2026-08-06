@@ -1,6 +1,8 @@
 ﻿#include "UICornerstoneAPI.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <windows.h>   /* GetTickCount64：无人值守自动退出计时 */
 
 static void onBtnClick(UIControlHandle ctl, void* user) {
     (void)ctl; (void)user;
@@ -48,8 +50,16 @@ static const char* LAYOUT_JSON =
 "  ]"
 "}";
 
-int main(void) {
+int main(int argc, char* argv[]) {
     printf("=== UICornerstone C ABI Controls Demo ===\n"); fflush(stdout);
+
+    /* 无人值守：argv[1]="auto=<秒>" → 到时投递 WINDOW_CLOSE 自行退出 */
+    int autoSec = 0; DWORD t0 = 0;
+    if (argc >= 2 && strncmp(argv[1], "auto=", 5) == 0) {
+        autoSec = atoi(argv[1] + 5);
+        t0 = GetTickCount64();
+        printf("  auto-quit in %ds\n", autoSec); fflush(stdout);
+    }
 
     UIInstance inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
     if (!inst) {
@@ -99,6 +109,12 @@ int main(void) {
 
     printf("  Frame loop running (close window to exit)...\n"); fflush(stdout);
     while (!UICornerstone_IsQuitRequested(inst)) {
+        if (autoSec && (GetTickCount64() - t0) >= (DWORD)autoSec * 1000) {
+            UIEvent ue;
+            memset(&ue, 0, sizeof(ue));
+            ue.type = UI_EVENT_WINDOW_CLOSE;
+            UICornerstone_PushUIEvent(inst, &ue);
+        }
         UICornerstone_ProcessEvents(inst);
         UICornerstone_Update(inst, 1.0 / 60.0);
         UICornerstone_Clear(inst);
@@ -106,7 +122,8 @@ int main(void) {
         UICornerstone_Present(inst);
     }
 
-    printf("  Window closed by user\n");
+    printf("  Window closed%s\n",
+        (autoSec && (GetTickCount64() - t0) >= (DWORD)autoSec * 1000) ? " (auto)" : " by user"); fflush(stdout);
     UICornerstone_DestroyInstance(inst);
     printf("  === PASS ===\n"); fflush(stdout);
     return 0;
