@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include <cstdio>
 
 // nanosvg expects these C headers in global namespace
 #include <string.h>
@@ -275,6 +276,7 @@ class SFMLRenderDevice : public RenderDevice {
     sf::VertexArray m_fillBatch;
     sf::VertexArray m_lineBatch;
     bool m_batchDirty = false;
+    bool m_vsyncEnabled = false;
 
     void applyClipRect(const SRect& rect) {
         int fbH = static_cast<int>(m_target->getSize().y);
@@ -647,9 +649,22 @@ public:
         if (strcmp(key, "vsync") == 0) {
             if (!m_window) return 0;
             m_window->setVerticalSyncEnabled(v != 0);
+            m_vsyncEnabled = (v != 0);
             return 1;
         }
         return 0;
+    }
+
+    int getConfig(const char* key, int type, void* value, int maxLen) override {
+        if (strcmp(key, "vsync") != 0) return 0;
+        if (type == 1 || type == 2) {
+            *static_cast<int*>(value) = m_vsyncEnabled ? 1 : 0;
+        } else if (type == 0) {
+            snprintf(static_cast<char*>(value), maxLen, "%d", m_vsyncEnabled ? 1 : 0);
+        } else {
+            return 0;
+        }
+        return 1;
     }
 
     void* getNativeHandle() override { return m_target; }

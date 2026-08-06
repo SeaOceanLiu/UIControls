@@ -311,6 +311,11 @@ UIInstance UICornerstone_CreateInstance(
             ctx->windowFlags = config->windowFlags;
         }
     }
+    // 全局默认后端配置（创建前设置，key=vsync）合并进窗口标志：
+    // raylib 的 vsync 属创建期参数，须在 InitWindow 前以 FLAG_VSYNC_HINT 生效
+    int gVsync = 0;
+    if (UICornerstone_GetBackendConfigInt(nullptr, "vsync", &gVsync) && gVsync)
+        ctx->windowFlags |= UIWindowFlags::Vsync;
 
     if (!ctx->initialize()) {
         delete ctx;

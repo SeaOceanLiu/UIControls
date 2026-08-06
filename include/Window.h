@@ -12,6 +12,7 @@ namespace UIWindowFlags {
     constexpr uint32_t None       = 0x00000000;
     constexpr uint32_t Fullscreen = 0x00000001; // SDL_WINDOW_FULLSCREEN
     constexpr uint32_t Resizable  = 0x00000020; // SDL_WINDOW_RESIZABLE
+    constexpr uint32_t Vsync      = 0x40000000; // 应用层保留位：请求垂直同步（raylib 创建期有效）
 }
 
 class Window {

@@ -66,6 +66,11 @@ int main(int argc, char* argv[]) {
         printf("  auto-quit in %ds\n", autoSec); fflush(stdout);
     }
 
+    /* 后端配置冒烟：全局默认在创建前设置 → CreateInstance 应用 → 运行期查询/切换。
+       vsync=1 全局默认在创建前生效：raylib 为创建期参数（InitWindow 前 FLAG_VSYNC_HINT，
+       回读应为 1）；sdl3 创建时强制关闭 vsync（见 CreateSDL3Window）故回读 0 属预期，
+       其后运行期 setConfig 可切换。非 sdl3/sfml/raylib 后端返回 0 属能力子集差异。 */
+    UICornerstone_SetBackendConfigBool(NULL, "vsync", 1);
     #ifdef UICORNERSTONE_BUILD_SHARED
     UIInstance inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
 #else
@@ -75,9 +80,6 @@ int main(int argc, char* argv[]) {
         printf("FAIL: CreateInstance\n"); return 1;
     }
 
-    /* 后端配置冒烟：全局默认 → CreateInstance 应用 → 运行期查询/切换。
-       sdl3/sfml 支持 vsync；其他后端返回 0 属预期（后端能力子集不同）。 */
-    UICornerstone_SetBackendConfigBool(NULL, "vsync", 0);
     int vb = -1, r = UICornerstone_GetBackendConfigBool(inst, "vsync", &vb);
     printf("  backend vsync after create: r=%d v=%d\n", r, vb); fflush(stdout);
     char rn[64] = {0};

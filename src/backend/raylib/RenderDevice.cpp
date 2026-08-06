@@ -709,6 +709,27 @@ public:
         return nullptr;
     }
 
+    // === 后端配置（键：vsync）===
+    // raylib 的 vsync 是创建期参数（FLAG_VSYNC_HINT 在 InitWindow 前设置），
+    // 运行期 setConfig 无法切换 → 返回 0；getConfig 回读创建时的标志状态。
+    int setConfig(const char* key, int type, const void* value) override {
+        (void)key; (void)type; (void)value;
+        return 0;
+    }
+
+    int getConfig(const char* key, int type, void* value, int maxLen) override {
+        if (strcmp(key, "vsync") != 0) return 0;
+        if (type == 1 || type == 2) {
+            *static_cast<int*>(value) = IsWindowState(FLAG_VSYNC_HINT) ? 1 : 0;
+        } else if (type == 0) {
+            snprintf(static_cast<char*>(value), maxLen, "%d",
+                     IsWindowState(FLAG_VSYNC_HINT) ? 1 : 0);
+        } else {
+            return 0;
+        }
+        return 1;
+    }
+
 private:
     Color m_currentColor;
     bool m_frameActive;

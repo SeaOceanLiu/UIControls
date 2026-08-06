@@ -88,8 +88,8 @@ Window* CreateSDL3Window(const char* title, int width, int height, uint32_t flag
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     // flags 为跨后端统一窗口标志（UIWindowFlags，值对齐 SDL_WINDOW_*，可直接透传）。
-    // 注意：SDL3 部分平台运行期 SetWindowResizable 不生效，可调性需在创建时指定
-    if (!SDL_CreateWindowAndRenderer(title, width, height, flags, &window, &renderer)) {
+    // 注意：Vsync 是应用层保留位（raylib 创建期专用），不属 SDL 窗口标志，须掩掉。
+    if (!SDL_CreateWindowAndRenderer(title, width, height, flags & ~UIWindowFlags::Vsync, &window, &renderer)) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return nullptr;
     }

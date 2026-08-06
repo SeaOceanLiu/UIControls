@@ -17,6 +17,7 @@ public:
         unsigned int rlFlags = 0;
         if (flags & UIWindowFlags::Resizable) rlFlags |= FLAG_WINDOW_RESIZABLE;
         if (flags & UIWindowFlags::Fullscreen) rlFlags |= FLAG_FULLSCREEN_MODE;
+        if (flags & UIWindowFlags::Vsync) rlFlags |= FLAG_VSYNC_HINT;
         if (rlFlags) SetConfigFlags(rlFlags);
 
         InitWindow(w, h, title);

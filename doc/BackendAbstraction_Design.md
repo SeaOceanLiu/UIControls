@@ -2005,14 +2005,16 @@ virtual int getConfig(const char* key, int type, void* value, int maxLen);
 
 | key | 类型 | sdl3 | sfml | raylib | 说明 |
 |-----|------|------|------|--------|------|
-| `vsync` | bool/int/string | ✓ | ✓ | ✗ | 0/1；sdl3 运行期 `SDL_SetRenderVSync`；sfml `setVerticalSyncEnabled` |
+| `vsync` | bool/int/string | ✓ | ✓ | ✓* | 0/1；sdl3 运行期 `SDL_SetRenderVSync`；sfml 运行期 `setVerticalSyncEnabled`；raylib 创建期 `FLAG_VSYNC_HINT`（运行期 setConfig 不支持，返 0） |
 | `swap-ratio` | int | ✓ | ✗ | ✗ | sdl3 透传 `SDL_SetRenderVSync`（0/1/-1） |
 | `renderer-name` | string（只读） | ✓ | ✗ | ✗ | `SDL_GetRendererName`，能力探测 |
 
-raylib 的 vsync 属创建期参数，当前后端不支持（返回 0），后续可扩展为全局默认在 `InitWindow` 前读取。
+*raylib 的 vsync 属创建期参数：全局默认（`SetBackendConfigBool(NULL,"vsync",1)` 于创建实例前）经 `UIWindowFlags::Vsync` 合并进窗口标志，`InitWindow` 前以 `FLAG_VSYNC_HINT` 生效；`getConfig` 以 `IsWindowState(FLAG_VSYNC_HINT)` 回读创建标志。`UIWindowFlags::Vsync` 为应用层保留位（0x40000000），sdl3 透传 SDL 前掩除，避免误传给 SDL_WINDOW_*。
 
 ### 19.5 测试
 
-`test_api.c` 冒烟：全局默认 `vsync=0` → 创建实例 → 查询 → 运行期置 1 → 复查回读。断言仅在后端返回成功时强制执行（非 sdl3/sfml 后端允许不支持）。
+`test_api.c` 冒烟：全局默认 `vsync=1`（创建前设置） → 创建实例 → 创建期回读（raylib r=1 v=1 证明 HINT 生效）→ 运行期置 1 → 复查回读。断言仅在后端返回成功时强制执行（非 sdl3/sfml/raylib 后端允许不支持）。
 
-**验证状态（2026-08-06，本地桌面已完成）**：vsync=0/1 在真实窗口下运行 `test_api` 无撕裂、回读一致（`UICornerstone_GetBackendConfigBool(vsync)` 正常），视觉无差异已人工确认。raylib 后端仍返回 0（不支持，属创建期参数）。
+**验证状态（2026-08-06，本地桌面已完成）**：vsync 三后端实测——sdl3 运行期 `SDL_SetRenderVSync`（direct3d11 renderer，vsync=1→60fps、0→420fps）；raylib 创建期 `FLAG_VSYNC_HINT`（vsync=1→59fps、0→~1050fps）；sfml 运行期 `setVerticalSyncEnabled`。全程由 `test_aniviewer` 顶部 fps 覆盖层人工确认无撕裂、回读一致。另补：raylib/sfml 静态回调表注册 `setBackendConfig`/`getBackendConfig`。
+
+**环境备注（2026-08-06）**：`UICornerstone_CreateInstance` 的 vsync 全局默认合并进窗口标志逻辑原位于 `if (config)` 块内，config 为 NULL 时（如 `test_api.c` 传 NULL）失效——已移出，全局默认在实例创建时恒生效。
