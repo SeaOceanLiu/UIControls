@@ -27,10 +27,12 @@ using json = nlohmann::json;
 
 static void printUsage(const char* argv0) {
     printf("LuotiAni 视觉校验工具\n");
-    printf("用法: %s <动画jsonc路径> [loop 0|1]   (loop 缺省 1)\n", argv0);
+    printf("用法: %s <动画jsonc路径> [loop=0|1] [auto=<秒>] [vsync=0|1]\n", argv0);
     printf("  路径: 绝对路径原样使用；相对路径按 exe 同目录解析\n");
+    printf("  参数: 任意顺序、可省略；loop 缺省 1，auto 缺省 0（不自动退出）\n");
+    printf("  兼容: 旧式位置参数 [loop 0|1]（argv[2] 为纯 0/1）仍可用\n");
     printf("  窗口大小取 jsonc 的 overview.view 画布尺寸\n");
-    printf("  示例: %s assets/animations/rotateBtn/rotateBtn.jsonc\n", argv0);
+    printf("  示例: %s assets/animations/rotateBtn/rotateBtn.jsonc auto=5 vsync=1\n", argv0);
 }
 
 static std::string resolvePath(const char* arg) {
@@ -63,13 +65,27 @@ int main(int argc, char** argv) {
         return 2;
     }
     std::string jsoncReal = resolvePath(argv[1]);
-    int loop = (argc >= 3 && argv[2][0] == '0') ? 0 : 1;
-    // 无人值守：argv[3]="auto=<秒>" → 到时自动跳出循环（无需关闭窗口）
+    // 键值参数任意顺序解析：loop=0|1 / auto=<秒> / vsync=0|1，均可省略。
+    // 兼容旧式：argv[i] 为纯 "0"/"1" 时视为旧式 loop 位置参数。
+    int loop = 1;
     int autoSec = 0;
-    if (argc >= 4 && strncmp(argv[3], "auto=", 5) == 0) autoSec = std::atoi(argv[3] + 5);
-    // vsync 开关：argv[4]="vsync=0|1" → 创建实例前设置后端全局配置
     int vsync = -1;
-    if (argc >= 5 && strncmp(argv[4], "vsync=", 6) == 0) vsync = std::atoi(argv[4] + 6);
+    for (int i = 2; i < argc; i++) {
+        const char* a = argv[i];
+        if (strncmp(a, "loop=", 5) == 0) {
+            loop = (a[5] == '0') ? 0 : 1;
+        } else if (strncmp(a, "auto=", 5) == 0) {
+            autoSec = std::atoi(a + 5);
+        } else if (strncmp(a, "vsync=", 6) == 0) {
+            vsync = std::atoi(a + 6);
+        } else if (a[0] == '0' && a[1] == '\0') {
+            loop = 0;                       // 旧式位置参数 loop=0
+        } else if (a[0] == '1' && a[1] == '\0') {
+            loop = 1;                       // 旧式位置参数 loop=1
+        } else {
+            printf("WARN: 忽略无法识别的参数: %s\n", a);
+        }
+    }
 
     int winW = 0, winH = 0;
     std::string title;
