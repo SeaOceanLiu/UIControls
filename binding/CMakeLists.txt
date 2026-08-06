@@ -53,6 +53,15 @@ if(TARGET UICornerstone)
             endforeach()
         endforeach()
     endif()
+
+    # 资源目录拷贝（字体/图片/动画，与 test 目标一致）
+    get_filename_component(ASSETS_DIR "${CMAKE_SOURCE_DIR}/subModules/assets" ABSOLUTE)
+    foreach(sample IN LISTS BINDING_SAMPLES)
+        add_custom_command(TARGET ${sample} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${ASSETS_DIR}"
+                $<TARGET_FILE_DIR:${sample}>/assets)
+    endforeach()
 endif()
 
 message(STATUS "UICornerstoneBinding: sources registered")
