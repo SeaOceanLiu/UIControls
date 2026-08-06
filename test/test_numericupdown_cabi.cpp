@@ -27,6 +27,7 @@ typedef int   (*UIIsQuitFn)(UIInstance);
 typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
 typedef void* (*UIFindControlFn)(UIInstance,const char*);
 typedef void  (*UIRegisterActionFn)(UIInstance,const char*,void(*)(void*,void*),void*);
+typedef void  (*UIPushUIEventFn)(UIInstance,const UIEvent*);
 
 typedef int  (*UISetFloatFn)(UIInstance,void*,const char*,float);
 typedef int  (*UIGetFloatFn)(UIInstance,void*,const char*,float*);
@@ -42,6 +43,7 @@ static UIClearFn                      uiClear                   = nullptr;
 static UIRenderFn                     uiRender                  = nullptr;
 static UIPresentFn                    uiPresent                 = nullptr;
 static UIIsQuitFn                     uiIsQuitRequested         = nullptr;
+static UIPushUIEventFn                uiPushUIEvent             = nullptr;
 static UILoadLayoutFn                 uiLoadLayout              = nullptr;
 static UIFindControlFn                uiFindControl             = nullptr;
 static UIRegisterActionFn             uiRegisterAction          = nullptr;
@@ -53,6 +55,7 @@ static UISetCallbackFn uiSetCallback = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 static UIInstance g_inst = nullptr;
+static int g_autoSec = 0;   // auto=<秒>：到时注入 WINDOW_CLOSE 自行退出（无人值守）
 
 static void loadAllProcs(HMODULE dll) {
 #define RESOLVE(name) \
@@ -66,6 +69,7 @@ static void loadAllProcs(HMODULE dll) {
     RESOLVE(Render);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
+    RESOLVE(PushUIEvent);
     RESOLVE(DestroyInstance);
     RESOLVE(LoadLayout);
     RESOLVE(FindControl);
@@ -258,7 +262,12 @@ static int runTest(const char* shortName, const char* displayName) {
     }
 
     printf("Frame loop... (interact with NumericUpDown controls or close the window)\n");
+    ULONGLONG autoT0 = GetTickCount64();
     while (!uiIsQuitRequested(g_inst)) {
+        if (g_autoSec > 0 && (GetTickCount64() - autoT0) >= (ULONGLONG)g_autoSec * 1000) {
+            UIEvent ue; memset(&ue, 0, sizeof(ue)); ue.type = UI_EVENT_WINDOW_CLOSE;
+            uiPushUIEvent(g_inst, &ue);
+        }
         uiProcessEvents(g_inst);
         uiUpdate(g_inst, 1.0 / 60.0);
         uiClear(g_inst);
@@ -274,4 +283,9 @@ static int runTest(const char* shortName, const char* displayName) {
     return 0;
 }
 
-int main() { return runTest(BACKEND_SHORT_NAME, BACKEND_DISPLAY_NAME); }
+int main(int argc, char* argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "auto=", 5) == 0) g_autoSec = atoi(argv[i] + 5);
+    }
+    return runTest(BACKEND_SHORT_NAME, BACKEND_DISPLAY_NAME);
+}

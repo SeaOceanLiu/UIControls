@@ -55,6 +55,7 @@ static UIInstance g_inst = nullptr;
 // ===== 注入模拟（--sim-inject）：进程内事件注入（走 queuedEvents 通路），
 // 不依赖窗口焦点，用于验证 comboEditable 打字 + 回车匹配 =====
 static bool g_simInject = false;
+static int g_autoSec = 0;   // auto=<秒>：到时注入 WINDOW_CLOSE 自行退出（无人值守）
 static int g_simPhase = 0;
 static ULONGLONG g_simNextTick = 0;
 
@@ -317,7 +318,12 @@ static int runTest(const char* shortName, const char* displayName) {
     printf("OK: layout loaded\n");
 
     printf("Frame loop... (interact with the ComboBox or close the window)\n");
+    ULONGLONG autoT0 = GetTickCount64();
     while (!uiIsQuitRequested(g_inst)) {
+        if (g_autoSec > 0 && (GetTickCount64() - autoT0) >= (ULONGLONG)g_autoSec * 1000) {
+            UIEvent ue; memset(&ue, 0, sizeof(ue)); ue.type = UI_EVENT_WINDOW_CLOSE;
+            uiPushUIEvent(g_inst, &ue);
+        }
         if (g_simInject) runSimInject();
         uiProcessEvents(g_inst);
         uiUpdate(g_inst, 1.0 / 60.0);
@@ -337,6 +343,7 @@ static int runTest(const char* shortName, const char* displayName) {
 int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--sim-inject") == 0) g_simInject = true;
+        if (strncmp(argv[i], "auto=", 5) == 0) g_autoSec = atoi(argv[i] + 5);
     }
     return runTest(BACKEND_SHORT_NAME, BACKEND_DISPLAY_NAME);
 }

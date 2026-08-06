@@ -25,6 +25,7 @@ typedef void  (*UIClearFn)(UIInstance);
 typedef void  (*UIRenderFn)(UIInstance);
 typedef void  (*UIPresentFn)(UIInstance);
 typedef int   (*UIIsQuitFn)(UIInstance);
+typedef void  (*UIPushUIEventFn)(UIInstance,const UIEvent*);
 typedef int   (*UILoadLayoutFn)(UIInstance,const char*);
 typedef void* (*UIFindControlFn)(UIInstance,const char*);
 typedef void  (*UIRegisterActionFn)(UIInstance, const char*, void(*)(void*,void*), void*);
@@ -40,6 +41,7 @@ static UIClearFn               uiClear                = nullptr;
 static UIRenderFn              uiRender               = nullptr;
 static UIPresentFn             uiPresent              = nullptr;
 static UIIsQuitFn              uiIsQuit               = nullptr;
+static UIPushUIEventFn     uiPushUIEvent          = nullptr;
 static UIDestroyInstanceFn     uiDestroyInstance      = nullptr;
 static UILoadLayoutFn         uiLoadLayout         = nullptr;
 static UIFindControlFn        uiFindControl        = nullptr;
@@ -52,6 +54,7 @@ static void*                  g_treeHandle         = nullptr;
 
 static HMODULE g_uiDll = nullptr;
 static UIInstance g_inst = nullptr;
+static int g_autoSec = 0;   // auto=<秒>：到时注入 WINDOW_CLOSE 自行退出（无人值守）
 
 // ---- JSON layout ----
 // TreeView with deep hierarchy + long labels (horizontal scroll trigger)
@@ -158,6 +161,7 @@ static void loadFunctions() {
     uiRender         = (UIRenderFn)           GetProcAddress(g_uiDll, "UICornerstone_Render");
     uiPresent        = (UIPresentFn)          GetProcAddress(g_uiDll, "UICornerstone_Present");
     uiIsQuit         = (UIIsQuitFn)           GetProcAddress(g_uiDll, "UICornerstone_IsQuitRequested");
+    uiPushUIEvent    = (UIPushUIEventFn)      GetProcAddress(g_uiDll, "UICornerstone_PushUIEvent");
     uiDestroyInstance= (UIDestroyInstanceFn)  GetProcAddress(g_uiDll, "UICornerstone_DestroyInstance");
     uiLoadLayout     = (UILoadLayoutFn)       GetProcAddress(g_uiDll, "UICornerstone_LoadLayout");
     uiFindControl    = (UIFindControlFn)      GetProcAddress(g_uiDll, "UICornerstone_FindControl");
@@ -167,14 +171,17 @@ static void loadFunctions() {
     uiGetPtr         = (UIGetPtrFn)           GetProcAddress(g_uiDll, "UICornerstone_GetPtr");
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "auto=", 5) == 0) g_autoSec = atoi(argv[i] + 5);
+    }
     setvbuf(stdout, NULL, _IONBF, 0);
 
     g_uiDll = LoadLibraryA("UICornerstone.dll");
     if (!g_uiDll) { printf("FAIL: LoadLibrary\n"); return 1; }
 
     loadFunctions();
-    if (!uiCreateInstance || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetString || !uiIsQuit) {
+    if (!uiCreateInstance || !uiLoadLayout || !uiFindControl || !uiRegisterAction || !uiSetString || !uiIsQuit || !uiPushUIEvent) {
         printf("FAIL: GetProcAddress\n");
         FreeLibrary(g_uiDll);
         return 1;
@@ -207,7 +214,12 @@ int main() {
     printf("FindControl(lblSelection) OK\n");
 
     printf("Frame loop running - click nodes in the TreeView, close window to exit\n");
+    ULONGLONG autoT0 = GetTickCount64();
     while (!uiIsQuit(g_inst)) {
+        if (g_autoSec > 0 && (GetTickCount64() - autoT0) >= (ULONGLONG)g_autoSec * 1000) {
+            UIEvent ue; memset(&ue, 0, sizeof(ue)); ue.type = UI_EVENT_WINDOW_CLOSE;
+            uiPushUIEvent(g_inst, &ue);
+        }
         uiProcessEvents(g_inst);
         uiUpdate(g_inst, 1.0 / 60.0);
         uiClear(g_inst);

@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <windows.h>   /* GetTickCount64：无人值守自动退出计时 */
 
+/* 静态后端回调表（src/backend/<backend>/BackendPlugin.cpp 定义，编入 UICornerstone 静态库）。
+   静态构建下必须用静态回调绕过插件 DLL：避免目录残留的旧版 UIBackend_*.dll vtable 错位
+   （旧 DLL 无新虚方法 → 后端配置/Surface 工厂均失效）。空声明 → C linkage，与 extern "C" 定义匹配。 */
+extern UIBackendCallbacks* GetUIBackendCallbacks(void);
+
 static void onBtnClick(UIControlHandle ctl, void* user) {
     (void)ctl; (void)user;
     static int count = 0;
@@ -61,9 +66,13 @@ int main(int argc, char* argv[]) {
         printf("  auto-quit in %ds\n", autoSec); fflush(stdout);
     }
 
+    #ifdef UICORNERSTONE_BUILD_SHARED
     UIInstance inst = UICornerstone_CreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
+#else
+    UIInstance inst = UICornerstone_CreateInstance(GetUIBackendCallbacks(), NULL);
+#endif
     if (!inst) {
-        printf("FAIL: CreateInstanceFromPlugin (%s)\n", UICORNERSTONE_BACKEND_NAME); return 1;
+        printf("FAIL: CreateInstance\n"); return 1;
     }
 
     /* 后端配置冒烟：全局默认 → CreateInstance 应用 → 运行期查询/切换。
@@ -71,6 +80,9 @@ int main(int argc, char* argv[]) {
     UICornerstone_SetBackendConfigBool(NULL, "vsync", 0);
     int vb = -1, r = UICornerstone_GetBackendConfigBool(inst, "vsync", &vb);
     printf("  backend vsync after create: r=%d v=%d\n", r, vb); fflush(stdout);
+    char rn[64] = {0};
+    if (UICornerstone_GetBackendConfig(inst, "renderer-name", rn, sizeof(rn)) == 1)
+        printf("  backend renderer-name: %s\n", rn); fflush(stdout);
     r = UICornerstone_SetBackendConfigInt(inst, "vsync", 1);
     if (r) {
         int vb2 = -1;

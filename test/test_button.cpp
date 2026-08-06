@@ -121,9 +121,8 @@ void testBenchInitialize(shared_ptr<Bench>) {
         .setMatchParentRect(true)
         .build();
 
-    g_button5 = ButtonBuilder(nullptr, SRect(50, 150, 240, 100), 2.0f, 2.0f)
-        .setCaption(u8"2x缩放按钮\n含文字图片")
-        .setCaptionSize(24)
+    // 与 g_button3 (1x, 380,50,120,50, icon.png) 对比：同素材同 rect 同样式（无 caption），仅差 2x 缩放
+    g_button5 = ButtonBuilder(nullptr, SRect(50, 150, 120, 50), 2.0f, 2.0f)
         .setNormalStateActor(normalActor2x)
         .setHoverStateActor(hoverActor2x)
         .setPressedStateActor(pressedActor2x)
@@ -142,7 +141,8 @@ void testBenchInitialize(shared_ptr<Bench>) {
             .prepare()
             .setAutoStart()
             .build();
-        g_button6 = ButtonBuilder(nullptr, SRect(530, 150, 240, 100), 2.0f, 2.0f)
+        // 与 g_button4 (1x, 530,50,120,50) 对比：同 rect 同动画，仅差 2x 缩放
+        g_button6 = ButtonBuilder(nullptr, SRect(530, 150, 120, 50), 2.0f, 2.0f)
             .setLuotiAni(rotateAni2x)
             .setTransparent(true)
             .setOnClick([](shared_ptr<Button> btn) {

@@ -66,6 +66,9 @@ int main(int argc, char** argv) {
     // 无人值守：argv[3]="auto=<秒>" → 到时自动跳出循环（无需关闭窗口）
     int autoSec = 0;
     if (argc >= 4 && strncmp(argv[3], "auto=", 5) == 0) autoSec = std::atoi(argv[3] + 5);
+    // vsync 开关：argv[4]="vsync=0|1" → 创建实例前设置后端全局配置
+    int vsync = -1;
+    if (argc >= 5 && strncmp(argv[4], "vsync=", 6) == 0) vsync = std::atoi(argv[4] + 6);
 
     int winW = 0, winH = 0;
     std::string title;
@@ -73,8 +76,12 @@ int main(int argc, char** argv) {
         printf("FAIL: 无法读取动画 jsonc: %s\n", jsoncReal.c_str());
         return 2;
     }
-    printf("动画: %s  (%dx%d)  loop=%d%s —— 关闭窗口退出\n",
-        title.c_str(), winW, winH, loop, autoSec ? "  auto" : "");
+    printf("动画: %s  (%dx%d)  loop=%d%s%s —— 关闭窗口退出\n",
+        title.c_str(), winW, winH, loop, autoSec ? "  auto" : "", vsync >= 0 ? (vsync ? "  vsync=1" : "  vsync=0") : "");
+
+    // vsync 在实例创建前经全局后端配置生效（sdl3 支持；其他后端返回 0 忽略）
+    if (vsync >= 0)
+        UICornerstone_SetBackendConfigBool(NULL, "vsync", vsync);
 
     UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
     cfg.windowTitle = title.c_str();
