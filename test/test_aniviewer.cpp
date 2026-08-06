@@ -40,7 +40,7 @@ static std::string resolvePath(const char* arg) {
     return (fs::path(Platform::GetBasePath()) / s).string();  // 相对 → exe 同目录
 }
 
-static bool loadCanvasInfo(const std::string& path, int& winW, int& winH, std::string& name) {
+static bool loadCanvasInfo(const std::string& path, int& winW, int& winH, std::string& name, int& frameRate) {
     std::ifstream in(path, std::ios::binary);
     if (!in.is_open()) return false;
     std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -50,6 +50,7 @@ static bool loadCanvasInfo(const std::string& path, int& winW, int& winH, std::s
         winW = overview.at("view").at("width").get<int>();
         winH = overview.at("view").at("height").get<int>();
         name = overview.value("name", "test_aniviewer");
+        frameRate = overview.value("frameRate", 0);
         return true;
     } catch (...) {
         return false;
@@ -72,7 +73,8 @@ int main(int argc, char** argv) {
 
     int winW = 0, winH = 0;
     std::string title;
-    if (!loadCanvasInfo(jsoncReal, winW, winH, title)) {
+    int setFrameRate = 0;
+    if (!loadCanvasInfo(jsoncReal, winW, winH, title, setFrameRate)) {
         printf("FAIL: 无法读取动画 jsonc: %s\n", jsoncReal.c_str());
         return 2;
     }
@@ -105,7 +107,19 @@ int main(int argc, char** argv) {
     UICornerstone_SetBool(inst, ani, "playing", 1);
     UICornerstone_SetBool(inst, ani, "loop", loop);
 
+    // 信息覆盖层：左上=动画设定帧率，右上=实际帧率（每秒刷新）。
+    // label 宽度随窗口自适应，避免小画布（如 256px）两组 fps 重叠。
+    float fpsLblW = (float)(winW - 24) / 2.0f;
+    if (fpsLblW < 120.0f) fpsLblW = 120.0f;
+    char setFpsText[64] = {0};
+    snprintf(setFpsText, sizeof(setFpsText), "set fps: %d", setFrameRate);
+    UIControlHandle lblSetFps = UICornerstone_CreateLabel(inst, setFpsText, 18.0f, 8.0f, 4.0f, fpsLblW, 26.0f);
+    UIControlHandle lblRealFps = UICornerstone_CreateLabel(inst, "real fps: -", 18.0f, (float)winW - 8.0f - fpsLblW, 4.0f, fpsLblW, 26.0f);
+
     uint64_t t0 = Platform::GetTicks();
+    uint64_t fpsT0 = t0;
+    int fpsFrames = 0;
+    char fpsText[64] = {0};
     while (!UICornerstone_IsQuitRequested(inst)) {
         if (autoSec && Platform::GetTicks() - t0 >= (uint64_t)autoSec * 1000) break;
         UICornerstone_ProcessEvents(inst);
@@ -113,6 +127,15 @@ int main(int argc, char** argv) {
         UICornerstone_Clear(inst);
         UICornerstone_Render(inst);
         UICornerstone_Present(inst);
+        // 实际 fps：每秒更新一次右上角 label
+        fpsFrames++;
+        uint64_t now = Platform::GetTicks();
+        if (now - fpsT0 >= 1000) {
+            snprintf(fpsText, sizeof(fpsText), "real fps: %d", (int)(fpsFrames * 1000 / (now - fpsT0)));
+            if (lblRealFps) UICornerstone_SetString(inst, lblRealFps, "caption", fpsText);
+            fpsFrames = 0;
+            fpsT0 = now;
+        }
     }
 
     printf("视图已关闭（%s）\n", autoSec ? "自动超时" : "人工");
