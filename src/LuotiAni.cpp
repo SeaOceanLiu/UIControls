@@ -591,7 +591,9 @@ void LuotiAni::prepare(uint32_t startFrame){
         }
 
         OpData opData;
-        opData.opacity = layer->getOpacity();
+        // 图层级 opacity 存为 0~1（parseJsonDesc:239 /100），OpData::opacity 为 0~255 域——
+        // 直接赋值会把 1=100% 截断成几乎透明（缺陷修复：手工×255 归一化，源 §5 陷阱 3）
+        opData.opacity = static_cast<uint8_t>(layer->getOpacity() * 255.0f);
         opData.dRect = {0, 0, (float)operationSurface->width(), (float)operationSurface->height()};
         opData.m = {1, 1};
         opData.surface = operationSurface;
