@@ -89,6 +89,8 @@ public:
     void present() override;
     void flush() override;
     void* getNativeHandle() override;
+    int setConfig(const char* key, int type, const void* value) override;
+    int getConfig(const char* key, int type, void* value, int maxLen) override;
     UIRenderDeviceHandle handle() const { return m_handle; }
 };
 

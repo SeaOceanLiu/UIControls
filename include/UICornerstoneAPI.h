@@ -126,6 +126,10 @@ typedef struct {
     void                 (*present)(UIRenderDeviceHandle);
     void                 (*flush)(UIRenderDeviceHandle);
     void*                (*getNativeHandle)(UIRenderDeviceHandle);
+    // 后端配置键值（可选，可 NULL — 未识别 key 返回 0）
+    // type: 0=string 1=int 2=bool，value 为统一指针（const char* / int*）
+    int                  (*setBackendConfig)(UIRenderDeviceHandle, const char* key, int type, const void* value);
+    int                  (*getBackendConfig)(UIRenderDeviceHandle, const char* key, int type, void* value, int maxLen);
     // 纹理（可选，可 NULL—图片不可用时跳过）
     UITextureHandle      (*createTextureFromFile)(UIRenderDeviceHandle, const char* path);
     void                 (*destroyTexture)(UIRenderDeviceHandle, UITextureHandle);

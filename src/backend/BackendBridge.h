@@ -93,6 +93,12 @@ inline void bridge_flush(UIRenderDeviceHandle h) {
 inline void* bridge_getNativeHandle(UIRenderDeviceHandle h) {
     return static_cast<RenderDevice*>(h)->getNativeHandle();
 }
+inline int bridge_setBackendConfig(UIRenderDeviceHandle h, const char* key, int type, const void* value) {
+    return static_cast<RenderDevice*>(h)->setConfig(key ? key : "", type, value);
+}
+inline int bridge_getBackendConfig(UIRenderDeviceHandle h, const char* key, int type, void* value, int maxLen) {
+    return static_cast<RenderDevice*>(h)->getConfig(key ? key : "", type, value, maxLen);
+}
 inline UITextureHandle bridge_createTextureFromFile(UIRenderDeviceHandle h, const char* path) {
     auto tex = static_cast<RenderDevice*>(h)->createTextureFromFile(path ? path : "");
     if (!tex) return nullptr;

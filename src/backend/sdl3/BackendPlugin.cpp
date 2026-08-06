@@ -165,6 +165,8 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     cb.present              = bridge_present;
     cb.flush                = bridge_flush;
     cb.getNativeHandle      = bridge_getNativeHandle;
+    cb.setBackendConfig     = bridge_setBackendConfig;
+    cb.getBackendConfig     = bridge_getBackendConfig;
     cb.createTextureFromFile = bridge_createTextureFromFile;
     cb.destroyTexture       = bridge_destroyTexture;
     cb.drawTexture          = bridge_drawTexture;

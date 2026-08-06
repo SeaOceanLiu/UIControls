@@ -104,6 +104,17 @@ bool MainWindow::processEvents(AppCallbacks* app) {
         m_quitRequested = false;
         running = false;
     }
+    // Consume injected event queue (UICornerstone_PushUIEvent, e.g. auto-quit
+    // from automated tests). Any event that ends the loop stops it; other
+    // injected events bypass the loop's owned-loop semantics and are dropped
+    // (the MessageBox/auto-quit use-case only needs WindowClose respected).
+    if (m_context) {
+        while (!m_context->queuedEvents.empty()) {
+            UIEvent ue = m_context->queuedEvents.front();
+            m_context->queuedEvents.pop();
+            if (ue.type == UI_EVENT_WINDOW_CLOSE) running = false;
+        }
+    }
     return running;
 }
 

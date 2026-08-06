@@ -200,6 +200,12 @@ void CallbackRenderDevice::flush() {
 void* CallbackRenderDevice::getNativeHandle() {
     return m_cbs->getNativeHandle ? m_cbs->getNativeHandle(m_handle) : nullptr;
 }
+int CallbackRenderDevice::setConfig(const char* key, int type, const void* value) {
+    return (m_cbs->setBackendConfig) ? m_cbs->setBackendConfig(m_handle, key, type, value) : 0;
+}
+int CallbackRenderDevice::getConfig(const char* key, int type, void* value, int maxLen) {
+    return (m_cbs->getBackendConfig) ? m_cbs->getBackendConfig(m_handle, key, type, value, maxLen) : 0;
+}
 
 // ============================================================
 // CallbackInputBackend
