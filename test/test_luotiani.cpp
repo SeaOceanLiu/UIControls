@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 #include "LuotiAni.h"
+#include "Button.h"
 #include "MainWindow.h"
 #include "Bench.h"
 #include "AppCallbacks.h"
@@ -592,6 +593,46 @@ void testLuotianiPixel(void) {
     }
 }
 
+// ── 用例：L11  帧 Actor 缩放校准（§6.9，仿 g_button6：prepare 先行 → 挂 2x 父）──
+
+void testL11ScaleCalibration(void) {
+    g_caseIndex++;
+    {
+        // prepare 先行（帧 Actor 快照 xScale=1）→ 挂 2x 父 → 绘制校准后应 ==2
+        shared_ptr<LuotiAni> ani = LuotiAniBuilder(BENCH)
+            .loadAniDesc(string("animations/rotateBtn/rotateBtn.jsonc"))
+            .prepare()
+            .build();
+        shared_ptr<Button> btn2x = ButtonBuilder(nullptr, SRect(50, 700, 240, 100), 2.0f, 2.0f)
+            .setLuotiAni(ani)
+            .setTransparent(true)
+            .build();
+        btn2x->create();
+        BENCH->addControl(btn2x);
+        ani->draw();
+        Actor* fa = ani->getFrameActor(0);
+        CHECK(fa != nullptr, "L11 frame actor exists");
+        if (fa != nullptr) {
+            CHECK(fa->getScaleXX() == 2.0f, "L11 2x parent frame actor scale==2");
+        }
+        BENCH->removeControl(btn2x);
+
+        // 换 1x 父再绘制 → 校准后 ==1
+        shared_ptr<Button> btn1x = ButtonBuilder(nullptr, SRect(50, 820, 240, 100))
+            .setLuotiAni(ani)
+            .setTransparent(true)
+            .build();
+        btn1x->create();
+        BENCH->addControl(btn1x);
+        ani->draw();
+        if (fa != nullptr) {
+            CHECK(fa->getScaleXX() == 1.0f, "L11 1x parent frame actor scale==1");
+        }
+        BENCH->removeControl(btn1x);
+    }
+    logOutput(u8"L11 缩放校准用例完成（2x 父==2 / 1x 父==1）");
+}
+
 // ── 可见演示动画：挂载到屏幕供人工观察（真实资源 + easing/path 自定义）──
 
 static void showDemoAnimations(void) {
@@ -656,6 +697,7 @@ void testLuotianiInitialize(shared_ptr<Bench>) {
     testL8MultiSegment();
     testL9Tolerance();
     testL10Resources();
+    testL11ScaleCalibration();
     testLuotianiPixel();
     showDemoAnimations();
 

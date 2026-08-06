@@ -1,4 +1,6 @@
 ﻿#include "LuotiAni.h"
+#include "PropertyNames.h"
+#include "PlatformUtils.h"
 
 LuotiAni::Matrix2D LuotiAni::createRotationMatrix(float angle) {
     Matrix2D mat;
@@ -195,6 +197,14 @@ void LuotiAni::loadAniDesc(string resourceId){
 void LuotiAni::parseJsonDesc(){
     m_jsonAniDesc = json::parse(m_pJsonFileContent.get(), nullptr, false, true);
     m_layerSegs.clear();
+
+    // 换动画状态重置（§6.5）：二次 loadAniDesc 必须清除上一动画的烘焙状态，
+    // 否则 prepare() 因 m_isPrepared 早退、m_frames 保留旧帧而 m_totalFrames 已是新值
+    m_isPrepared = false;
+    m_frames.clear();
+    m_frameSurfaces.clear();
+    m_layers.clear();
+    m_frameToDraw = 0;
 
     json overview = m_jsonAniDesc["overview"];
     if (overview.is_null()) {
@@ -472,6 +482,7 @@ void LuotiAni::draw(uint32_t frameNo, float x, float y, uint8_t alpha) {
     if (!m_visible) return;
     if (!m_isPrepared || m_frames.empty()) return;
 
+    updateChildScale(m_frames[frameNo].get());   // 帧 Actor 缩放校准（§6.9：非控件树成员，快照会陈旧）
     m_frames[frameNo]->draw(x, y, alpha);
 }
 
@@ -491,6 +502,19 @@ void LuotiAni::play(void){
     m_frameToDraw = 0;
     m_isPlaying = true;
     m_lastFrameMsTick = getTicks();
+}
+
+void LuotiAni::setFrame(uint32_t frame) {
+    if (!m_isPrepared) return;
+    if (m_frames.empty() || frame >= m_totalFrames) return;
+    m_frameToDraw = frame;
+    m_lastFrameMsTick = getTicks();   // 跳帧后复位累计时间，避免首次 update 按旧 delta 连跳
+}
+
+Actor* LuotiAni::getFrameActor(uint32_t frameNo) {
+    if (!m_isPrepared) return nullptr;
+    if (frameNo >= m_frames.size()) return nullptr;
+    return m_frames[frameNo].get();
 }
 
 void LuotiAni::setRenderDevice(RenderDevice* device) {
@@ -774,4 +798,67 @@ void LuotiInstance::play(void){
     m_frameToDraw = 0;
     m_isPlaying = true;
     m_lastFrameMsTick = getTicks();
+}
+
+// ============================================================
+// 属性系统重写（控件化 §6.3/§6.4）
+// ============================================================
+int LuotiAni::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kAnimation) == 0) {
+        if (!value || !value[0]) return 0;
+        fs::path p(value);
+        if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+        try {
+            bool wasPlaying = m_isPlaying;
+            loadFromFile(p);     // 依赖 §6.5 换动画状态重置（parseJsonDesc 开头）
+            prepare();
+            if (wasPlaying) {    // §6.2：播放中换动画 → 从第 0 帧重播（prepare 已复位 frameToDraw=0）
+                m_isPlaying = true;
+                m_lastFrameMsTick = getTicks();
+            }
+        } catch (...) {          // §6.4-2：失败返回 0，控件保留，下一次设置仍可重试
+            printf("LuotiAni::setStringProperty('animation'): load/prepare failed.\n");
+            return 0;
+        }
+        return 1;
+    }
+    return ControlImpl::setStringProperty(prop, value);
+}
+
+int LuotiAni::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kPlaying) == 0) {
+        if (value != 0) {
+            if (!m_isPrepared) return 0;   // §6.4-3：未 prepare 拒绝（play() 会 throw）
+            play();                        // 每次置 1 均为 play()（帧复位 0 重播，§6.2 语义）
+        } else {
+            pause();
+        }
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kLoop) == 0) {
+        setLoop(value != 0);
+        return 1;
+    }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+
+int LuotiAni::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kFrame) == 0) {
+        if (!m_isPrepared) return 0;       // §6.4-4：未 prepare 拒绝
+        if (value < 0) return 0;
+        setFrame(static_cast<uint32_t>(value));
+        return 1;
+    }
+    return ControlImpl::setIntProperty(prop, value);
+}
+
+int LuotiAni::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kPlaying) == 0) { out = m_isPlaying ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kLoop) == 0)     { out = m_loop ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+
+int LuotiAni::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kFrame) == 0) { out = static_cast<int>(m_frameToDraw); return 1; }
+    return ControlImpl::getIntProperty(prop, out);
 }

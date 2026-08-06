@@ -332,6 +332,8 @@ public:
     void prepare(uint32_t startFrame = 0);
     void pause(void);
     void resume(void);
+    void setFrame(uint32_t frame);
+    Actor* getFrameActor(uint32_t frameNo);   // 帧 Actor 调试/断言访问（未 prepare 或越界返回 nullptr）
     bool isPlaying(void) { return m_isPlaying; };
     bool isPrepared(void) { return m_isPrepared; };
     bool isLoaded(void) { return m_isLoaded; };
@@ -340,6 +342,14 @@ public:
     uint32_t getCurrentFrame(void) { return m_frameToDraw; };
     bool isLoop(void) { return m_loop; };
     void setLoop(bool loop) { m_loop = loop; };
+
+    // ── 属性系统重写（控件化 §6.3，分发惯例同 Button.cpp:335-353）──
+    int setStringProperty(const char* prop, const char* value) override;  // "animation"
+    int setBoolProperty(const char* prop, int value) override;            // "playing" / "loop"
+    int setIntProperty(const char* prop, int value) override;             // "frame"
+    int getBoolProperty(const char* prop, int& out) override;             // "playing" / "loop"
+    int getIntProperty(const char* prop, int& out) override;              // "frame"
+    bool isContainsPoint(float x, float y) override { return false; }     // 纯显示控件不参与事件命中
 };
 
 class LuotiAniBuilder{

@@ -167,6 +167,9 @@ PROP_CONSTEXPR const char* kConfirmText         = "confirm-text";
 PROP_CONSTEXPR const char* kCancelText          = "cancel-text";
 PROP_CONSTEXPR const char* kColor               = "color";
 PROP_CONSTEXPR const char* kAnimation           = "animation";
+PROP_CONSTEXPR const char* kPlaying             = "playing";            // LuotiAni 播放/暂停（命令式，置 1=play 帧复位 0 重播）
+PROP_CONSTEXPR const char* kLoop                = "loop";               // LuotiAni 循环开关
+PROP_CONSTEXPR const char* kFrame               = "frame";              // LuotiAni 跳帧（只读当前帧经 getInt）
 PROP_CONSTEXPR const char* kItems               = "items";
 
 // TreeView

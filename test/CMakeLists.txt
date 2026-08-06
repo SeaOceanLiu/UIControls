@@ -112,6 +112,7 @@ set(UI_TEST_EXECUTABLES
     test_multi_instance
     test_multiviewport
     test_luotiani
+    test_animation
 )
 
 foreach(test_name ${UI_TEST_EXECUTABLES})
