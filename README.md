@@ -9,8 +9,9 @@
 - **14+ UI 控件**：Label、Button（支持 Actor/LuotiAni）、CheckBox（三态）、EditBox、TextArea（多行+滚动）、ProgressBar、ScrollBar、Slider、Menu、WinFrame、ColorPicker、Panel 等
 - **声明式 UI（JSON 布局）**：通过 JSON 描述控件树和事件绑定，`LayoutParser` 自动解析，无需手写创建代码
 - **三后端切换**：SDL3（主开发后端）、SFML、Raylib，只需改 CMake 变量即可切换
-- **LuotiAni 粒子动画引擎**：为 Button 控件提供粒子动画支持
-- **Actor 图片系统**：控件可绑定多状态图片（normal/hover/pressed/disabled）
+- **LuotiAni 关键帧动画引擎**（音译"洛蒂"）：JSON 描述 → prepare 一次性烘焙全部帧贴图 → 播放时按毫秒跳帧、运行时零插值；支持平移/缩放/旋转/透明度/可见性多图层动画、loop 循环、多实例共享帧数据
+- **Actor 图片系统**：控件可绑定多状态图片（normal/hover/pressed/disabled），支持缩放模式/锚点/透明度/匹配父矩形；LuotiAni 每帧动画即为一个帧 Actor
+- **多实例 / 多视口**：`UIContext` 承载实例状态，单进程可创建多个独立窗口实例（`CreateInstance`/`CreateViewport`），事件、Action、控件 ID、资源根目录、焦点系统逐实例隔离，Ctrl+Tab 跨视口导航
 - **四层抽象架构**：`RenderDevice` → `Texture/Surface` → `TextRenderer` → `InputBackend`，完全不直接依赖后端 API
 - **C ABI 公开接口**：纯 C 兼容的 `UICornerstone_*` 函数，支持静态链接、DLL 隐式加载、显式 `LoadLibrary`
 - **缩放感知**：内置 `dpiScale` 机制，布局和渲染自动适配高 DPI 显示
@@ -20,6 +21,44 @@
 - Windows 10+
 - Visual Studio 2022（需包含"使用 C++ 的桌面开发"工作负载）
 - CMake 3.16+
+
+## 多实例 / 多视口
+
+UICornerstone 支持单进程内创建多个独立窗口实例：
+
+- **多实例**：`UICornerstone_CreateInstance` 每调用一次即创建一个独立实例（独立的窗口、事件队列、控件 ID 表、Action 表、资源根目录、焦点管理器）；各实例互不干扰，句柄不可跨实例混用
+- **多视口**：`UICornerstone_CreateViewport` 在既有实例内创建共享同一后端的子视口；焦点系统支持 Tab 环内导航与 **Ctrl+Tab 跨视口跳转**（焦点智能路由到最近实例）
+- 生命周期：实例销毁自动清理后端窗口与渲染设备；日志以 `[Instance_N]` 前缀区分实例
+- 详见 [C ABI 多实例支持改造设计](doc/CABI_MultiInstance_Design.md)，实测用例 `test_multi_instance_cabi`、`test_multiviewport_cabi`（K1-K8 三后端全过）
+
+## LuotiAni 动画引擎（"洛蒂"）
+
+LuotiAni 是内置的关键帧动画引擎，采用"JSON 描述 → 一次性烘焙 → 按帧播放"三段式流水线：
+
+```
+jsonc 描述文件          prepare() 烘焙            play() 播放
+┌──────────────┐   ┌──────────────────────┐   ┌──────────────────┐
+│ overview     │ → │ 图层贴图加载/缩放      │ → │ update() 按毫秒   │
+│ layers       │   │ 关键帧→全帧 OpData    │   │ 推进帧号          │
+│ keyFrames    │   │ 逐帧合成画布贴图       │ → │ draw() 直接贴帧图 │
+└──────────────┘   └──────────────────────┘   └──────────────────┘
+```
+
+- **运行时零插值**：所有帧在加载时全部烘焙为贴图，播放只做跳帧，CPU 开销极低
+- **动画能力**：多图层（每层一张贴图 + 关键帧）、平移/缩放/旋转/透明度/可见性操作、`loop` 循环、`frameRate` 帧率
+- **绑定方式**：Button 的 `animation` 属性、JSON 布局 `luotiAni` 节点、C ABI `UICornerstone_CreateAnimation`
+- **多实例共享**：`LuotiInstance` 共享同一份帧数据多路播放，内存只存一份
+- 视觉校验工具：`test_aniviewer <动画.jsonc> [loop=0|1] [auto=<秒>] [vsync=0|1]`（任意顺序），窗口覆盖层实时显示设定/实际 fps
+- 详见 [LuotiAni 动画开发手册](doc/LuotiAni_DevGuide.md)
+
+## Actor 图片系统
+
+Actor 是控件可绑定的图片素材（`Actor → Material`）：
+
+- **多状态外观**：Button 等控件每种状态（normal/hover/pressed/disabled）可挂独立 Actor
+- **属性**：`image`（文件或资源）、`match-parent-rect`（匹配父矩形）、`alpha`（透明度）、`scale-type`/`anchor`（缩放模式与锚点）
+- **绘制次序**：Actor 图片位于控件背景之上、标题文字之下
+- **帧 Actor**：LuotiAni 每帧画布即一个帧 Actor（`make_shared<Actor>(this, true)`），随帧号切换贴图
 
 ## 快速开始
 
@@ -79,7 +118,7 @@ build\sdl3_dll --config Debug --target sample_fromsource
 
 | 测试名（文件名排序） | 说明 |
 |----------------------|------|
-| test_button | 按钮动画（LuotiAni 粒子动画）测试 |
+| test_button | 按钮动画（LuotiAni 关键帧动画）测试 |
 | test_checkbox | 复选框（三态）测试 |
 | test_colorpicker | 颜色选择器测试 |
 | test_editbox | 输入框测试（含中文输入） |
@@ -88,6 +127,7 @@ build\sdl3_dll --config Debug --target sample_fromsource
 | test_layout | JSON 布局解析基础演示 |
 | test_layout_advanced | 高级布局：百分比、嵌套、对齐 |
 | test_menu | 菜单控件测试（MenuItem / MenuPanel / MenuBar） |
+| test_aniviewer | LuotiAni 视觉校验工具（加载 jsonc 播放，窗口覆盖层显示设定/实际 fps，支持 vsync/loop/auto 参数） |
 | test_progressbar | 进度条动画测试 |
 | test_slider | 滑块控件测试（含刻度线/值标签） |
 | test_winframe | 窗口框架测试（拖动、缩放、关闭按钮） |
@@ -167,6 +207,9 @@ UICornerstone/
 | [GraphTool_Design.md](doc/GraphTool_Design.md) | 内部图形工具设计 |
 | [EventSystem_Design.md](doc/EventSystem_Design.md) | 事件系统设计（EventType → InputBackend → EventQueue → 控件分派 → FocusManager） |
 | [FocusSystem_Design.md](doc/FocusSystem_Design.md) | 焦点系统设计（Tab 环、FocusBoundary、焦点环绘制） |
+| [CABI_MultiInstance_Design.md](doc/CABI_MultiInstance_Design.md) | C ABI 多实例/多视口支持设计（UIContext 隔离、焦点路由、生命周期） |
+| [LuotiAni_Design.md](doc/LuotiAni_Design.md) | LuotiAni 关键帧动画引擎设计 |
+| [LuotiAni_DevGuide.md](doc/LuotiAni_DevGuide.md) | LuotiAni 开发手册（原理/上手/JSON 参考/语义陷阱） |
 | [Dialog_Design.md](doc/Dialog_Design.md) | Dialog/Popup 弹窗设计 |
 | [ComboBox_Design.md](doc/ComboBox_Design.md) | ComboBox 下拉框设计 |
 | Button_Design.md / Label_Design.md / ... | 各控件详细设计（CheckBox / EditBox / TextArea / ScrollBar / ProgressBar / WinFrame / Menu / Slider / ColorPicker / HandleControl） |
