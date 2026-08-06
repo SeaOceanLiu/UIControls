@@ -188,6 +188,19 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
     const char* pluginName,
     const UIInstanceConfig* config);
 
+/* ============ 后端配置 ============ */
+/* 后端键值配置（vsync / swap-ratio / renderer-name 等，各后端支持子集见文档）。
+   inst == NULL → 设置/查询全局后端默认值，在后续 CreateInstance 创建 renderer 前生效
+                  （对应 raylib FLAG_VSYNC_HINT 这类须创建期生效的参数）；
+   inst != NULL → 设置/查询当前实例的 connecter 运行期可调参数（sdl3/sfml 的 vsync 可运行期切换）。
+   成功返回 1；未识别的 key / 后端不支持返回 0。 */
+UICORNERSTONE_API int UICornerstone_SetBackendConfig(UIInstance inst, const char* key, const char* value);
+UICORNERSTONE_API int UICornerstone_SetBackendConfigInt(UIInstance inst, const char* key, int value);
+UICORNERSTONE_API int UICornerstone_SetBackendConfigBool(UIInstance inst, const char* key, int value);
+UICORNERSTONE_API int UICornerstone_GetBackendConfig(UIInstance inst, const char* key, char* value, int maxLen);
+UICORNERSTONE_API int UICornerstone_GetBackendConfigInt(UIInstance inst, const char* key, int* value);
+UICORNERSTONE_API int UICornerstone_GetBackendConfigBool(UIInstance inst, const char* key, int* value);
+
 /* 在父实例（owner）的窗口中创建子视口：共享后端，独立控制树/事件队列/DataContext。
    rect 为窗口坐标系下的视口区域。 */
 UICORNERSTONE_API UIInstance UICornerstone_CreateViewport(
@@ -298,6 +311,16 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(UIInstance ins
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateImage(
     UIInstance instance,
     const char* image,
+    float x, float y, float w, float h);
+
+/* ============ LuotiAni 动画控件 ============ */
+// jsoncPath 为动画描述文件路径（相对路径经基路径拼接），可为 NULL（之后经
+// UICornerstone_SetString(inst, ctl, "animation", path) 设置）；
+// 创建后不自动播放（显式经 UICornerstone_SetBool(inst, ctl, "playing", 1) 控制）；
+// w/h 传 0 → prepare 回退到 JSON overview.view 画布尺寸；加载失败返回 NULL。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateAnimation(
+    UIInstance instance,
+    const char* jsoncPath,
     float x, float y, float w, float h);
 
 /* ============ 控件通用操作 ============ */

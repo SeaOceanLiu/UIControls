@@ -7,6 +7,9 @@
 #include <SDL3_image/SDL_image.h>
 #include <vector>
 #include <unordered_map>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
 
 // ============================================================
 // SDL3Texture
@@ -281,6 +284,47 @@ public:
 
     void present() override {
         SDL_RenderPresent(m_renderer);
+    }
+
+    // === 后端配置（键：vsync / swap-ratio / renderer-name）===
+    int setConfig(const char* key, int type, const void* value) override {
+        int v = 0;
+        if (type == 0) {
+            v = atoi(static_cast<const char*>(value));
+        } else if (type == 1 || type == 2) {
+            v = *static_cast<const int*>(value);
+        } else {
+            return 0;
+        }
+        if (strcmp(key, "vsync") == 0) {
+            return SDL_SetRenderVSync(m_renderer, v ? 1 : 0) ? 1 : 0;
+        }
+        if (strcmp(key, "swap-ratio") == 0) {
+            return SDL_SetRenderVSync(m_renderer, v) ? 1 : 0;
+        }
+        return 0;
+    }
+
+    int getConfig(const char* key, int type, void* value, int maxLen) override {
+        if (strcmp(key, "vsync") == 0) {
+            int v = 0;
+            if (!SDL_GetRenderVSync(m_renderer, &v)) return 0;
+            if (type == 1 || type == 2) {
+                *static_cast<int*>(value) = v;
+            } else if (type == 0) {
+                snprintf(static_cast<char*>(value), maxLen, "%d", v);
+            } else {
+                return 0;
+            }
+            return 1;
+        }
+        if (strcmp(key, "renderer-name") == 0) {
+            const char* name = SDL_GetRendererName(m_renderer);
+            if (!name || type != 0) return 0;
+            snprintf(static_cast<char*>(value), maxLen, "%s", name);
+            return 1;
+        }
+        return 0;
     }
 
     void* getNativeHandle() override { return m_renderer; }

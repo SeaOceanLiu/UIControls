@@ -63,6 +63,16 @@ public:
     virtual void clear() = 0;
     virtual void present() = 0;
 
+    // === 后端配置键值入口（后端 C ABI 配置转发落点）===
+    // type: 0=string 1=int 2=bool，value 为统一指针（const char* / int*）。
+    // 未识别 key 返回 0（与控件属性一致）；各后端实现自己的支持子集。
+    virtual int setConfig(const char* key, int type, const void* value) {
+        (void)key; (void)type; (void)value; return 0;
+    }
+    virtual int getConfig(const char* key, int type, void* value, int maxLen) {
+        (void)key; (void)type; (void)value; (void)maxLen; return 0;
+    }
+
     // === 批处理刷新（供 TextRenderer 等在直接绘制前刷新批处理）===
     virtual void flush() {}
 

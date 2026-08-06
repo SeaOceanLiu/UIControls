@@ -1968,3 +1968,51 @@ if (m_useCustomCursor) {
 ```
 
 **不需要等到后端抽象完成**——SColor 统一后（Phase 1），即可在现有 SDL3 代码中用 `SDL_ShowCursor(SDL_DISABLE)` + 手动绘制光标纹理实现。推荐在 Phase 1 后评估是否值得独立做。
+
+## 19. 后端配置键值 API
+
+### 19.1 动机
+
+UI 层需要统一入口下发后端能力参数（如垂直同步 vsync）。不同后端生效时机不同：raylib 的 `FLAG_VSYNC_HINT` 须在 `InitWindow` 前（创建期全局），sdl3/sfml 的 vsync 可运行期切换。
+
+### 19.2 设计决策
+
+- **多类型，不新增属性类型**：与属性系统同构，提供 string/int/bool 三种 Set/Get 入口；值统一以 `void*` 传入 RenderDevice 层（type: 0=string 1=int 2=bool）。
+- **inst == NULL → 全局默认**：存入静态表，后续 `CreateInstance` 创建 renderer 后由 `applyBackendDefaults()` 以字符串形式逐个下发（后端自行解析；不支持的键返回 0 被忽略）。用于须创建期生效的参数。
+- **inst != NULL → 运行期**：直接调用该实例 `renderDevice->setConfig/getConfig`。
+- **未识别 key / 后端不支持返回 0**（与控件属性 0=fail 语义一致）；查询可探测后端能力。
+- `UIInstanceConfig` 不动，仍承载基础窗口参数；`UIBackendCallbacks` 也不变（配置只在 `RenderDevice` 虚接口上，第三方 DLL 无需新 ABI）。
+
+### 19.3 C ABI
+
+```
+int UICornerstone_SetBackendConfig(UIInstance inst, const char* key, const char* value);
+int UICornerstone_SetBackendConfigInt(UIInstance inst, const char* key, int value);
+int UICornerstone_SetBackendConfigBool(UIInstance inst, const char* key, int value);
+int UICornerstone_GetBackendConfig(UIInstance inst, const char* key, char* value, int maxLen);
+int UICornerstone_GetBackendConfigInt(UIInstance inst, const char* key, int* value);
+int UICornerstone_GetBackendConfigBool(UIInstance inst, const char* key, int* value);
+```
+
+`RenderDevice` 新增两个非纯虚接口（默认返回 0）：
+
+```cpp
+virtual int setConfig(const char* key, int type, const void* value);
+virtual int getConfig(const char* key, int type, void* value, int maxLen);
+```
+
+### 19.4 键子集（各后端支持情况）
+
+| key | 类型 | sdl3 | sfml | raylib | 说明 |
+|-----|------|------|------|--------|------|
+| `vsync` | bool/int/string | ✓ | ✓ | ✗ | 0/1；sdl3 运行期 `SDL_SetRenderVSync`；sfml `setVerticalSyncEnabled` |
+| `swap-ratio` | int | ✓ | ✗ | ✗ | sdl3 透传 `SDL_SetRenderVSync`（0/1/-1） |
+| `renderer-name` | string（只读） | ✓ | ✗ | ✗ | `SDL_GetRendererName`，能力探测 |
+
+raylib 的 vsync 属创建期参数，当前后端不支持（返回 0），后续可扩展为全局默认在 `InitWindow` 前读取。
+
+### 19.5 测试
+
+`test_api.c` 冒烟：全局默认 `vsync=0` → 创建实例 → 查询 → 运行期置 1 → 复查回读。断言仅在后端返回成功时强制执行（非 sdl3/sfml 后端允许不支持）。
+
+**待验证项（GPU 相关，远程桌面暂停）**：vsync 开关在真实窗口下的帧率表现（`UICornerstone_GetBackendConfigBool(vsync)` 回读 + 视觉无撕裂），恢复本地桌面环境后运行 `test_api` 复核。

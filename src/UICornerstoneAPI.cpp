@@ -29,6 +29,7 @@
 #include "EventTypes.h"
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <string>
 #include <unordered_map>
 #include <functional>
@@ -74,6 +75,30 @@ static LeakDetector s_leakCheck;
 static inline void registerInstance(UIInstance) {}
 static inline void unregisterInstance(UIInstance) {}
 #endif
+
+// ============================================================
+// 后端配置：全局默认值（inst == NULL 的 Set/Get 落点）
+// ============================================================
+static std::mutex s_backendConfigMutex;
+static std::unordered_map<std::string, std::string> s_backendDefaults;
+
+// 把全局默认配置应用到已创建 renderer 的实例（创建期参数以字符串下发，
+// 由后端自行解析；不支持的后端/键自然返回 0，忽略即可）。
+static int applyBackendDefaults(UIInstance inst) {
+    if (!inst || !inst->renderDevice) return 0;
+    std::unordered_map<std::string, std::string> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(s_backendConfigMutex);
+        snapshot = s_backendDefaults;
+    }
+    int ok = 0;
+    for (const auto& kv : snapshot) {
+        if (inst->renderDevice->setConfig(kv.first.c_str(), 0, kv.second.c_str()) > 0) {
+            ok = 1;
+        }
+    }
+    return ok;
+}
 
 // ============================================================
 // 句柄归属校验（仅 _DEBUG；Release 直接透传）
@@ -307,6 +332,8 @@ UIInstance UICornerstone_CreateInstance(
     }
 
     registerInstance(ctx);
+    // 应用全局后端默认配置（inst == NULL 的 SetBackendConfig* 落点）
+    applyBackendDefaults(ctx);
     UI_LOGI(ctx, "created");
     return ctx;
 }
@@ -412,6 +439,70 @@ UIInstance UICornerstone_CreateInstanceFromPlugin(
 
     printf("UICornerstone: loaded %s\n", dllName);
     return UICornerstone_CreateInstance(callbacks, config);
+}
+
+// ============================================================
+// 后端配置（inst == NULL → 全局默认；否则运行期当前实例）
+// type 约定（与 RenderDevice::setConfig/getConfig 一致）：
+//   0 = string, 1 = int, 2 = bool
+// ============================================================
+int UICornerstone_SetBackendConfig(UIInstance inst, const char* key, const char* value) {
+    if (!key || !value) return 0;
+    if (!inst) {
+        std::lock_guard<std::mutex> lock(s_backendConfigMutex);
+        s_backendDefaults[key] = value;
+        return 1;
+    }
+    if (!inst->initialized || inst->destroying || !inst->renderDevice) return 0;
+    return inst->renderDevice->setConfig(key, 0, value);
+}
+
+int UICornerstone_SetBackendConfigInt(UIInstance inst, const char* key, int value) {
+    if (!key) return 0;
+    if (!inst) {
+        std::lock_guard<std::mutex> lock(s_backendConfigMutex);
+        s_backendDefaults[key] = std::to_string(value);
+        return 1;
+    }
+    if (!inst->initialized || inst->destroying || !inst->renderDevice) return 0;
+    return inst->renderDevice->setConfig(key, 1, &value);
+}
+
+int UICornerstone_SetBackendConfigBool(UIInstance inst, const char* key, int value) {
+    return UICornerstone_SetBackendConfigInt(inst, key, value ? 1 : 0);
+}
+
+int UICornerstone_GetBackendConfig(UIInstance inst, const char* key, char* value, int maxLen) {
+    if (!key || !value || maxLen <= 0) return 0;
+    value[0] = '\0';
+    if (!inst) {
+        std::lock_guard<std::mutex> lock(s_backendConfigMutex);
+        auto it = s_backendDefaults.find(key);
+        if (it == s_backendDefaults.end()) return 0;
+        strncpy(value, it->second.c_str(), static_cast<size_t>(maxLen) - 1);
+        value[maxLen - 1] = '\0';
+        return 1;
+    }
+    if (!inst->renderDevice) return 0;
+    return inst->renderDevice->getConfig(key, 0, value, maxLen);
+}
+
+int UICornerstone_GetBackendConfigInt(UIInstance inst, const char* key, int* value) {
+    if (!key || !value) return 0;
+    *value = 0;
+    if (!inst) {
+        std::lock_guard<std::mutex> lock(s_backendConfigMutex);
+        auto it = s_backendDefaults.find(key);
+        if (it == s_backendDefaults.end()) return 0;
+        *value = std::atoi(it->second.c_str());
+        return 1;
+    }
+    if (!inst->renderDevice) return 0;
+    return inst->renderDevice->getConfig(key, 1, value, sizeof(int));
+}
+
+int UICornerstone_GetBackendConfigBool(UIInstance inst, const char* key, int* value) {
+    return UICornerstone_GetBackendConfigInt(inst, key, value);
 }
 
 // ============================================================
@@ -888,6 +979,29 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
     actor->create();
     actor->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(actor.get()));
+}
+
+UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
+    const char* jsoncPath, float x, float y, float w, float h)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto ani = std::make_shared<LuotiAni>(instance->bench);   // 构造不加载（同 Button.cpp:345 用法）
+    ani->setRect(SRect(x, y, w, h));                          // w/h 传 0 → prepare 回退到画布尺寸
+    instance->bench->addControl(ani);                         // setContext 传播
+    if (jsoncPath) {
+        try {                                                 // §6.4-1：异常边界，失败回滚 + 返回 nullptr
+            fs::path p(jsoncPath);
+            if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+            ani->loadFromFile(p);
+            ani->prepare();
+        } catch (...) {
+            printf("UICornerstone_CreateAnimation: load/prepare failed for '%s'\n", jsoncPath);
+            instance->bench->removeControl(ani);
+            return nullptr;
+        }
+    }
+    ani->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ani.get()));
 }
 
 // ============================================================

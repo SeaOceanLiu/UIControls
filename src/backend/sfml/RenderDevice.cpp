@@ -634,6 +634,24 @@ public:
         }
     }
 
+    // === 后端配置（键：vsync）===
+    int setConfig(const char* key, int type, const void* value) override {
+        int v = 0;
+        if (type == 0) {
+            v = atoi(static_cast<const char*>(value));
+        } else if (type == 1 || type == 2) {
+            v = *static_cast<const int*>(value);
+        } else {
+            return 0;
+        }
+        if (strcmp(key, "vsync") == 0) {
+            if (!m_window) return 0;
+            m_window->setVerticalSyncEnabled(v != 0);
+            return 1;
+        }
+        return 0;
+    }
+
     void* getNativeHandle() override { return m_target; }
 
     sf::RenderWindow* getWindow() const { return m_window; }

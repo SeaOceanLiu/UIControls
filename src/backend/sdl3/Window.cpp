@@ -93,6 +93,7 @@ Window* CreateSDL3Window(const char* title, int width, int height, uint32_t flag
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return nullptr;
     }
+    // VSync 退出默认关闭（开启与否由后端配置入口控制，不硬编码）
     SDL_SetRenderVSync(renderer, 0);
     return new SDL3Window(window, renderer);
 }

@@ -55,6 +55,23 @@ int main(void) {
     if (!inst) {
         printf("FAIL: CreateInstanceFromPlugin (%s)\n", UICORNERSTONE_BACKEND_NAME); return 1;
     }
+
+    /* 后端配置冒烟：全局默认 → CreateInstance 应用 → 运行期查询/切换。
+       sdl3/sfml 支持 vsync；其他后端返回 0 属预期（后端能力子集不同）。 */
+    UICornerstone_SetBackendConfigBool(NULL, "vsync", 0);
+    int vb = -1, r = UICornerstone_GetBackendConfigBool(inst, "vsync", &vb);
+    printf("  backend vsync after create: r=%d v=%d\n", r, vb); fflush(stdout);
+    r = UICornerstone_SetBackendConfigInt(inst, "vsync", 1);
+    if (r) {
+        int vb2 = -1;
+        if (UICornerstone_GetBackendConfigBool(inst, "vsync", &vb2) && vb2 != 1) {
+            printf("FAIL: SetBackendConfig(vsync=1) not reflected (v=%d)\n", vb2);
+            UICornerstone_DestroyInstance(inst); return 1;
+        }
+    } else {
+        printf("  backend config vsync runtime set unsupported (ok if not sdl3/sfml)\n"); fflush(stdout);
+    }
+
     UICornerstone_SetViewport(inst, 0, 0, 800, 480);
     UICornerstone_RegisterAction(inst, "onBtnClick", onBtnClick, NULL);
 
