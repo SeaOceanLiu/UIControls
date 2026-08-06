@@ -2015,4 +2015,4 @@ raylib 的 vsync 属创建期参数，当前后端不支持（返回 0），后�
 
 `test_api.c` 冒烟：全局默认 `vsync=0` → 创建实例 → 查询 → 运行期置 1 → 复查回读。断言仅在后端返回成功时强制执行（非 sdl3/sfml 后端允许不支持）。
 
-**待验证项（GPU 相关，远程桌面暂停）**：vsync 开关在真实窗口下的帧率表现（`UICornerstone_GetBackendConfigBool(vsync)` 回读 + 视觉无撕裂），恢复本地桌面环境后运行 `test_api` 复核。
+**验证状态（2026-08-06，本地桌面已完成）**：vsync=0/1 在真实窗口下运行 `test_api` 无撕裂、回读一致（`UICornerstone_GetBackendConfigBool(vsync)` 正常），视觉无差异已人工确认。raylib 后端仍返回 0（不支持，属创建期参数）。
