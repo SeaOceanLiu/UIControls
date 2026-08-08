@@ -1,8 +1,8 @@
-# UICornerstone
+﻿# UICornerstone
 
 基于 C++17 的多后端跨平台 UI 控件库，适用于游戏和图形应用。
 
-支持 **SDL3 / SFML / Raylib** 三种渲染后端，提供 C ABI 接口可被纯 C / C++ / 动态加载等多种集成方式调用。
+支持 **SDL3 / SFML / Raylib** 三种渲染后端，提供 C ABI 接口可被纯 C / C++ / 动态加载等多种集成方式调用；另附 **C++ Binding**（`binding/`，纯动态加载封装）与 4 个可直接修改的样例程序。
 
 ## 功能特性
 
@@ -11,9 +11,10 @@
 - **三后端切换**：SDL3（主开发后端）、SFML、Raylib，只需改 CMake 变量即可切换
 - **LuotiAni 关键帧动画引擎**（音译"洛蒂"）：JSON 描述 → prepare 一次性烘焙全部帧贴图 → 播放时按毫秒跳帧、运行时零插值；支持平移/缩放/旋转/透明度/可见性多图层动画、loop 循环、多实例共享帧数据
 - **Actor 图片系统**：控件可绑定多状态图片（normal/hover/pressed/disabled），支持缩放模式/锚点/透明度/匹配父矩形；LuotiAni 每帧动画即为一个帧 Actor
-- **多实例 / 多视口**：`UIContext` 承载实例状态，单进程可创建多个独立窗口实例（`CreateInstance`/`CreateViewport`），事件、Action、控件 ID、资源根目录、焦点系统逐实例隔离，Ctrl+Tab 跨视口导航
+- **多实例 / 多视口**：`UIContext` 承载实例状态，单进程可创建多个独立窗口实例（`CreateInstance`/`CreateViewport`），事件、Action、控件 ID、资源根目录、焦点系统逐实例隔离，Ctrl+Tab 跨视口导航；**后端能力位机制**（`UICornerstone_GetBackendCapabilities`）声明各后端能力，调用方按能力决定行为（如 raylib 单窗口架构下第二实例为 headless，多窗口渲染需按 `MULTI_WINDOW` 能力位条件化）
 - **四层抽象架构**：`RenderDevice` → `Texture/Surface` → `TextRenderer` → `InputBackend`，完全不直接依赖后端 API
 - **C ABI 公开接口**：纯 C 兼容的 `UICornerstone_*` 函数，支持静态链接、DLL 隐式加载、显式 `LoadLibrary`
+- **C++ Binding**：纯动态加载封装（零链接期依赖，核心/后端 DLL 全部 `LoadLibrary` 运行时解析），类型安全的事件/属性/控件工厂 + Hosted/Embedded 双模式循环
 - **缩放感知**：内置 `dpiScale` 机制，布局和渲染自动适配高 DPI 显示
 
 ## 环境要求
@@ -28,8 +29,9 @@ UICornerstone 支持单进程内创建多个独立窗口实例：
 
 - **多实例**：`UICornerstone_CreateInstance` 每调用一次即创建一个独立实例（独立的窗口、事件队列、控件 ID 表、Action 表、资源根目录、焦点管理器）；各实例互不干扰，句柄不可跨实例混用
 - **多视口**：`UICornerstone_CreateViewport` 在既有实例内创建共享同一后端的子视口；焦点系统支持 Tab 环内导航与 **Ctrl+Tab 跨视口跳转**（焦点智能路由到最近实例）
+- **后端能力位**：`UICornerstone_GetBackendCapabilities` 返回 `UICORN_BACKEND_CAP_*` 位组合（`MULTI_WINDOW`/`RENDER_TARGET`/`CLIP_RECT`/`READBACK`），调用方据此决定行为。**raylib 为单窗口架构**（内部全局只跟踪最近创建的窗口，预编译 DLL 无源码不可修补），声明**不含 `MULTI_WINDOW`**——多实例下仅首个实例有真实窗口，其余为 headless（`Window::isHeadless()`），对其渲染会串扰到主实例窗口（内容闪动）；多窗口渲染前须查能力位条件化（sdl3/sfml 四能力全有，不受限）。详见 [后端抽象设计文档 §20](doc/BackendAbstraction_Design.md)
 - 生命周期：实例销毁自动清理后端窗口与渲染设备；日志以 `[Instance_N]` 前缀区分实例
-- 详见 [C ABI 多实例支持改造设计](doc/CABI_MultiInstance_Design.md)，实测用例 `test_multi_instance_cabi`、`test_multiviewport_cabi`（K1-K8 三后端全过）
+- 详见 [C ABI 多实例支持改造设计](doc/CABI_MultiInstance_Design.md)，实测用例 `test_multi_instance_cabi`、`test_multiviewport_cabi`（K1-K8 三后端全过）、`test_multiinstance_visual_cabi` / `test_multiviewport_visual_cabi`（视觉状态断言）
 
 ## LuotiAni 动画引擎（"洛蒂"）
 
@@ -92,6 +94,14 @@ build_scripts\build.bat raylib
 
 输出目录：`build\{sdl3|sfml|raylib}\test\Debug\`
 
+### C++ Binding 与样例
+
+```cmd
+cmake --build build\binding --config Debug
+```
+
+输出：`build\binding\Debug\`（`UICornerstoneBinding.lib` + 4 个样例 exe + 运行所需核心/后端 DLL）。
+
 ## 首个应用：5 分钟快速上手
 
 UICornerstone 提供 4 种集成模式的完整示例，详见 [用户开发教程](doc/Tutorial.md)：
@@ -112,31 +122,54 @@ build\sdl3_dll --config Debug --target sample_fromsource
 
 所有示例输出到 `build/sample/<name>/<backend>/Debug/`。
 
+### C++ Binding 样例（binding/samples/）
+
+| 样例 | 说明 |
+|------|------|
+| `sample_cpp_hosted` | Hosted 模式：UI 托管循环，游戏逻辑嵌入回调 |
+| `sample_cpp_embed` | Embedded 模式：UI 嵌入用户游戏循环 |
+| `sample_cpp_multiview` | 单窗口两个子视口（Bench A/B），弹窗展示本视口输入 |
+| `sample_cpp_multiinstance` | 双窗口独立实例双向通信（A 按钮 → B 标签），多窗口事件泵 + 能力位条件化渲染 |
+
+构建/运行（`build\binding\Debug\` 下）：
+
+```cmd
+cmake --build build\binding --config Debug
+sample_cpp_multiinstance.exe backend=sdl3      # 命令行选后端（缺省 sdl3）
+set UICORN_AUTO=1 && sample_cpp_multiinstance.exe   # 无人值守冒烟（240 帧自动退出）
+```
+
+详见 [CppBinding_UserManual.md](doc/CppBinding_UserManual.md)（用户手册）与 [CppBinding_Design.md](doc/CppBinding_Design.md)（设计）。
+
 ## 可用测试
 
 ### 核心功能测试（所有后端均可编译）
 
 | 测试名（文件名排序） | 说明 |
 |----------------------|------|
+| test_animation | 动画测试 |
+| test_aniviewer | LuotiAni 视觉校验工具（加载 jsonc 播放，窗口覆盖层显示设定/实际 fps，支持 vsync/loop/auto 参数） |
+| test_api | 纯 C 编写的 C ABI 全功能验证（6 种控件 + JSON 布局 + 事件绑定） |
 | test_button | 按钮动画（LuotiAni 关键帧动画）测试 |
 | test_checkbox | 复选框（三态）测试 |
 | test_colorpicker | 颜色选择器测试 |
+| test_dialog | Dialog/Popup 弹窗测试 |
 | test_editbox | 输入框测试（含中文输入） |
 | test_graphtool | 图形工具绘制测试（几何图元、线型、填充） |
+| test_handlecontrol | HandleControl 句柄调整控件测试 |
+| test_image | Image 图片控件测试（T1-T8） |
 | test_label | 标签及标题栏按钮动画演示 |
 | test_layout | JSON 布局解析基础演示 |
 | test_layout_advanced | 高级布局：百分比、嵌套、对齐 |
+| test_luotiani | LuotiAni 动画引擎测试 |
 | test_menu | 菜单控件测试（MenuItem / MenuPanel / MenuBar） |
-| test_aniviewer | LuotiAni 视觉校验工具（加载 jsonc 播放，窗口覆盖层显示设定/实际 fps，支持 vsync/loop/auto 参数） |
+| test_multi_instance | 多实例隔离（静态链接，事件/Action/生命周期隔离） |
+| test_multiviewport | 多视口 + 键盘跨视口导航（K1-K8，静态链接） |
 | test_progressbar | 进度条动画测试 |
 | test_slider | 滑块控件测试（含刻度线/值标签） |
+| test_splitter | 分割条控件测试 |
+| test_treeview | 树控件测试 |
 | test_winframe | 窗口框架测试（拖动、缩放、关闭按钮） |
-
-### C ABI 测试
-
-| 测试名 | 说明 |
-|--------|------|
-| test_api | 纯 C 编写的 C ABI 全功能验证（6 种控件 + JSON 布局 + 事件绑定） |
 
 ### From-source / DLL 桥接测试（仅 `UICORNERSTONE_BUILD_DLL=ON` 模式）
 
@@ -151,8 +184,12 @@ fromsource 测试使用单源文件 + 编译定义区分后端，后端源码作
 | test_splitter_cabi | JSON Splitter（分割条拖动与布局验证） |
 | test_treeview_cabi | JSON TreeView（树节点展开/选中验证） |
 | test_property_cabi | C ABI 通用属性系统验证（Set/Get 对称 + 边界条件） |
-| test_multi_instance_cabi | 多实例隔离（CreateInstanceFromPlugin 动态加载，事件/Action/生命周期隔离） |
-| test_multiviewport_cabi | 多视口 + 键盘跨视口导航（K1-K8） |
+| test_multi_instance_cabi | 多实例隔离（CreateInstanceFromPlugin 动态加载，事件/Action/生命周期隔离；渲染按 `MULTI_WINDOW` 能力位条件化） |
+| test_multiviewport_cabi | 多视口 + 键盘跨视口导航（K1-K8，动态加载） |
+| test_multiinstance_visual_cabi | 多实例视觉状态（hover/焦点环跨窗口隔离、跨窗口内容传递、逆序销毁；raylib 渲染冒烟按能力位 SKIP） |
+| test_multiviewport_visual_cabi | 多视口视觉状态（hover 隔离、弹窗视口内居中、右下视口 Popup 回归） |
+
+所有测试均支持 `auto=<秒>` 无人值守参数（任意顺序）；三后端全量回归 exit=0。
 
 ## 项目结构
 
@@ -162,6 +199,10 @@ UICornerstone/
 │   ├── *.cpp                #   控件实现 + 基础设施
 │   └── backend/             #   后端实现（sdl3/ sfml/ raylib/）
 ├── include/                 # 头文件（含公有 C ABI 头 UICornerstoneAPI.h）
+├── binding/                 # C++ Binding（纯动态加载封装 + 4 个样例）
+│   ├── src/                 #   DynamicApi 层 + 主类/Control/Event 封装
+│   ├── include/             #   UICornerstone.h / PropertyNames.h 等
+│   └── samples/             #   sample_cpp_{hosted,embed,multiview,multiinstance}
 ├── test/                    # 测试用例（test_*.cpp）
 ├── samples/                 # 4 种集成模式示例
 │   ├── hello_uicornerstone/ #   声明式 UI（JSON 布局）
@@ -201,18 +242,22 @@ UICornerstone/
 | [Build_Guide.md](doc/Build_Guide.md) | 编译指南 |
 | [Sample_Design.md](doc/Sample_Design.md) | 4 种集成模式的架构设计 |
 | [UICornerstone_DLL_Design.md](doc/UICornerstone_DLL_Design.md) | C ABI 与 DLL 架构 |
-| [BackendAbstraction_Design.md](doc/BackendAbstraction_Design.md) | 多后端抽象架构设计 |
+| [BackendAbstraction_Design.md](doc/BackendAbstraction_Design.md) | 多后端抽象架构设计（含 §20 后端能力位机制） |
+| [CABI_MultiInstance_Design.md](doc/CABI_MultiInstance_Design.md) | C ABI 多实例/多视口支持设计（UIContext 隔离、焦点路由、生命周期） |
+| [CABI_Property_Design.md](doc/CABI_Property_Design.md) | C ABI 属性系统设计 |
+| [CppBinding_Design.md](doc/CppBinding_Design.md) | C++ Binding 设计（DynamicApi 纯动态加载、双模式循环、P1-P17） |
+| [CppBinding_UserManual.md](doc/CppBinding_UserManual.md) | C++ Binding 用户手册（上手/Config/事件/多实例与子视口/FAQ/API 速查） |
 | [LayoutSystem_Design.md](doc/LayoutSystem_Design.md) | JSON 布局系统设计 |
 | [ControlBase_Design.md](doc/ControlBase_Design.md) | 控件基类架构与绘制机制 |
 | [GraphTool_Design.md](doc/GraphTool_Design.md) | 内部图形工具设计 |
 | [EventSystem_Design.md](doc/EventSystem_Design.md) | 事件系统设计（EventType → InputBackend → EventQueue → 控件分派 → FocusManager） |
 | [FocusSystem_Design.md](doc/FocusSystem_Design.md) | 焦点系统设计（Tab 环、FocusBoundary、焦点环绘制） |
-| [CABI_MultiInstance_Design.md](doc/CABI_MultiInstance_Design.md) | C ABI 多实例/多视口支持设计（UIContext 隔离、焦点路由、生命周期） |
+| [Image_Design.md](doc/Image_Design.md) | Image 图片控件设计 |
 | [LuotiAni_Design.md](doc/LuotiAni_Design.md) | LuotiAni 关键帧动画引擎设计 |
 | [LuotiAni_DevGuide.md](doc/LuotiAni_DevGuide.md) | LuotiAni 开发手册（原理/上手/JSON 参考/语义陷阱） |
 | [Dialog_Design.md](doc/Dialog_Design.md) | Dialog/Popup 弹窗设计 |
 | [ComboBox_Design.md](doc/ComboBox_Design.md) | ComboBox 下拉框设计 |
-| Button_Design.md / Label_Design.md / ... | 各控件详细设计（CheckBox / EditBox / TextArea / ScrollBar / ProgressBar / WinFrame / Menu / Slider / ColorPicker / HandleControl） |
+| Button_Design.md / Label_Design.md / ... | 各控件详细设计（CheckBox / EditBox / TextArea / ScrollBar / ProgressBar / WinFrame / Menu / Slider / ColorPicker / HandleControl / Splitter / TreeView / NumericUpDown） |
 
 ## 许可证
 
