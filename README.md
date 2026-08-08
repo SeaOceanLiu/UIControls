@@ -149,12 +149,12 @@ set UICORN_AUTO=1 && sample_cpp_multiinstance.exe   # 无人值守冒烟（240 �
 |----------------------|------|
 | test_animation | 动画测试 |
 | test_aniviewer | LuotiAni 视觉校验工具（加载 jsonc 播放，窗口覆盖层显示设定/实际 fps，支持 vsync/loop/auto 参数） |
-| test_api | 纯 C 编写的 C ABI 全功能验证（6 种控件 + JSON 布局 + 事件绑定） |
+| test_api | 纯 C 编写的 C ABI 全功能验证（7 种控件 + JSON 布局 + 事件绑定） |
 | test_button | 按钮动画（LuotiAni 关键帧动画）测试 |
 | test_checkbox | 复选框（三态）测试 |
 | test_colorpicker | 颜色选择器测试 |
 | test_dialog | Dialog/Popup 弹窗测试 |
-| test_editbox | 输入框测试（含中文输入） |
+| test_editbox | 输入框测试（placeholder / 密码模式 / 禁用 / 2x 缩放 / TextArea 多行滚动与清除） |
 | test_graphtool | 图形工具绘制测试（几何图元、线型、填充） |
 | test_handlecontrol | HandleControl 句柄调整控件测试 |
 | test_image | Image 图片控件测试（T1-T8） |
