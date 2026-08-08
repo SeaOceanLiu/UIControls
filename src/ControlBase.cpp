@@ -155,9 +155,18 @@ void ControlImpl::update(void){
     if (getVisible() && getEnable()) {
         // 获取当前鼠标位置；窗口不可用或鼠标不在本窗口内（多实例时
         // getMousePosition 返回 false）→ 视为不在任何控件上，清除 hover。
+        // Debug 鼠标注入（_DEBUG，无人值守测试）：用注入坐标替代真实鼠标。
         float mouseX = 0, mouseY = 0;
-        bool hasMouse = (m_context && m_context->window)
-            && m_context->window->getMousePosition(mouseX, mouseY);
+        bool hasMouse = false;
+        if (m_context && m_context->window) {
+            if (m_context->debugMouseOverride) {
+                hasMouse = true;
+                mouseX = m_context->debugMouseX;
+                mouseY = m_context->debugMouseY;
+            } else {
+                hasMouse = m_context->window->getMousePosition(mouseX, mouseY);
+            }
+        }
 
         SRect drawRect = getDrawRect();
         bool isInside = hasMouse && drawRect.contains(mouseX, mouseY);

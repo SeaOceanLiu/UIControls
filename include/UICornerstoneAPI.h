@@ -241,6 +241,13 @@ UICORNERSTONE_API UIInstance UICornerstone_Debug_GetAliveInstance(int index);
 UICORNERSTONE_API UIInstance UICornerstone_Debug_GetActiveViewport(UIInstance instance);
 // 查询控件是否拥有焦点
 UICORNERSTONE_API int      UICornerstone_Debug_IsControlFocused(UIInstance instance, UIControlHandle control);
+// 查询控件是否处于鼠标悬停状态（m_mouseInside，_DEBUG；Release 恒 0）
+UICORNERSTONE_API int      UICornerstone_Debug_IsControlHovered(UIInstance instance, UIControlHandle control);
+// 调试鼠标注入（_DEBUG；Release 返回 0 不生效）：用注入坐标替代 Window::getMousePosition
+// 驱动本实例 hover 状态——无人值守测试验证跨窗口/跨视口 hover 隔离。坐标为窗口坐标系绝对坐标。
+UICORNERSTONE_API int      UICornerstone_Debug_SetMousePosition(UIInstance instance, float x, float y);
+// 清除调试鼠标注入，恢复真实鼠标位置
+UICORNERSTONE_API int      UICornerstone_Debug_ClearMousePosition(UIInstance instance);
 
 /* ============ 布局系统 ============ */
 UICORNERSTONE_API int               UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent);

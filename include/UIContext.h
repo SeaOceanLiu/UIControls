@@ -82,6 +82,14 @@ struct UIContext {
     uint32_t instanceId = 0;
     std::string debugLabel;
 
+    // ── 调试鼠标注入（仅 _DEBUG 有效，无人值守测试驱动 hover 状态） ──
+    // SetMousePosition 置位后，本实例控件树的 hover 判定用注入坐标替代
+    // Window::getMousePosition（真实鼠标位置在无头测试中不可控）。
+    // 注入坐标为窗口坐标系下的绝对坐标，与 getDrawRect 判定一致。
+    bool debugMouseOverride = false;
+    float debugMouseX = 0.0f;
+    float debugMouseY = 0.0f;
+
     // ── 生命周期（全有或全无） ──
     bool initialize();
     void destroy();

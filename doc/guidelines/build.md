@@ -26,7 +26,9 @@ cmake --build build/raylib_dll --target test_treeview_cabi  # → build/raylib_d
 
 **Available tests (标准)**: test_menu, test_label, test_editbox, test_checkbox, test_progressbar, test_layout, test_layout_advanced, test_winframe, test_graphtool, test_button, test_slider, test_colorpicker, test_combobox, test_dialog, test_handlecontrol, test_numericupdown, test_splitter, test_treeview
 
-**Available tests (DLL 模式 C ABI)**: test_fromsource_cabi, test_api, test_dialog_cabi, test_combobox_cabi, test_numericupdown_cabi, test_splitter_cabi, test_treeview_cabi, test_property_cabi, test_multi_instance_cabi, test_multiviewport_cabi
+**Available tests (DLL 模式 C ABI)**: test_fromsource_cabi, test_api, test_dialog_cabi, test_combobox_cabi, test_numericupdown_cabi, test_splitter_cabi, test_treeview_cabi, test_property_cabi, test_multi_instance_cabi, test_multiviewport_cabi, test_multiinstance_visual_cabi, test_multiviewport_visual_cabi
+
+> **视觉状态测试（test_multiinstance_visual_cabi / test_multiviewport_visual_cabi）**：遵循测试规范用 JSON 布局创建控件（LoadLayout + FindControl + events.onClick 绑定 RegisterAction），参照 `sample_cpp_multiinstance`/`sample_cpp_multiview` 场景，用 Debug 辅助 API 断言视觉状态——hover 跨窗口/跨视口隔离（`Debug_SetMousePosition` 注入窗口内坐标驱动 hover 链路，无头环境真实鼠标不可控）、点击聚焦 + 焦点环并存 → `FocusLost` 清除、按钮点击 → 多窗口测试跨实例内容传递（本窗口 EditBox 内容显示到对方窗口 Label）、多视口测试 Dialog 弹窗显示本视口 EditBox 内容并视口内居中（右下视口 Popup 不显示 bug 回归）。Debug 构建运行。**运行模式**：无参数 = 人工模式（窗口驻留，真实鼠标输入 EditBox → 点击按钮 → 观察对方窗口/弹窗显示内容，关闭窗口退出，无断言）；`auto=<秒>` = 自动断言模式（注入坐标驱动，N 秒后超时退出，无人值守回归）。
 
 ## Running Tests
 

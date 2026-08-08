@@ -1,5 +1,25 @@
 ﻿## Session History
 
+### 2026-08-08（深夜）: 视觉测试 JSON 布局改造 + LoadLayout 多平级控件悬垂修复（Complete）
+
+**背景**：两个 CABI 视觉测试改用 JSON 创建后暴露 LoadLayout 的一个 bug（测试崩溃 + 控件不显示）。
+
+**1. LoadLayout 多平级控件悬垂修复（核心库 bug）**：
+
+- 根因：`parseLayout` 只返回最后一个控件（`root = ctrl` 覆盖），`UICornerstone_LoadLayout` 只把 root 挂到 bench，其余平级控件既未挂载也不持有所有权，**随 parser 析构销毁，FindControl 返回悬垂句柄**；Debug API `IsControlHovered/Focused` 访问时崩溃（同一对象地址被释放）。
+- 修复：LoadLayout 遍历 controlsById，将**无父控件**也挂到 bench 保持生命期与可见性（容器内子控件有父，跳过）。
+
+**2. CABI 视觉测试改造（遵循测试规范 JSON 创建）**：
+
+- 控件创建方式：LoadLayout + FindControl + events.onClick 绑定 RegisterAction；JSON 属性：editbox 文本用 "text"、button/label 用 "caption"、editbox 的 JSON type 为 "edit-box"。
+- 多窗口：按钮点击 → GetString 读本窗口 EditBox 文本 → SetString 到**对方窗口** Label（跨实例内容传递）；auto 模式断言对方窗口内容 == 本窗口输入（"Message: hello from A"）。
+- 多视口：按钮点击 → GetString 读本视口 EditBox 文本 → CreateDialog + CreateLabel(内容) + AddChildControl，弹窗显示自己视口输入的内容；auto 模式断言弹窗内 Label 文本 == 本视口 EditBox 文本 + 弹窗视口内居中（右下视口 Popup bug 回归）。
+- 新增动态加载函数指针：GetString/SetString/RegisterAction/LoadLayout/FindControl/CreateLabel/AddChildControl。
+- 排查结论：`ControlImpl` 是虚拟继承（virtual public Control），void*→Control* 直转须确认存储的是 Control 子对象地址——本链路（shared_ptr<Control> 存储 + reinterpret_cast）一致，无偏移问题；崩溃确认为悬垂句柄。
+
+**3. 回归**：三后端（SDL3/SFML/raylib）DLL 全量 test exit=0 + 4 binding 样例（UICORN_AUTO=1）exit=0；两个视觉测试三后端 auto=3 全部 ALL PASS；人工模式窗口驻留正常；LoadLayoutFromFile 委托 LoadLayout 同享修复。
+
+
 ### 2026-06-01: Phase 1 — SColor Unification
 
 **Changes**:

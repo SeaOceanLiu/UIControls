@@ -654,6 +654,12 @@ int UICornerstone_ProcessEvents(UIInstance instance) {
         } else if (event.m_type == EventType::WindowResize) {
             instance->bench->resized(SRect(0, 0,
                 (float)event.resizeEvent.width, (float)event.resizeEvent.height));
+        } else if (event.m_type == EventType::FocusLost) {
+            // 与轮询通路（pumpInstanceEvents）语义一致：窗口失去系统焦点
+            // → 清除本实例焦点（含活动子视口），避免跨实例焦点环并存
+            if (instance->focusManager) instance->focusManager->clearFocus();
+            if (instance->activeViewport && instance->activeViewport->focusManager)
+                instance->activeViewport->focusManager->clearFocus();
         } else if (event.m_type == EventType::KeyDown || event.m_type == EventType::KeyUp) {
             if (!tryViewportScopeSwitch(instance, event)) {
                 dispatchToBench(instance, event);
@@ -733,6 +739,41 @@ int UICornerstone_Debug_IsControlFocused(UIInstance instance, UIControlHandle co
     return c->getFocused() ? 1 : 0;
 }
 
+int UICornerstone_Debug_IsControlHovered(UIInstance instance, UIControlHandle control) {
+#ifdef _DEBUG
+    if (!instance || instance->destroying || !control) return 0;
+    auto* c = static_cast<Control*>(control);
+    return c->isMouseInside() ? 1 : 0;
+#else
+    (void)instance; (void)control;
+    return 0;
+#endif
+}
+
+int UICornerstone_Debug_SetMousePosition(UIInstance instance, float x, float y) {
+#ifdef _DEBUG
+    if (!instance || instance->destroying) return 0;
+    instance->debugMouseOverride = true;
+    instance->debugMouseX = x;
+    instance->debugMouseY = y;
+    return 1;
+#else
+    (void)instance; (void)x; (void)y;
+    return 0;
+#endif
+}
+
+int UICornerstone_Debug_ClearMousePosition(UIInstance instance) {
+#ifdef _DEBUG
+    if (!instance || instance->destroying) return 0;
+    instance->debugMouseOverride = false;
+    return 1;
+#else
+    (void)instance;
+    return 0;
+#endif
+}
+
 // ============================================================
 // 布局系统
 // ============================================================
@@ -754,6 +795,16 @@ int UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent) {
     if (!root) return 0;
 
     instance->bench->addControl(root);
+
+    // 多平级根控件布局：parseLayout 只返回最后一个控件，其余未挂载
+    // （无父）的控件若随 parser 析构销毁，FindControl 会返回悬垂句柄。
+    // 将无父控件也挂到 bench 保持生命期与可见性（容器内子控件有父，跳过）。
+    for (auto& id : parser.getAllControlIds()) {
+        auto ctl = parser.findControlById(id);
+        if (ctl && ctl != root && ctl->getParent() == nullptr) {
+            instance->bench->addControl(ctl);
+        }
+    }
 
     for (auto& mb : parser.getMenuBars()) {
         instance->bench->addControl(mb);

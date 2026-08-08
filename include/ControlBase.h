@@ -160,6 +160,7 @@ public:
     // === Focus API ===
     virtual void setFocused(bool focused, bool byKeyboard = false) = 0;
     virtual bool getFocused() const = 0;
+    virtual bool isMouseInside() const = 0;
     virtual bool isFocusable() const = 0;
     virtual int  getTabIndex() const = 0;
     virtual void setTabIndex(int index) = 0;
@@ -359,6 +360,7 @@ public:
     // === Focus API ===
     void setFocused(bool focused, bool byKeyboard = false) override;
     bool getFocused() const override { return m_focused; }
+    bool isMouseInside() const override { return m_mouseInside; }
     bool isFocusable() const override { return m_focusable; }
     int  getTabIndex() const override { return m_tabIndex; }
     void setTabIndex(int index) override;
