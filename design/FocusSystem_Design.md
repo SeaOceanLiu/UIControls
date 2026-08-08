@@ -674,7 +674,7 @@ bool Bench::handleEvent(shared_ptr<Event> event) {
 | WinFrame 焦点边界 | ✅ |
 | EditBox/Slider 基类焦点迁移 | ✅ |
 | SFML TextInput 控制字符过滤 | ✅ |
-| 窗口级焦点丢失（多实例，2026-08-08） | ✅ 窗口失去系统焦点 → `FocusLost` 事件 → 清除本实例焦点（含活动子视口），见 `doc/EventSystem_Design.md` §3.2 |
+| 窗口级焦点丢失（多实例，2026-08-08） | ✅ 窗口失去系统焦点 → `FocusLost` 事件 → 清除本实例焦点（含活动子视口），见 `design/EventSystem_Design.md` §3.2 |
 
 ## 10. 后续优化
 

@@ -1,6 +1,6 @@
 ﻿# C++ Binding 用户手册
 
-> 对应 Phase 17 | 编制 2026-08-07 | 状态: **初版** | 配套设计文档：`doc/CppBinding_Design.md`
+> 对应 Phase 17 | 编制 2026-08-07 | 状态: **初版** | 配套设计文档：`design/CppBinding_Design.md`
 
 本手册面向使用 C++ Binding（`binding/` 目录，MIT 许可证）开发 UICornerstone 应用的用户，从零开始讲解配置、控件、事件、循环模式与调试。所有 API 与当前源码一致；与设计文档冲突时以本手册（实机验证）为准。
 
@@ -482,7 +482,7 @@ bool multiWindow = (caps & UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
 if (multiWindow) { uiB->Clear(); uiB->Render(); uiB->Present(); }
 ```
 
-原因：**raylib 后端是单窗口架构**（内部全局只跟踪最近创建的窗口，且预编译 DLL 无源码不可修补）。它声明的能力位**不含 MULTI_WINDOW**——多实例下只有第一个实例有真实窗口，其余实例为 headless（`Window::isHeadless()`）。此时若照常渲染第二实例，内容会串扰到主实例窗口（A/B 交替闪动）。sdl3/sfml 具备完整四能力（`MULTI_WINDOW|RENDER_TARGET|CLIP_RECT|READBACK`），双窗口渲染不受限。详见 `doc/BackendAbstraction_Design.md` §20。
+原因：**raylib 后端是单窗口架构**（内部全局只跟踪最近创建的窗口，且预编译 DLL 无源码不可修补）。它声明的能力位**不含 MULTI_WINDOW**——多实例下只有第一个实例有真实窗口，其余实例为 headless（`Window::isHeadless()`）。此时若照常渲染第二实例，内容会串扰到主实例窗口（A/B 交替闪动）。sdl3/sfml 具备完整四能力（`MULTI_WINDOW|RENDER_TARGET|CLIP_RECT|READBACK`），双窗口渲染不受限。详见 `design/BackendAbstraction_Design.md` §20。
 
 ### 12.2 子视口（同一窗口内的多个视图）
 

@@ -230,10 +230,10 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
 
 | 文档 | 改动 |
 |------|------|
-| `doc/UICornerstone_DLL_Design.md` | API 清单加 `UICornerstone_CreateImage`（:424 CreateImageButton 附近） |
-| `doc/CABI_MultiInstance_Design.md` | API 迁移表加 CreateImage 行（:404 附近）；§6 实施清单加项 |
-| `doc/CABI_Property_Design.md` | Image 属性表（§5.4 内容，含 match-parent-rect 覆盖 w/h 语义） |
-| `doc/guidelines/history.md` | 记录实施与验证结果 |
+| `design/UICornerstone_DLL_Design.md` | API 清单加 `UICornerstone_CreateImage`（:424 CreateImageButton 附近） |
+| `design/CABI_MultiInstance_Design.md` | API 迁移表加 CreateImage 行（:404 附近）；§6 实施清单加项 |
+| `design/CABI_Property_Design.md` | Image 属性表（§5.4 内容，含 match-parent-rect 覆盖 w/h 语义） |
+| `design/guidelines/history.md` | 记录实施与验证结果 |
 
 ## 9. 实施顺序与验收标准
 

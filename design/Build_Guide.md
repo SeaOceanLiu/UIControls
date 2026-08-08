@@ -16,7 +16,7 @@ UICornerstone/
 │   ├── raylib/             # Raylib 静态模式
 │   └── raylib_dll/         # Raylib DLL 模式
 ├── build_scripts/          # 编译脚本
-├── doc/                    # 设计文档
+├── design/                    # 设计文档
 ├── include/                # 头文件
 ├── src/                    # 源代码
 └── test/                   # 测试代码

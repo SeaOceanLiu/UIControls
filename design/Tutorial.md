@@ -395,7 +395,7 @@ UICornerstone_DestroyInstance(win1);
 UICornerstone_DestroyInstance(win2);
 ```
 
-> 多实例隔离的完整设计见 `doc/CABI_MultiInstance_Design.md`，验证用例见 `test/test_multi_instance_cabi.cpp`（事件隔离/生命周期/销毁再创建 x100）与 `test/test_multiviewport_cabi.cpp`（多视口 + 键盘导航）。
+> 多实例隔离的完整设计见 `design/CABI_MultiInstance_Design.md`，验证用例见 `test/test_multi_instance_cabi.cpp`（事件隔离/生命周期/销毁再创建 x100）与 `test/test_multiviewport_cabi.cpp`（多视口 + 键盘导航）。
 
 ## 9. 常见问题
 
@@ -424,7 +424,7 @@ UICornerstone_DestroyInstance(win2);
 
 ## 10. 下一步
 
-- 阅读 `doc/Sample_Design.md` 了解四种集成模式的架构设计
+- 阅读 `design/Sample_Design.md` 了解四种集成模式的架构设计
 - 阅读 `samples/` 中的完整示例代码
-- 阅读各控件设计文档（`doc/*_Design.md`）了解控件 API
-- 阅读 `doc/Build_Guide.md` 获取完整构建参考
+- 阅读各控件设计文档（`design/*_Design.md`）了解控件 API
+- 阅读 `design/Build_Guide.md` 获取完整构建参考

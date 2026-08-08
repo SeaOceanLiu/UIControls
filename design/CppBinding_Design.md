@@ -1326,7 +1326,7 @@ UIControls/
 │
 ├── src/                          ← 核心库实现 (GPL)
 ├── samples/                      ← 核心库示例 (GPL)
-├── doc/                          ← 文档
+├── design/                          ← 文档
 └── LICENSE                       ← GPL v3.0
 ```
 
@@ -1490,7 +1490,7 @@ int main() {
 
 **文件**：`binding/samples/sample_cpp_multiview.cpp`（平铺单文件，~120 行）
 
-**要点**（完整讲解与代码见 `doc/CppBinding_UserManual.md` §12.3）：
+**要点**（完整讲解与代码见 `design/CppBinding_UserManual.md` §12.3）：
 
 - 一个窗口内两个子视口：左上 `CreateViewport(0, 0, 400, 300)`、右下 `CreateViewport(400, 300, 400, 300)`——各自独立控件树，共享后端
 - 每个视口（Bench）内：Label（caption 标明 Bench A/B）、EditBox、Button；按钮点击 → `GetString("text")` 读 EditBox → `CreateDialog("OK", "", ...)` 居中弹窗 + `CreateLabel` 内容 + `dialog.AddChild(label)`（实施修订 2026-08-08：CreateDialog 不再内置文本，内容用 Label 挂入）
@@ -1502,7 +1502,7 @@ int main() {
 
 **文件**：`binding/samples/sample_cpp_multiinstance.cpp`（平铺单文件，~120 行）
 
-**要点**（完整讲解见 `doc/CppBinding_UserManual.md` §12.1）：
+**要点**（完整讲解见 `design/CppBinding_UserManual.md` §12.1）：
 
 - 两个独立窗口实例 A/B（各自 `Create(Config)`），每窗口内 Label + EditBox + Button
 - **跨实例通信**：A 的按钮 → 把 A 的 EditBox 内容发到 B 的 Label（`B.FindControl("statusB")`），B 的按钮反向——验证多实例并存 + 各自控件树独立

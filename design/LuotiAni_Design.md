@@ -415,12 +415,12 @@ void draw(uint32_t frameNo, float x, float y, uint8_t alpha) {
 
 | 文档 | 改动 |
 |------|------|
-| `doc/LuotiAni_Design.md`（本文档） | 通过审核后移入"已审核" |
-| `doc/LuotiAni_DevGuide.md` | 新建：开发手册（原理 + 从 0 上手 + 实操样例 + 字段速查 + 语义陷阱 + 测试）。替代原参数表草案 |
-| `doc/CABI_Property_Design.md` | Animation 属性表（§6.2 内容） |
-| `doc/UICornerstone_DLL_Design.md` | API 清单加 `UICornerstone_CreateAnimation` |
-| `doc/CABI_MultiInstance_Design.md` | API 迁移表加 CreateAnimation 行；§6 实施清单加项 |
-| `doc/guidelines/history.md` | 三步分别记录 |
+| `design/LuotiAni_Design.md`（本文档） | 通过审核后移入"已审核" |
+| `design/LuotiAni_DevGuide.md` | 新建：开发手册（原理 + 从 0 上手 + 实操样例 + 字段速查 + 语义陷阱 + 测试）。替代原参数表草案 |
+| `design/CABI_Property_Design.md` | Animation 属性表（§6.2 内容） |
+| `design/UICornerstone_DLL_Design.md` | API 清单加 `UICornerstone_CreateAnimation` |
+| `design/CABI_MultiInstance_Design.md` | API 迁移表加 CreateAnimation 行；§6 实施清单加项 |
+| `design/guidelines/history.md` | 三步分别记录 |
 
 ## 8. 实施顺序与验收标准（汇总）
 

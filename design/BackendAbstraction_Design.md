@@ -1861,7 +1861,7 @@ rlPopMatrix();
 | `src/backend/raylib/RenderDevice.cpp` | `drawTexture()` 和 `drawTextureRotated()` 改用 `rlPushMatrix + rlScalef + DrawTextureEx`；`drawTextureRotated` 补 `EndBlendMode()` guard |
 - `CMakeLists.txt`：删除 `DEBUG_TRACE_DIR` 相关变量、`DebugTrace.cpp` 编译、`DebugInfoX64.dll` 复制
 - `test/CMakeLists.txt`：删除 `DEBUG_TRACE_DIR` 引用
-- `README.md` / `doc/Build_Guide.md` / `doc/LayoutSystem_Design.md` / `AGENTS.md`：同步清理所有 DebugTrace 引用
+- `README.md` / `design/Build_Guide.md` / `design/LayoutSystem_Design.md` / `AGENTS.md`：同步清理所有 DebugTrace 引用
 
 **结果**：
 - SFML 下 anchorCenter 边框不再透出 FILL bar

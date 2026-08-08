@@ -753,7 +753,7 @@ All 10 tests build and run on all 3 backends. ~6.5× speedup on SDL3.
 | 文件                          | 变更                                                                                         |
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `src/HandleControl.cpp`       | Win32 SetCursor 路径；拖拽中光标保持；按下瞬间光标；十字星蓝边白底；移除方块循环中 Move 绘制 |
-| `doc/HandleControl_Design.md` | 更新 drawMoveHandle、事件流程、光标 Win32 说明、移除 beforeDraw、m_handleAreas 固定数组      |
+| `design/HandleControl_Design.md` | 更新 drawMoveHandle、事件流程、光标 Win32 说明、移除 beforeDraw、m_handleAreas 固定数组      |
 
 **验证**：test_handlecontrol 三后端（SDL3/SFML/Raylib）构建通过。
 
@@ -796,9 +796,9 @@ All 10 tests build and run on all 3 backends. ~6.5× speedup on SDL3.
 
 **设计文档更新**：
 
-- `doc/Sample_Design.md`: §3 新增 loadlibrary 架构图；§7 关键差异说明改为零导入库方式（3 个 Core 符号内联）
+- `design/Sample_Design.md`: §3 新增 loadlibrary 架构图；§7 关键差异说明改为零导入库方式（3 个 Core 符号内联）
 - AGENTS.md: 本次 session 记录
-- `doc/Build_Guide.md` 已在前序 session 更新
+- `design/Build_Guide.md` 已在前序 session 更新
 
 ### 2026-06-20: hello_uicornerstone sample 实现
 
@@ -808,12 +808,12 @@ All 10 tests build and run on all 3 backends. ~6.5× speedup on SDL3.
 - `samples/hello_uicornerstone/CMakeLists.txt`: 单目标 CMake，POST_BUILD 复制 DLL + assets
 - `samples/CMakeLists.txt`: 新目录 CMake，转发到子目录
 - `CMakeLists.txt`: 添加 `add_subdirectory(samples)`
-- `doc/Sample_Design.md`: §2 新增后端选择说明（SDK3/SFML/Raylib 对比表），§7 更新实现状态
-- `doc/Sample_Design.md`: §7 sample_programmatic 标记为"✅ 已实现"
-- `doc/Build_Guide.md`: 添加 sample_programmatic 到测试表
+- `design/Sample_Design.md`: §2 新增后端选择说明（SDK3/SFML/Raylib 对比表），§7 更新实现状态
+- `design/Sample_Design.md`: §7 sample_programmatic 标记为"✅ 已实现"
+- `design/Build_Guide.md`: 添加 sample_programmatic 到测试表
 - `samples/sample_programmatic/sample_programmatic.c`: 纯 C 示例（~45 行），编程式控件创建代替 JSON 布局
 - `samples/sample_programmatic/CMakeLists.txt`: 单目标 CMake，输出到 `build/sample/sample_programmatic/<backend>/Debug/`
-- `doc/Build_Guide.md`: 添加 hello_uicornerstone 到测试表、输出目录、独立构建说明
+- `design/Build_Guide.md`: 添加 hello_uicornerstone 到测试表、输出目录、独立构建说明
 
 **验证**：`hello_uicornerstone.exe` 编译通过，启动后 2 秒存活正常，输出显示静态 InitFromPlugin 回退路径正常工作。
 
@@ -824,7 +824,7 @@ All 10 tests build and run on all 3 backends. ~6.5× speedup on SDL3.
 - SFML/Raylib 改为与 SDL3 一致：`build/sfml`=静态、`build/sfml_dll`=DLL、`build/raylib`=静态、`build/raylib_dll`=DLL
 - `test/test_fromsource.cpp` → `test/test_fromsource_sdl3.cpp`，CMake target 同步改名
 - 从静态构建目录中清理出旧 DLL 模式残留文件（`UICornerstone.dll`/`UIBackend_*.dll` 等）
-- AGENTS.md 和 `doc/UICornerstone_DLL_Design.md` 中引用同步更新
+- AGENTS.md 和 `design/UICornerstone_DLL_Design.md` 中引用同步更新
 
 **构建目录结构**：
 
@@ -847,8 +847,8 @@ All 10 tests build and run on all 3 backends. ~6.5× speedup on SDL3.
 - `samples/sample_fromsource/sample_fromsource.c`: 纯 C 示例（~55 行），Button 点击 → Label 计数，`GetUIBackendCallbacks()` + `UICornerstone_Init(callbacks)` 模式
 - `samples/sample_fromsource/CMakeLists.txt`: 仅 `UICORNERSTONE_BUILD_DLL=ON` 下构建；将 6 个后端源文件编译进 exe（Window/RenderDevice/TextRenderer/InputBackend/Cursor/BackendPlugin）；链接 `UICornerstone_dll`（导入库，ILT 隐式加载 UICornerstone.dll）
 - `samples/CMakeLists.txt`: 添加 `add_subdirectory(sample_fromsource)`
-- `doc/Sample_Design.md`: §3 新增 fromsource 架构说明；新增 §6 sample_fromsource 代码解读；§7 CMake 章节更新 fromsource CMake；§8 文件清单更新；§9 后续扩展标记为 ✅
-- `doc/Build_Guide.md`: 添加 sample_fromsource 到测试表、输出目录、独立构建说明、fromsource 节
+- `design/Sample_Design.md`: §3 新增 fromsource 架构说明；新增 §6 sample_fromsource 代码解读；§7 CMake 章节更新 fromsource CMake；§8 文件清单更新；§9 后续扩展标记为 ✅
+- `design/Build_Guide.md`: 添加 sample_fromsource 到测试表、输出目录、独立构建说明、fromsource 节
 
 **关键架构**：exe 272KB（仅有后端源码），UICornerstone.dll 3.2MB（核心控件）。通过 ILT（Import Library Thunk）在启动时自动加载 `UICornerstone.dll`，无需 `LoadLibrary` + `GetProcAddress`。
 
@@ -862,8 +862,8 @@ All 10 tests build and run on all 3 backends. ~6.5× speedup on SDL3.
 - `samples/sample_loadlibrary/CMakeLists.txt`: 仅 `UICORNERSTONE_BUILD_DLL=ON` 下构建；后端通过 `#include` 而非独立 TU 编译；链接 `UICornerstone_dll` 导入库（仅用于注册符号，C ABI 全部走函数指针）
 - `samples/CMakeLists.txt`: 添加 `add_subdirectory(sample_loadlibrary)`
 - `src/UICornerstoneAPI.cpp`: 修复预存在拼写错误 `initifalize` → `initialize`
-- `doc/Sample_Design.md`: §3 新增 loadlibrary 架构说明；新增 §7 sample_loadlibrary 代码解读（含与 fromsource 对比表）；§8-10 重编号；文件清单和后续扩展表更新
-- `doc/Build_Guide.md`: 添加 sample_loadlibrary 到测试表、输出目录、独立构建说明、fromsource 节
+- `design/Sample_Design.md`: §3 新增 loadlibrary 架构说明；新增 §7 sample_loadlibrary 代码解读（含与 fromsource 对比表）；§8-10 重编号；文件清单和后续扩展表更新
+- `design/Build_Guide.md`: 添加 sample_loadlibrary 到测试表、输出目录、独立构建说明、fromsource 节
 
 **与 sample_fromsource 的架构差异**：
 
@@ -1475,7 +1475,7 @@ Done, 180 frames                        # 帧循环正常完成
 |------|------|
 | `test/test_slider.cpp` | 左列 11 水平滑块 Y 重算（40~695），右列 4 垂直滑块 X 均匀分布（580~910），value label / tick label 全部留足间隙 |
 | `src/backend/raylib/InputBackend.cpp` | 新增 `fillKeyUpEvent()` 和 Keyboard phase 中 `IsKeyUp()` 检测，按键释放时发送 `KeyUp` 事件 |
-| `doc/Slider_Design.md` | §8 优化历史 + §10 关键实现注意事项更新 |
+| `design/Slider_Design.md` | §8 优化历史 + §10 关键实现注意事项更新 |
 
 **Raylib KeyUp 根因**：raylib 使用 `GetKeyPressed()` / `IsKeyDown()` 但无释放 API，`Keyboard` phase 从未生成 `KeyUp` 事件 → Slider 的 `m_repeatKey` 永不归零 → `handleKeyRepeat()` 无限重复无法停止。
 
@@ -1537,12 +1537,12 @@ Done, 180 frames                        # 帧循环正常完成
 - `test_fromsource_sdl3/sfml/raylib` — 三后端 C ABI ColorPicker 验证
 
 **设计文档更新**：
-- `doc/ColorPicker_Design.md` — 完整设计文档（13 节）
-- `doc/FocusSystem_Design.md` — ColorPicker 焦点边界
-- `doc/LayoutSystem_Design.md` — ColorPicker JSON 格式
+- `design/ColorPicker_Design.md` — 完整设计文档（13 节）
+- `design/FocusSystem_Design.md` — ColorPicker 焦点边界
+- `design/LayoutSystem_Design.md` — ColorPicker JSON 格式
 - `README.md` — 14+ 控件、test_colorpicker/test_slider 列表
-- `doc/Build_Guide.md` — test_colorpicker/test_slider 列表
-- `doc/UICornerstone_DLL_Design.md` — 完整 C ABI API 清单（含 ColorPicker/Slider/WinFrame/TextArea/ImageButton 等）
+- `design/Build_Guide.md` — test_colorpicker/test_slider 列表
+- `design/UICornerstone_DLL_Design.md` — 完整 C ABI API 清单（含 ColorPicker/Slider/WinFrame/TextArea/ImageButton 等）
 
 **三后端构建验证**：SDL3/SFML/Raylib 全部编译通过，test_fromsource 三后端输出 "Color: #FF6600"。
 
@@ -1613,11 +1613,11 @@ Done, 180 frames                        # 帧循环正常完成
 
 | 文档 | 主要变更 |
 |------|----------|
-| `doc/EventSystem_Design.md` | **新建** — 事件系统完整设计文档（EventType→Event→InputBackend→EventQueue→控件分派→FocusManager→StateMachine） |
-| `doc/Build_Guide.md` | 测试表 + fromsource 表添加 `test_dialog_cabi` 条目 |
-| `doc/BackendAbstraction_Design.md` | 进度表新增 Phase 16h；§13 新增 Cursor 回调表工厂子节 |
-| `doc/UICornerstone_DLL_Design.md` | `UIBackendCallbacks` 新增 3 个光标工厂回调；新增 Dialog C ABI API（11 个函数）；版本历史 1.13 |
-| `doc/Dialog_Design.md` | 测试计划新增第 13 项（test_dialog_cabi）；新增 §14 跨后端注意事项（windows.h 冲突 + Cursor 工厂注册） |
+| `design/EventSystem_Design.md` | **新建** — 事件系统完整设计文档（EventType→Event→InputBackend→EventQueue→控件分派→FocusManager→StateMachine） |
+| `design/Build_Guide.md` | 测试表 + fromsource 表添加 `test_dialog_cabi` 条目 |
+| `design/BackendAbstraction_Design.md` | 进度表新增 Phase 16h；§13 新增 Cursor 回调表工厂子节 |
+| `design/UICornerstone_DLL_Design.md` | `UIBackendCallbacks` 新增 3 个光标工厂回调；新增 Dialog C ABI API（11 个函数）；版本历史 1.13 |
+| `design/Dialog_Design.md` | 测试计划新增第 13 项（test_dialog_cabi）；新增 §14 跨后端注意事项（windows.h 冲突 + Cursor 工厂注册） |
 
 **验证**：SDL3/SFML/Raylib 三后端 DLL 模式 test_dialog_cabi 全部编译通过，0 error，0 C4819。
 
@@ -1680,10 +1680,10 @@ Done, 180 frames                        # 帧循环正常完成
 | `src/ConstDef.cpp` | 新增上述常量定义 |
 
 **Documentation updated**:
-- `doc/Splitter_Design.md`: 更新 §3.1/4.2/4.3.3/4.4/6/12.3 与当前实现一致
-- `doc/EventSystem_Design.md`: 更新 §3.4 `eventLoopEntry` 含 consumed 检查；§3.6 补充 `weak_ptr` 实现细节
-- `doc/UICornerstone_DLL_Design.md`: 版本历史 v1.16
-- `doc/guidelines/history.md`: 本次记录
+- `design/Splitter_Design.md`: 更新 §3.1/4.2/4.3.3/4.4/6/12.3 与当前实现一致
+- `design/EventSystem_Design.md`: 更新 §3.4 `eventLoopEntry` 含 consumed 检查；§3.6 补充 `weak_ptr` 实现细节
+- `design/UICornerstone_DLL_Design.md`: 版本历史 v1.16
+- `design/guidelines/history.md`: 本次记录
 
 ### 2026-07-26: Phase 4 — Getter/Setter/Callback C ABI 实现完成
 
@@ -1712,7 +1712,7 @@ Done, 180 frames                        # 帧循环正常完成
 - 新增 FromString 函数（与枚举定义同文件，方案 B）：
   - `SliderStyleFromString`, `CheckBoxStyleFromString`, `CheckStateFromString`
   - `ProgressBarStyleFromString`, `ProgressBarTextModeFromString`
-- `doc/CABI_Property_Design.md`: 新增 §5.10 枚举值字符串管理章节，更新 TOC
+- `design/CABI_Property_Design.md`: 新增 §5.10 枚举值字符串管理章节，更新 TOC
 - 3 后端编译通过，0 错误 0 警告
 
 ### 2026-07-30: C ABI 测试问题修复
@@ -1729,7 +1729,7 @@ Done, 180 frames                        # 帧循环正常完成
 
 **涉及文件**：`src/Splitter.cpp`、`src/CheckBox.cpp`、`test/test_fromsource_cabi.cpp`、`test/test_splitter_cabi.cpp`、`test/test_treeview_cabi.cpp`
 
-**文档更新**：`doc/CABI_Property_Design.md`（Bool 属性表补 CheckBox `"checked"`）、`doc/guidelines/testing.md`（新增 C ABI 测试常见陷阱章节）
+**文档更新**：`design/CABI_Property_Design.md`（Bool 属性表补 CheckBox `"checked"`）、`design/guidelines/testing.md`（新增 C ABI 测试常见陷阱章节）
 
 **修复示例程序**：
 - `test_numericupdown_cabi`：回调中读取 `evt->data.floatVal` 而非 `doubleVal`（NumericUpDown 用 `CCallbackData::Float` 发送，`doubleVal` 始终为 0）
@@ -1769,7 +1769,7 @@ Done, 180 frames                        # 帧循环正常完成
 - `CMakeLists.txt` 改为按 `${_BACKEND_LOWER}` 将后端 6 个源文件编译为独立 TU（同 `sample_fromsource` 的 `_BACKEND_SOURCES` 模式）
 - 源码改用 `extern "C" UIBackendCallbacks* GetUIBackendCallbacks(void);` 声明；补 `Surface.h`/`Cursor.h`/`ResourceProvider.h` include
 
-**验证**：SDL3/SFML/Raylib 三后端 `UICornerstone.lib` + `UICornerstone_dll.dll` 全部编译通过，0 错误；三后端 `sample_loadlibrary.exe` 均运行进入帧循环；新导出符号经 pefile 验证。提交 `7c63af0` 覆盖 4 示例修复（44 文件，含 `doc/CABI_MultiInstance_Design.md`/`doc/CppBinding_Design.md` 新文档）。
+**验证**：SDL3/SFML/Raylib 三后端 `UICornerstone.lib` + `UICornerstone_dll.dll` 全部编译通过，0 错误；三后端 `sample_loadlibrary.exe` 均运行进入帧循环；新导出符号经 pefile 验证。提交 `7c63af0` 覆盖 4 示例修复（44 文件，含 `design/CABI_MultiInstance_Design.md`/`design/CppBinding_Design.md` 新文档）。
 
 ### 2026-07-31: Menu 重构 — 去除内嵌 Label，直接绘制文本
 
@@ -1787,7 +1787,7 @@ Done, 180 frames                        # 帧循环正常完成
 
 **验证**：SDL3/SFML/Raylib 三后端静态库 + `UICornerstone_dll.dll` 全部编译通过，0 错误；`test_menu.exe` 三后端运行正常（事件循环 6 秒无崩溃）。C ABI 导出（`CreateMenuBar/CreateMenuPanel/CreateMenuItem/MenuBarAddMenu/MenuPanelAddItem/MenuPanelAddSeparator/MenuItemSetSubMenu`）签名不变，`src/UICornerstoneAPI.cpp` 无需修改。
 
-**文档**：`doc/Menu_Design.md`（§2 类图同步实例成员与 setMenuFont、§3.2 生命周期重写、§4.1 字体描述、§4.2 运行时调整即时生效、§6.4 API 变更表、§7.4 注意事项）、`doc/guidelines/history.md` 本次记录。
+**文档**：`design/Menu_Design.md`（§2 类图同步实例成员与 setMenuFont、§3.2 生命周期重写、§4.1 字体描述、§4.2 运行时调整即时生效、§6.4 API 变更表、§7.4 注意事项）、`design/guidelines/history.md` 本次记录。
 
 ### 2026-07-31: WinFrame 焦点置顶统一修复（notifyControlFocused）
 
@@ -1810,7 +1810,7 @@ Done, 180 frames                        # 帧循环正常完成
 
 ### 2026-07-31: CABI_MultiInstance_Design.md 全面修订（对照真实源码核验）
 
-**背景**：多实例改造设计草案（doc/CABI_MultiInstance_Design.md）存在大量虚构 API 与事实性错误。对照 include/UICornerstoneAPI.h（63 个导出）、src/UICornerstoneAPI.cpp、ControlBase.h/.cpp、Bench.h、RenderDevice.h 等源码逐节核验并全面修订。
+**背景**：多实例改造设计草案（design/CABI_MultiInstance_Design.md）存在大量虚构 API 与事实性错误。对照 include/UICornerstoneAPI.h（63 个导出）、src/UICornerstoneAPI.cpp、ControlBase.h/.cpp、Bench.h、RenderDevice.h 等源码逐节核验并全面修订。
 
 **修正虚构 API（§5.2 重写）**：
 
@@ -2130,11 +2130,11 @@ Done, 180 frames                        # 帧循环正常完成
 
 **相关文件**：src/UICornerstoneAPI.cpp（instanceHoldsControl 递归）、test/CMakeLists.txt（add_dependencies）、src/backend/raylib/InputBackend.cpp（pollEvent 相位重置移除）。
 
-**未提交**（本会话累计未提交集合：src/Slider.cpp、src/UICornerstoneAPI.cpp、src/backend/raylib/InputBackend.cpp、src/backend/sfml/InputBackend.cpp、test/CMakeLists.txt、test/test_dialog_cabi.cpp、include/UIContext.h、doc/CABI_MultiInstance_Design.md、doc/CppBinding_Design.md、doc/guidelines/build.md、doc/guidelines/history.md；未跟踪：test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp）。
+**未提交**（本会话累计未提交集合：src/Slider.cpp、src/UICornerstoneAPI.cpp、src/backend/raylib/InputBackend.cpp、src/backend/sfml/InputBackend.cpp、test/CMakeLists.txt、test/test_dialog_cabi.cpp、include/UIContext.h、design/CABI_MultiInstance_Design.md、design/CppBinding_Design.md、design/guidelines/build.md、design/guidelines/history.md；未跟踪：test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp）。
 
 ### 2026-08-05: Image 图片控件化（Image_Design.md 设计审核通过 + 实施，image-control 分支 d27ccca）
 
-**背景**：辅 Session 按 doc/Image_Design.md 在 image-control 分支实施零架构改动的 Image 图片控件（`UICornerstone_CreateImage` 直接复用 Actor）。主 Session 代提交代码（d27ccca，8 文件 +501/-34），辅 Session 完成验收与文档同步。
+**背景**：辅 Session 按 design/Image_Design.md 在 image-control 分支实施零架构改动的 Image 图片控件（`UICornerstone_CreateImage` 直接复用 Actor）。主 Session 代提交代码（d27ccca，8 文件 +501/-34），辅 Session 完成验收与文档同步。
 
 **实施要点**：
 
@@ -2146,13 +2146,13 @@ Done, 180 frames                        # 帧循环正常完成
 
 **验证**：三棵 `_dll` 树（sdl3/sfml/raylib）test_image T1-T8 全部 PASS；三棵标准树编译 0 错误 + test_button/test_winframe 回归通过（Actor rect 修正向后兼容）。
 
-**相关文件**：include/Actor.h、src/Actor.cpp、include/PropertyNames.h、include/UICornerstoneAPI.h、src/UICornerstoneAPI.cpp、test/test_image.cpp、test/CMakeLists.txt、doc/Image_Design.md（状态→已审核）。
+**相关文件**：include/Actor.h、src/Actor.cpp、include/PropertyNames.h、include/UICornerstoneAPI.h、src/UICornerstoneAPI.cpp、test/test_image.cpp、test/CMakeLists.txt、design/Image_Design.md（状态→已审核）。
 
-**文档同步**（本会话补充）：doc/UICornerstone_DLL_Design.md（API 清单加 CreateImage）、doc/CABI_MultiInstance_Design.md（迁移表 + §6 清单 #33）、doc/CABI_Property_Design.md（Bool/Int/String/Enum 四表 Image 行）。
+**文档同步**（本会话补充）：design/UICornerstone_DLL_Design.md（API 清单加 CreateImage）、design/CABI_MultiInstance_Design.md（迁移表 + §6 清单 #33）、design/CABI_Property_Design.md（Bool/Int/String/Enum 四表 Image 行）。
 
 ### 2026-08-07: PropertyNames 常量统一 — 枚举值全量小写 kebab-case（Complete）
 
-**背景**：LuotiAni/LayoutParser/Theme/后端/CABI 属性系统的硬编码字符串存在多套大小写风格（Upper 组、camelCase、小写组并存）。按 `doc/CABI_Property_Design.md` §6.1（属性名/值全小写、多词用连字符）统一收口到 `include/PropertyNames.h` 单一数据源。
+**背景**：LuotiAni/LayoutParser/Theme/后端/CABI 属性系统的硬编码字符串存在多套大小写风格（Upper 组、camelCase、小写组并存）。按 `design/CABI_Property_Design.md` §6.1（属性名/值全小写、多词用连字符）统一收口到 `include/PropertyNames.h` 单一数据源。
 
 **约定**：
 
@@ -2184,18 +2184,18 @@ Done, 180 frames                        # 帧循环正常完成
 
 ### 2026-08-07: JSON type 规范统一收尾 + 重构回归修复（Complete）
 
-**背景**：PropertyNames 常量统一后，test/*.cpp、test/test_api.c、doc/*.md、layouts/*.json 的 JSON type 仍有残留大写写法（`"type": "Button"`、`"type": "Panel"`、`	ype\: \Panel\` 等多种引号转义变体），LayoutParser 不做归一化（大小写不匹配即 unknown），导致多处 LoadLayout 失败。
+**背景**：PropertyNames 常量统一后，test/*.cpp、test/test_api.c、design/*.md、layouts/*.json 的 JSON type 仍有残留大写写法（`"type": "Button"`、`"type": "Panel"`、`	ype\: \Panel\` 等多种引号转义变体），LayoutParser 不做归一化（大小写不匹配即 unknown），导致多处 LoadLayout 失败。
 
 **本次工作**：
 
-- **JSON type 全量统一 kebab 小写**：正则清理 test/*.cpp、test/test_api.c（双重转义变体）、binding/samples/*.cpp、layouts/*.json、doc/*.md（12 个设计文档 + guidelines/testing.md）全部 type 值（含 Panel/Label/Button/EditBox/CheckBox/ProgressBar/TreeView 等）。
-- **doc/LayoutSystem_Design.md §4.2**：type 字段补规范声明——必须 kebab 小写（如 `"label"`/`"edit-box"`），大小写不匹配一律视为未知类型跳过，不兼容 `"Label"`/`"NumericUpDown"` 等写法。
+- **JSON type 全量统一 kebab 小写**：正则清理 test/*.cpp、test/test_api.c（双重转义变体）、binding/samples/*.cpp、layouts/*.json、design/*.md（12 个设计文档 + guidelines/testing.md）全部 type 值（含 Panel/Label/Button/EditBox/CheckBox/ProgressBar/TreeView 等）。
+- **design/LayoutSystem_Design.md §4.2**：type 字段补规范声明——必须 kebab 小写（如 `"label"`/`"edit-box"`），大小写不匹配一律视为未知类型跳过，不兼容 `"Label"`/`"NumericUpDown"` 等写法。
 - **修复 Actor.cpp setEnumProperty 重构回归**：anchor 枚举 9 值被错误合并进 scale-type 分支（git diff 确认重构引入），恢复独立 kAnchor 分支 → test_image 的 `uiSetEnum(inst,img,"anchor","center")` 断言通过。
 - **test_multi_instance / test_multi_instance_cabi / test_treeview_cabi**：内嵌 JSON 转义引号变体未覆盖导致 LoadLayout 失败，正则统一清理后通过。
 
 **验证**：全量测试集（含 test_api auto=5、test_aniviewer 带 jsonc 路径参数 auto=3 loop=0）全部 exit=0，无回归。
 
-**相关文件**：src/Actor.cpp、test/test_api.c、test/test_multi_instance.cpp、test/test_multi_instance_cabi.cpp、test/test_treeview_cabi.cpp、doc/LayoutSystem_Design.md、doc/guidelines/testing.md 及 doc/*.md 示例。
+**相关文件**：src/Actor.cpp、test/test_api.c、test/test_multi_instance.cpp、test/test_multi_instance_cabi.cpp、test/test_treeview_cabi.cpp、design/LayoutSystem_Design.md、design/guidelines/testing.md 及 design/*.md 示例。
 
 ### 2026-08-08: 多实例事件隔离 + hover/焦点跨窗口修复 + C++ Binding 多实例样例（Complete）
 
@@ -2242,7 +2242,7 @@ Done, 180 frames                        # 帧循环正常完成
 
 **验证**：构建 0 错误；全量回归——4 个 binding 样例（multiinstance/multiview/hosted/embed）AUTO exit=0，34 个 test（auto=N 无人值守）全部 exit=0（test_aniviewer 需 jsonc 路径参数，exit=2 为用法错误非回归）；用户手动验证：多窗口 hover 隔离、焦点环单一（点击 B EditBox → A 焦点环消失）、窗口交互正常。
 
-**文档刷新**（实施后两轮同步）：`doc/CABI_MultiInstance_Design.md`（ProcessEvents→int、语义分化表、§5.13.5 伪代码、多实例事件泵伪代码、实施状态 2026-08-08、清单 #21 改为已实施）、`doc/CppBinding_Design.md`（ProcessEvents bool、resourceRoot 空串回退链路、§5.6.1 事件泵、§7.4 新样例、P16、TOC 补 7.3/7.4、samples 目录树）、`doc/CppBinding_UserManual.md`（§12.1 事件泵、§12.3 CreateDialog+Label+AddChild、§3/§9 resourceRoot 默认、§15.2 改"四个样例"+构建目标）、`doc/EventSystem_Design.md`（§3.2 窗口隔离+焦点事件转换、§3.3 多实例路径 pumpInstanceEvents、变更历史）、`doc/BackendAbstraction_Design.md`（Phase 16i 进度表+执行清单）、`doc/Dialog_Design.md`/`doc/ComboBox_Design.md`/`doc/ColorPicker_Design.md`（Popup 父相对坐标）、`doc/UICornerstone_DLL_Design.md`（版本历史 1.18）、`doc/ControlBase_Design.md`（§5.1 补 update() hover 判定+多实例语义）、`doc/FocusSystem_Design.md`（§9 补窗口级焦点丢失）、`doc/Tutorial.md`（§8.1 双实例示例改事件泵模式+焦点/hover 隔离说明）、`doc/guidelines/history.md`（本条目）。
+**文档刷新**（实施后两轮同步）：`design/CABI_MultiInstance_Design.md`（ProcessEvents→int、语义分化表、§5.13.5 伪代码、多实例事件泵伪代码、实施状态 2026-08-08、清单 #21 改为已实施）、`design/CppBinding_Design.md`（ProcessEvents bool、resourceRoot 空串回退链路、§5.6.1 事件泵、§7.4 新样例、P16、TOC 补 7.3/7.4、samples 目录树）、`design/CppBinding_UserManual.md`（§12.1 事件泵、§12.3 CreateDialog+Label+AddChild、§3/§9 resourceRoot 默认、§15.2 改"四个样例"+构建目标）、`design/EventSystem_Design.md`（§3.2 窗口隔离+焦点事件转换、§3.3 多实例路径 pumpInstanceEvents、变更历史）、`design/BackendAbstraction_Design.md`（Phase 16i 进度表+执行清单）、`design/Dialog_Design.md`/`design/ComboBox_Design.md`/`design/ColorPicker_Design.md`（Popup 父相对坐标）、`design/UICornerstone_DLL_Design.md`（版本历史 1.18）、`design/ControlBase_Design.md`（§5.1 补 update() hover 判定+多实例语义）、`design/FocusSystem_Design.md`（§9 补窗口级焦点丢失）、`design/Tutorial.md`（§8.1 双实例示例改事件泵模式+焦点/hover 隔离说明）、`design/guidelines/history.md`（本条目）。
 
 **相关文件**：src/UICornerstoneAPI.cpp（ProcessEvents 返回 int、pumpInstanceEvents、FocusLost 清除焦点、CreateDialog 补 open）、src/Dialog.cpp / include/Dialog.h（computeTargetRect 本地坐标）、src/ComboBox.cpp / src/ColorPicker.cpp（popup 本地坐标）、src/backend/sdl3/InputBackend.cpp（PumpEvents/PeepEvents 窗口隔离/headOne/gotEvent/FocusLost 转换）、src/backend/sdl3/Window.cpp（getMousePosition 全局坐标判定）、src/ControlBase.cpp（isInside 判定）、binding/include/UICornerstone.h（resourceRoot 空、ProcessEvents bool）、binding/src/DynamicApi.h、binding/src/UICornerstone.cpp、binding/src/DynamicApi.cpp、include/UICornerstoneAPI.h、binding/samples/sample_cpp_multiinstance.cpp（新）、binding/samples/sample_cpp_multiview.cpp、binding/CMakeLists.txt、include/UIContext.h / src/UIContext.cpp（allActive 删除）。
 
@@ -2251,7 +2251,7 @@ Done, 180 frames                        # 帧循环正常完成
 
 **背景**：按测试规范补齐自动化参数支持（任意顺序、全测试统一）；回归中暴露 sfml/raylib 后端测试随机挂死。
 
-**1. 自动化测试参数规范（`doc/guidelines/testing.md` 新增章节）**：
+**1. 自动化测试参数规范（`design/guidelines/testing.md` 新增章节）**：
 
 - 所有标准 C++ 测试 / 集成测试 / CABI 测试必须支持 `auto=<秒>`（无人值守自动退出），参数任意顺序；无法识别的参数 WARN 后忽略。
 - 例外与附加：`test_aniviewer` 的 jsonc 路径参数可出现在任意位置、缺省使用 `assets/animations/rotateBtn/rotateBtn.jsonc`；binding 样例不要求 auto=（走 `UICORN_AUTO` 环境变量），但必须支持 `backend=<后端名>` 命令行选择后端（任意顺序，缺省 sdl3）。
@@ -2270,4 +2270,4 @@ Done, 180 frames                        # 帧循环正常完成
 
 **验证**：三后端各两轮全量回归——全部 test `auto=3` exit=0；4 样例（各树 `backend=对应后端` + sdl3 树缺省）UICORN_AUTO=1 exit=0；test_aniviewer 三后端路径任意位置 / 缺省路径均自动退出。
 
-**相关文件**：doc/guidelines/testing.md、test/TestInstance.h、test/test_aniviewer.cpp、test/test_api.c、test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp、test/test_image.cpp、binding/samples/sample_cpp_embed.cpp、binding/samples/sample_cpp_hosted.cpp、binding/samples/sample_cpp_multiinstance.cpp、binding/samples/sample_cpp_multiview.cpp、include/UIContext.h（queuedEventsMutex）、src/UICornerstoneAPI.cpp（Push 加锁）、src/MainWindow.cpp（帧循环消费加锁）、src/UIContext.cpp（destroy 加锁）。
+**相关文件**：design/guidelines/testing.md、test/TestInstance.h、test/test_aniviewer.cpp、test/test_api.c、test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp、test/test_image.cpp、binding/samples/sample_cpp_embed.cpp、binding/samples/sample_cpp_hosted.cpp、binding/samples/sample_cpp_multiinstance.cpp、binding/samples/sample_cpp_multiview.cpp、include/UIContext.h（queuedEventsMutex）、src/UICornerstoneAPI.cpp（Push 加锁）、src/MainWindow.cpp（帧循环消费加锁）、src/UIContext.cpp（destroy 加锁）。

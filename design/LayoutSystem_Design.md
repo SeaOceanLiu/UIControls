@@ -2137,7 +2137,7 @@ Margin LayoutParser::parseMargin(const json& j) {
 
 ### 5.4 设计文档
 
-完整的语法定义、处理流程、错误处理策略、变更清单及设计决策详见 `doc/ComponentSystem_Design.md`。
+完整的语法定义、处理流程、错误处理策略、变更清单及设计决策详见 `design/ComponentSystem_Design.md`。
 
 ## 6. 全局主题系统
 

@@ -176,7 +176,7 @@ void MainWindow::processEvents() {
 > **多实例路径（实施修订 2026-08-08）**：C ABI 路径（`UICornerstone_ProcessEvents` → `pumpInstanceEvents`，src/UICornerstoneAPI.cpp:545）取代 MainWindow 入口，职责相同但按实例分发：
 > - 窗口级事件（WindowClose/WindowResize）→ 实例自身处理（quit/bench resized）
 > - **`FocusLost` → 清除本实例焦点**（含活动子视口）——每个实例的 FocusManager 相互独立，只有靠窗口级焦点事件才能跨实例清除焦点环（点击 B 窗口的 EditBox 时 A 窗口的焦点环随之消失）
-> - `ProcessEvents` 返回 `int`（handled ≥ 1），多窗口帧循环由调用者驱动所有实例直到队列空（见 `doc/CABI_MultiInstance_Design.md` §5.13.5）
+> - `ProcessEvents` 返回 `int`（handled ≥ 1），多窗口帧循环由调用者驱动所有实例直到队列空（见 `design/CABI_MultiInstance_Design.md` §5.13.5）
 
 ### 3.4 Bench → 控件树分派
 

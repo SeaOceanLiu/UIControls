@@ -29,9 +29,9 @@ UICornerstone 支持单进程内创建多个独立窗口实例：
 
 - **多实例**：`UICornerstone_CreateInstance` 每调用一次即创建一个独立实例（独立的窗口、事件队列、控件 ID 表、Action 表、资源根目录、焦点管理器）；各实例互不干扰，句柄不可跨实例混用
 - **多视口**：`UICornerstone_CreateViewport` 在既有实例内创建共享同一后端的子视口；焦点系统支持 Tab 环内导航与 **Ctrl+Tab 跨视口跳转**（焦点智能路由到最近实例）
-- **后端能力位**：`UICornerstone_GetBackendCapabilities` 返回 `UICORN_BACKEND_CAP_*` 位组合（`MULTI_WINDOW`/`RENDER_TARGET`/`CLIP_RECT`/`READBACK`），调用方据此决定行为。**raylib 为单窗口架构**（内部全局只跟踪最近创建的窗口，预编译 DLL 无源码不可修补），声明**不含 `MULTI_WINDOW`**——多实例下仅首个实例有真实窗口，其余为 headless（`Window::isHeadless()`），对其渲染会串扰到主实例窗口（内容闪动）；多窗口渲染前须查能力位条件化（sdl3/sfml 四能力全有，不受限）。详见 [后端抽象设计文档 §20](doc/BackendAbstraction_Design.md)
+- **后端能力位**：`UICornerstone_GetBackendCapabilities` 返回 `UICORN_BACKEND_CAP_*` 位组合（`MULTI_WINDOW`/`RENDER_TARGET`/`CLIP_RECT`/`READBACK`），调用方据此决定行为。**raylib 为单窗口架构**（内部全局只跟踪最近创建的窗口，预编译 DLL 无源码不可修补），声明**不含 `MULTI_WINDOW`**——多实例下仅首个实例有真实窗口，其余为 headless（`Window::isHeadless()`），对其渲染会串扰到主实例窗口（内容闪动）；多窗口渲染前须查能力位条件化（sdl3/sfml 四能力全有，不受限）。详见 [后端抽象设计文档 §20](design/BackendAbstraction_Design.md)
 - 生命周期：实例销毁自动清理后端窗口与渲染设备；日志以 `[Instance_N]` 前缀区分实例
-- 详见 [C ABI 多实例支持改造设计](doc/CABI_MultiInstance_Design.md)，实测用例 `test_multi_instance_cabi`、`test_multiviewport_cabi`（K1-K8 三后端全过）、`test_multiinstance_visual_cabi` / `test_multiviewport_visual_cabi`（视觉状态断言）
+- 详见 [C ABI 多实例支持改造设计](design/CABI_MultiInstance_Design.md)，实测用例 `test_multi_instance_cabi`、`test_multiviewport_cabi`（K1-K8 三后端全过）、`test_multiinstance_visual_cabi` / `test_multiviewport_visual_cabi`（视觉状态断言）
 
 ## LuotiAni 动画引擎（"洛蒂"）
 
@@ -51,7 +51,7 @@ jsonc 描述文件          prepare() 烘焙            play() 播放
 - **绑定方式**：Button 的 `animation` 属性、JSON 布局 `luotiAni` 节点、C ABI `UICornerstone_CreateAnimation`
 - **多实例共享**：`LuotiInstance` 共享同一份帧数据多路播放，内存只存一份
 - 视觉校验工具：`test_aniviewer <动画.jsonc> [loop=0|1] [auto=<秒>] [vsync=0|1]`（任意顺序），窗口覆盖层实时显示设定/实际 fps
-- 详见 [LuotiAni 动画开发手册](doc/LuotiAni_DevGuide.md)
+- 详见 [LuotiAni 动画开发手册](design/LuotiAni_DevGuide.md)
 
 ## Actor 图片系统
 
@@ -104,7 +104,7 @@ cmake --build build\binding --config Debug
 
 ## 首个应用：5 分钟快速上手
 
-UICornerstone 提供 4 种集成模式的完整示例，详见 [用户开发教程](doc/Tutorial.md)：
+UICornerstone 提供 4 种集成模式的完整示例，详见 [用户开发教程](design/Tutorial.md)：
 
 | 模式 | 示例 | 一句话说明 |
 |------|------|-----------|
@@ -139,7 +139,7 @@ sample_cpp_multiinstance.exe backend=sdl3      # 命令行选后端（缺省 sdl
 set UICORN_AUTO=1 && sample_cpp_multiinstance.exe   # 无人值守冒烟（240 帧自动退出）
 ```
 
-详见 [CppBinding_UserManual.md](doc/CppBinding_UserManual.md)（用户手册）与 [CppBinding_Design.md](doc/CppBinding_Design.md)（设计）。
+详见 [CppBinding_UserManual.md](design/CppBinding_UserManual.md)（用户手册）与 [CppBinding_Design.md](design/CppBinding_Design.md)（设计）。
 
 ## 可用测试
 
@@ -210,7 +210,8 @@ UICornerstone/
 │   ├── sample_fromsource/   #   混合集成（核心 DLL + 后端源码）
 │   └── sample_loadlibrary/  #   显式 LoadLibrary
 ├── layouts/                 # JSON 布局文件
-├── doc/                     # 设计文档 + 用户教程
+├── docs/                      # 用户手册（网站形式，入口 index.html）
+├── design/                    # 设计文档 + 用户教程
 ├── build_scripts/           # 编译脚本（build.bat, build_test.bat）
 ├── subModules/              # 子模块依赖
 │   ├── libs/                #   预编译 SDK 库
@@ -238,25 +239,25 @@ UICornerstone/
 
 | 文档 | 说明 |
 |------|------|
-| [Tutorial.md](doc/Tutorial.md) | **用户开发教程（推荐首先阅读）** — 从零开始构建 UICornerstone 应用 |
-| [Build_Guide.md](doc/Build_Guide.md) | 编译指南 |
-| [Sample_Design.md](doc/Sample_Design.md) | 4 种集成模式的架构设计 |
-| [UICornerstone_DLL_Design.md](doc/UICornerstone_DLL_Design.md) | C ABI 与 DLL 架构 |
-| [BackendAbstraction_Design.md](doc/BackendAbstraction_Design.md) | 多后端抽象架构设计（含 §20 后端能力位机制） |
-| [CABI_MultiInstance_Design.md](doc/CABI_MultiInstance_Design.md) | C ABI 多实例/多视口支持设计（UIContext 隔离、焦点路由、生命周期） |
-| [CABI_Property_Design.md](doc/CABI_Property_Design.md) | C ABI 属性系统设计 |
-| [CppBinding_Design.md](doc/CppBinding_Design.md) | C++ Binding 设计（DynamicApi 纯动态加载、双模式循环、P1-P17） |
-| [CppBinding_UserManual.md](doc/CppBinding_UserManual.md) | C++ Binding 用户手册（上手/Config/事件/多实例与子视口/FAQ/API 速查） |
-| [LayoutSystem_Design.md](doc/LayoutSystem_Design.md) | JSON 布局系统设计 |
-| [ControlBase_Design.md](doc/ControlBase_Design.md) | 控件基类架构与绘制机制 |
-| [GraphTool_Design.md](doc/GraphTool_Design.md) | 内部图形工具设计 |
-| [EventSystem_Design.md](doc/EventSystem_Design.md) | 事件系统设计（EventType → InputBackend → EventQueue → 控件分派 → FocusManager） |
-| [FocusSystem_Design.md](doc/FocusSystem_Design.md) | 焦点系统设计（Tab 环、FocusBoundary、焦点环绘制） |
-| [Image_Design.md](doc/Image_Design.md) | Image 图片控件设计 |
-| [LuotiAni_Design.md](doc/LuotiAni_Design.md) | LuotiAni 关键帧动画引擎设计 |
-| [LuotiAni_DevGuide.md](doc/LuotiAni_DevGuide.md) | LuotiAni 开发手册（原理/上手/JSON 参考/语义陷阱） |
-| [Dialog_Design.md](doc/Dialog_Design.md) | Dialog/Popup 弹窗设计 |
-| [ComboBox_Design.md](doc/ComboBox_Design.md) | ComboBox 下拉框设计 |
+| [Tutorial.md](design/Tutorial.md) | **用户开发教程（推荐首先阅读）** — 从零开始构建 UICornerstone 应用 |
+| [Build_Guide.md](design/Build_Guide.md) | 编译指南 |
+| [Sample_Design.md](design/Sample_Design.md) | 4 种集成模式的架构设计 |
+| [UICornerstone_DLL_Design.md](design/UICornerstone_DLL_Design.md) | C ABI 与 DLL 架构 |
+| [BackendAbstraction_Design.md](design/BackendAbstraction_Design.md) | 多后端抽象架构设计（含 §20 后端能力位机制） |
+| [CABI_MultiInstance_Design.md](design/CABI_MultiInstance_Design.md) | C ABI 多实例/多视口支持设计（UIContext 隔离、焦点路由、生命周期） |
+| [CABI_Property_Design.md](design/CABI_Property_Design.md) | C ABI 属性系统设计 |
+| [CppBinding_Design.md](design/CppBinding_Design.md) | C++ Binding 设计（DynamicApi 纯动态加载、双模式循环、P1-P17） |
+| [CppBinding_UserManual.md](design/CppBinding_UserManual.md) | C++ Binding 用户手册（上手/Config/事件/多实例与子视口/FAQ/API 速查） |
+| [LayoutSystem_Design.md](design/LayoutSystem_Design.md) | JSON 布局系统设计 |
+| [ControlBase_Design.md](design/ControlBase_Design.md) | 控件基类架构与绘制机制 |
+| [GraphTool_Design.md](design/GraphTool_Design.md) | 内部图形工具设计 |
+| [EventSystem_Design.md](design/EventSystem_Design.md) | 事件系统设计（EventType → InputBackend → EventQueue → 控件分派 → FocusManager） |
+| [FocusSystem_Design.md](design/FocusSystem_Design.md) | 焦点系统设计（Tab 环、FocusBoundary、焦点环绘制） |
+| [Image_Design.md](design/Image_Design.md) | Image 图片控件设计 |
+| [LuotiAni_Design.md](design/LuotiAni_Design.md) | LuotiAni 关键帧动画引擎设计 |
+| [LuotiAni_DevGuide.md](design/LuotiAni_DevGuide.md) | LuotiAni 开发手册（原理/上手/JSON 参考/语义陷阱） |
+| [Dialog_Design.md](design/Dialog_Design.md) | Dialog/Popup 弹窗设计 |
+| [ComboBox_Design.md](design/ComboBox_Design.md) | ComboBox 下拉框设计 |
 | Button_Design.md / Label_Design.md / ... | 各控件详细设计（CheckBox / EditBox / TextArea / ScrollBar / ProgressBar / WinFrame / Menu / Slider / ColorPicker / HandleControl / Splitter / TreeView / NumericUpDown） |
 
 ## 许可证

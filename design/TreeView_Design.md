@@ -651,7 +651,7 @@ test/test_treeview.cpp         — 单元测试
 test/test_treeview_cabi.cpp    — C ABI 集成测试（JSON 布局）
 test/test_treeview_bench.cpp   — 性能与内存基准测试（独立，无后端依赖）
 test/CMakeLists.txt             — test_treeview / test_treeview_bench 目标注册
-doc/TreeView_Design.md          — 本文档
+design/TreeView_Design.md          — 本文档
 ```
 
 ---

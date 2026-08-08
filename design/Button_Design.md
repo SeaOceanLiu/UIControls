@@ -458,6 +458,6 @@ UICornerstone/
 test/
 └── test_button.cpp     # Button 测试
 
-doc/
+design/
 └── Button_Design.md    # 本文档
 ```

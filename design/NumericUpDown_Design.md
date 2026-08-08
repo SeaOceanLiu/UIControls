@@ -1325,10 +1325,10 @@ DLL 模式下 5 个 NumericUpDown 通过 `UICornerstone.dll` C ABI 调用，验�
 | `CMakeLists.txt`                      | 修改   | test_binary 列表                    | +1       |
 | `layouts/test_layout.json`            | 修改   | 3 个 JSON 测试用例                  | +20      |
 | `README.md`                           | 修改   | 控件列表                            | +2       |
-| `doc/Build_Guide.md`                  | 修改   | 测试表（添加 test_numericupdown_cabi）| +2       |
-| `doc/NumericUpDown_Design.md`         | 新建   | 本文档                              | (本文档) |
+| `design/Build_Guide.md`                  | 修改   | 测试表（添加 test_numericupdown_cabi）| +2       |
+| `design/NumericUpDown_Design.md`         | 新建   | 本文档                              | (本文档) |
 | `AGENTS.md`                           | 修改   | session 记录                        | +10      |
-| `doc/UICornerstone_DLL_Design.md`     | 修改   | C ABI 列表（追加 12 个函数）         | +10      |
+| `design/UICornerstone_DLL_Design.md`     | 修改   | C ABI 列表（追加 12 个函数）         | +10      |
 
 **总计**：约 **1665 行**（含标准测试 280 行 + C ABI 测试 250 行）
 

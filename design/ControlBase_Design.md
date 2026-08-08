@@ -548,6 +548,6 @@ UICornerstone/
 test/
 └── (各控件测试文件)
 
-doc/
+design/
 └── ControlBase_Design.md  # 本文档
 ```

@@ -977,7 +977,7 @@ void   UICornerstone_SetOnSplitterMoved(UIControlHandle ctl, void (*cb)(void*, f
 | `test/test_fromsource_cabi.cpp` | 修改 | 追加 Splitter 集成（最小集成） | +15 |
 | `test/CMakeLists.txt` | 修改 | 注册 test_splitter + test_splitter_cabi | +2 |
 | `CMakeLists.txt` | 修改 | 添加 src/Splitter.cpp | +1 |
-| `doc/Splitter_Design.md` | 新建 | 本文档 | — |
+| `design/Splitter_Design.md` | 新建 | 本文档 | — |
 
 **总计**：约 **1098 行**
 

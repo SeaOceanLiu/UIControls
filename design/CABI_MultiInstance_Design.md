@@ -473,7 +473,7 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
 | `CreateTreeView(x,y,w,h)` | `CreateTreeView(UIInstance, ...)` |
 | `CreateHandleControl(target, x,y,w,h)` | `CreateHandleControl(UIInstance, UIControlHandle target, float x, float y, float w, float h)` |
 | `CreateImageButton(n,h,p, x,y,w,h)` | `CreateImageButton(UIInstance, const char*, const char*, const char*, float x, float y, float w, float h)` |
-| —（新增，无旧签名） | `CreateImage(UIInstance, const char* image, float x, float y, float w, float h)`——Image 图片控件（零架构改动复用 Actor，见 doc/Image_Design.md 2026-08-05）；image 可 NULL、w/h=0 → 纹理自然尺寸 |
+| —（新增，无旧签名） | `CreateImage(UIInstance, const char* image, float x, float y, float w, float h)`——Image 图片控件（零架构改动复用 Actor，见 design/Image_Design.md 2026-08-05）；image 可 NULL、w/h=0 → 纹理自然尺寸 |
 | `CreateDialog(confirm, cancel, x,y,w,h)` | `CreateDialog(UIInstance, const char* confirmText, const char* cancelText, float x, float y, float w, float h)` |
 
 **控件通用操作**：
@@ -2279,9 +2279,9 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 
 ## 6. 实施清单
 
-> **实施状态（2026-08-03）**：除以下 4 项外，**清单 1-32 已全部实施**。未实施项：**#17**（三后端 BackendPlugin.cpp 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存，未改为每次 new，见 §5.6）、**#19**（`g_pathPrefix` 未迁入 UIContext，`resourceRoot` 覆盖由 UIInstanceConfig 提供，见 §5.1）、**#21**（C++ Binding 未实现——仓库无 binding 文件、无 `class UICornerstone`，`doc/CppBinding_Design.md` 为草案；该功能有专门设计文档，待实际实施时随该文档一并刷新本文档）、**#27**（`test_multiviewport.cpp` 未创建，见 §5.13.7）。"影响范围汇总"表内"新增 3 个文件"相应调整为 2 个（test_multiviewport.cpp 未创建）。
+> **实施状态（2026-08-03）**：除以下 4 项外，**清单 1-32 已全部实施**。未实施项：**#17**（三后端 BackendPlugin.cpp 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存，未改为每次 new，见 §5.6）、**#19**（`g_pathPrefix` 未迁入 UIContext，`resourceRoot` 覆盖由 UIInstanceConfig 提供，见 §5.1）、**#21**（C++ Binding 未实现——仓库无 binding 文件、无 `class UICornerstone`，`design/CppBinding_Design.md` 为草案；该功能有专门设计文档，待实际实施时随该文档一并刷新本文档）、**#27**（`test_multiviewport.cpp` 未创建，见 §5.13.7）。"影响范围汇总"表内"新增 3 个文件"相应调整为 2 个（test_multiviewport.cpp 未创建）。
 >
-> **实施状态（2026-08-04）**：未实施项减为 **2 项**：#19（`g_pathPrefix`，`resourceRoot` 覆盖由 UIInstanceConfig 提供）、#21（C++ Binding，见 `doc/CppBinding_Design.md` 草案）。**#17 已实施**（§5.6：三后端静态缓存移除 + raylib `IsWindowReady` 守卫）、**#27 已实施**（§5.13.7：`test_multiviewport.cpp` 创建并通过，K1-K8 三后端全过）。"影响范围汇总"表恢复"新增 3 个文件"（含 test_multiviewport.cpp），另增 `src/backend/raylib/Window.cpp` 一行（CloseWindow 守卫）。
+> **实施状态（2026-08-04）**：未实施项减为 **2 项**：#19（`g_pathPrefix`，`resourceRoot` 覆盖由 UIInstanceConfig 提供）、#21（C++ Binding，见 `design/CppBinding_Design.md` 草案）。**#17 已实施**（§5.6：三后端静态缓存移除 + raylib `IsWindowReady` 守卫）、**#27 已实施**（§5.13.7：`test_multiviewport.cpp` 创建并通过，K1-K8 三后端全过）。"影响范围汇总"表恢复"新增 3 个文件"（含 test_multiviewport.cpp），另增 `src/backend/raylib/Window.cpp` 一行（CloseWindow 守卫）。
 >
 > **实施状态（2026-08-04，收尾）**：**#19 关闭跟踪**——采用替代方案：`ConstDef::pathPrefix` 保持静态，per-instance 资源根目录由 `UIInstanceConfig.resourceRoot` 提供（MainWindow.cpp:13 已生效）。多实例共存共享同一资源根目录属常态，无需实例化路径；后续不再跟踪此项。**剩余遗留仅 #21**（C++ Binding）。
 
@@ -2307,7 +2307,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 18 | `include/PlatformUtils.h` | 移除旧宏定义检查 | 小 |
 | 19 | `src/ConstDef.cpp` | 若需要实例独立路径，将 `g_pathPrefix` 迁入 `UIContext`（见 §7）。**替代方案已采用**：`UIInstanceConfig.resourceRoot` 提供 per-instance 覆盖（MainWindow.cpp:13），此项关闭跟踪 | 小 |
 | 20 | 测试 + samples | 测试 1: `CreateInstance`×1 → 完整运行 → `DestroyInstance`；测试 2: `CreateInstance`×2 → 两个独立窗口循环 → `DestroyInstance`；**samples ×4（hello_uicornerstone/sample_programmatic/sample_fromsource/sample_loadlibrary）与 test_fromsource_cabi 按 §5.12.1 适配**（纯 DLL 插件场景走 `CreateInstanceFromPlugin`，fromsource 架构走 `CreateInstance(callbacks, NULL)`） | 中 |
-| 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员（**已实施**：2026-08-06 起 `binding/` 落地（P1-P14 动态加载模式），2026-08-08 P16 多窗口隔离完成——`ProcessEvents()` 返回 bool 驱动多窗口事件泵、Config.resourceRoot 默认空串、`sample_cpp_multiinstance` 双窗口样例；设计见 `doc/CppBinding_Design.md`） | 小 |
+| 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员（**已实施**：2026-08-06 起 `binding/` 落地（P1-P14 动态加载模式），2026-08-08 P16 多窗口隔离完成——`ProcessEvents()` 返回 bool 驱动多窗口事件泵、Config.resourceRoot 默认空串、`sample_cpp_multiinstance` 双窗口样例；设计见 `design/CppBinding_Design.md`） | 小 |
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
 | 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, UIRect rect)`（复核修订：UIRect 为纯 C 结构体，UICornerstoneAPI.h:52；SRect 是 C++ 类型，C ABI 不可用） | 小 |
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport（nullptr 回退 owner，复核修订 2026-07-31 第六轮） | 中 |
@@ -2322,7 +2322,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 30 | `include/ControlBase.h` | `GET_FOCUSMANAGER` 宏改为 `(CONTEXT->focusManager)` | 小 |
 | 31 | `src/Dialog.cpp` / `ColorPicker.cpp` / `ComboBox.cpp` | `MAINWIN->getWindowSize()` → `m_context->viewport`（弹出定位改为视口相对） | 小 |
 | 32 | `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` | 新增 Debug 辅助 API：`Debug_GetActiveViewport`、`Debug_IsControlFocused`（供测试断言） | 小 |
-| 33 | `include/Actor.h` / `src/Actor.cpp` / `include/PropertyNames.h` / `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` / 新增 `test/test_image.cpp` | **已实施（2026-08-05）**：`UICornerstone_CreateImage` 工厂 + Actor rect 语义修正（显式尺寸保留、自然尺寸跟随新图、match-parent-rect 覆盖 w/h，见 doc/Image_Design.md §6.1）+ `isContainsPoint`=false 遮挡修正（§6.2）+ 属性分发（image/image-resource 只写不读、scale-type/anchor/alpha/match-parent-rect 可读）；test_image T1-T8 三后端 DLL 树全绿 | 中 |
+| 33 | `include/Actor.h` / `src/Actor.cpp` / `include/PropertyNames.h` / `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` / 新增 `test/test_image.cpp` | **已实施（2026-08-05）**：`UICornerstone_CreateImage` 工厂 + Actor rect 语义修正（显式尺寸保留、自然尺寸跟随新图、match-parent-rect 覆盖 w/h，见 design/Image_Design.md §6.1）+ `isContainsPoint`=false 遮挡修正（§6.2）+ 属性分发（image/image-resource 只写不读、scale-type/anchor/alpha/match-parent-rect 可读）；test_image T1-T8 三后端 DLL 树全绿 | 中 |
 | 34 | `include/UICornerstoneAPI.h` / `include/BackendPlugin.h` / `src/BackendManager.cpp` / `src/UICornerstoneAPI.cpp` / 三后端 `BackendPlugin.cpp` / `include/Window.h` / `src/backend/raylib/Window.cpp` / `src/backend/raylib/InputBackend.cpp` / 测试 ×2 / binding ×4 / `sample_cpp_multiinstance.cpp` | **已实施（2026-08-08，Phase 16j）**：能力位机制（`UICORN_BACKEND_CAP_*` 宏 + `BackendAPI`/`UIBackendCallbacks` 末尾 `capabilities` 字段 + `UICornerstone_GetBackendCapabilities` 导出 + `BackendManager::capabilities()` 双路径保存）+ raylib 单窗口架构 headless 化（`s_windowCount`/`m_hasOwnWindow` 仅首个实例建窗口 + 窗口/输入 API 守卫 + `Window::isHeadless()`）+ sfml FocusLost/FocusGained 事件转换补全；Binding 封装 `GetBackendCapabilities()`；多实例测试/样例渲染条件化。详见 BackendAbstraction_Design.md §20 | 中 |
 
 ### 影响范围汇总

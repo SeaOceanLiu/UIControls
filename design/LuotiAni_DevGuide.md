@@ -2,7 +2,7 @@
 
 LuotiAni 是 UICornerstone 内置的关键帧动画引擎。它把一份 JSON 描述文件（`.jsonc`）在加载时**烘焙**为全部帧的贴图，播放时只做"按毫秒跳帧"——运行时零插值、零计算。本文从原理讲起，带你从 0 做出第一个动画。
 
-- 设计文档（内部）：`doc/LuotiAni_Design.md`
+- 设计文档（内部）：`design/LuotiAni_Design.md`
 - 真实资源样本：`subModules/assets/animations/`（rotateBtn、bombBlock 等 11 个）
 - 引擎实现：`src/LuotiAni.cpp` / `include/LuotiAni.h`
 

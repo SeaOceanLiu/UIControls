@@ -720,7 +720,7 @@ UICornerstone/
 test/
 └── test_checkbox.cpp     # 测试文件
 
-doc/
+design/
 └── CheckBox_Design.md   # 本文档
 ```
 
