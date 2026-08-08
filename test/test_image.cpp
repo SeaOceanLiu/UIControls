@@ -137,8 +137,17 @@ static bool rectEq(float x1, float y1, float w1, float h1,
     return x1 == x2 && y1 == y2 && w1 == w2 && h1 == h2;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     DISABLE_ASSERT_DIALOG();
+    // 命令行参数任意顺序：识别 auto=<秒>（本测试为有限步骤逻辑测试，
+    // 无窗口循环，接受参数但不改变行为）；无法识别参数 WARN 后忽略
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "auto=", 5) == 0) {
+            printf("auto= 已接受（本测试无窗口循环，直接执行）\n");
+        } else {
+            printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
+        }
+    }
 
     g_uiDll = LoadLibraryA("UICornerstone.dll");
     if (!g_uiDll) {

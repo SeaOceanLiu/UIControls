@@ -27,12 +27,13 @@ using json = nlohmann::json;
 
 static void printUsage(const char* argv0) {
     printf("LuotiAni 视觉校验工具\n");
-    printf("用法: %s <动画jsonc路径> [loop=0|1] [auto=<秒>] [vsync=0|1]\n", argv0);
-    printf("  路径: 绝对路径原样使用；相对路径按 exe 同目录解析\n");
+    printf("用法: %s [动画jsonc路径] [loop=0|1] [auto=<秒>] [vsync=0|1]\n", argv0);
+    printf("  路径: 任意位置、可省略（缺省 assets/animations/rotateBtn/rotateBtn.jsonc）；\n");
+    printf("        绝对路径原样使用；相对路径按 exe 同目录解析\n");
     printf("  参数: 任意顺序、可省略；loop 缺省 1，auto 缺省 0（不自动退出）\n");
-    printf("  兼容: 旧式位置参数 [loop 0|1]（argv[2] 为纯 0/1）仍可用\n");
+    printf("  兼容: 旧式位置参数 [loop 0|1]（纯 0/1 参数）仍可用\n");
     printf("  窗口大小取 jsonc 的 overview.view 画布尺寸\n");
-    printf("  示例: %s assets/animations/rotateBtn/rotateBtn.jsonc auto=5 vsync=1\n", argv0);
+    printf("  示例: %s auto=5 vsync=1 assets/animations/rotateBtn/rotateBtn.jsonc\n", argv0);
 }
 
 static std::string resolvePath(const char* arg) {
@@ -60,17 +61,13 @@ static bool loadCanvasInfo(const std::string& path, int& winW, int& winH, std::s
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        printUsage(argv[0]);
-        return 2;
-    }
-    std::string jsoncReal = resolvePath(argv[1]);
-    // 键值参数任意顺序解析：loop=0|1 / auto=<秒> / vsync=0|1，均可省略。
-    // 兼容旧式：argv[i] 为纯 "0"/"1" 时视为旧式 loop 位置参数。
+    // 路径参数任意位置：非 "key=" 键值且非纯 "0"/"1" 的参数视为 jsonc 路径；
+    // 未提供时使用缺省路径 assets/animations/rotateBtn/rotateBtn.jsonc
+    std::string jsoncReal;
     int loop = 1;
     int autoSec = 0;
     int vsync = -1;
-    for (int i = 2; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
         if (strncmp(a, "loop=", 5) == 0) {
             loop = (a[5] == '0') ? 0 : 1;
@@ -82,9 +79,15 @@ int main(int argc, char** argv) {
             loop = 0;                       // 旧式位置参数 loop=0
         } else if (a[0] == '1' && a[1] == '\0') {
             loop = 1;                       // 旧式位置参数 loop=1
+        } else if (std::strchr(a, '=') == nullptr) {
+            jsoncReal = resolvePath(a);     // jsonc 路径（任意位置）
         } else {
             printf("WARN: 忽略无法识别的参数: %s\n", a);
         }
+    }
+    if (jsoncReal.empty()) {
+        jsoncReal = resolvePath("assets/animations/rotateBtn/rotateBtn.jsonc");
+        printf("提示: 未提供动画 jsonc 路径，使用缺省: %s\n", jsoncReal.c_str());
     }
 
     int winW = 0, winH = 0;

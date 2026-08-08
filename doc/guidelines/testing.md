@@ -49,6 +49,22 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(10, 50, 120, 24);
 3. 最后创建**独立的 `test_xxxx_cabi.cpp`**（完整覆盖 C ABI 接口）。
 4. SFML/Raylib 后端的测试在 SDL3 确认通过后再启动。
 
+## 自动化测试参数规范（所有测试强制）
+
+所有 **标准 C++ 测试、集成测试（test_fromsource_cabi）、C ABI 测试** 必须支持命令行参数 `auto=<秒>` 实现无人值守自动化，且**参数必须支持任意顺序**（不限定位置）。无法识别的参数 WARN 提示后忽略，不得报错退出。
+
+| 参数          | 语义                                                         | 要求             |
+| ------------- | ------------------------------------------------------------ | ---------------- |
+| `auto=<秒>`   | 无人值守自动退出：`auto=0`/缺省 = 人工模式（窗口驻留，关闭窗口退出）；`auto=N` = N 秒后超时自动退出 | 必须支持、任意顺序 |
+| 其他参数      | 各测试专属（如 test_aniviewer 的 jsonc 路径、loop=/vsync=）  | 保持任意顺序     |
+
+规则：
+
+1. **标准 C++ 测试**：main 走 `TestRunMain<AppT>(argc, argv)`（test/TestInstance.h），其 `scheduleAutoQuit` 已统一实现任意顺序 `auto=<秒>` 解析（定时线程经 `UICornerstone_PushUIEvent` 投递 WINDOW_CLOSE 退出）。新标准测试必须保持此入口。
+2. **CABI / 集成测试**：main 需 `int main(int argc, char* argv[])`，自行按任意顺序循环解析 `auto=<秒>`；窗口循环中达到秒数后退出（或经 PushUIEvent 投递 WINDOW_CLOSE）。无窗口循环的有限步骤逻辑测试也必须解析并接受该参数（不改变行为）。
+3. **test_aniviewer 例外规则**：路径参数**不限定为第 1 个位置**——任何非 `key=` 键值且非纯 `0`/`1` 的参数视为 jsonc 路径（任意位置）；**未提供路径时使用缺省路径** `assets/animations/rotateBtn/rotateBtn.jsonc`（相对 exe 同目录解析）。
+4. **样例程序**：`binding/samples/sample_cpp_*` **不要求**支持 `auto=`，但**必须支持**命令行参数 `backend=<后端名>`（sdl3/sfml/raylib，任意顺序）设定加载哪个后端，缺省 sdl3。
+
 ## C ABI 测试常见陷阱
 
 ### 属性名不匹配

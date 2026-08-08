@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <utility>
+#include <mutex>
 #include "UICornerstoneAPI.h"
 #include "Utility.h"
 
@@ -69,6 +70,9 @@ struct UIContext {
     std::unordered_map<std::string, UIControlHandle> controlsById;
 
     // ── 注入事件队列 ──
+    // 跨线程（scheduleAutoQuit 的定时线程 → UICornerstone_PushUIEvent）与
+    // 主线程（帧循环消费）访问，必须互斥保护。
+    mutable std::mutex queuedEventsMutex;
     std::queue<UIEvent> queuedEvents;
 
     // ── 弹窗 / 菜单生命周期池 ──

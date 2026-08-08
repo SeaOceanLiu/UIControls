@@ -109,9 +109,14 @@ bool MainWindow::processEvents(AppCallbacks* app) {
     // injected events bypass the loop's owned-loop semantics and are dropped
     // (the MessageBox/auto-quit use-case only needs WindowClose respected).
     if (m_context) {
-        while (!m_context->queuedEvents.empty()) {
-            UIEvent ue = m_context->queuedEvents.front();
-            m_context->queuedEvents.pop();
+        while (true) {
+            UIEvent ue;
+            {
+                std::lock_guard<std::mutex> lock(m_context->queuedEventsMutex);
+                if (m_context->queuedEvents.empty()) break;
+                ue = m_context->queuedEvents.front();
+                m_context->queuedEvents.pop();
+            }
             if (ue.type == UI_EVENT_WINDOW_CLOSE) running = false;
         }
     }

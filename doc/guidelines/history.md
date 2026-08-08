@@ -2207,3 +2207,29 @@ Done, 180 frames                        # 帧循环正常完成
 **文档刷新**（实施后两轮同步）：`doc/CABI_MultiInstance_Design.md`（ProcessEvents→int、语义分化表、§5.13.5 伪代码、多实例事件泵伪代码、实施状态 2026-08-08、清单 #21 改为已实施）、`doc/CppBinding_Design.md`（ProcessEvents bool、resourceRoot 空串回退链路、§5.6.1 事件泵、§7.4 新样例、P16、TOC 补 7.3/7.4、samples 目录树）、`doc/CppBinding_UserManual.md`（§12.1 事件泵、§12.3 CreateDialog+Label+AddChild、§3/§9 resourceRoot 默认、§15.2 改"四个样例"+构建目标）、`doc/EventSystem_Design.md`（§3.2 窗口隔离+焦点事件转换、§3.3 多实例路径 pumpInstanceEvents、变更历史）、`doc/BackendAbstraction_Design.md`（Phase 16i 进度表+执行清单）、`doc/Dialog_Design.md`/`doc/ComboBox_Design.md`/`doc/ColorPicker_Design.md`（Popup 父相对坐标）、`doc/UICornerstone_DLL_Design.md`（版本历史 1.18）、`doc/ControlBase_Design.md`（§5.1 补 update() hover 判定+多实例语义）、`doc/FocusSystem_Design.md`（§9 补窗口级焦点丢失）、`doc/Tutorial.md`（§8.1 双实例示例改事件泵模式+焦点/hover 隔离说明）、`doc/guidelines/history.md`（本条目）。
 
 **相关文件**：src/UICornerstoneAPI.cpp（ProcessEvents 返回 int、pumpInstanceEvents、FocusLost 清除焦点、CreateDialog 补 open）、src/Dialog.cpp / include/Dialog.h（computeTargetRect 本地坐标）、src/ComboBox.cpp / src/ColorPicker.cpp（popup 本地坐标）、src/backend/sdl3/InputBackend.cpp（PumpEvents/PeepEvents 窗口隔离/headOne/gotEvent/FocusLost 转换）、src/backend/sdl3/Window.cpp（getMousePosition 全局坐标判定）、src/ControlBase.cpp（isInside 判定）、binding/include/UICornerstone.h（resourceRoot 空、ProcessEvents bool）、binding/src/DynamicApi.h、binding/src/UICornerstone.cpp、binding/src/DynamicApi.cpp、include/UICornerstoneAPI.h、binding/samples/sample_cpp_multiinstance.cpp（新）、binding/samples/sample_cpp_multiview.cpp、binding/CMakeLists.txt、include/UIContext.h / src/UIContext.cpp（allActive 删除）。
+
+
+### 2026-08-08（傍晚）: 自动化测试参数规范 + queuedEvents 跨线程竞态修复（Complete）
+
+**背景**：按测试规范补齐自动化参数支持（任意顺序、全测试统一）；回归中暴露 sfml/raylib 后端测试随机挂死。
+
+**1. 自动化测试参数规范（`doc/guidelines/testing.md` 新增章节）**：
+
+- 所有标准 C++ 测试 / 集成测试 / CABI 测试必须支持 `auto=<秒>`（无人值守自动退出），参数任意顺序；无法识别的参数 WARN 后忽略。
+- 例外与附加：`test_aniviewer` 的 jsonc 路径参数可出现在任意位置、缺省使用 `assets/animations/rotateBtn/rotateBtn.jsonc`；binding 样例不要求 auto=（走 `UICORN_AUTO` 环境变量），但必须支持 `backend=<后端名>` 命令行选择后端（任意顺序，缺省 sdl3）。
+
+**2. 测试代码整改**：
+
+- `test/TestInstance.h`：`scheduleAutoQuit` 循环扫描全部参数识别 `auto=<秒>`（原只认 argv[1]），非 auto 参数 WARN 后忽略（覆盖全部走 TestRunMain 的标准测试）。
+- `test/test_aniviewer.cpp`：路径参数任意位置（非 `key=` 且非纯 0/1 的参数视为路径），缺省路径；用法文本更新。
+- `test/test_api.c`、`test/test_multi_instance_cabi.cpp`、`test/test_multiviewport_cabi.cpp`、`test/test_image.cpp`：main 接受 argc/argv，任意顺序解析 auto= + WARN。
+- 4 个 binding 样例（embed/hosted/multiinstance/multiview）：解析 `backend=` 传入 WithBackend，头注释说明。
+
+**3. queuedEvents 跨线程竞态修复（核心库 bug，sfml/raylib 随机挂死）**：
+
+- 根因：`UIContext::queuedEvents`（`std::queue`）无锁。scheduleAutoQuit 的 detach 定时线程经 `UICornerstone_PushUIEvent` push，主线程帧循环（MainWindow::run / UICornerstoneAPI 注入队列通路 / UIContext::destroy）front/pop——**并发读写 std::deque 为数据竞争（UB）**，偶发挂死/损坏。sdl3 后端帧时序恰好未撞上，sfml/raylib 回归中重现（test_animation/test_multi_instance 卡在 ALL PASS 后、test_multi_instance_cabi 卡在实例创建）。
+- 修复：`UIContext` 增加 `mutable std::mutex queuedEventsMutex`，Push（UICornerstoneAPI.cpp）与全部消费点（MainWindow.cpp 帧循环、UICornerstoneAPI.cpp 注入队列通路、UIContext.cpp destroy）加锁保护。
+
+**验证**：三后端各两轮全量回归——全部 test `auto=3` exit=0；4 样例（各树 `backend=对应后端` + sdl3 树缺省）UICORN_AUTO=1 exit=0；test_aniviewer 三后端路径任意位置 / 缺省路径均自动退出。
+
+**相关文件**：doc/guidelines/testing.md、test/TestInstance.h、test/test_aniviewer.cpp、test/test_api.c、test/test_multi_instance_cabi.cpp、test/test_multiviewport_cabi.cpp、test/test_image.cpp、binding/samples/sample_cpp_embed.cpp、binding/samples/sample_cpp_hosted.cpp、binding/samples/sample_cpp_multiinstance.cpp、binding/samples/sample_cpp_multiview.cpp、include/UIContext.h（queuedEventsMutex）、src/UICornerstoneAPI.cpp（Push 加锁）、src/MainWindow.cpp（帧循环消费加锁）、src/UIContext.cpp（destroy 加锁）。

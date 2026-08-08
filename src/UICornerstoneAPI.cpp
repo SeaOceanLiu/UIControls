@@ -536,7 +536,10 @@ void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w
 // ============================================================
 void UICornerstone_PushUIEvent(UIInstance instance, const UIEvent* ue) {
     if (!instance || !instance->initialized || instance->destroying) return;
-    if (ue) instance->queuedEvents.push(*ue);
+    if (ue) {
+        std::lock_guard<std::mutex> lock(instance->queuedEventsMutex);
+        instance->queuedEvents.push(*ue);
+    }
 }
 
 // 单实例事件泵：poll 属于本实例窗口的事件并分发（只消费自己的事件，
@@ -641,9 +644,14 @@ int UICornerstone_ProcessEvents(UIInstance instance) {
     }
 
     // 注入队列通路（UIEvent → Event）：所有实例（owner 和 viewport）都处理自己的 queuedEvents
-    while (!instance->queuedEvents.empty()) {
-        UIEvent ue = instance->queuedEvents.front();
-        instance->queuedEvents.pop();
+    while (true) {
+        UIEvent ue;
+        {
+            std::lock_guard<std::mutex> lock(instance->queuedEventsMutex);
+            if (instance->queuedEvents.empty()) break;
+            ue = instance->queuedEvents.front();
+            instance->queuedEvents.pop();
+        }
 
         Event event;
         if (!uiEventToEvent(ue, event)) continue;

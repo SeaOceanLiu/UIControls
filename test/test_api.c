@@ -58,10 +58,17 @@ static const char* LAYOUT_JSON =
 int main(int argc, char* argv[]) {
     printf("=== UICornerstone C ABI Controls Demo ===\n"); fflush(stdout);
 
-    /* 无人值守：argv[1]="auto=<秒>" → 到时投递 WINDOW_CLOSE 自行退出 */
+    /* 无人值守：命令行参数任意顺序，识别 "auto=<秒>" → 到时投递 WINDOW_CLOSE
+       自行退出；无法识别的参数 WARN 提示后忽略 */
     int autoSec = 0; DWORD t0 = 0;
-    if (argc >= 2 && strncmp(argv[1], "auto=", 5) == 0) {
-        autoSec = atoi(argv[1] + 5);
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "auto=", 5) == 0) {
+            autoSec = atoi(argv[i] + 5);
+        } else {
+            printf("  WARN: 忽略无法识别的参数: %s\n", argv[i]); fflush(stdout);
+        }
+    }
+    if (autoSec > 0) {
         t0 = GetTickCount64();
         printf("  auto-quit in %ds\n", autoSec); fflush(stdout);
     }

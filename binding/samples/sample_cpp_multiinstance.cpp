@@ -1,5 +1,6 @@
 ﻿// UICornerstone C++ Binding — 示例：多实例（多窗口）— 两个独立窗口各自一套控件树
 // 许可证 MIT。编译：链接 UICornerstoneBinding 即可；核心库/后端经 LoadLibrary 动态加载。
+// 命令行参数：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，任意顺序，缺省 sdl3）
 //
 // 布局：
 //   Window A (640×480)          Window B (640×480)
@@ -22,15 +23,21 @@
 #include <chrono>
 #include <thread>
 
-int main() {
+int main(int argc, char* argv[]) {
+    // 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（缺省 sdl3）
+    const char* backend = "sdl3";
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "backend=", 8) == 0) backend = argv[i] + 8;
+        else std::printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
+    }
     // ── 创建两个独立窗口实例 ──
     auto uiA = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
-            .WithBackend("sdl3")
+            .WithBackend(backend)
             .WithWindow("C++ Multi-Instance Sample A", 640, 480));
     auto uiB = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
-            .WithBackend("sdl3")
+            .WithBackend(backend)
             .WithWindow("C++ Multi-Instance Sample B", 640, 480));
     if (!uiA || !uiB) {
         std::printf("Create failed\n");

@@ -1,5 +1,6 @@
 ﻿// UICornerstone C++ Binding — 示例：Embedded 模式（用户循环嵌入 UI）
 // 许可证 MIT。编译：链接 UICornerstoneBinding 即可；核心库/后端经 LoadLibrary 动态加载。
+// 命令行参数：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，任意顺序，缺省 sdl3）
 #include "UICornerstone.h"
 #include "Control.h"
 #include "Event.h"
@@ -11,10 +12,16 @@
 #include <thread>
 #include <cstdlib>
 
-int main() {
+int main(int argc, char* argv[]) {
+    // 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（缺省 sdl3）
+    const char* backend = "sdl3";
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "backend=", 8) == 0) backend = argv[i] + 8;
+        else std::printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
+    }
     auto ui = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
-            .WithBackend("sdl3")
+            .WithBackend(backend)
             .WithWindow("C++ Embed Sample", 800, 600));
     if (!ui) {
         std::printf("Create failed\n");

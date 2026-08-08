@@ -111,7 +111,11 @@ void UIContext::destroy() {
     menuPool.clear();
     controlsById.clear();
     actions.clear();
-    while (!queuedEvents.empty()) queuedEvents.pop();
+    while (true) {
+        std::lock_guard<std::mutex> lock(queuedEventsMutex);
+        if (queuedEvents.empty()) break;
+        queuedEvents.pop();
+    }
 
     delete dataContext;     dataContext = nullptr;
     delete eventQueue;      eventQueue = nullptr;

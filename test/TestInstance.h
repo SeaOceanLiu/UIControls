@@ -41,12 +41,19 @@ inline UIInstance g_uiInstance = nullptr;
 #define GET_RESOURCEPROVIDER (g_uiInstance ? g_uiInstance->resourceProvider : nullptr)
 #define GET_FOCUSMANAGER (g_uiInstance ? g_uiInstance->focusManager : nullptr)
 
-// 无人值守自动退出：argv[1] = "auto=<秒>" → 定时线程经 UICornerstone_PushUIEvent
-// 投递 WINDOW_CLOSE（互斥事件队列，实例销毁后 Push 走 null 安全路径，无悬垂访问）。
-// 用于自动化回归/CI：窗口无需人工关闭，达到时长后测试自行退出。
+// 无人值守自动退出：命令行参数任意顺序，识别 "auto=<秒>" → 定时线程经
+// UICornerstone_PushUIEvent 投递 WINDOW_CLOSE（互斥事件队列，实例销毁后 Push
+// 走 null 安全路径，无悬垂访问）。用于自动化回归/CI：窗口无需人工关闭，
+// 达到时长后测试自行退出；无法识别的参数 WARN 提示后忽略。
 inline void scheduleAutoQuit(int argc, char* argv[]) {
-    if (argc < 2 || strncmp(argv[1], "auto=", 5) != 0) return;
-    int sec = atoi(argv[1] + 5);
+    int sec = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "auto=", 5) == 0) {
+            sec = atoi(argv[i] + 5);
+        } else {
+            printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
+        }
+    }
     if (sec <= 0) return;
     printf("[TestInstance] auto-quit scheduled in %ds (无人值守)\n", sec); fflush(stdout);
     std::thread([sec]() {
