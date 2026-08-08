@@ -824,6 +824,7 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 ```
 
 - 属性名全小写，多词用连字符 `-`
+- 枚举值字符串（控件类型、对齐、布局类型、字体样式、BlendMode、绑定模式等）同样全小写 kebab-case，多词用连字符 `-`（如 `"edit-box"`、`"top-stretch"`、`"additive-premultiplied"`；解析侧不区分大小写，读写两侧保持同一小写风格）
 - 4 态后缀 (仅用于 `SetColor` 单色入口设置 StateColor 的某态)：
   - `.normal`（默认，可不写）
   - `.hover`

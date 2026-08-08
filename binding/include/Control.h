@@ -26,7 +26,7 @@ public:
     bool IsValid() const;
     UIControlHandle Handle() const { return m_state ? m_state->handle : nullptr; }
 
-    // ── 属性设置 ──
+    // ── 属性设置（一一对应 C ABI：UICornerstone_Set*）──
     void SetColor(const char* prop, UIColor value);
     void SetStateColor(const char* prop, UIStateColor value);
     void SetBool(const char* prop, bool value);
@@ -36,7 +36,7 @@ public:
     void SetEnum(const char* prop, const std::string& value);
     void SetPtr(const char* prop, void* value);
 
-    // ── 属性读取 ──
+    // ── 属性读取（一一对应 C ABI：UICornerstone_Get*）──
     UIColor      GetColor(const char* prop) const;
     UIStateColor GetStateColor(const char* prop) const;
     bool         GetBool(const char* prop) const;
@@ -50,13 +50,7 @@ public:
     using EventCallback = std::function<void(const Event&)>;
     void SetCallback(const char* event, EventCallback callback);
 
-    // ── 便捷方法 ──
-    void SetText(const std::string& text);
-    std::string GetText() const;
-    void SetVisible(bool visible);
-    bool IsVisible() const;
-    void SetEnabled(bool enabled);
-    bool IsEnabled() const;
+    // ── 控件操作（一一对应 C ABI：UICornerstone_*Control / SetRect 等）──
     void SetRect(float x, float y, float w, float h);
     UIRect GetRect() const;
     void AddChild(Control child);

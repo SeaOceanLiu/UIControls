@@ -1,4 +1,4 @@
-# ColorPicker 颜色选择器控件设计文档
+﻿# ColorPicker 颜色选择器控件设计文档
 
 ## 1. 概述
 
@@ -571,7 +571,7 @@ shared_ptr<ColorPicker> LayoutParser::parseColorPicker(
 
 ```json
 {
-    "type": "ColorPicker",
+    "type": "color-picker",
     "id": "btnBgColor",
     "rect": { "x": 10, "y": 10, "w": 130, "h": 24 },
     "color": "#4A90D9",
@@ -679,7 +679,7 @@ if (auto cp = dynamic_pointer_cast<ColorPicker>(ctrl)) {
 
 ## 12. 关键实现注意事项
 
-1. **坐标空间一致性**：弹窗定位时 `computePopupRect()` 返回已缩放绝对坐标；弹窗内部子控件使用未缩放相对坐标（作为 Panel 的子控件，通过继承的 scale 进行绘制缩放）。
+1. **坐标空间一致性**：弹窗定位时 `computePopupRect()` 基于 `getDrawRect()` 返回已缩放**窗口绝对**坐标（多视口场景按视口区域钳制）；`openPopup()` 调用处将其转换为**父（bench）相对本地坐标**（减 `BENCH->getDrawRect()` 偏移）后传给弹窗——Popup 的 `m_rect` 与普通控件一致为父相对（2026-08-08 修订，原文档"直接使用绝对坐标"过时）；弹窗内部子控件使用未缩放相对坐标（作为 Panel 的子控件，通过继承的 scale 进行绘制缩放）。
 2. **颜色同步循环防护**：`syncUIFromColor()` 调 Slider 的 `setValue()` 不会触发回调（Slider 内部检测值与 `m_committedValue` 差异）；调 EditBox 的 `setText()` 不会触发 `onTextChanged`（相同文本不触发）。
 3. **Watcher 注册/注销配对**：`openPopup()` 注册 `BeforeEventHandlingWatcher`，`closePopup()` 必须注销，避免内存泄漏和悬挂指针。
 4. **弹窗 Focus Boundary**：弹窗 Panel 的 `m_isFocusBoundary = true` 必须在构造函数或 `create()` 中设置，并调用 `GET_FOCUSMANAGER->registerBoundary(this)`。

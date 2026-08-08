@@ -21,6 +21,7 @@
 #include "Surface.h"
 #include "Texture.h"
 #include "Utility.h"
+#include "PropertyNames.h"
 
 using json = nlohmann::json;
 
@@ -41,21 +42,21 @@ public:
         NULL_OPERATION
     };
     static OPERATION_TYPE strToOperationType(string str){
-        if (str == "translate") return OPERATION_TYPE::TRANSLATE;
-        else if (str == "scale") return OPERATION_TYPE::SCALE;
-        else if (str == "rotate") return OPERATION_TYPE::ROTATE;
-        else if (str == "opacity") return OPERATION_TYPE::OPACITY;
-        else if (str == "visible") return OPERATION_TYPE::VISIBLE;
+        if (str == PropertyNames::kOpTypeTranslate) return OPERATION_TYPE::TRANSLATE;
+        else if (str == PropertyNames::kOpTypeScale) return OPERATION_TYPE::SCALE;
+        else if (str == PropertyNames::kOpTypeRotate) return OPERATION_TYPE::ROTATE;
+        else if (str == PropertyNames::kOpTypeOpacity) return OPERATION_TYPE::OPACITY;
+        else if (str == PropertyNames::kOpTypeVisible) return OPERATION_TYPE::VISIBLE;
         else return OPERATION_TYPE::NULL_OPERATION;
     }
     static string operationTypeToStr(OPERATION_TYPE type){
         switch(type){
-            case OPERATION_TYPE::TRANSLATE: return "translate";
-            case OPERATION_TYPE::SCALE: return "scale";
-            case OPERATION_TYPE::ROTATE: return "rotate";
-            case OPERATION_TYPE::OPACITY: return "opacity";
-            case OPERATION_TYPE::VISIBLE: return "visible";
-            default: return "null_operation";
+            case OPERATION_TYPE::TRANSLATE: return PropertyNames::kOpTypeTranslate;
+            case OPERATION_TYPE::SCALE: return PropertyNames::kOpTypeScale;
+            case OPERATION_TYPE::ROTATE: return PropertyNames::kOpTypeRotate;
+            case OPERATION_TYPE::OPACITY: return PropertyNames::kOpTypeOpacity;
+            case OPERATION_TYPE::VISIBLE: return PropertyNames::kOpTypeVisible;
+            default: return PropertyNames::kOpTypeNull;
         }
     }
 private:
@@ -116,27 +117,27 @@ public:
         NULL_LAYER
     };
     static LAYER_TYPE strToLayerType(string str){
-        if (str == "image") return LAYER_TYPE::IMAGE;
-        else if (str == "shape") return LAYER_TYPE::SHAPE;
-        else if (str == "text") return LAYER_TYPE::TEXT;
+        if (str == PropertyNames::kLayerTypeImage) return LAYER_TYPE::IMAGE;
+        else if (str == PropertyNames::kLayerTypeShape) return LAYER_TYPE::SHAPE;
+        else if (str == PropertyNames::kLayerTypeText) return LAYER_TYPE::TEXT;
         else return LAYER_TYPE::NULL_LAYER;
     }
     static string layerTypeToStr(LAYER_TYPE type){
         switch(type){
-            case LAYER_TYPE::IMAGE: return "image";
-            case LAYER_TYPE::SHAPE: return "shape";
-            case LAYER_TYPE::TEXT: return "text";
-            default: return "null_layer";
+            case LAYER_TYPE::IMAGE: return PropertyNames::kLayerTypeImage;
+            case LAYER_TYPE::SHAPE: return PropertyNames::kLayerTypeShape;
+            case LAYER_TYPE::TEXT: return PropertyNames::kLayerTypeText;
+            default: return PropertyNames::kLayerTypeNull;
         }
     }
     static BlendMode blendModeStrToBlendMode(string str){
-        if (str == "normal") return BlendMode::None;
-        else if (str == "additive") return BlendMode::Add;
-        else if (str == "additivePremultiplied") return BlendMode::Add;
-        else if (str == "modulate") return BlendMode::Mod;
-        else if (str == "blend") return BlendMode::Blend;
-        else if (str == "blendPremultiplied") return BlendMode::Blend;
-        else if (str == "multiply") return BlendMode::Mul;
+        if (str == PropertyNames::kBlendNormal) return BlendMode::None;
+        else if (str == PropertyNames::kBlendAdditive) return BlendMode::Add;
+        else if (str == PropertyNames::kBlendAdditivePremultiplied) return BlendMode::Add;
+        else if (str == PropertyNames::kBlendModulate) return BlendMode::Mod;
+        else if (str == PropertyNames::kBlendBlend) return BlendMode::Blend;
+        else if (str == PropertyNames::kBlendBlendPremultiplied) return BlendMode::Blend;
+        else if (str == PropertyNames::kBlendMultiply) return BlendMode::Mul;
         else return BlendMode::None;
     }
 private:

@@ -1,4 +1,5 @@
 ﻿#include "Panel.h"
+#include "PropertyNames.h"
 
 Panel::Panel(Control *parent, SRect rect, float xScale, float yScale):
     ControlImpl(parent, xScale, yScale)
@@ -37,9 +38,9 @@ void Panel::removeAllControls() {
 void Panel::reflowChildren() {
     if (!m_layoutEngine) return;
     string type = m_layoutEngine->getType();
-    if (type == "Grid") {
+    if (type == PropertyNames::kLayoutTypeGrid) {
         m_layoutEngine->applyGrid(m_rect, m_children, m_gridItemProps);
-    } else if (type == "Anchor") {
+    } else if (type == PropertyNames::kLayoutTypeAnchor) {
         m_layoutEngine->applyAnchor(m_rect, m_children, m_anchorItemProps);
     } else {
         m_layoutEngine->apply(m_rect, m_children, m_flowItemProps);

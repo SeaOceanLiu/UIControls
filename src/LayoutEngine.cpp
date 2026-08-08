@@ -1,5 +1,6 @@
 ﻿// 由AI(DeepSeek V4 Flash)生成，可能不完整或有错误，请自行检查和修改
 #include "LayoutEngine.h"
+#include "PropertyNames.h"
 
 HFlowLayout::HFlowLayout(float gap, Margin padding)
     : m_gap(gap), m_padding(padding) {}
@@ -276,7 +277,7 @@ void AnchorLayout::applyAnchor(const SRect& containerRect,
         if (!child->getVisible()) continue;
         SRect childRect = child->getRect();
 
-        string anchor = "TOP_LEFT";
+        string anchor = PropertyNames::kAlignLowerTopLeft;
         Margin offset;
         auto it = anchorProps.find(child.get());
         if (it != anchorProps.end()) {
@@ -289,41 +290,41 @@ void AnchorLayout::applyAnchor(const SRect& containerRect,
         float w = childRect.width;
         float h = childRect.height;
 
-        if (anchor == "TOP_RIGHT") {
+        if (anchor == PropertyNames::kAlignLowerTopRight) {
             x = innerLeft + innerWidth - w - offset.right;
-        } else if (anchor == "BOTTOM_LEFT") {
+        } else if (anchor == PropertyNames::kAlignLowerBottomLeft) {
             y = innerTop + innerHeight - h - offset.bottom;
-        } else if (anchor == "BOTTOM_RIGHT") {
+        } else if (anchor == PropertyNames::kAlignLowerBottomRight) {
             x = innerLeft + innerWidth - w - offset.right;
             y = innerTop + innerHeight - h - offset.bottom;
-        } else if (anchor == "TOP_CENTER") {
+        } else if (anchor == PropertyNames::kAlignLowerTopCenter) {
             x = innerLeft + (innerWidth - w) * 0.5f + offset.left;
-        } else if (anchor == "BOTTOM_CENTER") {
+        } else if (anchor == PropertyNames::kAlignLowerBottomCenter) {
             x = innerLeft + (innerWidth - w) * 0.5f + offset.left;
             y = innerTop + innerHeight - h - offset.bottom;
-        } else if (anchor == "MID_LEFT") {
+        } else if (anchor == PropertyNames::kAlignLowerMidLeft) {
             y = innerTop + (innerHeight - h) * 0.5f + offset.top;
-        } else if (anchor == "MID_RIGHT") {
+        } else if (anchor == PropertyNames::kAlignLowerMidRight) {
             x = innerLeft + innerWidth - w - offset.right;
             y = innerTop + (innerHeight - h) * 0.5f + offset.top;
-        } else if (anchor == "CENTER") {
+        } else if (anchor == PropertyNames::kAlignLowerCenter) {
             x = innerLeft + (innerWidth - w) * 0.5f + offset.left;
             y = innerTop + (innerHeight - h) * 0.5f + offset.top;
-        } else if (anchor == "TOP_STRETCH") {
+        } else if (anchor == PropertyNames::kJsonAnchorTopStretch) {
             x = innerLeft + offset.left;
             w = innerWidth - offset.left - offset.right;
-        } else if (anchor == "BOTTOM_STRETCH") {
+        } else if (anchor == PropertyNames::kJsonAnchorBottomStretch) {
             x = innerLeft + offset.left;
             w = innerWidth - offset.left - offset.right;
             y = innerTop + innerHeight - h - offset.bottom;
-        } else if (anchor == "LEFT_STRETCH") {
+        } else if (anchor == PropertyNames::kJsonAnchorLeftStretch) {
             y = innerTop + offset.top;
             h = innerHeight - offset.top - offset.bottom;
-        } else if (anchor == "RIGHT_STRETCH") {
+        } else if (anchor == PropertyNames::kJsonAnchorRightStretch) {
             x = innerLeft + innerWidth - w - offset.right;
             y = innerTop + offset.top;
             h = innerHeight - offset.top - offset.bottom;
-        } else if (anchor == "FILL") {
+        } else if (anchor == PropertyNames::kJsonAnchorFill) {
             x = innerLeft + offset.left;
             y = innerTop + offset.top;
             w = innerWidth - offset.left - offset.right;

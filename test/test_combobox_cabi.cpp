@@ -232,14 +232,14 @@ static int runTest(const char* shortName, const char* displayName) {
         "version": "1.0",
         "controls": [
             {
-                "type": "Panel",
+                "type": "panel",
                 "id": "rootPanel",
                 "rect": { "x": 0, "y": 0, "w": 540, "h": 320 },
                 "colors": { "background": { "normal": "#282828FF" } },
                 "children": [
                     {
                         "id": "lblTitle",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 16, "w": 500, "h": 28 },
                         "caption": "ComboBox C ABI Test",
                         "fontSize": 20,
@@ -247,7 +247,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "comboMain",
-                        "type": "ComboBox",
+                        "type": "combo-box",
                         "rect": { "x": 20, "y": 56, "w": 300, "h": 32 },
                         "fontSize": 16,
                         "placeholder": "Select a city...",
@@ -267,7 +267,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblStatus",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 100, "w": 500, "h": 24 },
                         "caption": "Selected: (none)",
                         "fontSize": 14,
@@ -275,7 +275,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "comboEditable",
-                        "type": "ComboBox",
+                        "type": "combo-box",
                         "rect": { "x": 20, "y": 140, "w": 300, "h": 32 },
                         "fontSize": 16,
                         "editable": true,
@@ -296,14 +296,14 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "btnDump",
-                        "type": "Button",
+                        "type": "button",
                         "rect": { "x": 340, "y": 140, "w": 170, "h": 32 },
                         "caption": "Dump Combo",
                         "events": { "onClick": "onDumpCombo" }
                     },
                     {
                         "id": "lblHint",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 196, "w": 500, "h": 110 },
                         "caption": "Mode 1 (read-only): click anywhere to open the dropdown.\nMode 2 (editable): type text + Enter to select the\nmatching item; unmatched text is kept as the content.\nDisabled items (e.g. Wuhan) cannot be selected.\n\nPress 'Dump Combo' to read text/selected-value/selected-index\nvia property CAPI (unmatched input is kept in 'text').",
                         "fontSize": 12,

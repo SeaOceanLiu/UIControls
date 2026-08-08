@@ -216,16 +216,18 @@ SRect ColorPicker::computePopupRect() {
     float ph = m_popupHeight;
     float renderedW = pw * sx;
     float renderedH = ph * sy;
-    // 视口相对定位（多视口场景弹层按视口区域钳制）
+    // 视口绝对钳制（多视口场景弹层按视口区域钳制；dr 为窗口绝对
+    // 坐标，钳制边界须为 vp.left/top + 尺寸）
     SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
-    float screenW = vp.width;
-    float screenH = vp.height;
+    float screenW = vp.left + vp.width;
+    float screenH = vp.top + vp.height;
 
     // 1) Try below
     float by = dr.bottom() + 2.0f;
     if (by + renderedH <= screenH) {
         float x = dr.left;
         if (x + renderedW > screenW) x = screenW - renderedW;
+        if (x < vp.left) x = vp.left;
         return SRect(x, by, pw, ph);
     }
 
@@ -233,7 +235,7 @@ SRect ColorPicker::computePopupRect() {
     float rx = dr.right();
     float ry = dr.top + (dr.height - renderedH) * 0.5f;
     if (rx + renderedW <= screenW) {
-        if (ry < 0) ry = 0;
+        if (ry < vp.top) ry = vp.top;
         if (ry + renderedH > screenH) ry = screenH - renderedH;
         return SRect(rx, ry, pw, ph);
     }
@@ -241,23 +243,25 @@ SRect ColorPicker::computePopupRect() {
     // 3) Try left (vertically centered on CP)
     float lx = dr.left - renderedW - 2.0f;
     float ly = dr.top + (dr.height - renderedH) * 0.5f;
-    if (lx >= 0) {
-        if (ly < 0) ly = 0;
+    if (lx >= vp.left) {
+        if (ly < vp.top) ly = vp.top;
         if (ly + renderedH > screenH) ly = screenH - renderedH;
         return SRect(lx, ly, pw, ph);
     }
 
     // 4) Try above
     float ay = dr.top - renderedH - 2.0f;
-    if (ay >= 0) {
+    if (ay >= vp.top) {
         float x = dr.left;
         if (x + renderedW > screenW) x = screenW - renderedW;
+        if (x < vp.left) x = vp.left;
         return SRect(x, ay, pw, ph);
     }
 
-    // 4) Fallback: clamp below position to screen
+    // 4) Fallback: clamp below position to viewport
     float fx = dr.left;
     if (fx + renderedW > screenW) fx = screenW - renderedW;
+    if (fx < vp.left) fx = vp.left;
     float fy = dr.bottom() + 2.0f;
     if (fy + renderedH > screenH) fy = screenH - renderedH;
     return SRect(fx, fy, pw, ph);
@@ -266,6 +270,10 @@ SRect ColorPicker::computePopupRect() {
 void ColorPicker::openPopup() {
     if (!m_dialog) return;
     SRect pr = computePopupRect();
+    // 绝对坐标（computePopupRect 基于 getDrawRect）转父（bench）相对本地坐标
+    SRect br = BENCH ? BENCH->getDrawRect() : SRect(0, 0, 0, 0);
+    pr.left -= br.left;
+    pr.top -= br.top;
     m_dialog->setAbsolute(pr);
     layoutButtons();
     m_committedColor = m_color;

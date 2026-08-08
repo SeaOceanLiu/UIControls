@@ -327,15 +327,15 @@ int ProgressBar::setEnumProperty(const char* prop, const char* value) {
         return 1;
     }
     if (strcmp(prop, PropertyNames::kAlign) == 0) {
-        if (_stricmp(value, "top-left") == 0)      { setAlignmentMode(AlignmentMode::AM_TOP_LEFT);      return 1; }
-        if (_stricmp(value, "mid-left") == 0)      { setAlignmentMode(AlignmentMode::AM_MID_LEFT);      return 1; }
-        if (_stricmp(value, "bottom-left") == 0)   { setAlignmentMode(AlignmentMode::AM_BOTTOM_LEFT);   return 1; }
-        if (_stricmp(value, "top-right") == 0)     { setAlignmentMode(AlignmentMode::AM_TOP_RIGHT);     return 1; }
-        if (_stricmp(value, "mid-right") == 0)     { setAlignmentMode(AlignmentMode::AM_MID_RIGHT);     return 1; }
-        if (_stricmp(value, "bottom-right") == 0)  { setAlignmentMode(AlignmentMode::AM_BOTTOM_RIGHT);  return 1; }
-        if (_stricmp(value, "top-center") == 0)    { setAlignmentMode(AlignmentMode::AM_TOP_CENTER);    return 1; }
-        if (_stricmp(value, "center") == 0)        { setAlignmentMode(AlignmentMode::AM_CENTER);        return 1; }
-        if (_stricmp(value, "bottom-center") == 0) { setAlignmentMode(AlignmentMode::AM_BOTTOM_CENTER); return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerTopLeft) == 0)      { setAlignmentMode(AlignmentMode::AM_TOP_LEFT);      return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerMidLeft) == 0)      { setAlignmentMode(AlignmentMode::AM_MID_LEFT);      return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerBottomLeft) == 0)   { setAlignmentMode(AlignmentMode::AM_BOTTOM_LEFT);   return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerTopRight) == 0)     { setAlignmentMode(AlignmentMode::AM_TOP_RIGHT);     return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerMidRight) == 0)     { setAlignmentMode(AlignmentMode::AM_MID_RIGHT);     return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerBottomRight) == 0)  { setAlignmentMode(AlignmentMode::AM_BOTTOM_RIGHT);  return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerTopCenter) == 0)    { setAlignmentMode(AlignmentMode::AM_TOP_CENTER);    return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerCenter) == 0)        { setAlignmentMode(AlignmentMode::AM_CENTER);        return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerBottomCenter) == 0) { setAlignmentMode(AlignmentMode::AM_BOTTOM_CENTER); return 1; }
         return 0;
     }
     return ControlImpl::setEnumProperty(prop, value);
@@ -370,13 +370,13 @@ int ProgressBar::getStringProperty(const char* prop, const char*& out) {
 
 int ProgressBar::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kProgressBarStyle) == 0) {
-        out = (m_style == ProgressBarStyle::Horizontal) ? "horizontal" : "vertical";
+        out = (m_style == ProgressBarStyle::Horizontal) ? PropertyNames::kOrientHorizontal : PropertyNames::kOrientVertical;
         return 1;
     }
     if (strcmp(prop, PropertyNames::kTextMode) == 0) {
-        if (m_textMode == ProgressBarTextMode::None)    out = "none";
-        else if (m_textMode == ProgressBarTextMode::Percent) out = "percent";
-        else out = "custom";
+        if (m_textMode == ProgressBarTextMode::None)    out = PropertyNames::kTextModeNone;
+        else if (m_textMode == ProgressBarTextMode::Percent) out = PropertyNames::kTextModePercent;
+        else out = PropertyNames::kTextModeCustom;
         return 1;
     }
     if (strcmp(prop, PropertyNames::kFont) == 0) {
@@ -385,16 +385,16 @@ int ProgressBar::getEnumProperty(const char* prop, const char*& out) {
     }
     if (strcmp(prop, PropertyNames::kAlign) == 0) {
         switch (m_alignmentMode) {
-            case AlignmentMode::AM_TOP_LEFT:      out = "top-left";      break;
-            case AlignmentMode::AM_MID_LEFT:      out = "mid-left";      break;
-            case AlignmentMode::AM_BOTTOM_LEFT:   out = "bottom-left";   break;
-            case AlignmentMode::AM_TOP_RIGHT:     out = "top-right";     break;
-            case AlignmentMode::AM_MID_RIGHT:     out = "mid-right";     break;
-            case AlignmentMode::AM_BOTTOM_RIGHT:  out = "bottom-right";  break;
-            case AlignmentMode::AM_TOP_CENTER:    out = "top-center";    break;
-            case AlignmentMode::AM_CENTER:        out = "center";        break;
-            case AlignmentMode::AM_BOTTOM_CENTER: out = "bottom-center"; break;
-            default: out = "center"; break;
+            case AlignmentMode::AM_TOP_LEFT:      out = PropertyNames::kAlignLowerTopLeft;      break;
+            case AlignmentMode::AM_MID_LEFT:      out = PropertyNames::kAlignLowerMidLeft;      break;
+            case AlignmentMode::AM_BOTTOM_LEFT:   out = PropertyNames::kAlignLowerBottomLeft;   break;
+            case AlignmentMode::AM_TOP_RIGHT:     out = PropertyNames::kAlignLowerTopRight;     break;
+            case AlignmentMode::AM_MID_RIGHT:     out = PropertyNames::kAlignLowerMidRight;     break;
+            case AlignmentMode::AM_BOTTOM_RIGHT:  out = PropertyNames::kAlignLowerBottomRight;  break;
+            case AlignmentMode::AM_TOP_CENTER:    out = PropertyNames::kAlignLowerTopCenter;    break;
+            case AlignmentMode::AM_CENTER:        out = PropertyNames::kAlignLowerCenter;        break;
+            case AlignmentMode::AM_BOTTOM_CENTER: out = PropertyNames::kAlignLowerBottomCenter; break;
+            default: out = PropertyNames::kAlignLowerCenter; break;
         }
         return 1;
     }

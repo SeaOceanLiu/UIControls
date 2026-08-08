@@ -1,4 +1,4 @@
-# UICornerstone DLL + C ABI 设计
+﻿# UICornerstone DLL + C ABI 设计
 
 > 对应 Phase 16 | 编制 2026-06-12 | 最后更新 2026-06-19 | 状态: **已完成** — R1~R10b + fromsource + 16c~16i 全部三后端验证通过
 
@@ -169,7 +169,7 @@ void UICornerstone_GetViewport(float* x, float* y, float* w, float* h);
     },
     "controls": [
         {
-            "type": "Button",
+            "type": "button",
             "id": "start_btn",
             "text": "开始游戏",
             "font": "fonts/msyh.ttf",
@@ -180,7 +180,7 @@ void UICornerstone_GetViewport(float* x, float* y, float* w, float* h);
             "enabled": true
         },
         {
-            "type": "Label",
+            "type": "label",
             "id": "game_title",
             "text": "我的游戏",
             "font": "fonts/msyh.ttf",
@@ -189,7 +189,7 @@ void UICornerstone_GetViewport(float* x, float* y, float* w, float* h);
             "align": "Center"
         },
         {
-            "type": "CheckBox",
+            "type": "check-box",
             "id": "options_cb",
             "text": "启用特效",
             "rect": {"x": 300, "y": 300, "w": 200, "h": 30}
@@ -1217,3 +1217,4 @@ int main() {
 | 1.15 | 2026-07-16 | 重构：`test_fromsource_cabi`、`test_dialog_cabi`、`test_combobox_cabi` 统一为单源文件 + 编译定义模式，删除共享头文件和后端变体文件；CMake 改用 `add_fromsource_target` 宏统一管理 |
 | 1.16 | 2026-07-21 | `UICornerstone_Shutdown` 新增 `BENCH->removeAllControls()` 在 `BackendManager::shutdown()` 前销毁控制树，避免 `FreeLibrary` 静态析构时控件访问已释放的后端资源；`EventQueue` watcher map 改用 `weak_ptr<Control>` 消除静态析构顺序问题 |
 | 1.17 | 2026-07-31 | 补齐 C ABI 创建 API：`CreateScrollBar`（orientation 0=垂直/非 0=水平）、`CreateTreeView`、`CreateHandleControl`（target 必传非 NULL）；Menu 三件套 7 函数（`CreateMenuBar/CreateMenuPanel/CreateMenuItem/MenuBarAddMenu/MenuPanelAddItem/MenuPanelAddSeparator/MenuItemSetSubMenu`）替换已删除的空实现 `CreateMenu`，引入 `g_menuPool` 保活池管理裸指针生命周期；`sample_loadlibrary` 后端独立 TU 编译（SDL3/SFML/Raylib 三后端可构建） |
+| 1.18 | 2026-08-08 | `UICornerstone_ProcessEvents` 返回 `int`（handled ≥ 1，多窗口事件泵驱动）；sdl3 pollEvent 窗口级事件隔离（`SDL_PumpEvents` + `SDL_PeepEvents` peek + headOne 同 type 检查 + GETEVENT + gotEvent 守卫）；`FocusLost` 事件分发清除实例焦点（跨窗口焦点环隔离）；`Window::getMousePosition` 全局坐标窗口内判定（hover 跨窗口隔离）；`CreateDialog` 补 `open()`；Popup/ComboBox/ColorPicker 弹层坐标统一为父相对本地坐标 |

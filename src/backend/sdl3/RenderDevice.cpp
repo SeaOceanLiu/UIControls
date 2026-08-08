@@ -2,9 +2,11 @@
 #include "Texture.h"
 #include "Surface.h"
 #include "ConstDef.h"
+#include "PropertyNames.h"
 #include "BackendPlugin.h"
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
+#include <cstring>
 #include <vector>
 #include <unordered_map>
 #include <cstring>
@@ -274,7 +276,20 @@ public:
     void readPixels(void* buffer, const SRect& rect) override {
         SDL_Rect sdlRect = { static_cast<int>(rect.left), static_cast<int>(rect.top),
                              static_cast<int>(rect.width), static_cast<int>(rect.height) };
-        SDL_RenderReadPixels(m_renderer, &sdlRect);
+        SDL_Surface* surface = SDL_RenderReadPixels(m_renderer, &sdlRect);
+        if (!surface) return;
+        int w = static_cast<int>(rect.width);
+        int h = static_cast<int>(rect.height);
+        SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
+        if (rgba) {
+            for (int y = 0; y < h; ++y) {
+                std::memcpy(static_cast<uint8_t*>(buffer) + static_cast<size_t>(y) * w * 4,
+                            static_cast<const uint8_t*>(rgba->pixels) + static_cast<size_t>(y) * rgba->pitch,
+                            static_cast<size_t>(w) * 4);
+            }
+            SDL_DestroySurface(rgba);
+        }
+        SDL_DestroySurface(surface);
     }
 
     // === Frame operations ===
@@ -296,17 +311,17 @@ public:
         } else {
             return 0;
         }
-        if (strcmp(key, "vsync") == 0) {
+        if (strcmp(key, PropertyNames::kBackendKeyVsync) == 0) {
             return SDL_SetRenderVSync(m_renderer, v ? 1 : 0) ? 1 : 0;
         }
-        if (strcmp(key, "swap-ratio") == 0) {
+        if (strcmp(key, PropertyNames::kBackendKeySwapRatio) == 0) {
             return SDL_SetRenderVSync(m_renderer, v) ? 1 : 0;
         }
         return 0;
     }
 
     int getConfig(const char* key, int type, void* value, int maxLen) override {
-        if (strcmp(key, "vsync") == 0) {
+        if (strcmp(key, PropertyNames::kBackendKeyVsync) == 0) {
             int v = 0;
             if (!SDL_GetRenderVSync(m_renderer, &v)) return 0;
             if (type == 1 || type == 2) {
@@ -318,7 +333,7 @@ public:
             }
             return 1;
         }
-        if (strcmp(key, "renderer-name") == 0) {
+        if (strcmp(key, PropertyNames::kBackendKeyRendererName) == 0) {
             const char* name = SDL_GetRendererName(m_renderer);
             if (!name || type != 0) return 0;
             snprintf(static_cast<char*>(value), maxLen, "%s", name);

@@ -72,6 +72,7 @@ UICornerstone 当前硬编码绑定 SDL3，所有控件直接在头文件中引�
 | 16f — fromsource 4 bug 修复 | ✅ **已完成** | SFML/Raylib 表面工厂注册（RegisterSFMLSurfaceFactories）；SFML vsync 关闭；Raylib newFrame 回调桥接解决"未响应"；Raylib 中文码点懒加载 |
 | 16g — Raylib 纹理不可见根因排查 + 彻底修复 | ✅ **已完成** | 双根因：(1)bridge_drawTexture nullptr src→零SRect；(2)rlPushMatrix+rScalef+DrawTextureEx DLL 边界不可见。修复：bridge 传 nullptr 而非 &zeroRect；改用 DrawTexturePro |
 | 16h — UIBackendCallbacks Cursor 工厂 | ✅ **已完成** | UIBackendCallbacks 新增 createSystemCursor/getDefaultCursor/setCurrentCursor；BackendManager::initialize(callbacks) 调用 Cursor::registerFactories()；test_dialog_cabi 三后端验证通过 |
+| 16i — SDL3 多窗口事件隔离 | ✅ **已完成** | sdl3 pollEvent 只消费本窗口事件（SDL_PumpEvents 显式调用 + SDL_PeepEvents peek + headOne 同 type 检查 + GETEVENT + gotEvent 守卫）；`SDL_EVENT_WINDOW_FOCUS_GAINED/LOST` → FocusGained/FocusLost 转换补全；Window::getMousePosition 改用全局坐标窗口内判定（hover 跨窗口隔离）；ControlImpl::update() isInside = hasMouse && drawRect.contains |
 
 ## 2. Phase 1——SColor 统一
 
@@ -1937,6 +1938,8 @@ Phase 16 (RGBA8888 像素格式排查 + DLL 桥接验证) ← ✅ 已完成
 Phase 16b (Raylib DrawTexturePro DLL 桥接修复) ← ✅ 已完成
     ↓
 Phase 15c (SFML/Raylib Cursor 工厂注册一致性) ← ✅ 已完成 — SFML/Raylib 从直接方法覆盖切换为工厂注册模式，修复 fromsource 模式下光标失效 + SFML 默认光标空指针问题
+    ↓
+Phase 16i (SDL3 多窗口事件隔离) ← ✅ 已完成（2026-08-08）— sdl3 pollEvent 只消费本窗口事件（SDL_PumpEvents + SDL_PeepEvents peek + headOne 同 type 检查 + GETEVENT + gotEvent 守卫）；Window::getMousePosition 改用 SDL_GetGlobalMouseState + 窗口内判定（SDL_GetMouseState 返回鼠标焦点窗口坐标，跨窗口串扰）
 ```
 
 > **注**：Phase 4（SDL 头文件解耦）在 Phase 3 后自然衍生——Texture/Surface 抽象完成后，大量头文件不再需要 SDL 类型，可直接移除或替换为具体子头文件。Phases 7-12 为执行过程中识别出的额外去耦机会，均在 Phase 5 后顺次完成。

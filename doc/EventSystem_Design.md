@@ -135,9 +135,18 @@ InputBackend::pollEvent(event)
 - SFML：`src/backend/sfml/InputBackend.cpp` — 使用 `sf::Event` / `sf::Keyboard` / `sf::Mouse`
 - Raylib：`src/backend/raylib/InputBackend.cpp` — 使用 `IsKeyPressed` / `IsMouseButtonPressed` / `GetCharPressed` 等（需 `newFrame()` 每帧调用 `PollInputEvents()`）
 
+**窗口级事件隔离（实施修订 2026-08-08，SDL3）**：多窗口（多实例）场景下各窗口事件由 SDL 统一投递到全局队列。sdl3 `pollEvent` 按以下规则**只消费本窗口的事件**：
+
+- 开头必须显式 `SDL_PumpEvents()`——`SDL_PeepEvents` 不像 `SDL_PollEvent` 那样内部 pump 窗口消息，不调用则窗口"未响应"（沙漏）
+- `SDL_PeepEvents` peek 找本窗口第一个事件；**headOne 同 type 队头检查**（防止 GETEVENT 取到其他窗口的同 type 事件）；GETEVENT 消费
+- **`gotEvent` 守卫**：peek 循环结束仍未取到自己的事件时必须 `return false`——不得用未初始化的 `sdlEvent` 继续处理，否则永远返回 true → 调用者的内层 while 死循环
+- 窗口事件（mouse/keyboard/wheel/focus 等）按各自结构体的 `windowID` 提取窗口标识
+
+**事件转换补全（实施修订 2026-08-08）**：`SDL_EVENT_WINDOW_FOCUS_GAINED/LOST` → `FocusGained/FocusLost`（此前落入默认分支被忽略，窗口焦点事件无法到达分发层）。
+
 ### 3.3 MainWindow 事件入口
 
-`MainWindow::processEvents()` 在 `src/MainWindow.cpp`：
+`MainWindow::processEvents()` 在 `src/MainWindow.cpp`（单实例 / Hosted `run()` 路径）：
 
 ```cpp
 void MainWindow::processEvents() {
@@ -163,6 +172,11 @@ void MainWindow::processEvents() {
     }
 }
 ```
+
+> **多实例路径（实施修订 2026-08-08）**：C ABI 路径（`UICornerstone_ProcessEvents` → `pumpInstanceEvents`，src/UICornerstoneAPI.cpp:545）取代 MainWindow 入口，职责相同但按实例分发：
+> - 窗口级事件（WindowClose/WindowResize）→ 实例自身处理（quit/bench resized）
+> - **`FocusLost` → 清除本实例焦点**（含活动子视口）——每个实例的 FocusManager 相互独立，只有靠窗口级焦点事件才能跨实例清除焦点环（点击 B 窗口的 EditBox 时 A 窗口的焦点环随之消失）
+> - `ProcessEvents` 返回 `int`（handled ≥ 1），多窗口帧循环由调用者驱动所有实例直到队列空（见 `doc/CABI_MultiInstance_Design.md` §5.13.5）
 
 ### 3.4 Bench → 控件树分派
 
@@ -388,3 +402,4 @@ Phase 12 迁移保留了旧 `EventName` 枚举和 `std::any` 参数，但仅在 
 | 2026-06-07 | Raylib InputBackend 实现 + `newFrame()` 机制 |
 | 2026-07-11 | ColorPicker/Dialog FocusBoundary + watcher 集成 |
 | 2026-07-12 | `customInt`/`customPtr` 移出 union，支持同时设置 |
+| 2026-08-08 | 多窗口隔离：sdl3 pollEvent 只消费本窗口事件（PumpEvents/PeepEvents/headOne/gotEvent）；`FocusGained/FocusLost` 转换补全；`FocusLost` 分发清除实例焦点；多实例路径（pumpInstanceEvents）说明 |

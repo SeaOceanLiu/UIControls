@@ -215,7 +215,7 @@ UICORNERSTONE_API void UICornerstone_SetViewport(UIInstance instance, float x, f
 UICORNERSTONE_API void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w, float* h);
 
 /* ============ 帧循环 ============ */
-UICORNERSTONE_API void UICornerstone_ProcessEvents(UIInstance instance);
+UICORNERSTONE_API int UICornerstone_ProcessEvents(UIInstance instance);
 UICORNERSTONE_API void UICornerstone_Update(UIInstance instance, double deltaTime);
 
 // 注入外部事件（例如从 SDL_AppEvent 回调传入的 SDL 事件）。

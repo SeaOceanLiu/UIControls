@@ -4,6 +4,7 @@
 #include "MainWindow.h"
 #include "EventQueue.h"
 #include "PropertyNames.h"
+#include "Bench.h"
 #include "nlohmann/json.hpp"
 #include <algorithm>
 
@@ -360,6 +361,10 @@ void ComboBox::openPopup()
     if (popupRect.width <= 0 || popupRect.height <= 0)
         return;
 
+    // 绝对坐标（computePopupRect 基于 getDrawRect）转父（bench）相对本地坐标
+    SRect br = BENCH ? BENCH->getDrawRect() : SRect(0, 0, 0, 0);
+    popupRect.left -= br.left;
+    popupRect.top -= br.top;
     m_popup->setAbsolute(popupRect);
     m_popup->open();
 }
@@ -397,9 +402,10 @@ SRect ComboBox::computePopupRect()
     float pw = dr.width;
     float fullPh = visibleCount * m_itemHeight * sy;
 
-    // 视口相对定位（多视口场景下拉列表按视口区域钳制）
+    // 视口绝对钳制（多视口场景下拉列表按视口区域钳制；dr 为窗口绝对
+    // 坐标，钳制边界须为 vp.left/top + 尺寸）
     SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
-    float screenH = vp.height;
+    float screenH = vp.top + vp.height;
 
     float x = dr.left;
     float bestY = dr.bottom() + m_dropdownOffset * sy;
@@ -410,12 +416,12 @@ SRect ComboBox::computePopupRect()
         found = true;
     } else {
         float yAbove = dr.top - fullPh - m_dropdownOffset * sy;
-        if (yAbove >= 0) {
+        if (yAbove >= vp.top) {
             bestY = yAbove;
             found = true;
         } else {
             float spaceBelow = screenH - dr.bottom() - m_dropdownOffset * sy;
-            float spaceAbove = dr.top - m_dropdownOffset * sy;
+            float spaceAbove = dr.top - m_dropdownOffset * sy - vp.top;
 
             if (spaceBelow >= spaceAbove) {
                 bestPh = max(0.0f, spaceBelow);
@@ -931,7 +937,7 @@ int ComboBox::setColorProperty(const char* prop, SColor color) {
 
 int ComboBox::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kCycleEnabled) == 0) { setCycleEnabled(value != 0); return 1; }
-    if (strcmp(prop, "editable") == 0)                   { setEditable(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kEditable) == 0)                   { setEditable(value != 0); return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 
@@ -955,9 +961,9 @@ int ComboBox::setStringProperty(const char* prop, const char* value) {
             vector<ComboBoxItem> items;
             for (auto& jitem : j) {
                 ComboBoxItem item;
-                item.label = jitem.value("label", "");
-                item.value = jitem.value("value", item.label);
-                item.disabled = jitem.value("disabled", false);
+                item.label = jitem.value(PropertyNames::kJsonLabel, "");
+                item.value = jitem.value(PropertyNames::kJsonValue, item.label);
+                item.disabled = jitem.value(PropertyNames::kJsonDisabled, false);
                 items.push_back(item);
             }
             setItems(items);
@@ -985,7 +991,7 @@ int ComboBox::getColorProperty(const char* prop, SColor& out) {
 
 int ComboBox::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kCycleEnabled) == 0) { out = m_cycleEnabled ? 1 : 0; return 1; }
-    if (strcmp(prop, "editable") == 0)                   { out = m_editable ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kEditable) == 0)                   { out = m_editable ? 1 : 0; return 1; }
     return ControlImpl::getBoolProperty(prop, out);
 }
 

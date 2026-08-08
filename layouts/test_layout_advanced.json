@@ -1,27 +1,27 @@
-{
+﻿{
     "version": "1.0",
     "viewport": { "width": 800, "height": 1000 },
 
     "components": {
-        "Greeter": {
+        "greeter": {
             "props": {
                 "name": { "type": "string", "default": "World" },
                 "buttonText": { "type": "string", "default": "Click" }
             },
             "template": {
-                "type": "Panel",
+                "type": "panel",
                 "rect": { "x": 0, "y": 0, "w": 200, "h": 60 },
                 "children": [
                     {
-                        "type": "Label",
+                        "type": "label",
                         "id": "greeting",
                         "rect": { "x": 10, "y": 5, "w": 180, "h": 24 },
                         "caption": "Hello, {{name}}!",
                         "font": { "size": 14 },
-                        "alignment": "CENTER"
+                        "alignment": "center"
                     },
                     {
-                        "type": "Button",
+                        "type": "button",
                         "id": "btn",
                         "rect": { "x": 50, "y": 32, "w": 100, "h": 24 },
                         "caption": "{{buttonText}}",
@@ -30,20 +30,20 @@
                 ]
             }
         },
-        "FramedGreeter": {
+        "framed-greeter": {
             "props": {
                 "name": { "type": "string", "default": "World" },
                 "buttonText": { "type": "string", "default": "Click" }
             },
             "template": {
-                "type": "Panel",
+                "type": "panel",
                 "rect": { "x": 0, "y": 0, "w": 220, "h": 80 },
                 "bgColor": "#3A3A3AFF",
                 "borderColor": "#808080FF",
                 "children": [
                     {
-                        "type": "Greeter",
-                        "id": "nestedGreeter",
+                        "type": "greeter",
+                        "id": "nestedgreeter",
                         "rect": { "x": 10, "y": 10, "w": 200, "h": 60 },
                         "name": "{{name}}",
                         "buttonText": "{{buttonText}}",
@@ -52,14 +52,14 @@
                 ]
             }
         },
-        "SelfRef": {
+        "self-ref": {
             "template": {
-                "type": "Panel",
+                "type": "panel",
                 "rect": { "x": 0, "y": 0, "w": 200, "h": 100 },
                 "bgColor": "#3A3A3AFF",
                 "children": [
                     {
-                        "type": "SelfRef",
+                        "type": "self-ref",
                         "id": "child",
                         "rect": { "x": 10, "y": 10, "w": 180, "h": 80 }
                     }
@@ -121,7 +121,7 @@
     },
     "controls": [
         {
-            "type": "Panel",
+            "type": "panel",
             "id": "rootPanel",
             "rect": { "x": 0, "y": 0, "w": "100%", "h": "100%" },
             "colors": {
@@ -129,31 +129,31 @@
             },
             "children": [
                 {
-                    "type": "Greeter",
+                    "type": "greeter",
                     "id": "greeter1",
                     "rect": { "x": 10, "y": 1180, "w": 200, "h": 60 },
                     "name": "组件系统",
                     "buttonText": "问候",
-                    "events": { "onGreet": "onGreeterClick" }
+                    "events": { "onGreet": "ongreeterClick" }
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "titleLabel",
                     "rect": { "x": 10, "y": 10, "w": 780, "h": 30 },
                     "caption": "Advanced Layout Features Test",
-                    "font": { "size": 20, "style": "BOLD" },
-                    "alignment": "MID_LEFT"
+                    "font": { "size": 20, "style": "bold" },
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "scaleTypeTitle",
                     "rect": { "x": 10, "y": 50, "w": 780, "h": 24 },
                     "caption": "--- ScaleType (Actor缩放模式) ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "stretchBtn",
                     "rect": { "x": 10, "y": 80, "w": 240, "h": 60 },
                     "caption": "STRETCH (default)",
@@ -161,7 +161,7 @@
                     "actors": {
                         "normal": {
                             "file": "assets/images/cross_up.png",
-                            "scaleType": "STRETCH"
+                            "scaleType": "stretch"
                         }
                     },
                     "colors": {
@@ -170,7 +170,7 @@
                     }
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "fitCenterBtn",
                     "rect": { "x": 270, "y": 80, "w": 240, "h": 60 },
                     "caption": "FIT_CENTER",
@@ -178,7 +178,7 @@
                     "actors": {
                         "normal": {
                             "file": "assets/images/cross_up.png",
-                            "scaleType": "FIT_CENTER"
+                            "scaleType": "fit-center"
                         }
                     },
                     "colors": {
@@ -187,7 +187,7 @@
                     }
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "centerCropBtn",
                     "rect": { "x": 530, "y": 80, "w": 240, "h": 60 },
                     "caption": "CENTER_CROP",
@@ -195,7 +195,7 @@
                     "actors": {
                         "normal": {
                             "file": "assets/images/cross_up.png",
-                            "scaleType": "CENTER_CROP"
+                            "scaleType": "center-crop"
                         }
                     },
                     "colors": {
@@ -204,27 +204,27 @@
                     }
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "hflowTitle",
                     "rect": { "x": 10, "y": 160, "w": 780, "h": 24 },
                     "caption": "--- HFlow (水平流式布局: 权重1:2:1) ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Panel",
+                    "type": "panel",
                     "id": "hflowPanel",
                     "rect": { "x": 10, "y": 190, "w": 780, "h": 50 },
                     "bgColor": "#353535FF",
                     "borderColor": "#606060FF",
                     "layout": {
-                        "type": "HFlow",
+                        "type": "h-flow",
                         "gap": 4,
                         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
                     },
                     "children": [
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "hflowBtn1",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 42 },
                             "flowWeight": 1,
@@ -236,7 +236,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "hflowBtn2",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 42 },
                             "flowWeight": 2,
@@ -248,7 +248,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "hflowBtn3",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 42 },
                             "flowWeight": 1,
@@ -262,27 +262,27 @@
                     ]
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "vflowTitle",
                     "rect": { "x": 10, "y": 260, "w": 780, "h": 24 },
                     "caption": "--- VFlow (垂直流式布局: 固定+flex混合) ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Panel",
+                    "type": "panel",
                     "id": "vflowPanel",
                     "rect": { "x": 10, "y": 290, "w": 200, "h": 200 },
                     "bgColor": "#353535FF",
                     "borderColor": "#606060FF",
                     "layout": {
-                        "type": "VFlow",
+                        "type": "v-flow",
                         "gap": 4,
                         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
                     },
                     "children": [
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "vflowBtn1",
                             "rect": { "x": 0, "y": 0, "w": 192, "h": 40 },
                             "caption": "Fixed 40px",
@@ -293,7 +293,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "vflowBtn2",
                             "rect": { "x": 0, "y": 0, "w": 192, "h": 40 },
                             "flowWeight": 1,
@@ -305,7 +305,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "vflowBtn3",
                             "rect": { "x": 0, "y": 0, "w": 192, "h": 40 },
                             "caption": "Fixed 40px",
@@ -318,29 +318,29 @@
                     ]
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "anchorTitle",
                     "rect": { "x": 10, "y": 510, "w": 780, "h": 24 },
                     "caption": "--- Anchor (锚点布局: TL/TR/BL/BR/CENTER) ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Panel",
+                    "type": "panel",
                     "id": "anchorPanel",
                     "rect": { "x": 10, "y": 540, "w": 780, "h": 90 },
                     "bgColor": "#353535FF",
                     "borderColor": "#606060FF",
                     "layout": {
-                        "type": "Anchor",
+                        "type": "anchor",
                         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
                     },
                     "children": [
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "anchorTL",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 30 },
-                            "anchor": "TOP_LEFT",
+                            "anchor": "top-left",
                             "caption": "TL",
                             "captionSize": 12,
                             "colors": {
@@ -349,10 +349,10 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "anchorTR",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 30 },
-                            "anchor": "TOP_RIGHT",
+                            "anchor": "top-right",
                             "anchorOffset": { "left": 0, "top": 0, "right": 4, "bottom": 0 },
                             "caption": "TR",
                             "captionSize": 12,
@@ -362,10 +362,10 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "anchorBL",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 30 },
-                            "anchor": "BOTTOM_LEFT",
+                            "anchor": "bottom-left",
                             "anchorOffset": { "left": 0, "top": 0, "right": 0, "bottom": 4 },
                             "caption": "BL",
                             "captionSize": 12,
@@ -375,10 +375,10 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "anchorBR",
                             "rect": { "x": 0, "y": 0, "w": 80, "h": 30 },
-                            "anchor": "BOTTOM_RIGHT",
+                            "anchor": "bottom-right",
                             "anchorOffset": { "left": 0, "top": 0, "right": 4, "bottom": 4 },
                             "caption": "BR",
                             "captionSize": 12,
@@ -388,10 +388,10 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "anchorCenter",
                             "rect": { "x": 0, "y": 0, "w": 100, "h": 30 },
-                            "anchor": "CENTER",
+                            "anchor": "center",
                             "caption": "CENTER",
                             "captionSize": 12,
                             "colors": {
@@ -400,10 +400,10 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "anchorFill",
                             "rect": { "x": 0, "y": 0, "w": 100, "h": 30 },
-                            "anchor": "FILL",
+                            "anchor": "fill",
                             "anchorOffset": { "left": 90, "top": 32, "right": 90, "bottom": 4 },
                             "caption": "FILL bar",
                             "captionSize": 12,
@@ -415,21 +415,21 @@
                     ]
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "gridTitle",
                     "rect": { "x": 10, "y": 640, "w": 780, "h": 24 },
                     "caption": "--- Grid (网格布局: 列[1fr,2fr,100px] 行[30px,1fr,30px]) ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Panel",
+                    "type": "panel",
                     "id": "gridPanel",
                     "rect": { "x": 10, "y": 670, "w": 780, "h": 200 },
                     "bgColor": "#353535FF",
                     "borderColor": "#606060FF",
                     "layout": {
-                        "type": "Grid",
+                        "type": "grid",
                         "columns": ["1fr", "2fr", "100px"],
                         "rows": ["30px", "1fr", "30px"],
                         "gap": 4,
@@ -437,7 +437,7 @@
                     },
                     "children": [
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "grid0_0",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 0, "col": 0 },
@@ -449,7 +449,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "gridSpan",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 0, "col": 1, "colSpan": 2 },
@@ -461,7 +461,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "grid1_0",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 1, "col": 0 },
@@ -473,7 +473,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "grid1_1",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 1, "col": 1 },
@@ -485,7 +485,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "gridSpan2",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 1, "col": 2, "rowSpan": 2 },
@@ -497,7 +497,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "grid2_0",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 2, "col": 0 },
@@ -509,7 +509,7 @@
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "grid2_1",
                             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
                             "grid": { "row": 2, "col": 1 },
@@ -523,15 +523,15 @@
                     ]
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "pctTitle",
                     "rect": { "x": "2%", "y": 870, "w": "46%", "h": 20 },
                     "caption": "--- 百分比尺寸: (x:2%, w:46%) 窗口拉宽后自动变宽 ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "pctBtn",
                     "rect": { "x": "2%", "y": 894, "w": "46%", "h": 32 },
                     "caption": "宽度=46% × 父容器宽，拉宽窗口试试",
@@ -542,46 +542,46 @@
                     }
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "bindingTitle",
                     "rect": { "x": "52%", "y": 870, "w": "46%", "h": 16 },
                     "caption": "数据绑定: 输入→同步",
                     "font": { "size": 12 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "EditBox",
+                    "type": "edit-box",
                     "id": "bindingEdit",
                     "rect": { "x": "52%", "y": 890, "w": "46%", "h": 26 },
                     "placeholder": "输入同步到右侧 Label...",
-                    "bind": { "text": { "source": "sharedText", "mode": "twoWay" } }
+                    "bind": { "text": { "source": "sharedText", "mode": "twoway" } }
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "bindingLabel",
                     "rect": { "x": "52%", "y": 920, "w": "46%", "h": 26 },
-                    "alignment": "MID_LEFT",
+                    "alignment": "mid-left",
                     "font": { "size": 14 },
                     "bind": { "caption": "sharedText" }
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "bindingProgressTitle",
                     "rect": { "x": "52%", "y": 954, "w": "30%", "h": 14 },
                     "caption": "DataContext Value ⇢ ProgressBar",
                     "font": { "size": 11 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "ProgressBar",
+                    "type": "progress-bar",
                     "id": "bindingProgress",
                     "rect": { "x": "52%", "y": 970, "w": "30%", "h": 18 },
                     "range": { "min": 0, "max": 100 },
-                    "textMode": "Percent",
+                    "textMode": "percent",
                     "bind": { "value": "progressValue" }
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "btnDec",
                     "rect": { "x": "83%", "y": 970, "w": "7%", "h": 18 },
                     "caption": "-10",
@@ -593,7 +593,7 @@
                     }
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "btnInc",
                     "rect": { "x": "91%", "y": 970, "w": "7%", "h": 18 },
                     "caption": "+10",
@@ -605,55 +605,55 @@
                     }
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "themeTitle",
                     "rect": { "x": "2%", "y": 940, "w": "46%", "h": 16 },
                     "caption": "主题默认色 (无显式颜色配置)",
                     "font": { "size": 12 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "themeBtn1",
                     "rect": { "x": "2%", "y": 960, "w": "46%", "h": 26 },
                     "caption": "主题按钮 A"
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "themeBtn2",
                     "rect": { "x": "2%", "y": 990, "w": "46%", "h": 26 },
                     "caption": "主题按钮 B"
                 },
                 {
-                    "type": "Button",
+                    "type": "button",
                     "id": "themeBtn3",
                     "rect": { "x": "2%", "y": 1020, "w": "46%", "h": 26 },
                     "caption": "主题按钮 C"
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "compTitle",
                     "rect": { "x": "2%", "y": 1060, "w": "96%", "h": 20 },
                     "caption": "--- 组件(V1): 嵌套 / Props默认值 / 循环引用 ---",
                     "font": { "size": 14 },
-                    "alignment": "MID_LEFT"
+                    "alignment": "mid-left"
                 },
                 {
-                    "type": "FramedGreeter",
-                    "id": "framedGreeter1",
+                    "type": "framed-greeter",
+                    "id": "framedgreeter1",
                     "rect": { "x": 10, "y": 1090, "w": 220, "h": 80 },
                     "name": "嵌套组件",
                     "buttonText": "点我",
                     "events": { "onGreet": "onFramedGreet" }
                 },
                 {
-                    "type": "Greeter",
+                    "type": "greeter",
                     "id": "greeterDefaults",
                     "rect": { "x": 250, "y": 1090, "w": 200, "h": 60 },
                     "name": "默认按钮"
                 },
                 {
-                    "type": "SelfRef",
+                    "type": "self-ref",
                     "id": "selfRef1",
                     "rect": { "x": 470, "y": 1090, "w": 200, "h": 100 }
                 }

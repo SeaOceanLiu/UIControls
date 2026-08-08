@@ -299,6 +299,418 @@ PROP_CONSTEXPR const char* kEventInitial          = "initial";
 PROP_CONSTEXPR const char* kEventPropertyChanged  = "property-changed";
 PROP_CONSTEXPR const char* kEventNodeRemoved       = "node-removed";
 
+// ============================================================
+// -- JSON 数据契约键（LuotiAni 动画描述 / LayoutParser 布局 / Theme）--
+// ============================================================
+
+// LuotiAni 动画描述 JSON
+PROP_CONSTEXPR const char* kJsonOverview        = "overview";
+PROP_CONSTEXPR const char* kJsonName            = "name";
+PROP_CONSTEXPR const char* kJsonVersion         = "version";
+PROP_CONSTEXPR const char* kJsonView            = "view";
+PROP_CONSTEXPR const char* kJsonWidth           = "width";
+PROP_CONSTEXPR const char* kJsonHeight          = "height";
+PROP_CONSTEXPR const char* kJsonFrameRate       = "frameRate";
+PROP_CONSTEXPR const char* kJsonTotalFrames     = "totalFrames";
+PROP_CONSTEXPR const char* kJsonLoop            = "loop";
+PROP_CONSTEXPR const char* kJsonLayers          = "layers";
+PROP_CONSTEXPR const char* kJsonType            = "type";
+PROP_CONSTEXPR const char* kJsonSrc             = "src";
+PROP_CONSTEXPR const char* kJsonOpacity         = "opacity";
+PROP_CONSTEXPR const char* kJsonBlendMode       = "blendMode";
+PROP_CONSTEXPR const char* kJsonKeyFrames       = "keyFrames";
+PROP_CONSTEXPR const char* kJsonFrame           = "frame";
+PROP_CONSTEXPR const char* kJsonOperation       = "operation";
+PROP_CONSTEXPR const char* kJsonEasing          = "easing";
+PROP_CONSTEXPR const char* kJsonPath            = "path";
+PROP_CONSTEXPR const char* kJsonTx              = "tx";
+PROP_CONSTEXPR const char* kJsonTy              = "ty";
+PROP_CONSTEXPR const char* kJsonSx              = "sx";
+PROP_CONSTEXPR const char* kJsonSy              = "sy";
+PROP_CONSTEXPR const char* kJsonAngle           = "angle";
+PROP_CONSTEXPR const char* kJsonCx              = "cx";
+PROP_CONSTEXPR const char* kJsonCy              = "cy";
+PROP_CONSTEXPR const char* kJsonVisible         = "visible";
+PROP_CONSTEXPR const char* kJsonC1x             = "c1x";
+PROP_CONSTEXPR const char* kJsonC1y             = "c1y";
+PROP_CONSTEXPR const char* kJsonC2x             = "c2x";
+PROP_CONSTEXPR const char* kJsonC2y             = "c2y";
+PROP_CONSTEXPR const char* kJsonVx              = "vx";
+PROP_CONSTEXPR const char* kJsonVy              = "vy";
+PROP_CONSTEXPR const char* kJsonPoints          = "points";
+PROP_CONSTEXPR const char* kJsonX               = "x";
+PROP_CONSTEXPR const char* kJsonY               = "y";
+
+// 布局 JSON（顶层/通用）
+PROP_CONSTEXPR const char* kJsonTheme           = "theme";
+PROP_CONSTEXPR const char* kJsonComponents      = "components";
+PROP_CONSTEXPR const char* kJsonLayouts         = "layouts";
+PROP_CONSTEXPR const char* kJsonControls        = "controls";
+PROP_CONSTEXPR const char* kJsonDialogs         = "dialogs";
+PROP_CONSTEXPR const char* kJsonRect            = "rect";
+PROP_CONSTEXPR const char* kJsonW               = "w";
+PROP_CONSTEXPR const char* kJsonH               = "h";
+PROP_CONSTEXPR const char* kJsonScale           = "scale";
+PROP_CONSTEXPR const char* kJsonId              = "id";
+PROP_CONSTEXPR const char* kJsonFont            = "font";
+PROP_CONSTEXPR const char* kJsonSize            = "size";
+PROP_CONSTEXPR const char* kJsonStyle           = "style";
+PROP_CONSTEXPR const char* kJsonColors          = "colors";
+PROP_CONSTEXPR const char* kJsonText            = "text";
+PROP_CONSTEXPR const char* kJsonTextShadow      = "textShadow";
+PROP_CONSTEXPR const char* kJsonShadow          = "shadow";
+PROP_CONSTEXPR const char* kJsonEnabled         = "enabled";
+PROP_CONSTEXPR const char* kJsonOffset          = "offset";
+PROP_CONSTEXPR const char* kJsonCaption         = "caption";
+PROP_CONSTEXPR const char* kJsonAlignment       = "alignment";
+PROP_CONSTEXPR const char* kJsonEvents          = "events";
+PROP_CONSTEXPR const char* kJsonBind            = "bind";
+PROP_CONSTEXPR const char* kJsonSource          = "source";
+PROP_CONSTEXPR const char* kJsonMode            = "mode";
+PROP_CONSTEXPR const char* kJsonChildren        = "children";
+PROP_CONSTEXPR const char* kJsonMargin          = "margin";
+PROP_CONSTEXPR const char* kJsonLeft            = "left";
+PROP_CONSTEXPR const char* kJsonTop             = "top";
+PROP_CONSTEXPR const char* kJsonRight           = "right";
+PROP_CONSTEXPR const char* kJsonBottom          = "bottom";
+PROP_CONSTEXPR const char* kJsonR               = "r";
+PROP_CONSTEXPR const char* kJsonG               = "g";
+PROP_CONSTEXPR const char* kJsonB               = "b";
+PROP_CONSTEXPR const char* kJsonA               = "a";
+PROP_CONSTEXPR const char* kJsonNormal          = "normal";
+PROP_CONSTEXPR const char* kJsonHover           = "hover";
+PROP_CONSTEXPR const char* kJsonPressed         = "pressed";
+PROP_CONSTEXPR const char* kJsonDisabled        = "disabled";
+PROP_CONSTEXPR const char* kJsonTitle           = "title";
+PROP_CONSTEXPR const char* kJsonValue           = "value";
+PROP_CONSTEXPR const char* kJsonItems           = "items";
+PROP_CONSTEXPR const char* kJsonLabel           = "label";
+PROP_CONSTEXPR const char* kJsonColor           = "color";
+PROP_CONSTEXPR const char* kJsonBorderVisible   = "borderVisible";
+
+// 布局 JSON（控件级）
+PROP_CONSTEXPR const char* kJsonCaptionLabel        = "captionLabel";
+PROP_CONSTEXPR const char* kJsonCaptionSize         = "captionSize";
+PROP_CONSTEXPR const char* kJsonEnableTextShadow    = "enableTextShadow";
+PROP_CONSTEXPR const char* kJsonActors              = "actors";
+PROP_CONSTEXPR const char* kJsonMatchParentRect     = "matchParentRect";
+PROP_CONSTEXPR const char* kJsonFile                = "file";
+PROP_CONSTEXPR const char* kJsonResourceId          = "resourceId";
+PROP_CONSTEXPR const char* kJsonScaleType           = "scaleType";
+PROP_CONSTEXPR const char* kJsonLuotiAni            = "luotiAni";
+PROP_CONSTEXPR const char* kJsonPlaceholder         = "placeholder";
+PROP_CONSTEXPR const char* kJsonPasswordMode        = "passwordMode";
+PROP_CONSTEXPR const char* kJsonPasswordChar        = "passwordChar";
+PROP_CONSTEXPR const char* kJsonEditable            = "editable";
+PROP_CONSTEXPR const char* kJsonSelectedIndex       = "selectedIndex";
+PROP_CONSTEXPR const char* kJsonArrowWidth          = "arrowWidth";
+PROP_CONSTEXPR const char* kJsonItemHeight          = "itemHeight";
+PROP_CONSTEXPR const char* kJsonMaxVisibleItems     = "maxVisibleItems";
+PROP_CONSTEXPR const char* kJsonCycleEnabled        = "cycleEnabled";
+PROP_CONSTEXPR const char* kJsonTransparent         = "transparent";
+PROP_CONSTEXPR const char* kJsonBgColor             = "bgColor";
+PROP_CONSTEXPR const char* kJsonBorderColor         = "borderColor";
+PROP_CONSTEXPR const char* kJsonLayout              = "layout";
+PROP_CONSTEXPR const char* kJsonGap                 = "gap";
+PROP_CONSTEXPR const char* kJsonPadding             = "padding";
+PROP_CONSTEXPR const char* kJsonColumns             = "columns";
+PROP_CONSTEXPR const char* kJsonRows                = "rows";
+PROP_CONSTEXPR const char* kJsonFlowWeight          = "flowWeight";
+PROP_CONSTEXPR const char* kJsonAnchor              = "anchor";
+PROP_CONSTEXPR const char* kJsonAnchorOffset        = "anchorOffset";
+PROP_CONSTEXPR const char* kJsonGrid                = "grid";
+PROP_CONSTEXPR const char* kJsonRow                 = "row";
+PROP_CONSTEXPR const char* kJsonCol                 = "col";
+PROP_CONSTEXPR const char* kJsonRowSpan             = "rowSpan";
+PROP_CONSTEXPR const char* kJsonColSpan             = "colSpan";
+PROP_CONSTEXPR const char* kJsonPresets             = "presets";
+PROP_CONSTEXPR const char* kJsonPresetLayout        = "presetLayout";
+PROP_CONSTEXPR const char* kJsonSwatchSize          = "swatchSize";
+PROP_CONSTEXPR const char* kJsonClosedFontSize      = "closedFontSize";
+PROP_CONSTEXPR const char* kJsonClosedTextColor     = "closedTextColor";
+PROP_CONSTEXPR const char* kJsonPopupBGColor        = "popupBGColor";
+PROP_CONSTEXPR const char* kJsonEdgeMargin          = "edgeMargin";
+PROP_CONSTEXPR const char* kJsonResizable           = "resizable";
+PROP_CONSTEXPR const char* kJsonTitleBar            = "titleBar";
+PROP_CONSTEXPR const char* kJsonBg                  = "bg";
+PROP_CONSTEXPR const char* kJsonTitleText           = "titleText";
+PROP_CONSTEXPR const char* kJsonMenus               = "menus";
+PROP_CONSTEXPR const char* kJsonShortcut            = "shortcut";
+PROP_CONSTEXPR const char* kJsonChecked             = "checked";
+PROP_CONSTEXPR const char* kJsonWordWrap            = "wordWrap";
+PROP_CONSTEXPR const char* kJsonLineHeight          = "lineHeight";
+PROP_CONSTEXPR const char* kJsonLineSpacingRatio    = "lineSpacingRatio";
+PROP_CONSTEXPR const char* kJsonEnableExpand        = "enableExpand";
+PROP_CONSTEXPR const char* kJsonDebugDraw           = "debugDraw";
+PROP_CONSTEXPR const char* kJsonScrollBarThickness  = "scrollBarThickness";
+PROP_CONSTEXPR const char* kJsonCheckState          = "checkState";
+PROP_CONSTEXPR const char* kJsonSizeRatio           = "sizeRatio";
+PROP_CONSTEXPR const char* kJsonTriState            = "triState";
+PROP_CONSTEXPR const char* kJsonCheckColor          = "checkColor";
+PROP_CONSTEXPR const char* kJsonCrossColor          = "crossColor";
+PROP_CONSTEXPR const char* kJsonIndeterminateColor  = "indeterminateColor";
+PROP_CONSTEXPR const char* kJsonBoxBorderColor      = "boxBorderColor";
+PROP_CONSTEXPR const char* kJsonRange               = "range";
+PROP_CONSTEXPR const char* kJsonMin                 = "min";
+PROP_CONSTEXPR const char* kJsonMax                 = "max";
+PROP_CONSTEXPR const char* kJsonCustomText          = "customText";
+PROP_CONSTEXPR const char* kJsonAnimationSpeed      = "animationSpeed";
+PROP_CONSTEXPR const char* kJsonProgressColor       = "progressColor";
+PROP_CONSTEXPR const char* kJsonBackgroundColor     = "backgroundColor";
+PROP_CONSTEXPR const char* kJsonTrack               = "track";
+PROP_CONSTEXPR const char* kJsonThumb               = "thumb";
+PROP_CONSTEXPR const char* kJsonTick                = "tick";
+PROP_CONSTEXPR const char* kJsonThickness           = "thickness";
+PROP_CONSTEXPR const char* kJsonFillColor           = "fillColor";
+PROP_CONSTEXPR const char* kJsonHoverColor          = "hoverColor";
+PROP_CONSTEXPR const char* kJsonInterval            = "interval";
+PROP_CONSTEXPR const char* kJsonLength              = "length";
+PROP_CONSTEXPR const char* kJsonShowValueLabel      = "showValueLabel";
+PROP_CONSTEXPR const char* kJsonLabelFormat         = "labelFormat";
+PROP_CONSTEXPR const char* kJsonLabelGap            = "labelGap";
+PROP_CONSTEXPR const char* kJsonPageStep            = "pageStep";
+PROP_CONSTEXPR const char* kJsonDecimals            = "decimals";
+PROP_CONSTEXPR const char* kJsonReadOnly            = "readOnly";
+PROP_CONSTEXPR const char* kJsonButtonWidth         = "buttonWidth";
+PROP_CONSTEXPR const char* kJsonOrientation         = "orientation";
+PROP_CONSTEXPR const char* kJsonVerticalAlign       = "verticalAlign";
+PROP_CONSTEXPR const char* kJsonTextMode            = "textMode";
+PROP_CONSTEXPR const char* kJsonStep                = "step";
+PROP_CONSTEXPR const char* kJsonReverse             = "reverse";
+PROP_CONSTEXPR const char* kJsonBarHeight           = "barHeight";
+PROP_CONSTEXPR const char* kJsonPresetCols          = "cols";
+PROP_CONSTEXPR const char* kJsonPresetRows          = "rows";
+PROP_CONSTEXPR const char* kJsonFirstPanel          = "firstPanel";
+PROP_CONSTEXPR const char* kJsonSecondPanel         = "secondPanel";
+PROP_CONSTEXPR const char* kJsonMinFirst            = "minFirst";
+PROP_CONSTEXPR const char* kJsonMinSecond           = "minSecond";
+PROP_CONSTEXPR const char* kJsonRatio               = "ratio";
+PROP_CONSTEXPR const char* kJsonIndentWidth         = "indentWidth";
+PROP_CONSTEXPR const char* kJsonRowHeight           = "rowHeight";
+PROP_CONSTEXPR const char* kJsonCycleNavigation     = "cycleNavigation";
+PROP_CONSTEXPR const char* kJsonDefaultExpand       = "defaultExpand";
+PROP_CONSTEXPR const char* kJsonExpanded            = "expanded";
+PROP_CONSTEXPR const char* kJsonUserData            = "userData";
+PROP_CONSTEXPR const char* kJsonPageSize            = "pageSize";
+PROP_CONSTEXPR const char* kJsonStepSize            = "stepSize";
+PROP_CONSTEXPR const char* kJsonCentered            = "centered";
+PROP_CONSTEXPR const char* kJsonCloseOnEsc          = "closeOnEsc";
+PROP_CONSTEXPR const char* kJsonCloseOnClickOutside = "closeOnClickOutside";
+PROP_CONSTEXPR const char* kJsonConfirmButton       = "confirmButton";
+PROP_CONSTEXPR const char* kJsonCancelButton        = "cancelButton";
+PROP_CONSTEXPR const char* kJsonButtonHeight        = "buttonHeight";
+PROP_CONSTEXPR const char* kJsonButtonGap           = "buttonGap";
+PROP_CONSTEXPR const char* kJsonTemplate            = "template";
+PROP_CONSTEXPR const char* kJsonProps               = "props";
+PROP_CONSTEXPR const char* kJsonDefault             = "default";
+PROP_CONSTEXPR const char* kJsonXScale              = "xScale";
+PROP_CONSTEXPR const char* kJsonYScale              = "yScale";
+PROP_CONSTEXPR const char* kJsonEnable              = "enable";
+
+// 布局 JSON 事件键（events 对象）
+PROP_CONSTEXPR const char* kEventKeyClick            = "onClick";
+PROP_CONSTEXPR const char* kEventKeyEnter            = "onEnter";
+PROP_CONSTEXPR const char* kEventKeyTextChanged      = "onTextChanged";
+PROP_CONSTEXPR const char* kEventKeySelectionChanged = "onSelectionChanged";
+PROP_CONSTEXPR const char* kEventKeyCheckChanged     = "onCheckChanged";
+PROP_CONSTEXPR const char* kEventKeySelect           = "onSelect";
+PROP_CONSTEXPR const char* kEventKeyValueChanged     = "onValueChanged";
+PROP_CONSTEXPR const char* kEventKeyPositionChanged  = "onPositionChanged";
+PROP_CONSTEXPR const char* kEventKeyColorChanged     = "onColorChanged";
+PROP_CONSTEXPR const char* kEventKeyConfirm          = "onConfirm";
+PROP_CONSTEXPR const char* kEventKeyCancel           = "onCancel";
+PROP_CONSTEXPR const char* kEventKeyClose            = "onClose";
+PROP_CONSTEXPR const char* kEventKeySplitterMoved    = "onSplitterMoved";
+
+// -- 控件类型名（布局 JSON type 字段，小写 kebab-case）--
+PROP_CONSTEXPR const char* kControlTypeLabel = "label";
+PROP_CONSTEXPR const char* kControlTypeButton = "button";
+PROP_CONSTEXPR const char* kControlTypeEditBox = "edit-box";
+PROP_CONSTEXPR const char* kControlTypeComboBox = "combo-box";
+PROP_CONSTEXPR const char* kControlTypeTextArea = "text-area";
+PROP_CONSTEXPR const char* kControlTypeCheckBox = "check-box";
+PROP_CONSTEXPR const char* kControlTypeProgressBar = "progress-bar";
+PROP_CONSTEXPR const char* kControlTypeSlider = "slider";
+PROP_CONSTEXPR const char* kControlTypeScrollBar = "scroll-bar";
+PROP_CONSTEXPR const char* kControlTypePanel = "panel";
+PROP_CONSTEXPR const char* kControlTypeWinFrame = "win-frame";
+PROP_CONSTEXPR const char* kControlTypeColorPicker = "color-picker";
+PROP_CONSTEXPR const char* kControlTypePopup = "popup";
+PROP_CONSTEXPR const char* kControlTypeConfirmPopup = "confirm-popup";
+PROP_CONSTEXPR const char* kControlTypeDialog = "dialog";
+PROP_CONSTEXPR const char* kControlTypeMenuBar = "menu-bar";
+PROP_CONSTEXPR const char* kControlTypeNumericUpDown = "numeric-up-down";
+PROP_CONSTEXPR const char* kControlTypeSplitter = "splitter";
+PROP_CONSTEXPR const char* kControlTypeTreeView = "tree-view";
+
+// ============================================================
+// -- LuotiAni 枚举值 --
+// ============================================================
+
+// Easing
+PROP_CONSTEXPR const char* kEasingLinear            = "linear";
+PROP_CONSTEXPR const char* kEasingEaseIn            = "ease-in";
+PROP_CONSTEXPR const char* kEasingEaseOut           = "ease-out";
+PROP_CONSTEXPR const char* kEasingEaseInOut         = "ease-in-out";
+PROP_CONSTEXPR const char* kEasingQuad              = "quad";
+PROP_CONSTEXPR const char* kEasingSine              = "sine";
+PROP_CONSTEXPR const char* kEasingCubicBezierPrefix = "cubic-bezier(";
+
+// Path 类型
+PROP_CONSTEXPR const char* kPathBezier              = "bezier";
+PROP_CONSTEXPR const char* kPathParabola            = "parabola";
+PROP_CONSTEXPR const char* kPathCatmullRom          = "catmull-rom";
+
+// Layer 类型
+PROP_CONSTEXPR const char* kLayerTypeImage          = "image";
+PROP_CONSTEXPR const char* kLayerTypeShape          = "shape";
+PROP_CONSTEXPR const char* kLayerTypeText           = "text";
+PROP_CONSTEXPR const char* kLayerTypeNull           = "null_layer";
+
+// Operation 类型
+PROP_CONSTEXPR const char* kOpTypeTranslate         = "translate";
+PROP_CONSTEXPR const char* kOpTypeScale             = "scale";
+PROP_CONSTEXPR const char* kOpTypeRotate            = "rotate";
+PROP_CONSTEXPR const char* kOpTypeOpacity           = "opacity";
+PROP_CONSTEXPR const char* kOpTypeVisible           = "visible";
+PROP_CONSTEXPR const char* kOpTypeNull              = "null_operation";
+
+// BlendMode
+PROP_CONSTEXPR const char* kBlendNormal                = "normal";
+PROP_CONSTEXPR const char* kBlendAdditive              = "additive";
+PROP_CONSTEXPR const char* kBlendAdditivePremultiplied = "additive-premultiplied";
+PROP_CONSTEXPR const char* kBlendModulate              = "modulate";
+PROP_CONSTEXPR const char* kBlendBlend                 = "blend";
+PROP_CONSTEXPR const char* kBlendBlendPremultiplied    = "blend-premultiplied";
+PROP_CONSTEXPR const char* kBlendMultiply              = "multiply";
+
+// ============================================================
+// -- 布局 JSON 枚举值（小写风格，与 CABI 属性值域一致）--
+// ============================================================
+
+// 布局引擎类型
+PROP_CONSTEXPR const char* kLayoutTypeHFlow        = "h-flow";
+PROP_CONSTEXPR const char* kLayoutTypeVFlow        = "v-flow";
+PROP_CONSTEXPR const char* kLayoutTypeAnchor       = "anchor";
+PROP_CONSTEXPR const char* kLayoutTypeGrid         = "grid";
+
+// Anchor 扩展（布局引擎使用，小写风格）
+PROP_CONSTEXPR const char* kJsonAnchorTopStretch   = "top-stretch";
+PROP_CONSTEXPR const char* kJsonAnchorBottomStretch = "bottom-stretch";
+PROP_CONSTEXPR const char* kJsonAnchorLeftStretch  = "left-stretch";
+PROP_CONSTEXPR const char* kJsonAnchorRightStretch = "right-stretch";
+PROP_CONSTEXPR const char* kJsonAnchorFill         = "fill";
+
+// 字体样式
+PROP_CONSTEXPR const char* kFontStyleNormal        = "normal";
+PROP_CONSTEXPR const char* kFontStyleBold          = "bold";
+PROP_CONSTEXPR const char* kFontStyleItalic        = "italic";
+PROP_CONSTEXPR const char* kFontStyleUnderline     = "underline";
+PROP_CONSTEXPR const char* kFontStyleStrikethrough = "strikethrough";
+
+// 绑定模式
+PROP_CONSTEXPR const char* kBindModeOneWay         = "oneway";
+PROP_CONSTEXPR const char* kBindModeTwoWay         = "twoway";
+
+// 组件 prop 类型
+PROP_CONSTEXPR const char* kPropTypeString         = "string";
+PROP_CONSTEXPR const char* kPropTypeNumber         = "number";
+PROP_CONSTEXPR const char* kPropTypeBool           = "bool";
+
+// GridSize 后缀
+PROP_CONSTEXPR const char* kGridSizeAuto           = "auto";
+PROP_CONSTEXPR const char* kGridSizeFrSuffix       = "fr";
+PROP_CONSTEXPR const char* kGridSizePxSuffix       = "px";
+
+// 菜单项类型
+PROP_CONSTEXPR const char* kMenuTypeSeparator      = "separator";
+
+// ============================================================
+// -- Theme / 状态 / 其它 --
+// ============================================================
+
+// StateColor 子键
+PROP_CONSTEXPR const char* kStateKeyNormal         = "normal";
+PROP_CONSTEXPR const char* kStateKeyHover          = "hover";
+PROP_CONSTEXPR const char* kStateKeyPressed        = "pressed";
+PROP_CONSTEXPR const char* kStateKeyDisabled       = "disabled";
+
+// Theme 路径片段
+PROP_CONSTEXPR const char* kThemeFontsPrefix       = "fonts.";
+PROP_CONSTEXPR const char* kThemeNameSuffix        = ".name";
+PROP_CONSTEXPR const char* kThemeSizeSuffix        = ".size";
+PROP_CONSTEXPR const char* kThemeColorsPrefix      = "colors.";
+PROP_CONSTEXPR const char* kThemeBgSuffix          = ".bg";
+PROP_CONSTEXPR const char* kThemeBorderSuffix      = ".border";
+PROP_CONSTEXPR const char* kThemeTextSuffix        = ".text";
+PROP_CONSTEXPR const char* kThemeTextShadowSuffix  = ".textShadow";
+PROP_CONSTEXPR const char* kThemeCheckboxCheck          = "colors.checkbox.check";
+PROP_CONSTEXPR const char* kThemeCheckboxCross          = "colors.checkbox.cross";
+PROP_CONSTEXPR const char* kThemeCheckboxIndeterminate  = "colors.checkbox.indeterminate";
+PROP_CONSTEXPR const char* kThemeCheckboxBoxBorder      = "colors.checkbox.boxBorder";
+PROP_CONSTEXPR const char* kThemeProgressbarProgress    = "colors.progressbar.progress";
+PROP_CONSTEXPR const char* kThemeProgressbarTrack       = "colors.progressbar.track";
+PROP_CONSTEXPR const char* kThemeCategoryDefault        = "default";
+
+// Theme 字体类别
+PROP_CONSTEXPR const char* kThemeCatLabel          = "label";
+PROP_CONSTEXPR const char* kThemeCatButton         = "button";
+PROP_CONSTEXPR const char* kThemeCatEditBox        = "editbox";
+PROP_CONSTEXPR const char* kThemeCatCheckBox       = "checkbox";
+PROP_CONSTEXPR const char* kThemeCatPanel          = "panel";
+PROP_CONSTEXPR const char* kThemeCatColorPicker    = "colorpicker";
+PROP_CONSTEXPR const char* kThemeCatMenuBar        = "menubar";
+PROP_CONSTEXPR const char* kThemeCatTextArea       = "textarea";
+PROP_CONSTEXPR const char* kThemeCatProgressBar    = "progressbar";
+PROP_CONSTEXPR const char* kThemeCatNumericUpDown  = "numericupdown";
+PROP_CONSTEXPR const char* kThemeCatSplitter       = "splitter";
+PROP_CONSTEXPR const char* kThemeCatTreeView       = "treeview";
+PROP_CONSTEXPR const char* kThemeCatScrollBar      = "scrollbar";
+PROP_CONSTEXPR const char* kThemeCatPopup          = "popup";
+PROP_CONSTEXPR const char* kThemeCatConfirmPopup   = "confirmpopup";
+PROP_CONSTEXPR const char* kThemeCatDialog         = "dialog";
+
+// 颜色通道
+PROP_CONSTEXPR const char* kChannelR               = "r";
+PROP_CONSTEXPR const char* kChannelG               = "g";
+PROP_CONSTEXPR const char* kChannelB               = "b";
+PROP_CONSTEXPR const char* kChannelA               = "a";
+
+// 组件系统
+PROP_CONSTEXPR const char* kPlaceholderOpen        = "{{";
+PROP_CONSTEXPR const char* kPlaceholderClose       = "}}";
+PROP_CONSTEXPR const char* kCompEventPrefix        = "_comp_";
+PROP_CONSTEXPR const char* kIdPrefixSep            = "__";
+
+// 后端配置键
+PROP_CONSTEXPR const char* kBackendKeyVsync        = "vsync";
+PROP_CONSTEXPR const char* kBackendKeySwapRatio    = "swap-ratio";
+PROP_CONSTEXPR const char* kBackendKeyRendererName = "renderer-name";
+
+// 其它
+PROP_CONSTEXPR const char* kDefaultWindowTitle     = "UICornerstone";
+PROP_CONSTEXPR const char* kDefaultWinFrameTitle   = "WinFrame";
+PROP_CONSTEXPR const char* kDefaultMenuTitle       = "Menu";
+PROP_CONSTEXPR const char* kAssetsDirName          = "assets";
+
+// 属性缺口补齐
+PROP_CONSTEXPR const char* kEditable               = "editable";
+PROP_CONSTEXPR const char* kScaleTypeStretch       = "stretch";
+PROP_CONSTEXPR const char* kScaleTypeFitCenter     = "fit-center";
+PROP_CONSTEXPR const char* kScaleTypeCenterCrop    = "center-crop";
+PROP_CONSTEXPR const char* kScaleTypeNone          = "none";
+
+// 对齐值（小写风格，AlignmentMode/Actor 锚点 CABI 属性字符串值）
+PROP_CONSTEXPR const char* kAlignLowerTopLeft     = "top-left";
+PROP_CONSTEXPR const char* kAlignLowerMidLeft     = "mid-left";
+PROP_CONSTEXPR const char* kAlignLowerBottomLeft  = "bottom-left";
+PROP_CONSTEXPR const char* kAlignLowerTopRight    = "top-right";
+PROP_CONSTEXPR const char* kAlignLowerMidRight    = "mid-right";
+PROP_CONSTEXPR const char* kAlignLowerBottomRight = "bottom-right";
+PROP_CONSTEXPR const char* kAlignLowerTopCenter   = "top-center";
+PROP_CONSTEXPR const char* kAlignLowerCenter      = "center";
+PROP_CONSTEXPR const char* kAlignLowerBottomCenter= "bottom-center";
+
 PROP_NS_END
 
 #undef PROP_CONSTEXPR

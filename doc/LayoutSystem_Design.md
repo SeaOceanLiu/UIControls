@@ -1,4 +1,4 @@
-# 配置文件化布局系统 — 设计文档
+﻿# 配置文件化布局系统 — 设计文档
 
 ## 1. 概述
 
@@ -160,7 +160,7 @@
 
 | 字段       | 类型   | 必填   | 默认值                                    | 说明                                                                                              |
 | ---------- | ------ | ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `type`     | string | **是** | —                                        | 控件类型标识符，受支持的值见 4.5                                                                  |
+| `type`     | string | **是** | —                                        | 控件类型标识符，受支持的值见 4.5。**必须为 kebab 小写**（如 `"label"`、`"edit-box"`、`"numeric-up-down"`）；大小写不匹配一律视为未知类型跳过。不兼容 `"Label"`、`"EditBox"`、`"NumericUpDown"` 等写法 |
 | `id`       | string | 否     | `""`                                      | 全局唯一标识（字符串），用于`findControlById` 和事件绑定。与 C++ 侧 `setId(int)` 的关系见第 12 节 |
 | `rect`     | object | **是** | —                                        | `{"x", "y", "w", "h"}` 绝对定位 (Phase 1)                                                         |
 | `scale`    | object | 否     | `{"x": 1.0, "y": 1.0}`                    | 本地缩放倍数                                                                                      |
@@ -235,7 +235,7 @@
 
 ```jsonc
 {
-    "type": "Label",
+    "type": "label",
     "caption": "Hello World\n第二行",              // \n 换行
     "alignment": "TOP_LEFT",                       // 见下方 AlignmentMode 枚举值
     "font": {
@@ -288,7 +288,7 @@ Button 内部使用 `Label`（`m_caption`）来渲染文字，因此 Button 的 
 
 ```jsonc
 {
-    "type": "Button",
+    "type": "button",
     "caption": "Click Me",
     "captionSize": 16,                             // 文字大小，默认 16
     "enableTextShadow": false                      // 是否开启文字阴影
@@ -301,7 +301,7 @@ Button 可以为每个交互状态指定一个 Actor（图片），Actor 会在 
 
 ```jsonc
 {
-    "type": "Button",
+    "type": "button",
     "caption": "Play",
     "captionSize": 16,
     "actors": {
@@ -354,7 +354,7 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
 
 ```jsonc
 {
-    "type": "Button",
+    "type": "button",
     "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"  // 粒子动画文件（相对于可执行文件路径）
 }
 ```
@@ -378,7 +378,7 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
 
 ```jsonc
 {
-    "type": "Button",
+    "type": "button",
     "captionLabel": {
         "caption": "Click Me",
         "font": { "size": 16, "style": "BOLD" },
@@ -402,7 +402,7 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
 
 ```jsonc
 {
-    "type": "EditBox",
+    "type": "edit-box",
     "text": "",                                    // 初始文本
     "placeholder": "Please input...",              // 占位提示文字
     "passwordMode": false,                         // 密码模式
@@ -420,13 +420,13 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "transparent": false,                           // 是否透明 (不绘制背景)
     "borderVisible": true,                          // 是否显示边框
     "bgColor": "#404040FF",                         // 背景色 (单色, 非状态色)
     "borderColor": "#808080FF",                     // 边框色 (单色, 非状态色)
     "layout": {                                     // 布局引擎（可选）
-        "type": "HFlow",                            // "HFlow" 或 "VFlow"
+        "type": "h-flow",                            // "HFlow" 或 "VFlow"
         "gap": 4,                                   // 子控件间距
         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
     },
@@ -444,7 +444,7 @@ TextArea 继承自 EditBox，支持所有 EditBox 属性，并额外  支持多�
 
 ```jsonc
 {
-    "type": "TextArea",
+    "type": "text-area",
     "text": "",                                    // 初始文本
     "placeholder": "请输入多行文本...",             // 占位提示
     "wordWrap": true,                               // 自动换行
@@ -463,7 +463,7 @@ TextArea 继承自 EditBox，支持所有 EditBox 属性，并额外  支持多�
 
 ```jsonc
 {
-    "type": "CheckBox",
+    "type": "check-box",
     "caption": "同意条款",                          // 复选框文字（通过 getCaption()->setCaption 设置）
     "captionSize": 16,                             // 文字大小
     "checkState": "Unchecked",                     // Unchecked / Checked / Indeterminate
@@ -496,7 +496,7 @@ TextArea 继承自 EditBox，支持所有 EditBox 属性，并额外  支持多�
 
 ```jsonc
 {
-    "type": "ProgressBar",
+    "type": "progress-bar",
     "value": 50,                                   // 当前值
     "range": { "min": 0, "max": 100 },             // 值范围
     "style": "Horizontal",                          // Horizontal / Vertical
@@ -530,7 +530,7 @@ ScrollBar 通常作为其他控件（TextArea、Panel 等）的内部组件，�
 
 ```jsonc
 {
-    "type": "ScrollBar",
+    "type": "scroll-bar",
     "orientation": "VERTICAL",                      // VERTICAL / HORIZONTAL
     "value": 0,                                    // 当前值
     "range": { "min": 0, "max": 100 },             // 值范围
@@ -555,7 +555,7 @@ WinFrame 是一个可拖拽、可缩放（可选）的窗口控件，内部包�
 
 ```jsonc
 {
-    "type": "WinFrame",
+    "type": "win-frame",
     "id": "myWinFrame",
     "rect": { "x": 100, "y": 100, "w": 400, "h": 300 },
     "title": "窗口标题",                              // 标题栏文字
@@ -570,8 +570,8 @@ WinFrame 是一个可拖拽、可缩放（可选）的窗口控件，内部包�
         "titleText": { "normal": "#FFFFFFFF" }        // 标题文字色
     },
     "children": [
-        { "type": "Label", "caption": "Hello" },
-        { "type": "Button", "caption": "OK" }
+        { "type": "label", "caption": "Hello" },
+        { "type": "button", "caption": "OK" }
     ],
     "events": {
         "onClose": "onWinFrameClosed"                 // 关闭按钮点击事件
@@ -591,7 +591,7 @@ WinFrame 是一个可拖拽、可缩放（可选）的窗口控件，内部包�
 
 ```jsonc
 {
-    "type": "ColorPicker",
+    "type": "color-picker",
     "color": "#FF6633FF",                              // 初始颜色（hex）
     "presets": ["#FF0000FF", "#00FF00FF", "#0000FFFF"], // 预设色块数组
     "presetLayout": { "cols": 8, "rows": 2 },          // 预设面板网格布局
@@ -624,7 +624,7 @@ WinFrame 是一个可拖拽、可缩放（可选）的窗口控件，内部包�
 
 ```jsonc
 {
-    "type": "ComboBox",
+    "type": "combo-box",
     "items": ["北京", "上海", "广州", "深圳", "杭州", "成都"],  // 下拉列表项
     "selectedIndex": 0,                                        // 初始选中项索引
     "placeholder": "请选择城市",                                 // 占位文本（未选中时显示）
@@ -658,7 +658,7 @@ MenuBar 继承自 ControlImpl，不通过 rect 定位（auto-width 通过 setPar
 
 ```jsonc
 {
-    "type": "MenuBar",
+    "type": "menu-bar",
     "id": "mainMenuBar",
     "font": { "size": 16 },                         // 全局菜单字体大小（静态 setFontSize）
     "barHeight": 32,                                 // 菜单栏高度（可选，缺省自动计算：fontSize × 1.6）
@@ -668,14 +668,14 @@ MenuBar 继承自 ControlImpl，不通过 rect 定位（auto-width 通过 setPar
             "items": [
                 { "caption": "新建", "shortcut": "Ctrl+N", "events": { "onClick": "onMenuNew" } },
                 { "caption": "打开", "shortcut": "Ctrl+O", "events": { "onClick": "onMenuOpen" }, "enabled": false },
-                { "type": "Separator" },
+                { "type": "separator" },
                 {
                     "caption": "最近文件",
                     "items": [                       // 嵌套 items = SubMenu
                         { "caption": "file1.txt", "events": { "onClick": "onMenuRecent" } }
                     ]
                 },
-                { "type": "Separator" },
+                { "type": "separator" },
                 { "caption": "退出", "shortcut": "Alt+F4", "events": { "onClick": "onMenuExit" } }
             ]
         },
@@ -737,7 +737,7 @@ MenuBar 解析后不加入父容器的子控件列表，而是独立存储在 `L
 ```jsonc
 {
     "id": "submitBtn",
-    "type": "Button",
+    "type": "button",
     "events": {
         "onClick": "handleSubmitClick"     // handler 名称字符串
     }
@@ -823,11 +823,11 @@ if (editBox) {
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "rect": { "x": 10, "y": 190, "w": 780, "h": 50 },
     "bgColor": "#353535FF",
     "layout": {
-        "type": "HFlow",                        // "HFlow" | "VFlow"
+        "type": "h-flow",                        // "HFlow" | "VFlow"
         "gap": 4,                                // 子控件之间的间距（像素）
         "padding": {                             // 容器内边距
             "left": 4, "top": 4,
@@ -853,7 +853,7 @@ if (editBox) {
 
 ```jsonc
 {
-    "type": "Button",
+    "type": "button",
     "rect": { "x": 0, "y": 0, "w": 80, "h": 42 },  // 初始 rect
     "flowWeight": 2,                                   // flex 权重（可选）
     "caption": "Flex2"
@@ -919,31 +919,31 @@ Panel (继承 ControlImpl)
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "id": "hflowDemo",
     "rect": { "x": 10, "y": 200, "w": 600, "h": 50 },
     "bgColor": "#353535FF",
     "borderColor": "#606060FF",
     "layout": {
-        "type": "HFlow",
+        "type": "h-flow",
         "gap": 8,
         "padding": { "left": 6, "top": 6, "right": 6, "bottom": 6 }
     },
     "children": [
         {
-            "type": "Button",
+            "type": "button",
             "rect": { "x": 0, "y": 0, "w": 80, "h": 38 },
             "flowWeight": 1,
             "caption": "左"
         },
         {
-            "type": "Button",
+            "type": "button",
             "rect": { "x": 0, "y": 0, "w": 80, "h": 38 },
             "flowWeight": 2,
             "caption": "中 (x2)"
         },
         {
-            "type": "Button",
+            "type": "button",
             "rect": { "x": 0, "y": 0, "w": 80, "h": 38 },
             "flowWeight": 1,
             "caption": "右"
@@ -969,14 +969,14 @@ Anchor 布局将子控件锚定到容器的特定边角或中心，支持偏移�
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "layout": {
-        "type": "Anchor",
+        "type": "anchor",
         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
     },
     "children": [
         {
-            "type": "Button",
+            "type": "button",
             "rect": { "x": 0, "y": 0, "w": 80, "h": 30 },
             "anchor": "TOP_RIGHT",                       // 锚点模式
             "anchorOffset": { "left": 0, "top": 0, "right": 4, "bottom": 0 },  // 偏移量
@@ -1019,22 +1019,22 @@ Anchor 布局将子控件锚定到容器的特定边角或中心，支持偏移�
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "rect": { "x": 10, "y": 540, "w": 780, "h": 90 },
     "layout": {
-        "type": "Anchor",
+        "type": "anchor",
         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
     },
     "children": [
-        { "type": "Button", "rect": { "w": 80, "h": 30 }, "anchor": "TOP_LEFT",      "caption": "TL" },
-        { "type": "Button", "rect": { "w": 80, "h": 30 }, "anchor": "TOP_RIGHT",     "caption": "TR",
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "TOP_LEFT",      "caption": "TL" },
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "TOP_RIGHT",     "caption": "TR",
           "anchorOffset": { "right": 4 } },
-        { "type": "Button", "rect": { "w": 80, "h": 30 }, "anchor": "BOTTOM_LEFT",   "caption": "BL",
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "BOTTOM_LEFT",   "caption": "BL",
           "anchorOffset": { "bottom": 4 } },
-        { "type": "Button", "rect": { "w": 80, "h": 30 }, "anchor": "BOTTOM_RIGHT",  "caption": "BR",
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "BOTTOM_RIGHT",  "caption": "BR",
           "anchorOffset": { "right": 4, "bottom": 4 } },
-        { "type": "Button", "rect": { "w": 100, "h": 30 }, "anchor": "CENTER",       "caption": "CENTER" },
-        { "type": "Button", "rect": { "w": 100, "h": 30 }, "anchor": "FILL",         "caption": "FILL bar",
+        { "type": "button", "rect": { "w": 100, "h": 30 }, "anchor": "CENTER",       "caption": "CENTER" },
+        { "type": "button", "rect": { "w": 100, "h": 30 }, "anchor": "FILL",         "caption": "FILL bar",
           "anchorOffset": { "left": 90, "top": 32, "right": 90, "bottom": 4 } }
     ]
 }
@@ -1060,9 +1060,9 @@ Grid 布局将容器划分为行列网格，子控件通过 `grid` 属性指定�
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "layout": {
-        "type": "Grid",
+        "type": "grid",
         "columns": ["1fr", "2fr", "100px"],      // 列定义
         "rows": ["30px", "1fr", "auto"],          // 行定义
         "gap": 4,
@@ -1070,7 +1070,7 @@ Grid 布局将容器划分为行列网格，子控件通过 `grid` 属性指定�
     },
     "children": [
         {
-            "type": "Button",
+            "type": "button",
             "rect": { "x": 0, "y": 0, "w": 0, "h": 0 },
             "grid": { "row": 0, "col": 0, "rowSpan": 1, "colSpan": 1 },
             "caption": "Cell (0,0)"
@@ -1121,29 +1121,29 @@ Grid 布局将容器划分为行列网格，子控件通过 `grid` 属性指定�
 
 ```jsonc
 {
-    "type": "Panel",
+    "type": "panel",
     "rect": { "x": 10, "y": 670, "w": 780, "h": 200 },
     "layout": {
-        "type": "Grid",
+        "type": "grid",
         "columns": ["1fr", "2fr", "100px"],
         "rows": ["30px", "1fr", "30px"],
         "gap": 4,
         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
     },
     "children": [
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 0, "col": 0 }, "caption": "(0,0)" },
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 0, "col": 1, "colSpan": 2 }, "caption": "(0,1) span2" },
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 1, "col": 0 }, "caption": "(1,0)" },
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 1, "col": 1 }, "caption": "(1,1)" },
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 1, "col": 2, "rowSpan": 2 }, "caption": "span\n2rows" },
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 2, "col": 0 }, "caption": "(2,0)" },
-        { "type": "Button", "rect": { "w": 0, "h": 0 },
+        { "type": "button", "rect": { "w": 0, "h": 0 },
           "grid": { "row": 2, "col": 1 }, "caption": "(2,1)" }
     ]
 }
@@ -2087,16 +2087,16 @@ Margin LayoutParser::parseMargin(const json& j) {
         "buttonText":  { "type": "string", "default": "Go" }
       },
       "template": {
-        "type": "Panel",
+        "type": "panel",
         "children": [
           {
-            "type": "EditBox",
+            "type": "edit-box",
             "rect": { "x": 0, "y": 0, "w": "75%", "h": 40 },
             "placeholder": "{{placeholder}}",
             "events": { "onEnter": "_comp_onSearch" }
           },
           {
-            "type": "Button",
+            "type": "button",
             "rect": { "x": "78%", "y": 0, "w": "22%", "h": 40 },
             "caption": "{{buttonText}}",
             "events": { "onClick": "_comp_onSearch" }
@@ -2108,10 +2108,10 @@ Margin LayoutParser::parseMargin(const json& j) {
 
   "layouts": [
     {
-      "type": "Panel",
+      "type": "panel",
       "children": [
         {
-          "type": "SearchBar",
+          "type": "search-bar",
           "id": "mySearch",
           "rect": { "x": 50, "y": 50 },
           "placeholder": "Type keyword...",
@@ -2351,7 +2351,7 @@ g_reloader.poll();
 
 ```json
 {
-    "type": "EditBox",
+    "type": "edit-box",
     "rect": { "x": 10, "y": 10, "w": 200, "h": 30 },
     "bind": {
         "text": { "source": "userName", "mode": "twoWay" },
@@ -2399,15 +2399,15 @@ ctx->set("sharedText", string("World!"));
 
 ```json
 {
-    "type": "EditBox",
+    "type": "edit-box",
     "bind": { "text": { "source": "sharedText", "mode": "twoWay" } }
 },
 {
-    "type": "Label",
+    "type": "label",
     "bind": { "caption": "sharedText" }
 },
 {
-    "type": "ProgressBar",
+    "type": "progress-bar",
     "bind": { "value": "progressValue" }
 }
 ```
@@ -2762,7 +2762,7 @@ add_custom_command(TARGET test_layout POST_BUILD
     "version": "1.0",
     "controls": [
         {
-            "type": "Panel",
+            "type": "panel",
             "id": "mainPanel",
             "rect": { "x": 0, "y": 0, "w": 800, "h": 600 },
             "colors": {
@@ -2770,7 +2770,7 @@ add_custom_command(TARGET test_layout POST_BUILD
             },
             "children": [
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "titleLabel",
                     "rect": { "x": 0, "y": 20, "w": 800, "h": 40 },
                     "caption": "布局配置系统测试",
@@ -2788,7 +2788,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                     }
                 },
                 {
-                    "type": "Panel",
+                    "type": "panel",
                     "id": "formPanel",
                     "rect": { "x": 50, "y": 80, "w": 400, "h": 200 },
                     "colors": {
@@ -2798,7 +2798,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                     },
                     "children": [
                         {
-                            "type": "Label",
+                            "type": "label",
                             "id": "nameLabel",
                             "rect": { "x": 20, "y": 20, "w": 80, "h": 30 },
                             "caption": "姓名：",
@@ -2806,7 +2806,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             "font": { "size": 16 }
                         },
                         {
-                            "type": "EditBox",
+                            "type": "edit-box",
                             "id": "nameEdit",
                             "rect": { "x": 110, "y": 20, "w": 250, "h": 30 },
                             "placeholder": "请输入姓名",
@@ -2817,7 +2817,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             }
                         },
                         {
-                            "type": "Label",
+                            "type": "label",
                             "id": "descLabel",
                             "rect": { "x": 20, "y": 70, "w": 360, "h": 20 },
                             "caption": "这是一个编辑框，输入文本后会触发 onTextChanged",
@@ -2828,7 +2828,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             }
                         },
                         {
-                            "type": "Button",
+                            "type": "button",
                             "id": "submitBtn",
                             "rect": { "x": 280, "y": 140, "w": 100, "h": 35 },
                             "caption": "提交",
@@ -2853,7 +2853,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                     ]
                 },
                 {
-                    "type": "Panel",
+                    "type": "panel",
                     "id": "previewPanel",
                     "rect": { "x": 500, "y": 80, "w": 250, "h": 200 },
                     "colors": {
@@ -2863,7 +2863,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                     },
                     "children": [
                         {
-                            "type": "Label",
+                            "type": "label",
                             "id": "previewTitle",
                             "rect": { "x": 10, "y": 10, "w": 230, "h": 25 },
                             "caption": "预览区域",
@@ -2871,7 +2871,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             "font": { "size": 14, "style": "BOLD" }
                         },
                         {
-                            "type": "Label",
+                            "type": "label",
                             "id": "previewContent",
                             "rect": { "x": 10, "y": 45, "w": 230, "h": 140 },
                             "caption": "姓名：\n年龄：\n备注：",
@@ -2884,7 +2884,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                     ]
                 },
                 {
-                    "type": "Label",
+                    "type": "label",
                     "id": "statusLabel",
                     "rect": { "x": 0, "y": 560, "w": 800, "h": 25 },
                     "caption": "状态：就绪",

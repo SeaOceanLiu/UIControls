@@ -27,6 +27,7 @@
 #include "Actor.h"
 #include "LuotiAni.h"
 #include "EventTypes.h"
+#include "PropertyNames.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -314,7 +315,7 @@ UIInstance UICornerstone_CreateInstance(
     // 全局默认后端配置（创建前设置，key=vsync）合并进窗口标志：
     // raylib 的 vsync 属创建期参数，须在 InitWindow 前以 FLAG_VSYNC_HINT 生效
     int gVsync = 0;
-    if (UICornerstone_GetBackendConfigInt(nullptr, "vsync", &gVsync) && gVsync)
+    if (UICornerstone_GetBackendConfigInt(nullptr, PropertyNames::kBackendKeyVsync, &gVsync) && gVsync)
         ctx->windowFlags |= UIWindowFlags::Vsync;
 
     if (!ctx->initialize()) {
@@ -360,7 +361,9 @@ UIInstance UICornerstone_CreateViewport(UIInstance parent, UIRect rect) {
     // initialize() 内兜底 `viewport = owner->viewport` 会覆盖上文写入的区域，
     // 此处须在 initialize 之后重写视口区域（§5.13.4）
     vp->viewport = SRect(rect.x, rect.y, rect.w, rect.h);
-    vp->bench->resized(vp->viewport);
+    // resized 只更新宽高（ControlImpl::resized），子视口位于非零偏移时须用
+    // setRect 一并写入 left/top，否则 bench 内容画在 (0,0) 被视口裁剪
+    vp->bench->setRect(vp->viewport);
 
     parent->children.push_back(vp);
     // 首个子视口自动设为活动视口（键盘事件投递目标）
@@ -516,7 +519,8 @@ int UICornerstone_GetBackendConfigBool(UIInstance inst, const char* key, int* va
 void UICornerstone_SetViewport(UIInstance instance, float x, float y, float w, float h) {
     if (!instance || instance->destroying) return;
     instance->viewport = SRect(x, y, w, h);
-    if (instance->bench) instance->bench->resized(instance->viewport);
+    // resized 只更新宽高（ControlImpl::resized），须用 setRect 一并写入偏移
+    if (instance->bench) instance->bench->setRect(instance->viewport);
 }
 
 void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w, float* h) {
@@ -535,78 +539,104 @@ void UICornerstone_PushUIEvent(UIInstance instance, const UIEvent* ue) {
     if (ue) instance->queuedEvents.push(*ue);
 }
 
-void UICornerstone_ProcessEvents(UIInstance instance) {
-    if (!instance || !instance->initialized || instance->destroying) return;
+// 单实例事件泵：poll 属于本实例窗口的事件并分发（只消费自己的事件，
+// 不消费其他窗口的事件，多实例共享全局队列时的隔离保证）。
+// 返回是否处理了至少一个事件。
+static bool pumpInstanceEvents(UIInstance instance) {
+    if (!instance || !instance->initialized || instance->destroying) return false;
+    if (!instance->ownsBackend || !instance->inputBackend) return false;
 
+    bool handled = false;
+    Event evt;
+    while (instance->inputBackend->pollEvent(evt)) {
+        handled = true;
+        switch (evt.m_type) {
+        case EventType::MouseMove:
+        case EventType::MouseDown:
+        case EventType::MouseUp:
+        case EventType::MouseWheel: {
+            float mx = (evt.m_type == EventType::MouseWheel)
+                ? evt.mouseWheel.x : evt.mousePos.x;
+            float my = (evt.m_type == EventType::MouseWheel)
+                ? evt.mouseWheel.y : evt.mousePos.y;
+            UIInstance target = findViewportByCoord(instance, mx, my);
+            if (!target) {
+                // 兜底：点击 owner 区域视为焦点回到 owner 树
+                if (instance->activeViewport
+                    && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
+                    instance->activeViewport->focusManager->clearFocus();
+                    instance->activeViewport = nullptr;
+                }
+                dispatchToBench(instance, evt);
+                break;
+            }
+            // 跨视口焦点转移（仅按下/抬起触发）
+            if (target != instance->activeViewport
+                && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
+                if (instance->activeViewport) {
+                    instance->activeViewport->focusManager->clearFocus();
+                }
+                instance->activeViewport = target;
+            }
+            // 事件保持窗口绝对坐标分发（控件命中/绘制均基于绝对坐标
+            // getDrawRect；若在此转视口本地坐标，则子视口偏移非零时
+            // 命中测试与坐标换算全部错位）
+            dispatchToBench(target, evt);
+            break;
+        }
+        case EventType::KeyDown:
+        case EventType::KeyUp:
+            // 键盘事件：先经 Ctrl+Tab 智能路由，未消费则发到当前活动视口
+            // （activeViewport 为 null 时回退 owner 自身 bench）
+            if (!tryViewportScopeSwitch(instance, evt)) {
+                UIInstance kbdTarget = instance->activeViewport
+                    ? instance->activeViewport : instance;
+                dispatchToBench(kbdTarget, evt);
+            }
+            break;
+        case EventType::FocusLost:
+            // 窗口失去系统焦点（用户点击了其他窗口/实例）→ 清除本实例焦点，
+            // 避免跨实例同时存在焦点环（每个实例的 FocusManager 相互独立）。
+            if (instance->focusManager) instance->focusManager->clearFocus();
+            if (instance->activeViewport && instance->activeViewport->focusManager)
+                instance->activeViewport->focusManager->clearFocus();
+            break;
+        case EventType::FocusGained:
+            break;
+        case EventType::TextInput:
+            // 文本输入事件：直接发到当前活动视口（焦点控件处理）
+            {
+                UIInstance kbdTarget = instance->activeViewport
+                    ? instance->activeViewport : instance;
+                dispatchToBench(kbdTarget, evt);
+            }
+            break;
+        default:
+            // 窗口事件 → owner 自身处理
+            if (evt.m_type == EventType::WindowClose) {
+                instance->quit = true;
+            } else if (evt.m_type == EventType::WindowResize) {
+                instance->bench->resized(SRect(0, 0,
+                    (float)evt.resizeEvent.width, (float)evt.resizeEvent.height));
+            }
+            break;
+        }
+    }
+    return handled;
+}
+
+// 返回是否处理了至少一个事件（供多实例主循环调度：处理完所有实例的
+// 事件为止——每个实例只消费自己窗口的事件，总有一个实例能处理队头）
+int UICornerstone_ProcessEvents(UIInstance instance) {
+    if (!instance || !instance->initialized || instance->destroying) return 0;
+
+    bool handled = false;
     if (instance->ownsBackend) {
-        // 窗口级别：轮询输入并分发到子视口（产出 C++ Event）
+        // 窗口级别：轮询属于本窗口的输入并分发到子视口（产出 C++ Event）。
+        // newFrame 每帧一次（多实例主循环每帧调用一次 ProcessEvents）。
         if (instance->inputBackend) {
             instance->inputBackend->newFrame();
-            Event evt;
-            while (instance->inputBackend->pollEvent(evt)) {
-                switch (evt.m_type) {
-                case EventType::MouseMove:
-                case EventType::MouseDown:
-                case EventType::MouseUp:
-                case EventType::MouseWheel: {
-                    float mx = (evt.m_type == EventType::MouseWheel)
-                        ? evt.mouseWheel.x : evt.mousePos.x;
-                    float my = (evt.m_type == EventType::MouseWheel)
-                        ? evt.mouseWheel.y : evt.mousePos.y;
-                    UIInstance target = findViewportByCoord(instance, mx, my);
-                    if (!target) {
-                        // 兜底：点击 owner 区域视为焦点回到 owner 树
-                        if (instance->activeViewport
-                            && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
-                            instance->activeViewport->focusManager->clearFocus();
-                            instance->activeViewport = nullptr;
-                        }
-                        dispatchToBench(instance, evt);
-                        break;
-                    }
-                    // 跨视口焦点转移（仅按下/抬起触发）
-                    if (target != instance->activeViewport
-                        && (evt.m_type == EventType::MouseDown || evt.m_type == EventType::MouseUp)) {
-                        if (instance->activeViewport) {
-                            instance->activeViewport->focusManager->clearFocus();
-                        }
-                        instance->activeViewport = target;
-                    }
-                    // 转视口本地坐标后 dispatch 到目标视口
-                    evt.mousePos.x = mx - target->viewport.left;
-                    evt.mousePos.y = my - target->viewport.top;
-                    dispatchToBench(target, evt);
-                    break;
-                }
-                case EventType::KeyDown:
-                case EventType::KeyUp:
-                    // 键盘事件：先经 Ctrl+Tab 智能路由，未消费则发到当前活动视口
-                    // （activeViewport 为 null 时回退 owner 自身 bench）
-                    if (!tryViewportScopeSwitch(instance, evt)) {
-                        UIInstance kbdTarget = instance->activeViewport
-                            ? instance->activeViewport : instance;
-                        dispatchToBench(kbdTarget, evt);
-                    }
-                    break;
-                case EventType::TextInput:
-                    // 文本输入事件：直接发到当前活动视口（焦点控件处理）
-                    {
-                        UIInstance kbdTarget = instance->activeViewport
-                            ? instance->activeViewport : instance;
-                        dispatchToBench(kbdTarget, evt);
-                    }
-                    break;
-                default:
-                    // 窗口事件 → owner 自身处理
-                    if (evt.m_type == EventType::WindowClose) {
-                        instance->quit = true;
-                    } else if (evt.m_type == EventType::WindowResize) {
-                        instance->bench->resized(SRect(0, 0,
-                            (float)evt.resizeEvent.width, (float)evt.resizeEvent.height));
-                    }
-                    break;
-                }
-            }
+            if (pumpInstanceEvents(instance)) handled = true;
         }
     }
 
@@ -618,6 +648,7 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
         Event event;
         if (!uiEventToEvent(ue, event)) continue;
 
+        handled = true;
         if (event.m_type == EventType::WindowClose) {
             instance->quit = true;
         } else if (event.m_type == EventType::WindowResize) {
@@ -631,6 +662,7 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
             dispatchToBench(instance, event);
         }
     }
+    return handled ? 1 : 0;
 }
 
 void UICornerstone_Update(UIInstance instance, double deltaTime) {
@@ -1116,6 +1148,7 @@ UIControlHandle UICornerstone_CreateDialog(UIInstance instance,
     if (cancelText) ctl->setCancelButtonText(cancelText);
     ctl->setCentered();
     ctl->create();
+    ctl->open();    // create() 内 setVisible(false)，须 open() 才显示（computeTargetRect 居中定位）
 
     // 保持 Dialog 生命期：加入 popupPool，close() 时自动清理
     instance->popupPool.push_back(ctl);

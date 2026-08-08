@@ -1,4 +1,4 @@
-# WinFrame 控件设计文档
+﻿# WinFrame 控件设计文档
 
 ## 1. 概述
 
@@ -853,7 +853,7 @@ void WinFrame::draw() {
 
 ```json
 {
-    "type": "WinFrame",
+    "type": "win-frame",
     "id": "myWinFrame",
     "rect": { "x": 100, "y": 100, "w": 400, "h": 300 },
     "colors": {
@@ -865,8 +865,8 @@ void WinFrame::draw() {
     "title": "标题",
     "edgeMargin": 4.0,
     "children": [
-        { "type": "Label", "caption": "Hello" },
-        { "type": "Button", "caption": "OK" }
+        { "type": "label", "caption": "Hello" },
+        { "type": "button", "caption": "OK" }
     ],
     "events": {
         "onClose": "onWinFrameClosed"

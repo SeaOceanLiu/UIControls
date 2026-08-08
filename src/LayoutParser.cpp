@@ -5,6 +5,7 @@
 #include "ComboBox.h"
 #include "NumericUpDown.h"
 #include "LayoutEngine.h"
+#include "PropertyNames.h"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -33,21 +34,21 @@ shared_ptr<Control> LayoutParser::parseLayout(const string& jsonContent) {
         return nullptr;
     }
 
-    if (j.contains("theme") && j["theme"].is_object()) {
-        m_theme.parse(j["theme"]);
+    if (j.contains(PropertyNames::kJsonTheme) && j[PropertyNames::kJsonTheme].is_object()) {
+        m_theme.parse(j[PropertyNames::kJsonTheme]);
     }
 
     // Component system: parse components before layouts
-    if (j.contains("components")) {
+    if (j.contains(PropertyNames::kJsonComponents)) {
         parseComponents(j);
     }
 
     // Support both "layouts" (component system) and "controls" (original)
     const json* controlsArray = nullptr;
-    if (j.contains("layouts") && j["layouts"].is_array()) {
-        controlsArray = &j["layouts"];
-    } else if (j.contains("controls") && j["controls"].is_array()) {
-        controlsArray = &j["controls"];
+    if (j.contains(PropertyNames::kJsonLayouts) && j[PropertyNames::kJsonLayouts].is_array()) {
+        controlsArray = &j[PropertyNames::kJsonLayouts];
+    } else if (j.contains(PropertyNames::kJsonControls) && j[PropertyNames::kJsonControls].is_array()) {
+        controlsArray = &j[PropertyNames::kJsonControls];
     }
 
     if (!controlsArray) {
@@ -70,8 +71,8 @@ shared_ptr<Control> LayoutParser::parseLayout(const string& jsonContent) {
     }
 
     // 解析独立的 Dialogs（从 controls 树外管理）
-    if (j.contains("dialogs") && j["dialogs"].is_array()) {
-        const json& dialogs = j["dialogs"];
+    if (j.contains(PropertyNames::kJsonDialogs) && j[PropertyNames::kJsonDialogs].is_array()) {
+        const json& dialogs = j[PropertyNames::kJsonDialogs];
         for (size_t i = 0; i < dialogs.size(); ++i) {
             auto dlg = parseControl(dialogs[i], nullptr, (int)i);
             if (auto pop = dynamic_pointer_cast<Popup>(dlg)) {
@@ -208,46 +209,46 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
     string indexPath = "controls[" + to_string(index) + "]";
     pushJsonPath(indexPath);
 
-    if (!j.contains("type") || !j["type"].is_string()) {
+    if (!j.contains(PropertyNames::kJsonType) || !j[PropertyNames::kJsonType].is_string()) {
         logError("'type' field is required");
         popJsonPath();
         return nullptr;
     }
 
-    string type = j["type"].get<string>();
+    string type = j[PropertyNames::kJsonType].get<string>();
 
     shared_ptr<Control> result = nullptr;
-    if (type == "Label") {
+    if (type == PropertyNames::kControlTypeLabel) {
         result = parseLabel(j, parent);
-    } else if (type == "Button") {
+    } else if (type == PropertyNames::kControlTypeButton) {
         result = parseButton(j, parent);
-    } else if (type == "EditBox") {
+    } else if (type == PropertyNames::kControlTypeEditBox) {
         result = parseEditBox(j, parent);
-    } else if (type == "ComboBox") {
+    } else if (type == PropertyNames::kControlTypeComboBox) {
         result = parseComboBox(j, parent);
-    } else if (type == "TextArea") {
+    } else if (type == PropertyNames::kControlTypeTextArea) {
         result = parseTextArea(j, parent);
-    } else if (type == "CheckBox") {
+    } else if (type == PropertyNames::kControlTypeCheckBox) {
         result = parseCheckBox(j, parent);
-    } else if (type == "ProgressBar") {
+    } else if (type == PropertyNames::kControlTypeProgressBar) {
         result = parseProgressBar(j, parent);
-    } else if (type == "Slider") {
+    } else if (type == PropertyNames::kControlTypeSlider) {
         result = parseSlider(j, parent);
-    } else if (type == "ScrollBar") {
+    } else if (type == PropertyNames::kControlTypeScrollBar) {
         result = parseScrollBar(j, parent);
-    } else if (type == "Panel") {
+    } else if (type == PropertyNames::kControlTypePanel) {
         result = parsePanel(j, parent);
-    } else if (type == "WinFrame") {
+    } else if (type == PropertyNames::kControlTypeWinFrame) {
         result = parseWinFrame(j, parent);
-    } else if (type == "ColorPicker") {
+    } else if (type == PropertyNames::kControlTypeColorPicker) {
         result = parseColorPicker(j, parent);
-    } else if (type == "Popup") {
+    } else if (type == PropertyNames::kControlTypePopup) {
         result = parsePopup(j, parent);
-    } else if (type == "ConfirmPopup") {
+    } else if (type == PropertyNames::kControlTypeConfirmPopup) {
         result = parseConfirmPopup(j, parent);
-    } else if (type == "Dialog") {
+    } else if (type == PropertyNames::kControlTypeDialog) {
         result = parseDialog(j, parent);
-    } else if (type == "MenuBar") {
+    } else if (type == PropertyNames::kControlTypeMenuBar) {
         // MenuBar 不加入控件树（会被父容器裁剪），独立存储后再由调用方加入 BENCH 顶层
         auto menuBar = parseMenuBar(j, parent);
         if (menuBar) {
@@ -256,11 +257,11 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = nullptr;
         popJsonPath();
         return nullptr;
-    } else if (type == "NumericUpDown") {
+    } else if (type == PropertyNames::kControlTypeNumericUpDown) {
         result = parseNumericUpDown(j, parent);
-    } else if (type == "Splitter") {
+    } else if (type == PropertyNames::kControlTypeSplitter) {
         result = parseSplitter(j, parent);
-    } else if (type == "TreeView") {
+    } else if (type == PropertyNames::kControlTypeTreeView) {
         result = parseTreeView(j, parent);
     } else if (m_components.find(type) != m_components.end()) {
         // Component type: instantiate from template
@@ -278,79 +279,79 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
 // ==================== Label ====================
 
 shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto label = make_shared<Label>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(label, "label");
-    m_theme.applyFont(label, "label");
+    m_theme.applyCommonColors(label, PropertyNames::kThemeCatLabel);
+    m_theme.applyFont(label, PropertyNames::kThemeCatLabel);
     parseCommonProperties(label, j);
 
     // caption
-    if (j.contains("caption") && j["caption"].is_string()) {
-        label->setCaption(j["caption"].get<string>());
+    if (j.contains(PropertyNames::kJsonCaption) && j[PropertyNames::kJsonCaption].is_string()) {
+        label->setCaption(j[PropertyNames::kJsonCaption].get<string>());
     }
 
     // alignment
-    if (j.contains("alignment") && j["alignment"].is_string()) {
-        label->setAlignmentMode(parseAlignment(j["alignment"].get<string>()));
+    if (j.contains(PropertyNames::kJsonAlignment) && j[PropertyNames::kJsonAlignment].is_string()) {
+        label->setAlignmentMode(parseAlignment(j[PropertyNames::kJsonAlignment].get<string>()));
     }
 
     // font
-    if (j.contains("font") && j["font"].is_object()) {
-        pushJsonPath("font");
-        const json& font = j["font"];
-        if (font.contains("name") && font["name"].is_string()) {
-            label->setFont(parseFontName(font["name"].get<string>()));
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        pushJsonPath(PropertyNames::kJsonFont);
+        const json& font = j[PropertyNames::kJsonFont];
+        if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+            label->setFont(parseFontName(font[PropertyNames::kJsonName].get<string>()));
         }
-        if (font.contains("size") && font["size"].is_number()) {
-            label->setFontSize(font["size"].get<int>());
+        if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+            label->setFontSize(font[PropertyNames::kJsonSize].get<int>());
         }
-        if (font.contains("style") && font["style"].is_string()) {
-            label->SetFontStyle(parseFontStyle(font["style"].get<string>()));
+        if (font.contains(PropertyNames::kJsonStyle) && font[PropertyNames::kJsonStyle].is_string()) {
+            label->SetFontStyle(parseFontStyle(font[PropertyNames::kJsonStyle].get<string>()));
         }
         popJsonPath();
     }
 
     // shadow
-    if (j.contains("shadow") && j["shadow"].is_object()) {
-        pushJsonPath("shadow");
-        const json& shadow = j["shadow"];
-        label->setShadow(shadow.value("enabled", false));
-        if (shadow.contains("offset") && shadow["offset"].is_object()) {
-            float ox = shadow["offset"].value("x", 1.0f);
-            float oy = shadow["offset"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonShadow) && j[PropertyNames::kJsonShadow].is_object()) {
+        pushJsonPath(PropertyNames::kJsonShadow);
+        const json& shadow = j[PropertyNames::kJsonShadow];
+        label->setShadow(shadow.value(PropertyNames::kJsonEnabled, false));
+        if (shadow.contains(PropertyNames::kJsonOffset) && shadow[PropertyNames::kJsonOffset].is_object()) {
+            float ox = shadow[PropertyNames::kJsonOffset].value(PropertyNames::kJsonX, 1.0f);
+            float oy = shadow[PropertyNames::kJsonOffset].value(PropertyNames::kJsonY, 1.0f);
             label->setShadowOffset(SPoint(ox, oy));
         }
         popJsonPath();
     }
 
     // lineHeight
-    if (j.contains("lineHeight") && j["lineHeight"].is_number()) {
-        label->setLineHeight(j["lineHeight"].get<int>());
+    if (j.contains(PropertyNames::kJsonLineHeight) && j[PropertyNames::kJsonLineHeight].is_number()) {
+        label->setLineHeight(j[PropertyNames::kJsonLineHeight].get<int>());
     }
 
     // lineSpacingRatio
-    if (j.contains("lineSpacingRatio") && j["lineSpacingRatio"].is_number()) {
-        label->setLineSpacingRatio(j["lineSpacingRatio"].get<float>());
+    if (j.contains(PropertyNames::kJsonLineSpacingRatio) && j[PropertyNames::kJsonLineSpacingRatio].is_number()) {
+        label->setLineSpacingRatio(j[PropertyNames::kJsonLineSpacingRatio].get<float>());
     }
 
     // enableExpand
-    if (j.contains("enableExpand") && j["enableExpand"].is_boolean()) {
-        label->setEnableExpand(j["enableExpand"].get<bool>());
+    if (j.contains(PropertyNames::kJsonEnableExpand) && j[PropertyNames::kJsonEnableExpand].is_boolean()) {
+        label->setEnableExpand(j[PropertyNames::kJsonEnableExpand].get<bool>());
     }
 
     // debugDraw
-    if (j.contains("debugDraw") && j["debugDraw"].is_boolean()) {
-        label->setDebugDraw(j["debugDraw"].get<bool>());
+    if (j.contains(PropertyNames::kJsonDebugDraw) && j[PropertyNames::kJsonDebugDraw].is_boolean()) {
+        label->setDebugDraw(j[PropertyNames::kJsonDebugDraw].get<bool>());
     }
 
     // events
@@ -358,8 +359,8 @@ shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
     parseBindings(label, j);
 
     // id
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = label;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = label;
     }
 
     label->create();
@@ -370,73 +371,72 @@ shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
 // ==================== Button ====================
 
 shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto btn = make_shared<Button>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(btn, "button");
+    m_theme.applyCommonColors(btn, PropertyNames::kThemeCatButton);
     parseCommonProperties(btn, j);
 
     // captionLabel embedding (Phase 2): 使用完整 Label 配置
-    if (j.contains("captionLabel") && j["captionLabel"].is_object()) {
-        pushJsonPath("captionLabel");
+    if (j.contains("captionLabel") && j[PropertyNames::kJsonCaptionLabel].is_object()) {
+        pushJsonPath(PropertyNames::kJsonCaptionLabel);
 
-        const json& cl = j["captionLabel"];
+        const json& cl = j[PropertyNames::kJsonCaptionLabel];
 
         auto builder = LabelBuilder(btn.get(), SRect(0, 0, rect.width, rect.height));
 
-        builder.setFont(m_theme.getFontName("button"));
-        builder.setFontSize(m_theme.getFontSize("button"));
+        builder.setFont(m_theme.getFontName(PropertyNames::kThemeCatButton));
+        builder.setFontSize(m_theme.getFontSize(PropertyNames::kThemeCatButton));
 
-        if (cl.contains("caption") && cl["caption"].is_string()) {
-            builder.setCaption(cl["caption"].get<string>());
+        if (cl.contains(PropertyNames::kJsonCaption) && cl[PropertyNames::kJsonCaption].is_string()) {
+            builder.setCaption(cl[PropertyNames::kJsonCaption].get<string>());
+        }
+        if (cl.contains(PropertyNames::kJsonFont) && cl[PropertyNames::kJsonFont].is_object()) {
+            const json& font = cl[PropertyNames::kJsonFont];
+            if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+                builder.setFont(parseFontName(font[PropertyNames::kJsonName].get<string>()));
+            }
+            if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+                builder.setFontSize(font[PropertyNames::kJsonSize].get<int>());
+            }
+            if (font.contains(PropertyNames::kJsonStyle) && font[PropertyNames::kJsonStyle].is_string()) {
+                builder.SetFontStyle(parseFontStyle(font[PropertyNames::kJsonStyle].get<string>()));
+            }
         }
 
-        if (cl.contains("font") && cl["font"].is_object()) {
-            const json& font = cl["font"];
-            if (font.contains("name") && font["name"].is_string()) {
-                builder.setFont(parseFontName(font["name"].get<string>()));
-            }
-            if (font.contains("size") && font["size"].is_number()) {
-                builder.setFontSize(font["size"].get<int>());
-            }
-            if (font.contains("style") && font["style"].is_string()) {
-                builder.SetFontStyle(parseFontStyle(font["style"].get<string>()));
-            }
+        if (cl.contains(PropertyNames::kJsonAlignment) && cl[PropertyNames::kJsonAlignment].is_string()) {
+            builder.setAlignmentMode(parseAlignment(cl[PropertyNames::kJsonAlignment].get<string>()));
         }
 
-        if (cl.contains("alignment") && cl["alignment"].is_string()) {
-            builder.setAlignmentMode(parseAlignment(cl["alignment"].get<string>()));
-        }
-
-        if (cl.contains("shadow") && cl["shadow"].is_object()) {
-            const json& shadow = cl["shadow"];
-            if (shadow.contains("enabled") && shadow["enabled"].is_boolean()) {
-                builder.setShadow(shadow["enabled"].get<bool>());
+        if (cl.contains(PropertyNames::kJsonShadow) && cl[PropertyNames::kJsonShadow].is_object()) {
+            const json& shadow = cl[PropertyNames::kJsonShadow];
+            if (shadow.contains(PropertyNames::kJsonEnabled) && shadow[PropertyNames::kJsonEnabled].is_boolean()) {
+                builder.setShadow(shadow[PropertyNames::kJsonEnabled].get<bool>());
             }
-            if (shadow.contains("offset") && shadow["offset"].is_object()) {
+            if (shadow.contains(PropertyNames::kJsonOffset) && shadow[PropertyNames::kJsonOffset].is_object()) {
                 SPoint offset;
-                offset.x = shadow["offset"].value("x", 1);
-                offset.y = shadow["offset"].value("y", 1);
+                offset.x = shadow[PropertyNames::kJsonOffset].value(PropertyNames::kJsonX, 1);
+                offset.y = shadow[PropertyNames::kJsonOffset].value(PropertyNames::kJsonY, 1);
                 builder.setShadowOffset(offset);
             }
         }
 
-        if (cl.contains("colors") && cl["colors"].is_object()) {
-            const json& colors = cl["colors"];
-            if (colors.contains("text") && colors["text"].is_object()) {
-                builder.setTextStateColor(parseStateColor(colors["text"], StateColor::Type::Text));
+        if (cl.contains(PropertyNames::kJsonColors) && cl[PropertyNames::kJsonColors].is_object()) {
+            const json& colors = cl[PropertyNames::kJsonColors];
+            if (colors.contains(PropertyNames::kJsonText) && colors[PropertyNames::kJsonText].is_object()) {
+                builder.setTextStateColor(parseStateColor(colors[PropertyNames::kJsonText], StateColor::Type::Text));
             }
-            if (colors.contains("textShadow") && colors["textShadow"].is_object()) {
-                builder.setTextShadowStateColor(parseStateColor(colors["textShadow"], StateColor::Type::TextShadow));
+            if (colors.contains(PropertyNames::kJsonTextShadow) && colors[PropertyNames::kJsonTextShadow].is_object()) {
+                builder.setTextShadowStateColor(parseStateColor(colors[PropertyNames::kJsonTextShadow], StateColor::Type::TextShadow));
             }
         }
 
@@ -446,30 +446,30 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
         popJsonPath();
     } else {
         // 简单方式 (Phase 1): 仅 caption / captionSize / enableTextShadow
-        int themeFontSize = m_theme.getFontSize("button");
+        int themeFontSize = m_theme.getFontSize(PropertyNames::kThemeCatButton);
         if (themeFontSize != 16) {
             btn->setCaptionSize((float)themeFontSize);
         }
 
-        if (j.contains("caption") && j["caption"].is_string()) {
-            btn->setCaption(j["caption"].get<string>());
+        if (j.contains(PropertyNames::kJsonCaption) && j[PropertyNames::kJsonCaption].is_string()) {
+            btn->setCaption(j[PropertyNames::kJsonCaption].get<string>());
         }
 
-        if (j.contains("captionSize") && j["captionSize"].is_number()) {
-            btn->setCaptionSize(j["captionSize"].get<float>());
+        if (j.contains(PropertyNames::kJsonCaptionSize) && j[PropertyNames::kJsonCaptionSize].is_number()) {
+            btn->setCaptionSize(j[PropertyNames::kJsonCaptionSize].get<float>());
         }
 
-        if (j.contains("enableTextShadow") && j["enableTextShadow"].is_boolean()) {
-            btn->setTextShadowEnable(j["enableTextShadow"].get<bool>());
+        if (j.contains("enableTextShadow") && j[PropertyNames::kJsonEnableTextShadow].is_boolean()) {
+            btn->setTextShadowEnable(j[PropertyNames::kJsonEnableTextShadow].get<bool>());
         }
     }
 
     // Actors (state images)
-    if (j.contains("actors") && j["actors"].is_object()) {
-        pushJsonPath("actors");
-        const json& actors = j["actors"];
+    if (j.contains(PropertyNames::kJsonActors) && j[PropertyNames::kJsonActors].is_object()) {
+        pushJsonPath(PropertyNames::kJsonActors);
+        const json& actors = j[PropertyNames::kJsonActors];
 
-        bool matchRect = actors.value("matchParentRect", false);
+        bool matchRect = actors.value(PropertyNames::kJsonMatchParentRect, false);
 
         auto createActor = [&](const json& v) -> shared_ptr<Actor> {
             if (v.is_null()) return nullptr;
@@ -479,17 +479,17 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
             if (v.is_string()) {
                 filePath = v.get<string>();
             } else if (v.is_object()) {
-                if (v.contains("file") && v["file"].is_string()) {
-                    filePath = v["file"].get<string>();
+                if (v.contains(PropertyNames::kJsonFile) && v[PropertyNames::kJsonFile].is_string()) {
+                    filePath = v[PropertyNames::kJsonFile].get<string>();
                 }
-                if (v.contains("resourceId") && v["resourceId"].is_string()) {
-                    resourceId = v["resourceId"].get<string>();
+                if (v.contains(PropertyNames::kJsonResourceId) && v[PropertyNames::kJsonResourceId].is_string()) {
+                    resourceId = v[PropertyNames::kJsonResourceId].get<string>();
                 }
-                if (v.contains("scaleType") && v["scaleType"].is_string()) {
-                    string st = v["scaleType"].get<string>();
-                    if (st == "FIT_CENTER")      scaleType = ScaleType::FIT_CENTER;
-                    else if (st == "CENTER_CROP") scaleType = ScaleType::CENTER_CROP;
-                    else if (st == "NONE")        scaleType = ScaleType::NONE;
+                if (v.contains(PropertyNames::kJsonScaleType) && v[PropertyNames::kJsonScaleType].is_string()) {
+                    string st = v[PropertyNames::kJsonScaleType].get<string>();
+                    if (st == PropertyNames::kScaleTypeFitCenter)      scaleType = ScaleType::FIT_CENTER;
+                    else if (st == PropertyNames::kScaleTypeCenterCrop) scaleType = ScaleType::CENTER_CROP;
+                    else if (st == PropertyNames::kScaleTypeNone)        scaleType = ScaleType::NONE;
                 }
             }
             shared_ptr<Actor> actor = nullptr;
@@ -504,20 +504,20 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
             return actor;
         };
 
-        if (actors.contains("normal") && !actors["normal"].is_null()) {
-            auto actor = createActor(actors["normal"]);
+        if (actors.contains(PropertyNames::kStateKeyNormal) && !actors[PropertyNames::kStateKeyNormal].is_null()) {
+            auto actor = createActor(actors[PropertyNames::kStateKeyNormal]);
             if (actor) btn->setNormalStateActor(actor);
         }
-        if (actors.contains("hover") && !actors["hover"].is_null()) {
-            auto actor = createActor(actors["hover"]);
+        if (actors.contains(PropertyNames::kStateKeyHover) && !actors[PropertyNames::kStateKeyHover].is_null()) {
+            auto actor = createActor(actors[PropertyNames::kStateKeyHover]);
             if (actor) btn->setHoverStateActor(actor);
         }
-        if (actors.contains("pressed") && !actors["pressed"].is_null()) {
-            auto actor = createActor(actors["pressed"]);
+        if (actors.contains(PropertyNames::kStateKeyPressed) && !actors[PropertyNames::kStateKeyPressed].is_null()) {
+            auto actor = createActor(actors[PropertyNames::kStateKeyPressed]);
             if (actor) btn->setPressedStateActor(actor);
         }
-        if (actors.contains("disabled") && !actors["disabled"].is_null()) {
-            auto actor = createActor(actors["disabled"]);
+        if (actors.contains(PropertyNames::kStateKeyDisabled) && !actors[PropertyNames::kStateKeyDisabled].is_null()) {
+            auto actor = createActor(actors[PropertyNames::kStateKeyDisabled]);
             if (actor) btn->setDisabledStateActor(actor);
     }
 
@@ -527,19 +527,19 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
     }
 
     // LuotiAni (particle animation)
-    if (j.contains("luotiAni") && !j["luotiAni"].is_null()) {
-        pushJsonPath("luotiAni");
-        const json& la = j["luotiAni"];
+    if (j.contains(PropertyNames::kJsonLuotiAni) && !j[PropertyNames::kJsonLuotiAni].is_null()) {
+        pushJsonPath(PropertyNames::kJsonLuotiAni);
+        const json& la = j[PropertyNames::kJsonLuotiAni];
         string filePath;
         string resourceId;
         if (la.is_string()) {
             filePath = la.get<string>();
         } else if (la.is_object()) {
-            if (la.contains("file") && la["file"].is_string()) {
-                filePath = la["file"].get<string>();
+            if (la.contains(PropertyNames::kJsonFile) && la[PropertyNames::kJsonFile].is_string()) {
+                filePath = la[PropertyNames::kJsonFile].get<string>();
             }
-            if (la.contains("resourceId") && la["resourceId"].is_string()) {
-                resourceId = la["resourceId"].get<string>();
+            if (la.contains(PropertyNames::kJsonResourceId) && la[PropertyNames::kJsonResourceId].is_string()) {
+                resourceId = la[PropertyNames::kJsonResourceId].get<string>();
             }
         }
         if (!filePath.empty()) {
@@ -571,8 +571,8 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
     parseEvents(btn, j);
     parseBindings(btn, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = btn;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = btn;
     }
 
     btn->create();
@@ -582,67 +582,67 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
 // ==================== EditBox ====================
 
 shared_ptr<EditBox> LayoutParser::parseEditBox(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto editBox = make_shared<EditBox>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(editBox, "editbox");
-    editBox->setFont(m_theme.getFontName("editbox"));
-    editBox->setFontSize(m_theme.getFontSize("editbox"));
+    m_theme.applyCommonColors(editBox, PropertyNames::kThemeCatEditBox);
+    editBox->setFont(m_theme.getFontName(PropertyNames::kThemeCatEditBox));
+    editBox->setFontSize(m_theme.getFontSize(PropertyNames::kThemeCatEditBox));
     parseCommonProperties(editBox, j);
 
-    if (j.contains("text") && j["text"].is_string()) {
-        editBox->setText(j["text"].get<string>());
+    if (j.contains(PropertyNames::kJsonText) && j[PropertyNames::kJsonText].is_string()) {
+        editBox->setText(j[PropertyNames::kJsonText].get<string>());
     }
 
-    if (j.contains("placeholder") && j["placeholder"].is_string()) {
-        editBox->setPlaceholder(j["placeholder"].get<string>());
+    if (j.contains(PropertyNames::kJsonPlaceholder) && j[PropertyNames::kJsonPlaceholder].is_string()) {
+        editBox->setPlaceholder(j[PropertyNames::kJsonPlaceholder].get<string>());
     }
 
-    if (j.contains("passwordMode") && j["passwordMode"].is_boolean()) {
-        editBox->setPasswordMode(j["passwordMode"].get<bool>());
+    if (j.contains(PropertyNames::kJsonPasswordMode) && j[PropertyNames::kJsonPasswordMode].is_boolean()) {
+        editBox->setPasswordMode(j[PropertyNames::kJsonPasswordMode].get<bool>());
     }
 
-    if (j.contains("passwordChar") && j["passwordChar"].is_string()) {
-        string pc = j["passwordChar"].get<string>();
+    if (j.contains(PropertyNames::kJsonPasswordChar) && j[PropertyNames::kJsonPasswordChar].is_string()) {
+        string pc = j[PropertyNames::kJsonPasswordChar].get<string>();
         if (!pc.empty()) {
             editBox->setPasswordChar(pc[0]);
         }
     }
 
-    if (j.contains("font") && j["font"].is_object()) {
-        pushJsonPath("font");
-        const json& font = j["font"];
-        if (font.contains("name") && font["name"].is_string()) {
-            editBox->setFont(parseFontName(font["name"].get<string>()));
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        pushJsonPath(PropertyNames::kJsonFont);
+        const json& font = j[PropertyNames::kJsonFont];
+        if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+            editBox->setFont(parseFontName(font[PropertyNames::kJsonName].get<string>()));
         }
-        if (font.contains("size") && font["size"].is_number()) {
-            editBox->setFontSize(font["size"].get<int>());
+        if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+            editBox->setFontSize(font[PropertyNames::kJsonSize].get<int>());
         }
         popJsonPath();
     }
 
-    if (j.contains("alignment") && j["alignment"].is_string()) {
-        editBox->setAlignmentMode(parseAlignment(j["alignment"].get<string>()));
+    if (j.contains(PropertyNames::kJsonAlignment) && j[PropertyNames::kJsonAlignment].is_string()) {
+        editBox->setAlignmentMode(parseAlignment(j[PropertyNames::kJsonAlignment].get<string>()));
     }
 
-    if (j.contains("margin")) {
-        editBox->setMargin(parseMargin(j["margin"]));
+    if (j.contains(PropertyNames::kJsonMargin)) {
+        editBox->setMargin(parseMargin(j[PropertyNames::kJsonMargin]));
     }
 
     parseEvents(editBox, j);
     parseBindings(editBox, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = editBox;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = editBox;
     }
 
     editBox->create();
@@ -652,91 +652,91 @@ shared_ptr<EditBox> LayoutParser::parseEditBox(const json& j, Control* parent) {
 // ==================== ComboBox ====================
 
 shared_ptr<ComboBox> LayoutParser::parseComboBox(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto combo = make_shared<ComboBox>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(combo, "editbox");
-    combo->setFont(m_theme.getFontName("editbox"));
-    combo->setFontSize(m_theme.getFontSize("editbox"));
+    m_theme.applyCommonColors(combo, PropertyNames::kThemeCatEditBox);
+    combo->setFont(m_theme.getFontName(PropertyNames::kThemeCatEditBox));
+    combo->setFontSize(m_theme.getFontSize(PropertyNames::kThemeCatEditBox));
     parseCommonProperties(combo, j);
 
-    if (j.contains("text") && j["text"].is_string()) {
-        combo->setText(j["text"].get<string>());
+    if (j.contains(PropertyNames::kJsonText) && j[PropertyNames::kJsonText].is_string()) {
+        combo->setText(j[PropertyNames::kJsonText].get<string>());
     }
 
-    if (j.contains("editable") && j["editable"].is_boolean()) {
-        combo->setEditable(j["editable"].get<bool>());
+    if (j.contains(PropertyNames::kJsonEditable) && j[PropertyNames::kJsonEditable].is_boolean()) {
+        combo->setEditable(j[PropertyNames::kJsonEditable].get<bool>());
     }
 
-    if (j.contains("placeholder") && j["placeholder"].is_string()) {
-        combo->setPlaceholder(j["placeholder"].get<string>());
+    if (j.contains(PropertyNames::kJsonPlaceholder) && j[PropertyNames::kJsonPlaceholder].is_string()) {
+        combo->setPlaceholder(j[PropertyNames::kJsonPlaceholder].get<string>());
     }
 
-    if (j.contains("items") && j["items"].is_array()) {
-        pushJsonPath("items");
+    if (j.contains(PropertyNames::kJsonItems) && j[PropertyNames::kJsonItems].is_array()) {
+        pushJsonPath(PropertyNames::kJsonItems);
         vector<ComboBoxItem> items;
-        for (size_t i = 0; i < j["items"].size(); ++i) {
-            const json& ji = j["items"][i];
+        for (size_t i = 0; i < j[PropertyNames::kJsonItems].size(); ++i) {
+            const json& ji = j[PropertyNames::kJsonItems][i];
             ComboBoxItem item;
-            item.label = ji.value("label", "");
-            item.value = ji.value("value", item.label);
-            item.disabled = ji.value("disabled", false);
+            item.label = ji.value(PropertyNames::kJsonLabel, "");
+            item.value = ji.value(PropertyNames::kJsonValue, item.label);
+            item.disabled = ji.value(PropertyNames::kJsonDisabled, false);
             items.push_back(item);
         }
         combo->setItems(items);
         popJsonPath();
     }
 
-    if (j.contains("selectedIndex") && j["selectedIndex"].is_number()) {
-        combo->setSelectedIndex(j["selectedIndex"].get<int>());
+    if (j.contains(PropertyNames::kJsonSelectedIndex) && j[PropertyNames::kJsonSelectedIndex].is_number()) {
+        combo->setSelectedIndex(j[PropertyNames::kJsonSelectedIndex].get<int>());
     }
 
-    if (j.contains("arrowWidth") && j["arrowWidth"].is_number()) {
-        combo->setArrowWidth(j["arrowWidth"].get<float>());
+    if (j.contains(PropertyNames::kJsonArrowWidth) && j[PropertyNames::kJsonArrowWidth].is_number()) {
+        combo->setArrowWidth(j[PropertyNames::kJsonArrowWidth].get<float>());
     }
 
-    if (j.contains("itemHeight") && j["itemHeight"].is_number()) {
-        combo->setItemHeight(j["itemHeight"].get<float>());
+    if (j.contains(PropertyNames::kJsonItemHeight) && j[PropertyNames::kJsonItemHeight].is_number()) {
+        combo->setItemHeight(j[PropertyNames::kJsonItemHeight].get<float>());
     }
 
-    if (j.contains("maxVisibleItems") && j["maxVisibleItems"].is_number()) {
-        combo->setMaxVisibleItems(j["maxVisibleItems"].get<int>());
+    if (j.contains(PropertyNames::kJsonMaxVisibleItems) && j[PropertyNames::kJsonMaxVisibleItems].is_number()) {
+        combo->setMaxVisibleItems(j[PropertyNames::kJsonMaxVisibleItems].get<int>());
     }
 
-    if (j.contains("cycleEnabled") && j["cycleEnabled"].is_boolean()) {
-        combo->setCycleEnabled(j["cycleEnabled"].get<bool>());
+    if (j.contains(PropertyNames::kJsonCycleEnabled) && j[PropertyNames::kJsonCycleEnabled].is_boolean()) {
+        combo->setCycleEnabled(j[PropertyNames::kJsonCycleEnabled].get<bool>());
     }
 
-    if (j.contains("font") && j["font"].is_object()) {
-        pushJsonPath("font");
-        const json& font = j["font"];
-        if (font.contains("name") && font["name"].is_string()) {
-            combo->setFont(parseFontName(font["name"].get<string>()));
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        pushJsonPath(PropertyNames::kJsonFont);
+        const json& font = j[PropertyNames::kJsonFont];
+        if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+            combo->setFont(parseFontName(font[PropertyNames::kJsonName].get<string>()));
         }
-        if (font.contains("size") && font["size"].is_number()) {
-            combo->setFontSize(font["size"].get<int>());
+        if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+            combo->setFontSize(font[PropertyNames::kJsonSize].get<int>());
         }
         popJsonPath();
     }
 
-    if (j.contains("alignment") && j["alignment"].is_string()) {
-        combo->setAlignmentMode(parseAlignment(j["alignment"].get<string>()));
+    if (j.contains(PropertyNames::kJsonAlignment) && j[PropertyNames::kJsonAlignment].is_string()) {
+        combo->setAlignmentMode(parseAlignment(j[PropertyNames::kJsonAlignment].get<string>()));
     }
 
     parseEvents(combo, j);
     parseBindings(combo, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = combo;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = combo;
     }
 
     combo->create();
@@ -746,34 +746,34 @@ shared_ptr<ComboBox> LayoutParser::parseComboBox(const json& j, Control* parent)
 // ==================== Panel ====================
 
 shared_ptr<Panel> LayoutParser::parsePanel(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto panel = make_shared<Panel>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(panel, "panel");
+    m_theme.applyCommonColors(panel, PropertyNames::kThemeCatPanel);
     parseCommonProperties(panel, j);
 
-    if (j.contains("transparent") && j["transparent"].is_boolean()) {
-        panel->setTransparent(j["transparent"].get<bool>());
+    if (j.contains(PropertyNames::kJsonTransparent) && j[PropertyNames::kJsonTransparent].is_boolean()) {
+        panel->setTransparent(j[PropertyNames::kJsonTransparent].get<bool>());
     }
 
-    if (j.contains("bgColor")) {
-        SColor bgColor = parseColor(j["bgColor"]);
+    if (j.contains(PropertyNames::kJsonBgColor)) {
+        SColor bgColor = parseColor(j[PropertyNames::kJsonBgColor]);
         StateColor sc(StateColor::Type::Background);
         sc.setNormal(bgColor);
         panel->setBackgroundStateColor(sc);
     }
 
-    if (j.contains("borderColor")) {
-        SColor borderColor = parseColor(j["borderColor"]);
+    if (j.contains(PropertyNames::kJsonBorderColor)) {
+        SColor borderColor = parseColor(j[PropertyNames::kJsonBorderColor]);
         StateColor sc(StateColor::Type::Border);
         sc.setNormal(borderColor);
         panel->setBorderStateColor(sc);
@@ -781,41 +781,41 @@ shared_ptr<Panel> LayoutParser::parsePanel(const json& j, Control* parent) {
 
     // Panel has no events in Phase 1
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = panel;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = panel;
     }
 
     parseChildren(panel, j);
 
     // Layout engine
-    if (j.contains("layout") && j["layout"].is_object()) {
-        pushJsonPath("layout");
-        const json& layoutJson = j["layout"];
-        string layoutType = layoutJson.value("type", "HFlow");
-        float gap = layoutJson.value("gap", 0.0f);
+    if (j.contains(PropertyNames::kJsonLayout) && j[PropertyNames::kJsonLayout].is_object()) {
+        pushJsonPath(PropertyNames::kJsonLayout);
+        const json& layoutJson = j[PropertyNames::kJsonLayout];
+        string layoutType = layoutJson.value(PropertyNames::kJsonType, PropertyNames::kLayoutTypeHFlow);
+        float gap = layoutJson.value(PropertyNames::kJsonGap, 0.0f);
 
         Margin padding{0,0,0,0};
-        if (layoutJson.contains("padding") && layoutJson["padding"].is_object()) {
-            padding = parseMargin(layoutJson["padding"]);
+        if (layoutJson.contains(PropertyNames::kJsonPadding) && layoutJson[PropertyNames::kJsonPadding].is_object()) {
+            padding = parseMargin(layoutJson[PropertyNames::kJsonPadding]);
         }
 
         shared_ptr<LayoutEngine> engine;
-        if (layoutType == "VFlow") {
+        if (layoutType == PropertyNames::kLayoutTypeVFlow) {
             engine = make_shared<VFlowLayout>(gap, padding);
-        } else if (layoutType == "Anchor") {
+        } else if (layoutType == PropertyNames::kLayoutTypeAnchor) {
             engine = make_shared<AnchorLayout>(padding);
-        } else if (layoutType == "Grid") {
+        } else if (layoutType == PropertyNames::kLayoutTypeGrid) {
             auto gridEngine = make_shared<GridLayout>(gap, padding);
-            if (layoutJson.contains("columns") && layoutJson["columns"].is_array()) {
+            if (layoutJson.contains(PropertyNames::kJsonColumns) && layoutJson[PropertyNames::kJsonColumns].is_array()) {
                 vector<GridSize> cols;
-                for (const auto& c : layoutJson["columns"]) {
+                for (const auto& c : layoutJson[PropertyNames::kJsonColumns]) {
                     cols.push_back(parseGridSize(c));
                 }
                 gridEngine->setColumns(cols);
             }
-            if (layoutJson.contains("rows") && layoutJson["rows"].is_array()) {
+            if (layoutJson.contains(PropertyNames::kJsonRows) && layoutJson[PropertyNames::kJsonRows].is_array()) {
                 vector<GridSize> rows;
-                for (const auto& r : layoutJson["rows"]) {
+                for (const auto& r : layoutJson[PropertyNames::kJsonRows]) {
                     rows.push_back(parseGridSize(r));
                 }
                 gridEngine->setRows(rows);
@@ -827,31 +827,31 @@ shared_ptr<Panel> LayoutParser::parsePanel(const json& j, Control* parent) {
         panel->setLayoutEngine(engine);
 
         // Per-child layout properties
-        if (j.contains("children") && j["children"].is_array()) {
-            const json& children = j["children"];
+        if (j.contains(PropertyNames::kJsonChildren) && j[PropertyNames::kJsonChildren].is_array()) {
+            const json& children = j[PropertyNames::kJsonChildren];
             auto& panelChildren = panel->getChildren();
             for (size_t i = 0; i < children.size() && i < panelChildren.size(); ++i) {
-                if (children[i].contains("flowWeight") && children[i]["flowWeight"].is_number()) {
-                    float fw = children[i]["flowWeight"].get<float>();
+                if (children[i].contains(PropertyNames::kJsonFlowWeight) && children[i][PropertyNames::kJsonFlowWeight].is_number()) {
+                    float fw = children[i][PropertyNames::kJsonFlowWeight].get<float>();
                     FlowItemProps props;
                     props.flexWeight = fw;
                     panel->setChildFlowProps(panelChildren[i].get(), props);
                 }
-                if (children[i].contains("anchor") && children[i]["anchor"].is_string()) {
+                if (children[i].contains(PropertyNames::kJsonAnchor) && children[i][PropertyNames::kJsonAnchor].is_string()) {
                     AnchorInfo info;
-                    info.anchor = children[i]["anchor"].get<string>();
-                    if (children[i].contains("anchorOffset") && children[i]["anchorOffset"].is_object()) {
-                        info.offset = parseMargin(children[i]["anchorOffset"]);
+                    info.anchor = children[i][PropertyNames::kJsonAnchor].get<string>();
+                    if (children[i].contains(PropertyNames::kJsonAnchorOffset) && children[i][PropertyNames::kJsonAnchorOffset].is_object()) {
+                        info.offset = parseMargin(children[i][PropertyNames::kJsonAnchorOffset]);
                     }
                     panel->setChildAnchorProps(panelChildren[i].get(), info);
                 }
-                if (children[i].contains("grid") && children[i]["grid"].is_object()) {
-                    const json& g = children[i]["grid"];
+                if (children[i].contains(PropertyNames::kJsonGrid) && children[i][PropertyNames::kJsonGrid].is_object()) {
+                    const json& g = children[i][PropertyNames::kJsonGrid];
                     GridItemProps props;
-                    props.row = g.value("row", 0);
-                    props.col = g.value("col", 0);
-                    props.rowSpan = g.value("rowSpan", 1);
-                    props.colSpan = g.value("colSpan", 1);
+                    props.row = g.value(PropertyNames::kJsonRow, 0);
+                    props.col = g.value(PropertyNames::kJsonCol, 0);
+                    props.rowSpan = g.value(PropertyNames::kJsonRowSpan, 1);
+                    props.colSpan = g.value(PropertyNames::kJsonColSpan, 1);
                     panel->setChildGridProps(panelChildren[i].get(), props);
                 }
             }
@@ -871,49 +871,49 @@ shared_ptr<Panel> LayoutParser::parsePanel(const json& j, Control* parent) {
 // ==================== ColorPicker ====================
 
 shared_ptr<ColorPicker> LayoutParser::parseColorPicker(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     auto cp = make_shared<ColorPicker>(parent, rect);
 
-    m_theme.applyCommonColors(cp, "colorpicker");
+    m_theme.applyCommonColors(cp, PropertyNames::kThemeCatColorPicker);
     parseCommonProperties(cp, j);
 
-    if (j.contains("color"))
-        cp->setColor(parseColor(j["color"]));
+    if (j.contains(PropertyNames::kJsonColor))
+        cp->setColor(parseColor(j[PropertyNames::kJsonColor]));
 
-    if (j.contains("presets") && j["presets"].is_array()) {
+    if (j.contains(PropertyNames::kJsonPresets) && j[PropertyNames::kJsonPresets].is_array()) {
         vector<SColor> colors;
-        for (auto& c : j["presets"])
+        for (auto& c : j[PropertyNames::kJsonPresets])
             colors.push_back(parseColor(c));
         if (!colors.empty())
             cp->setPresetColors(colors);
     }
 
-    if (j.contains("presetLayout") && j["presetLayout"].is_object()) {
-        const json& pl = j["presetLayout"];
-        int cols = pl.value("cols", ConstDef::COLORPICKER_PRESET_COLS);
-        int rows = pl.value("rows", ConstDef::COLORPICKER_PRESET_ROWS);
+    if (j.contains(PropertyNames::kJsonPresetLayout) && j[PropertyNames::kJsonPresetLayout].is_object()) {
+        const json& pl = j[PropertyNames::kJsonPresetLayout];
+        int cols = pl.value(PropertyNames::kJsonPresetCols, ConstDef::COLORPICKER_PRESET_COLS);
+        int rows = pl.value(PropertyNames::kJsonPresetRows, ConstDef::COLORPICKER_PRESET_ROWS);
         cp->setPresetLayout(cols, rows);
     }
 
-    if (j.contains("swatchSize") && j["swatchSize"].is_number())
-        cp->setClosedSwatchSize(j["swatchSize"].get<float>());
+    if (j.contains(PropertyNames::kJsonSwatchSize) && j[PropertyNames::kJsonSwatchSize].is_number())
+        cp->setClosedSwatchSize(j[PropertyNames::kJsonSwatchSize].get<float>());
 
-    if (j.contains("closedFontSize") && j["closedFontSize"].is_number())
-        cp->setClosedFontSize(j["closedFontSize"].get<int>());
+    if (j.contains(PropertyNames::kJsonClosedFontSize) && j[PropertyNames::kJsonClosedFontSize].is_number())
+        cp->setClosedFontSize(j[PropertyNames::kJsonClosedFontSize].get<int>());
 
-    if (j.contains("closedTextColor"))
-        cp->setClosedTextColor(parseColor(j["closedTextColor"]));
+    if (j.contains(PropertyNames::kJsonClosedTextColor))
+        cp->setClosedTextColor(parseColor(j[PropertyNames::kJsonClosedTextColor]));
 
-    if (j.contains("popupBGColor"))
-        cp->setPopupBGColor(parseColor(j["popupBGColor"]));
+    if (j.contains(PropertyNames::kJsonPopupBGColor))
+        cp->setPopupBGColor(parseColor(j[PropertyNames::kJsonPopupBGColor]));
 
     parseEvents(cp, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = cp;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = cp;
 
     cp->create();
     return cp;
@@ -922,59 +922,59 @@ shared_ptr<ColorPicker> LayoutParser::parseColorPicker(const json& j, Control* p
 // ==================== WinFrame ====================
 
 shared_ptr<WinFrame> LayoutParser::parseWinFrame(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto winFrame = make_shared<WinFrame>(parent, rect, xScale, yScale);
 
-    if (j.contains("title") && j["title"].is_string()) {
-        winFrame->setTitle(j["title"].get<string>());
+    if (j.contains(PropertyNames::kJsonTitle) && j[PropertyNames::kJsonTitle].is_string()) {
+        winFrame->setTitle(j[PropertyNames::kJsonTitle].get<string>());
     }
 
-    if (j.contains("edgeMargin") && j["edgeMargin"].is_number()) {
-        winFrame->setEdgeMargin(j["edgeMargin"].get<float>());
+    if (j.contains(PropertyNames::kJsonEdgeMargin) && j[PropertyNames::kJsonEdgeMargin].is_number()) {
+        winFrame->setEdgeMargin(j[PropertyNames::kJsonEdgeMargin].get<float>());
     }
 
-    if (j.contains("resizable") && j["resizable"].is_boolean()) {
-        winFrame->setResizable(j["resizable"].get<bool>());
+    if (j.contains(PropertyNames::kJsonResizable) && j[PropertyNames::kJsonResizable].is_boolean()) {
+        winFrame->setResizable(j[PropertyNames::kJsonResizable].get<bool>());
     }
 
     // Color parsing
-    if (j.contains("colors") && j["colors"].is_object()) {
-        const json& colors = j["colors"];
-        if (colors.contains("background") && colors["background"].is_object()) {
-            winFrame->setBackgroundStateColor(parseStateColor(colors["background"], StateColor::Type::Background));
+    if (j.contains(PropertyNames::kJsonColors) && j[PropertyNames::kJsonColors].is_object()) {
+        const json& colors = j[PropertyNames::kJsonColors];
+        if (colors.contains(PropertyNames::kBackground) && colors[PropertyNames::kBackground].is_object()) {
+            winFrame->setBackgroundStateColor(parseStateColor(colors[PropertyNames::kBackground], StateColor::Type::Background));
         }
-        if (colors.contains("border") && colors["border"].is_object()) {
-            winFrame->setBorderStateColor(parseStateColor(colors["border"], StateColor::Type::Border));
+        if (colors.contains(PropertyNames::kBorder) && colors[PropertyNames::kBorder].is_object()) {
+            winFrame->setBorderStateColor(parseStateColor(colors[PropertyNames::kBorder], StateColor::Type::Border));
         }
-        if (colors.contains("titleBar") && colors["titleBar"].is_object()) {
-            const json& tb = colors["titleBar"];
-            if (tb.contains("bg") && tb["bg"].is_object()) {
+        if (colors.contains(PropertyNames::kJsonTitleBar) && colors[PropertyNames::kJsonTitleBar].is_object()) {
+            const json& tb = colors[PropertyNames::kJsonTitleBar];
+            if (tb.contains(PropertyNames::kJsonBg) && tb[PropertyNames::kJsonBg].is_object()) {
                 winFrame->getTitleBar()->setBackgroundStateColor(
-                    parseStateColor(tb["bg"], StateColor::Type::Background));
+                    parseStateColor(tb[PropertyNames::kJsonBg], StateColor::Type::Background));
             }
         }
-        if (colors.contains("titleText") && colors["titleText"].is_object()) {
+        if (colors.contains(PropertyNames::kJsonTitleText) && colors[PropertyNames::kJsonTitleText].is_object()) {
             winFrame->getTitleLabel()->setTextStateColor(
-                parseStateColor(colors["titleText"], StateColor::Type::Text));
+                parseStateColor(colors[PropertyNames::kJsonTitleText], StateColor::Type::Text));
         }
     }
 
     // Children go into ClientPanel
-    if (j.contains("children")) {
+    if (j.contains(PropertyNames::kJsonChildren)) {
         parseChildren(static_pointer_cast<Control>(winFrame->getClientPanel()), j);
     }
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = winFrame;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = winFrame;
     }
 
     // Events
@@ -989,25 +989,25 @@ shared_ptr<WinFrame> LayoutParser::parseWinFrame(const json& j, Control* parent)
 
 shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     // 使用 nullptr parent：MenuBar 独立于控件树，调用方负责添加到 BENCH 顶层
     auto menuBar = make_shared<MenuBar>(nullptr, xScale, yScale);
 
-    m_theme.applyCommonColors(menuBar, "menubar");
+    m_theme.applyCommonColors(menuBar, PropertyNames::kThemeCatMenuBar);
     parseCommonProperties(menuBar, j);
 
     // font.size (static global setting)
-    if (j.contains("font") && j["font"].is_object()) {
-        pushJsonPath("font");
-        if (j["font"].contains("size") && j["font"]["size"].is_number()) {
-            float fontSize = (float)j["font"]["size"].get<int>();
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        pushJsonPath(PropertyNames::kJsonFont);
+        if (j[PropertyNames::kJsonFont].contains(PropertyNames::kJsonSize) && j[PropertyNames::kJsonFont][PropertyNames::kJsonSize].is_number()) {
+            float fontSize = (float)j[PropertyNames::kJsonFont][PropertyNames::kJsonSize].get<int>();
             menuBar->setFontSize(fontSize);
             // auto-recalculate barHeight if not explicitly set
-            if (!j.contains("barHeight")) {
+            if (!j.contains(PropertyNames::kJsonBarHeight)) {
                 menuBar->setBarHeight(fontSize * 1.6f);
             }
         }
@@ -1015,21 +1015,21 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
     }
 
     // barHeight (overrides auto-calculation from font.size)
-    if (j.contains("barHeight") && j["barHeight"].is_number()) {
-        menuBar->setBarHeight(j["barHeight"].get<float>());
+    if (j.contains(PropertyNames::kJsonBarHeight) && j[PropertyNames::kJsonBarHeight].is_number()) {
+        menuBar->setBarHeight(j[PropertyNames::kJsonBarHeight].get<float>());
     }
 
     // menus array
-    if (j.contains("menus") && j["menus"].is_array()) {
-        pushJsonPath("menus");
-        const json& menus = j["menus"];
+    if (j.contains(PropertyNames::kJsonMenus) && j[PropertyNames::kJsonMenus].is_array()) {
+        pushJsonPath(PropertyNames::kJsonMenus);
+        const json& menus = j[PropertyNames::kJsonMenus];
         for (size_t i = 0; i < menus.size(); ++i) {
             const json& menuJson = menus[i];
-            string caption = menuJson.value("caption", "Menu");
+            string caption = menuJson.value(PropertyNames::kJsonCaption, PropertyNames::kDefaultMenuTitle);
 
-            if (menuJson.contains("items") && menuJson["items"].is_array()) {
+            if (menuJson.contains(PropertyNames::kJsonItems) && menuJson[PropertyNames::kJsonItems].is_array()) {
                 auto panel = make_shared<MenuPanel>(nullptr, xScale, yScale);
-                populateMenuPanel(panel, menuJson["items"], xScale, yScale);
+                populateMenuPanel(panel, menuJson[PropertyNames::kJsonItems], xScale, yScale);
                 menuBar->addMenu(caption, panel);
             } else {
                 pushJsonPath("menus[" + to_string(i) + "]");
@@ -1040,8 +1040,8 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
         popJsonPath();
     }
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = menuBar;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = menuBar;
     }
 
     return menuBar;
@@ -1050,49 +1050,49 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
 void LayoutParser::populateMenuPanel(shared_ptr<MenuPanel> panel, const json& items, float xScale, float yScale) {
     for (const auto& itemJson : items) {
         // Separator
-        if (itemJson.contains("type") && itemJson["type"].is_string() &&
-            itemJson["type"].get<string>() == "Separator") {
+        if (itemJson.contains(PropertyNames::kJsonType) && itemJson[PropertyNames::kJsonType].is_string() &&
+            itemJson[PropertyNames::kJsonType].get<string>() == PropertyNames::kMenuTypeSeparator) {
             panel->addSeparator();
             continue;
         }
 
         // Determine type: SubMenu if has nested "items"
         MenuItemType type = MenuItemType::Normal;
-        if (itemJson.contains("items") && itemJson["items"].is_array()) {
+        if (itemJson.contains(PropertyNames::kJsonItems) && itemJson[PropertyNames::kJsonItems].is_array()) {
             type = MenuItemType::SubMenu;
         }
 
         auto item = make_shared<MenuItem>(panel.get(), type, xScale, yScale);
 
         // Caption
-        if (itemJson.contains("caption") && itemJson["caption"].is_string()) {
-            item->setCaption(itemJson["caption"].get<string>());
+        if (itemJson.contains(PropertyNames::kJsonCaption) && itemJson[PropertyNames::kJsonCaption].is_string()) {
+            item->setCaption(itemJson[PropertyNames::kJsonCaption].get<string>());
         }
 
         // Shortcut
-        if (itemJson.contains("shortcut") && itemJson["shortcut"].is_string()) {
-            item->setShortcut(itemJson["shortcut"].get<string>());
+        if (itemJson.contains(PropertyNames::kJsonShortcut) && itemJson[PropertyNames::kJsonShortcut].is_string()) {
+            item->setShortcut(itemJson[PropertyNames::kJsonShortcut].get<string>());
         }
 
         // Checked
-        if (itemJson.contains("checked") && itemJson["checked"].is_boolean()) {
-            item->setChecked(itemJson["checked"].get<bool>());
+        if (itemJson.contains(PropertyNames::kJsonChecked) && itemJson[PropertyNames::kJsonChecked].is_boolean()) {
+            item->setChecked(itemJson[PropertyNames::kJsonChecked].get<bool>());
         }
 
         // Enabled
-        if (itemJson.contains("enabled") && itemJson["enabled"].is_boolean()) {
-            item->setEnable(itemJson["enabled"].get<bool>());
+        if (itemJson.contains(PropertyNames::kJsonEnabled) && itemJson[PropertyNames::kJsonEnabled].is_boolean()) {
+            item->setEnable(itemJson[PropertyNames::kJsonEnabled].get<bool>());
         }
 
         // SubMenu (recursive)
-        if (itemJson.contains("items") && itemJson["items"].is_array()) {
+        if (itemJson.contains(PropertyNames::kJsonItems) && itemJson[PropertyNames::kJsonItems].is_array()) {
             auto subPanel = make_shared<MenuPanel>(nullptr, xScale, yScale);
-            populateMenuPanel(subPanel, itemJson["items"], xScale, yScale);
+            populateMenuPanel(subPanel, itemJson[PropertyNames::kJsonItems], xScale, yScale);
             item->setSubMenu(subPanel);
         }
 
         // Events (onClick)
-        if (itemJson.contains("events") && itemJson["events"].is_object()) {
+        if (itemJson.contains(PropertyNames::kJsonEvents) && itemJson[PropertyNames::kJsonEvents].is_object()) {
             parseEvents(item, itemJson);
         }
 
@@ -1105,68 +1105,68 @@ void LayoutParser::populateMenuPanel(shared_ptr<MenuPanel> panel, const json& it
 // ==================== TextArea ====================
 
 shared_ptr<TextArea> LayoutParser::parseTextArea(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto textArea = make_shared<TextArea>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(textArea, "textarea");
-    textArea->setFont(m_theme.getFontName("textarea"));
-    textArea->setFontSize(m_theme.getFontSize("textarea"));
+    m_theme.applyCommonColors(textArea, PropertyNames::kThemeCatTextArea);
+    textArea->setFont(m_theme.getFontName(PropertyNames::kThemeCatTextArea));
+    textArea->setFontSize(m_theme.getFontSize(PropertyNames::kThemeCatTextArea));
     parseCommonProperties(textArea, j);
 
-    if (j.contains("text") && j["text"].is_string()) {
-        textArea->setText(j["text"].get<string>());
+    if (j.contains(PropertyNames::kJsonText) && j[PropertyNames::kJsonText].is_string()) {
+        textArea->setText(j[PropertyNames::kJsonText].get<string>());
     }
 
-    if (j.contains("placeholder") && j["placeholder"].is_string()) {
-        textArea->setPlaceholder(j["placeholder"].get<string>());
+    if (j.contains(PropertyNames::kJsonPlaceholder) && j[PropertyNames::kJsonPlaceholder].is_string()) {
+        textArea->setPlaceholder(j[PropertyNames::kJsonPlaceholder].get<string>());
     }
 
-    if (j.contains("wordWrap") && j["wordWrap"].is_boolean()) {
-        textArea->setWordWrap(j["wordWrap"].get<bool>());
+    if (j.contains(PropertyNames::kJsonWordWrap) && j[PropertyNames::kJsonWordWrap].is_boolean()) {
+        textArea->setWordWrap(j[PropertyNames::kJsonWordWrap].get<bool>());
     }
 
-    if (j.contains("lineHeight") && j["lineHeight"].is_number()) {
-        textArea->setLineHeight(j["lineHeight"].get<int>());
+    if (j.contains(PropertyNames::kJsonLineHeight) && j[PropertyNames::kJsonLineHeight].is_number()) {
+        textArea->setLineHeight(j[PropertyNames::kJsonLineHeight].get<int>());
     }
 
-    if (j.contains("scrollBarThickness") && j["scrollBarThickness"].is_number()) {
-        textArea->setScrollBarThickness(j["scrollBarThickness"].get<float>());
+    if (j.contains(PropertyNames::kJsonScrollBarThickness) && j[PropertyNames::kJsonScrollBarThickness].is_number()) {
+        textArea->setScrollBarThickness(j[PropertyNames::kJsonScrollBarThickness].get<float>());
     }
 
-    if (j.contains("font") && j["font"].is_object()) {
-        pushJsonPath("font");
-        const json& font = j["font"];
-        if (font.contains("name") && font["name"].is_string()) {
-            textArea->setFont(parseFontName(font["name"].get<string>()));
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        pushJsonPath(PropertyNames::kJsonFont);
+        const json& font = j[PropertyNames::kJsonFont];
+        if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+            textArea->setFont(parseFontName(font[PropertyNames::kJsonName].get<string>()));
         }
-        if (font.contains("size") && font["size"].is_number()) {
-            textArea->setFontSize(font["size"].get<int>());
+        if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+            textArea->setFontSize(font[PropertyNames::kJsonSize].get<int>());
         }
         popJsonPath();
     }
 
-    if (j.contains("alignment") && j["alignment"].is_string()) {
-        textArea->setAlignmentMode(parseAlignment(j["alignment"].get<string>()));
+    if (j.contains(PropertyNames::kJsonAlignment) && j[PropertyNames::kJsonAlignment].is_string()) {
+        textArea->setAlignmentMode(parseAlignment(j[PropertyNames::kJsonAlignment].get<string>()));
     }
 
-    if (j.contains("margin")) {
-        textArea->setMargin(parseMargin(j["margin"]));
+    if (j.contains(PropertyNames::kJsonMargin)) {
+        textArea->setMargin(parseMargin(j[PropertyNames::kJsonMargin]));
     }
 
     parseEvents(textArea, j);
     parseBindings(textArea, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = textArea;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = textArea;
     }
 
     textArea->create();
@@ -1176,115 +1176,115 @@ shared_ptr<TextArea> LayoutParser::parseTextArea(const json& j, Control* parent)
 // ==================== CheckBox ====================
 
 static CheckState parseCheckState(const string& s) {
-    if (s == "Checked")        return CheckState::Checked;
-    if (s == "Indeterminate")  return CheckState::Indeterminate;
+    if (s == PropertyNames::kCheckChecked)        return CheckState::Checked;
+    if (s == PropertyNames::kCheckIndeterminate)  return CheckState::Indeterminate;
     return CheckState::Unchecked;
 }
 
 static CheckBoxStyle parseCheckBoxStyle(const string& s) {
-    if (s == "Cross")   return CheckBoxStyle::Cross;
-    if (s == "Circle")  return CheckBoxStyle::Circle;
+    if (s == PropertyNames::kStyleCross)   return CheckBoxStyle::Cross;
+    if (s == PropertyNames::kStyleCircle)  return CheckBoxStyle::Circle;
     return CheckBoxStyle::Classic;
 }
 
 static CheckBoxLayout parseCheckBoxLayout(const string& s) {
-    if (s == "TextLeft") return CheckBoxLayout::TextLeft;
+    if (s == PropertyNames::kLayoutTextLeft) return CheckBoxLayout::TextLeft;
     return CheckBoxLayout::TextRight;
 }
 
 static CheckBoxVerticalAlign parseCheckBoxVerticalAlign(const string& s) {
-    if (s == "Top")    return CheckBoxVerticalAlign::Top;
-    if (s == "Bottom") return CheckBoxVerticalAlign::Bottom;
+    if (s == PropertyNames::kVAlignTop)    return CheckBoxVerticalAlign::Top;
+    if (s == PropertyNames::kVAlignBottom) return CheckBoxVerticalAlign::Bottom;
     return CheckBoxVerticalAlign::Center;
 }
 
 shared_ptr<CheckBox> LayoutParser::parseCheckBox(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto checkBox = make_shared<CheckBox>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(checkBox, "checkbox");
+    m_theme.applyCommonColors(checkBox, PropertyNames::kThemeCatCheckBox);
     parseCommonProperties(checkBox, j);
 
-    if (j.contains("caption") && j["caption"].is_string()) {
-        checkBox->getCaption()->setCaption(j["caption"].get<string>());
+    if (j.contains(PropertyNames::kJsonCaption) && j[PropertyNames::kJsonCaption].is_string()) {
+        checkBox->getCaption()->setCaption(j[PropertyNames::kJsonCaption].get<string>());
     }
 
-    int cbFontSize = m_theme.getFontSize("checkbox");
+    int cbFontSize = m_theme.getFontSize(PropertyNames::kThemeCatCheckBox);
     checkBox->getCaption()->setFontSize(cbFontSize);
 
-    if (j.contains("captionSize") && j["captionSize"].is_number()) {
-        checkBox->getCaption()->setFontSize(j["captionSize"].get<int>());
+    if (j.contains(PropertyNames::kJsonCaptionSize) && j[PropertyNames::kJsonCaptionSize].is_number()) {
+        checkBox->getCaption()->setFontSize(j[PropertyNames::kJsonCaptionSize].get<int>());
     }
 
-    if (j.contains("checkState") && j["checkState"].is_string()) {
-        checkBox->setCheckState(parseCheckState(j["checkState"].get<string>()));
+    if (j.contains(PropertyNames::kJsonCheckState) && j[PropertyNames::kJsonCheckState].is_string()) {
+        checkBox->setCheckState(parseCheckState(j[PropertyNames::kJsonCheckState].get<string>()));
     }
 
-    if (j.contains("style") && j["style"].is_string()) {
-        checkBox->setStyle(parseCheckBoxStyle(j["style"].get<string>()));
+    if (j.contains(PropertyNames::kJsonStyle) && j[PropertyNames::kJsonStyle].is_string()) {
+        checkBox->setStyle(parseCheckBoxStyle(j[PropertyNames::kJsonStyle].get<string>()));
     }
 
-    if (j.contains("layout") && j["layout"].is_string()) {
-        checkBox->setLayout(parseCheckBoxLayout(j["layout"].get<string>()));
+    if (j.contains(PropertyNames::kJsonLayout) && j[PropertyNames::kJsonLayout].is_string()) {
+        checkBox->setLayout(parseCheckBoxLayout(j[PropertyNames::kJsonLayout].get<string>()));
     }
 
-    if (j.contains("verticalAlign") && j["verticalAlign"].is_string()) {
-        checkBox->setVerticalAlign(parseCheckBoxVerticalAlign(j["verticalAlign"].get<string>()));
+    if (j.contains(PropertyNames::kJsonVerticalAlign) && j[PropertyNames::kJsonVerticalAlign].is_string()) {
+        checkBox->setVerticalAlign(parseCheckBoxVerticalAlign(j[PropertyNames::kJsonVerticalAlign].get<string>()));
     }
 
-    if (j.contains("sizeRatio") && j["sizeRatio"].is_number()) {
-        checkBox->setSizeRatio(j["sizeRatio"].get<float>());
+    if (j.contains(PropertyNames::kJsonSizeRatio) && j[PropertyNames::kJsonSizeRatio].is_number()) {
+        checkBox->setSizeRatio(j[PropertyNames::kJsonSizeRatio].get<float>());
     }
 
-    if (j.contains("triState") && j["triState"].is_boolean()) {
-        checkBox->setTriStateEnabled(j["triState"].get<bool>());
+    if (j.contains(PropertyNames::kJsonTriState) && j[PropertyNames::kJsonTriState].is_boolean()) {
+        checkBox->setTriStateEnabled(j[PropertyNames::kJsonTriState].get<bool>());
     }
 
     // Theme CheckBox-specific colors (defaults)
     SColor themeCheck;
-    if (m_theme.getColorOpt("colors.checkbox.check", themeCheck))
+    if (m_theme.getColorOpt(PropertyNames::kThemeCheckboxCheck, themeCheck))
         checkBox->setCheckColor(themeCheck);
     SColor themeCross;
-    if (m_theme.getColorOpt("colors.checkbox.cross", themeCross))
+    if (m_theme.getColorOpt(PropertyNames::kThemeCheckboxCross, themeCross))
         checkBox->setCrossColor(themeCross);
     SColor themeIndet;
-    if (m_theme.getColorOpt("colors.checkbox.indeterminate", themeIndet))
+    if (m_theme.getColorOpt(PropertyNames::kThemeCheckboxIndeterminate, themeIndet))
         checkBox->setIndeterminateColor(themeIndet);
     SColor themeBoxBorder;
-    if (m_theme.getColorOpt("colors.checkbox.boxBorder", themeBoxBorder))
+    if (m_theme.getColorOpt(PropertyNames::kThemeCheckboxBoxBorder, themeBoxBorder))
         checkBox->setBoxBorderColor(themeBoxBorder);
 
     // CheckBox-specific colors (JSON overrides)
-    if (j.contains("colors") && j["colors"].is_object()) {
-        const json& colors = j["colors"];
-        if (colors.contains("checkColor")) {
-            checkBox->setCheckColor(parseColor(colors["checkColor"]));
+    if (j.contains(PropertyNames::kJsonColors) && j[PropertyNames::kJsonColors].is_object()) {
+        const json& colors = j[PropertyNames::kJsonColors];
+        if (colors.contains(PropertyNames::kJsonCheckColor)) {
+            checkBox->setCheckColor(parseColor(colors[PropertyNames::kJsonCheckColor]));
         }
-        if (colors.contains("crossColor")) {
-            checkBox->setCrossColor(parseColor(colors["crossColor"]));
+        if (colors.contains(PropertyNames::kJsonCrossColor)) {
+            checkBox->setCrossColor(parseColor(colors[PropertyNames::kJsonCrossColor]));
         }
-        if (colors.contains("indeterminateColor")) {
-            checkBox->setIndeterminateColor(parseColor(colors["indeterminateColor"]));
+        if (colors.contains(PropertyNames::kJsonIndeterminateColor)) {
+            checkBox->setIndeterminateColor(parseColor(colors[PropertyNames::kJsonIndeterminateColor]));
         }
-        if (colors.contains("boxBorderColor")) {
-            checkBox->setBoxBorderColor(parseColor(colors["boxBorderColor"]));
+        if (colors.contains(PropertyNames::kJsonBoxBorderColor)) {
+            checkBox->setBoxBorderColor(parseColor(colors[PropertyNames::kJsonBoxBorderColor]));
         }
     }
 
     parseEvents(checkBox, j);
     parseBindings(checkBox, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = checkBox;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = checkBox;
     }
 
     checkBox->create();
@@ -1294,100 +1294,100 @@ shared_ptr<CheckBox> LayoutParser::parseCheckBox(const json& j, Control* parent)
 // ==================== ProgressBar ====================
 
 static ProgressBarStyle parseProgressBarStyle(const string& s) {
-    if (s == "Vertical") return ProgressBarStyle::Vertical;
+    if (s == PropertyNames::kOrientVertical) return ProgressBarStyle::Vertical;
     return ProgressBarStyle::Horizontal;
 }
 
 static ProgressBarTextMode parseProgressBarTextMode(const string& s) {
-    if (s == "None")    return ProgressBarTextMode::None;
-    if (s == "Custom")  return ProgressBarTextMode::Custom;
+    if (s == PropertyNames::kTextModeNone)    return ProgressBarTextMode::None;
+    if (s == PropertyNames::kTextModeCustom)  return ProgressBarTextMode::Custom;
     return ProgressBarTextMode::Percent;
 }
 
 shared_ptr<ProgressBar> LayoutParser::parseProgressBar(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto progressBar = make_shared<ProgressBar>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(progressBar, "progressbar");
-    progressBar->setFont(m_theme.getFontName("progressbar"));
-    progressBar->setFontSize(m_theme.getFontSize("progressbar"));
+    m_theme.applyCommonColors(progressBar, PropertyNames::kThemeCatProgressBar);
+    progressBar->setFont(m_theme.getFontName(PropertyNames::kThemeCatProgressBar));
+    progressBar->setFontSize(m_theme.getFontSize(PropertyNames::kThemeCatProgressBar));
     parseCommonProperties(progressBar, j);
 
-    if (j.contains("value") && j["value"].is_number()) {
-        progressBar->setValue(j["value"].get<float>());
+    if (j.contains(PropertyNames::kJsonValue) && j[PropertyNames::kJsonValue].is_number()) {
+        progressBar->setValue(j[PropertyNames::kJsonValue].get<float>());
     }
 
-    if (j.contains("range") && j["range"].is_object()) {
-        float minVal = j["range"].value("min", 0.0f);
-        float maxVal = j["range"].value("max", 100.0f);
+    if (j.contains(PropertyNames::kJsonRange) && j[PropertyNames::kJsonRange].is_object()) {
+        float minVal = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMin, 0.0f);
+        float maxVal = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMax, 100.0f);
         progressBar->setRange(minVal, maxVal);
     }
 
-    if (j.contains("style") && j["style"].is_string()) {
-        progressBar->setStyle(parseProgressBarStyle(j["style"].get<string>()));
+    if (j.contains(PropertyNames::kJsonStyle) && j[PropertyNames::kJsonStyle].is_string()) {
+        progressBar->setStyle(parseProgressBarStyle(j[PropertyNames::kJsonStyle].get<string>()));
     }
 
-    if (j.contains("textMode") && j["textMode"].is_string()) {
-        progressBar->setTextMode(parseProgressBarTextMode(j["textMode"].get<string>()));
+    if (j.contains(PropertyNames::kJsonTextMode) && j[PropertyNames::kJsonTextMode].is_string()) {
+        progressBar->setTextMode(parseProgressBarTextMode(j[PropertyNames::kJsonTextMode].get<string>()));
     }
 
-    if (j.contains("customText") && j["customText"].is_string()) {
-        progressBar->setCustomText(j["customText"].get<string>());
+    if (j.contains(PropertyNames::kJsonCustomText) && j[PropertyNames::kJsonCustomText].is_string()) {
+        progressBar->setCustomText(j[PropertyNames::kJsonCustomText].get<string>());
     }
 
-    if (j.contains("animationSpeed") && j["animationSpeed"].is_number()) {
-        progressBar->setAnimationSpeed(j["animationSpeed"].get<float>());
+    if (j.contains(PropertyNames::kJsonAnimationSpeed) && j[PropertyNames::kJsonAnimationSpeed].is_number()) {
+        progressBar->setAnimationSpeed(j[PropertyNames::kJsonAnimationSpeed].get<float>());
     }
 
-    if (j.contains("font") && j["font"].is_object()) {
-        pushJsonPath("font");
-        const json& font = j["font"];
-        if (font.contains("name") && font["name"].is_string()) {
-            progressBar->setFont(parseFontName(font["name"].get<string>()));
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        pushJsonPath(PropertyNames::kJsonFont);
+        const json& font = j[PropertyNames::kJsonFont];
+        if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+            progressBar->setFont(parseFontName(font[PropertyNames::kJsonName].get<string>()));
         }
-        if (font.contains("size") && font["size"].is_number()) {
-            progressBar->setFontSize(font["size"].get<int>());
+        if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+            progressBar->setFontSize(font[PropertyNames::kJsonSize].get<int>());
         }
         popJsonPath();
     }
 
-    if (j.contains("alignment") && j["alignment"].is_string()) {
-        progressBar->setAlignmentMode(parseAlignment(j["alignment"].get<string>()));
+    if (j.contains(PropertyNames::kJsonAlignment) && j[PropertyNames::kJsonAlignment].is_string()) {
+        progressBar->setAlignmentMode(parseAlignment(j[PropertyNames::kJsonAlignment].get<string>()));
     }
 
     // Theme ProgressBar-specific colors (defaults)
     SColor themeProgress;
-    if (m_theme.getColorOpt("colors.progressbar.progress", themeProgress))
+    if (m_theme.getColorOpt(PropertyNames::kThemeProgressbarProgress, themeProgress))
         progressBar->setProgressColor(themeProgress);
     SColor themeTrack;
-    if (m_theme.getColorOpt("colors.progressbar.track", themeTrack))
+    if (m_theme.getColorOpt(PropertyNames::kThemeProgressbarTrack, themeTrack))
         progressBar->setBackgroundColor(themeTrack);
 
     // ProgressBar-specific colors (JSON overrides)
-    if (j.contains("colors") && j["colors"].is_object()) {
-        const json& colors = j["colors"];
-        if (colors.contains("progressColor")) {
-            progressBar->setProgressColor(parseColor(colors["progressColor"]));
+    if (j.contains(PropertyNames::kJsonColors) && j[PropertyNames::kJsonColors].is_object()) {
+        const json& colors = j[PropertyNames::kJsonColors];
+        if (colors.contains(PropertyNames::kJsonProgressColor)) {
+            progressBar->setProgressColor(parseColor(colors[PropertyNames::kJsonProgressColor]));
         }
-        if (colors.contains("backgroundColor")) {
-            progressBar->setBackgroundColor(parseColor(colors["backgroundColor"]));
+        if (colors.contains(PropertyNames::kJsonBackgroundColor)) {
+            progressBar->setBackgroundColor(parseColor(colors[PropertyNames::kJsonBackgroundColor]));
         }
     }
 
     parseEvents(progressBar, j);
     parseBindings(progressBar, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = progressBar;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = progressBar;
     }
 
     progressBar->create();
@@ -1397,81 +1397,81 @@ shared_ptr<ProgressBar> LayoutParser::parseProgressBar(const json& j, Control* p
 // ==================== Slider ====================
 
 static SliderStyle parseSliderStyle(const string& s) {
-    if (s == "Vertical") return SliderStyle::Vertical;
+    if (s == PropertyNames::kOrientVertical) return SliderStyle::Vertical;
     return SliderStyle::Horizontal;
 }
 
 shared_ptr<Slider> LayoutParser::parseSlider(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     auto slider = make_shared<Slider>(parent, rect);
 
-    if (j.contains("range") && j["range"].is_object()) {
-        float minVal = j["range"].value("min", 0.0f);
-        float maxVal = j["range"].value("max", 100.0f);
+    if (j.contains(PropertyNames::kJsonRange) && j[PropertyNames::kJsonRange].is_object()) {
+        float minVal = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMin, 0.0f);
+        float maxVal = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMax, 100.0f);
         slider->setRange(minVal, maxVal);
     }
 
-    if (j.contains("value") && j["value"].is_number())
-        slider->setValue(j["value"].get<float>());
+    if (j.contains(PropertyNames::kJsonValue) && j[PropertyNames::kJsonValue].is_number())
+        slider->setValue(j[PropertyNames::kJsonValue].get<float>());
 
-    if (j.contains("step") && j["step"].is_number())
-        slider->setStep(j["step"].get<float>());
+    if (j.contains(PropertyNames::kJsonStep) && j[PropertyNames::kJsonStep].is_number())
+        slider->setStep(j[PropertyNames::kJsonStep].get<float>());
 
-    if (j.contains("style") && j["style"].is_string())
-        slider->setStyle(parseSliderStyle(j["style"].get<string>()));
+    if (j.contains(PropertyNames::kJsonStyle) && j[PropertyNames::kJsonStyle].is_string())
+        slider->setStyle(parseSliderStyle(j[PropertyNames::kJsonStyle].get<string>()));
 
-    if (j.contains("reverse") && j["reverse"].is_boolean())
-        slider->setReverse(j["reverse"].get<bool>());
+    if (j.contains(PropertyNames::kJsonReverse) && j[PropertyNames::kJsonReverse].is_boolean())
+        slider->setReverse(j[PropertyNames::kJsonReverse].get<bool>());
 
-    if (j.contains("track") && j["track"].is_object()) {
-        const json& track = j["track"];
-        if (track.contains("thickness") && track["thickness"].is_number())
-            slider->setTrackThickness(track["thickness"].get<float>());
-        if (track.contains("color") && track["color"].is_object())
-            slider->setTrackColor(parseStateColor(track["color"], StateColor::Type::Background).getNormal());
-        if (track.contains("fillColor") && track["fillColor"].is_object())
-            slider->setTrackFillColor(parseStateColor(track["fillColor"], StateColor::Type::Background).getNormal());
+    if (j.contains(PropertyNames::kJsonTrack) && j[PropertyNames::kJsonTrack].is_object()) {
+        const json& track = j[PropertyNames::kJsonTrack];
+        if (track.contains(PropertyNames::kJsonThickness) && track[PropertyNames::kJsonThickness].is_number())
+            slider->setTrackThickness(track[PropertyNames::kJsonThickness].get<float>());
+        if (track.contains(PropertyNames::kJsonColor) && track[PropertyNames::kJsonColor].is_object())
+            slider->setTrackColor(parseStateColor(track[PropertyNames::kJsonColor], StateColor::Type::Background).getNormal());
+        if (track.contains(PropertyNames::kJsonFillColor) && track[PropertyNames::kJsonFillColor].is_object())
+            slider->setTrackFillColor(parseStateColor(track[PropertyNames::kJsonFillColor], StateColor::Type::Background).getNormal());
     }
 
-    if (j.contains("thumb") && j["thumb"].is_object()) {
-        const json& thumb = j["thumb"];
-        if (thumb.contains("size") && thumb["size"].is_number())
-            slider->setThumbSize(thumb["size"].get<float>());
-        if (thumb.contains("color") && thumb["color"].is_object())
-            slider->setThumbColor(parseStateColor(thumb["color"], StateColor::Type::Background).getNormal());
-        if (thumb.contains("borderColor") && thumb["borderColor"].is_object())
-            slider->setThumbBorderColor(parseStateColor(thumb["borderColor"], StateColor::Type::Background).getNormal());
-        if (thumb.contains("hoverColor") && thumb["hoverColor"].is_object())
-            slider->setThumbHoverColor(parseStateColor(thumb["hoverColor"], StateColor::Type::Background).getNormal());
+    if (j.contains(PropertyNames::kJsonThumb) && j[PropertyNames::kJsonThumb].is_object()) {
+        const json& thumb = j[PropertyNames::kJsonThumb];
+        if (thumb.contains(PropertyNames::kJsonSize) && thumb[PropertyNames::kJsonSize].is_number())
+            slider->setThumbSize(thumb[PropertyNames::kJsonSize].get<float>());
+        if (thumb.contains(PropertyNames::kJsonColor) && thumb[PropertyNames::kJsonColor].is_object())
+            slider->setThumbColor(parseStateColor(thumb[PropertyNames::kJsonColor], StateColor::Type::Background).getNormal());
+        if (thumb.contains(PropertyNames::kJsonBorderColor) && thumb[PropertyNames::kJsonBorderColor].is_object())
+            slider->setThumbBorderColor(parseStateColor(thumb[PropertyNames::kJsonBorderColor], StateColor::Type::Background).getNormal());
+        if (thumb.contains(PropertyNames::kJsonHoverColor) && thumb[PropertyNames::kJsonHoverColor].is_object())
+            slider->setThumbHoverColor(parseStateColor(thumb[PropertyNames::kJsonHoverColor], StateColor::Type::Background).getNormal());
     }
 
-    if (j.contains("showValueLabel") && j["showValueLabel"].is_boolean())
-        slider->setShowValueLabel(j["showValueLabel"].get<bool>());
+    if (j.contains(PropertyNames::kJsonShowValueLabel) && j[PropertyNames::kJsonShowValueLabel].is_boolean())
+        slider->setShowValueLabel(j[PropertyNames::kJsonShowValueLabel].get<bool>());
 
-    if (j.contains("labelFormat") && j["labelFormat"].is_string())
-        slider->setLabelFormat(j["labelFormat"].get<string>());
+    if (j.contains(PropertyNames::kJsonLabelFormat) && j[PropertyNames::kJsonLabelFormat].is_string())
+        slider->setLabelFormat(j[PropertyNames::kJsonLabelFormat].get<string>());
 
-    if (j.contains("labelGap") && j["labelGap"].is_number())
-        slider->setLabelGap(j["labelGap"].get<float>());
+    if (j.contains(PropertyNames::kJsonLabelGap) && j[PropertyNames::kJsonLabelGap].is_number())
+        slider->setLabelGap(j[PropertyNames::kJsonLabelGap].get<float>());
 
-    if (j.contains("tick") && j["tick"].is_object()) {
-        const json& tick = j["tick"];
-        if (tick.contains("interval") && tick["interval"].is_number())
-            slider->setTickInterval(tick["interval"].get<float>());
-        if (tick.contains("length") && tick["length"].is_number())
-            slider->setTickLength(tick["length"].get<float>());
-        if (tick.contains("color") && tick["color"].is_object())
-            slider->setTickColor(parseStateColor(tick["color"], StateColor::Type::Background).getNormal());
+    if (j.contains(PropertyNames::kJsonTick) && j[PropertyNames::kJsonTick].is_object()) {
+        const json& tick = j[PropertyNames::kJsonTick];
+        if (tick.contains(PropertyNames::kJsonInterval) && tick[PropertyNames::kJsonInterval].is_number())
+            slider->setTickInterval(tick[PropertyNames::kJsonInterval].get<float>());
+        if (tick.contains(PropertyNames::kJsonLength) && tick[PropertyNames::kJsonLength].is_number())
+            slider->setTickLength(tick[PropertyNames::kJsonLength].get<float>());
+        if (tick.contains(PropertyNames::kJsonColor) && tick[PropertyNames::kJsonColor].is_object())
+            slider->setTickColor(parseStateColor(tick[PropertyNames::kJsonColor], StateColor::Type::Background).getNormal());
     }
 
     parseCommonProperties(std::static_pointer_cast<ControlImpl>(slider), j);
     parseEvents(std::static_pointer_cast<ControlImpl>(slider), j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = slider;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = slider;
 
     slider->create();
     return slider;
@@ -1480,52 +1480,52 @@ shared_ptr<Slider> LayoutParser::parseSlider(const json& j, Control* parent) {
 // ==================== NumericUpDown ====================
 
 shared_ptr<NumericUpDown> LayoutParser::parseNumericUpDown(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto nud = make_shared<NumericUpDown>(parent, rect, xScale, yScale);
 
-    m_theme.applyCommonColors(nud, "numericupdown");
+    m_theme.applyCommonColors(nud, PropertyNames::kThemeCatNumericUpDown);
     parseCommonProperties(nud, j);
 
-    if (j.contains("value"))
-        nud->setValue(j["value"].get<double>());
+    if (j.contains(PropertyNames::kJsonValue))
+        nud->setValue(j[PropertyNames::kJsonValue].get<double>());
 
-    if (j.contains("range") && j["range"].is_object()) {
-        double mn = j["range"].value("min", 0.0);
-        double mx = j["range"].value("max", 100.0);
+    if (j.contains(PropertyNames::kJsonRange) && j[PropertyNames::kJsonRange].is_object()) {
+        double mn = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMin, 0.0);
+        double mx = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMax, 100.0);
         nud->setRange(mn, mx);
     }
 
-    if (j.contains("step"))
-        nud->setStep(j["step"].get<double>());
+    if (j.contains(PropertyNames::kJsonStep))
+        nud->setStep(j[PropertyNames::kJsonStep].get<double>());
 
-    if (j.contains("pageStep"))
-        nud->setPageStep(j["pageStep"].get<double>());
+    if (j.contains(PropertyNames::kJsonPageStep))
+        nud->setPageStep(j[PropertyNames::kJsonPageStep].get<double>());
 
-    if (j.contains("decimals"))
-        nud->setDecimals(j["decimals"].get<int>());
+    if (j.contains(PropertyNames::kJsonDecimals))
+        nud->setDecimals(j[PropertyNames::kJsonDecimals].get<int>());
 
-    if (j.contains("placeholder"))
-        nud->setPlaceholder(j["placeholder"].get<string>());
+    if (j.contains(PropertyNames::kJsonPlaceholder))
+        nud->setPlaceholder(j[PropertyNames::kJsonPlaceholder].get<string>());
 
-    if (j.contains("readOnly"))
-        nud->setReadOnly(j["readOnly"].get<bool>());
+    if (j.contains(PropertyNames::kJsonReadOnly))
+        nud->setReadOnly(j[PropertyNames::kJsonReadOnly].get<bool>());
 
-    if (j.contains("buttonWidth"))
-        nud->setButtonWidth(j["buttonWidth"].get<float>());
+    if (j.contains(PropertyNames::kJsonButtonWidth))
+        nud->setButtonWidth(j[PropertyNames::kJsonButtonWidth].get<float>());
 
     parseEvents(nud, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = nud;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = nud;
 
     nud->create();
     return nud;
@@ -1535,26 +1535,26 @@ shared_ptr<NumericUpDown> LayoutParser::parseNumericUpDown(const json& j, Contro
 
 shared_ptr<Splitter> LayoutParser::parseSplitter(const json& j, Control* parent) {
     SRect rect = {0, 0, 10, 10};
-    if (j.contains("rect")) rect = parseRect(j["rect"]);
+    if (j.contains(PropertyNames::kJsonRect)) rect = parseRect(j[PropertyNames::kJsonRect]);
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto sp = make_shared<Splitter>(parent, rect, xScale, yScale);
-    m_theme.applyCommonColors(sp, "splitter");
+    m_theme.applyCommonColors(sp, PropertyNames::kThemeCatSplitter);
     parseCommonProperties(sp, j);
 
-    if (j.contains("orientation")) {
-        string orient = j["orientation"].get<string>();
-        sp->setOrientation(orient == "vertical");
+    if (j.contains(PropertyNames::kJsonOrientation)) {
+        string orient = j[PropertyNames::kJsonOrientation].get<string>();
+        sp->setOrientation(orient == PropertyNames::kOrientVertical);
     }
 
-    if (j.contains("firstPanel") && j.contains("secondPanel")) {
-        string firstId = j["firstPanel"].get<string>();
-        string secondId = j["secondPanel"].get<string>();
+    if (j.contains(PropertyNames::kJsonFirstPanel) && j.contains(PropertyNames::kJsonSecondPanel)) {
+        string firstId = j[PropertyNames::kJsonFirstPanel].get<string>();
+        string secondId = j[PropertyNames::kJsonSecondPanel].get<string>();
         auto first = findControlById(firstId);
         auto second = findControlById(secondId);
         if (first && second) {
@@ -1570,19 +1570,19 @@ shared_ptr<Splitter> LayoutParser::parseSplitter(const json& j, Control* parent)
         }
     }
 
-    if (j.contains("minFirst"))
-        sp->setMinSize(j["minFirst"].get<float>(), sp->getMinSecond());
-    if (j.contains("minSecond"))
-        sp->setMinSize(sp->getMinFirst(), j["minSecond"].get<float>());
-    if (j.contains("thickness"))
-        sp->setThickness(j["thickness"].get<float>());
-    if (j.contains("ratio"))
-        sp->setSplitRatio(j["ratio"].get<float>());
+    if (j.contains(PropertyNames::kJsonMinFirst))
+        sp->setMinSize(j[PropertyNames::kJsonMinFirst].get<float>(), sp->getMinSecond());
+    if (j.contains(PropertyNames::kJsonMinSecond))
+        sp->setMinSize(sp->getMinFirst(), j[PropertyNames::kJsonMinSecond].get<float>());
+    if (j.contains(PropertyNames::kJsonThickness))
+        sp->setThickness(j[PropertyNames::kJsonThickness].get<float>());
+    if (j.contains(PropertyNames::kJsonRatio))
+        sp->setSplitRatio(j[PropertyNames::kJsonRatio].get<float>());
 
     parseEvents(sp, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = sp;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = sp;
 
     sp->create();
     return sp;
@@ -1592,46 +1592,46 @@ shared_ptr<Splitter> LayoutParser::parseSplitter(const json& j, Control* parent)
 
 shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent) {
     SRect rect = {0, 0, 200, 300};
-    if (j.contains("rect")) rect = parseRect(j["rect"]);
+    if (j.contains(PropertyNames::kJsonRect)) rect = parseRect(j[PropertyNames::kJsonRect]);
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto tv = make_shared<TreeView>(parent, rect, xScale, yScale);
-    m_theme.applyCommonColors(tv, "treeview");
+    m_theme.applyCommonColors(tv, PropertyNames::kThemeCatTreeView);
     parseCommonProperties(tv, j);
 
-    if (j.contains("indentWidth"))
-        tv->setIndentWidth(j["indentWidth"].get<float>());
-    if (j.contains("rowHeight"))
-        tv->setRowHeight(j["rowHeight"].get<float>());
-    if (j.contains("cycleNavigation"))
-        tv->setCycleNavigation(j["cycleNavigation"].get<bool>());
-    if (j.contains("defaultExpand"))
-        tv->setDefaultExpand(j["defaultExpand"].get<bool>());
+    if (j.contains(PropertyNames::kJsonIndentWidth))
+        tv->setIndentWidth(j[PropertyNames::kJsonIndentWidth].get<float>());
+    if (j.contains(PropertyNames::kJsonRowHeight))
+        tv->setRowHeight(j[PropertyNames::kJsonRowHeight].get<float>());
+    if (j.contains(PropertyNames::kJsonCycleNavigation))
+        tv->setCycleNavigation(j[PropertyNames::kJsonCycleNavigation].get<bool>());
+    if (j.contains(PropertyNames::kJsonDefaultExpand))
+        tv->setDefaultExpand(j[PropertyNames::kJsonDefaultExpand].get<bool>());
 
-    if (j.contains("items") && j["items"].is_array()) {
+    if (j.contains(PropertyNames::kJsonItems) && j[PropertyNames::kJsonItems].is_array()) {
         vector<shared_ptr<TreeNode>> items;
         function<void(const json&, vector<shared_ptr<TreeNode>>&)> parseItems;
         parseItems = [&](const json& arr, vector<shared_ptr<TreeNode>>& out) {
             for (const auto& item : arr) {
                 auto node = make_shared<TreeNode>();
-                node->id = item.value("id", "");
-                node->label = item.value("label", "");
-                node->expanded = item.value("expanded", false);
-                if (item.contains("userData") && item["userData"].is_string()) {
-                    node->userData = static_cast<void*>(new std::string(item["userData"].get<string>()));
+                node->id = item.value(PropertyNames::kJsonId, "");
+                node->label = item.value(PropertyNames::kJsonLabel, "");
+                node->expanded = item.value(PropertyNames::kJsonExpanded, false);
+                if (item.contains(PropertyNames::kJsonUserData) && item[PropertyNames::kJsonUserData].is_string()) {
+                    node->userData = static_cast<void*>(new std::string(item[PropertyNames::kJsonUserData].get<string>()));
                 }
-                if (item.contains("children") && item["children"].is_array()) {
-                    parseItems(item["children"], node->children);
+                if (item.contains(PropertyNames::kJsonChildren) && item[PropertyNames::kJsonChildren].is_array()) {
+                    parseItems(item[PropertyNames::kJsonChildren], node->children);
                 }
                 out.push_back(node);
             }
         };
-        parseItems(j["items"], items);
+        parseItems(j[PropertyNames::kJsonItems], items);
         tv->setItems(items);
         tv->setOnClearNode([](shared_ptr<TreeView>, void* ud) {
             delete static_cast<std::string*>(ud);
@@ -1640,8 +1640,8 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
 
     parseEvents(tv, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = tv;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = tv;
 
     tv->create();
     return tv;
@@ -1650,58 +1650,58 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
 // ==================== ScrollBar ====================
 
 static ScrollBarOrientation parseScrollBarOrientation(const string& s) {
-    if (s == "Horizontal") return ScrollBarOrientation::Horizontal;
+    if (s == PropertyNames::kOrientHorizontal) return ScrollBarOrientation::Horizontal;
     return ScrollBarOrientation::Vertical;
 }
 
 shared_ptr<ScrollBar> LayoutParser::parseScrollBar(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     ScrollBarOrientation orientation = ScrollBarOrientation::Vertical;
-    if (j.contains("orientation") && j["orientation"].is_string()) {
-        orientation = parseScrollBarOrientation(j["orientation"].get<string>());
+    if (j.contains(PropertyNames::kJsonOrientation) && j[PropertyNames::kJsonOrientation].is_string()) {
+        orientation = parseScrollBarOrientation(j[PropertyNames::kJsonOrientation].get<string>());
     }
 
     auto scrollBar = make_shared<ScrollBar>(parent, rect, orientation, xScale, yScale);
 
-    m_theme.applyCommonColors(scrollBar, "scrollbar");
+    m_theme.applyCommonColors(scrollBar, PropertyNames::kThemeCatScrollBar);
     parseCommonProperties(scrollBar, j);
 
-    if (j.contains("value") && j["value"].is_number()) {
-        scrollBar->setValue(j["value"].get<float>());
+    if (j.contains(PropertyNames::kJsonValue) && j[PropertyNames::kJsonValue].is_number()) {
+        scrollBar->setValue(j[PropertyNames::kJsonValue].get<float>());
     }
 
-    if (j.contains("range") && j["range"].is_object()) {
-        float minVal = j["range"].value("min", 0.0f);
-        float maxVal = j["range"].value("max", 100.0f);
+    if (j.contains(PropertyNames::kJsonRange) && j[PropertyNames::kJsonRange].is_object()) {
+        float minVal = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMin, 0.0f);
+        float maxVal = j[PropertyNames::kJsonRange].value(PropertyNames::kJsonMax, 100.0f);
         scrollBar->setRange(minVal, maxVal);
     }
 
-    if (j.contains("pageSize") && j["pageSize"].is_number()) {
-        scrollBar->setPageSize(j["pageSize"].get<float>());
+    if (j.contains(PropertyNames::kJsonPageSize) && j[PropertyNames::kJsonPageSize].is_number()) {
+        scrollBar->setPageSize(j[PropertyNames::kJsonPageSize].get<float>());
     }
 
-    if (j.contains("stepSize") && j["stepSize"].is_number()) {
-        scrollBar->setStepSize(j["stepSize"].get<float>());
+    if (j.contains(PropertyNames::kJsonStepSize) && j[PropertyNames::kJsonStepSize].is_number()) {
+        scrollBar->setStepSize(j[PropertyNames::kJsonStepSize].get<float>());
     }
 
-    if (j.contains("thickness") && j["thickness"].is_number()) {
-        scrollBar->setThickness(j["thickness"].get<float>());
+    if (j.contains(PropertyNames::kJsonThickness) && j[PropertyNames::kJsonThickness].is_number()) {
+        scrollBar->setThickness(j[PropertyNames::kJsonThickness].get<float>());
     }
 
     parseEvents(scrollBar, j);
     parseBindings(scrollBar, j);
 
-    if (j.contains("id") && j["id"].is_string()) {
-        m_controlsById[j["id"].get<string>()] = scrollBar;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = scrollBar;
     }
 
     scrollBar->create();
@@ -1711,33 +1711,33 @@ shared_ptr<ScrollBar> LayoutParser::parseScrollBar(const json& j, Control* paren
 // ==================== Popup ====================
 
 shared_ptr<Popup> LayoutParser::parsePopup(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto popup = make_shared<Popup>(parent, rect, xScale, yScale);
-    m_theme.applyCommonColors(popup, "popup");
+    m_theme.applyCommonColors(popup, PropertyNames::kThemeCatPopup);
     parseCommonProperties(popup, j);
 
     // Popup-specific
-    if (j.contains("centered") && j["centered"].is_boolean())
+    if (j.contains(PropertyNames::kJsonCentered) && j[PropertyNames::kJsonCentered].is_boolean())
         popup->setCentered();
-    if (j.contains("closeOnEsc") && j["closeOnEsc"].is_boolean())
-        popup->setCloseOnEsc(j["closeOnEsc"].get<bool>());
-    if (j.contains("closeOnClickOutside") && j["closeOnClickOutside"].is_boolean())
-        popup->setCloseOnClickOutside(j["closeOnClickOutside"].get<bool>());
+    if (j.contains(PropertyNames::kJsonCloseOnEsc) && j[PropertyNames::kJsonCloseOnEsc].is_boolean())
+        popup->setCloseOnEsc(j[PropertyNames::kJsonCloseOnEsc].get<bool>());
+    if (j.contains(PropertyNames::kJsonCloseOnClickOutside) && j[PropertyNames::kJsonCloseOnClickOutside].is_boolean())
+        popup->setCloseOnClickOutside(j[PropertyNames::kJsonCloseOnClickOutside].get<bool>());
 
     parseEvents(popup, j);
     parseBindings(popup, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = popup;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = popup;
 
     parseChildren(popup, j);
     popup->create();
@@ -1747,50 +1747,50 @@ shared_ptr<Popup> LayoutParser::parsePopup(const json& j, Control* parent) {
 // ==================== ConfirmPopup ====================
 
 shared_ptr<ConfirmPopup> LayoutParser::parseConfirmPopup(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto cp = make_shared<ConfirmPopup>(parent, rect, xScale, yScale);
-    m_theme.applyCommonColors(cp, "confirmpopup");
+    m_theme.applyCommonColors(cp, PropertyNames::kThemeCatConfirmPopup);
     parseCommonProperties(cp, j);
 
-    if (j.contains("centered") && j["centered"].is_boolean())
+    if (j.contains(PropertyNames::kJsonCentered) && j[PropertyNames::kJsonCentered].is_boolean())
         cp->setCentered();
-    if (j.contains("closeOnEsc") && j["closeOnEsc"].is_boolean())
-        cp->setCloseOnEsc(j["closeOnEsc"].get<bool>());
-    if (j.contains("closeOnClickOutside") && j["closeOnClickOutside"].is_boolean())
-        cp->setCloseOnClickOutside(j["closeOnClickOutside"].get<bool>());
+    if (j.contains(PropertyNames::kJsonCloseOnEsc) && j[PropertyNames::kJsonCloseOnEsc].is_boolean())
+        cp->setCloseOnEsc(j[PropertyNames::kJsonCloseOnEsc].get<bool>());
+    if (j.contains(PropertyNames::kJsonCloseOnClickOutside) && j[PropertyNames::kJsonCloseOnClickOutside].is_boolean())
+        cp->setCloseOnClickOutside(j[PropertyNames::kJsonCloseOnClickOutside].get<bool>());
 
     // confirm button
-    if (j.contains("confirmButton") && j["confirmButton"].is_object()) {
-        const json& btn = j["confirmButton"];
-        if (btn.contains("text") && btn["text"].is_string())
-            cp->setConfirmButtonText(btn["text"].get<string>());
-        if (btn.contains("rect") && btn["rect"].is_object())
-            cp->setConfirmButtonRect(parseRect(btn["rect"]));
-        if (btn.contains("visible") && btn["visible"].is_boolean())
-            cp->setConfirmButtonVisible(btn["visible"].get<bool>());
+    if (j.contains(PropertyNames::kJsonConfirmButton) && j[PropertyNames::kJsonConfirmButton].is_object()) {
+        const json& btn = j[PropertyNames::kJsonConfirmButton];
+        if (btn.contains(PropertyNames::kJsonText) && btn[PropertyNames::kJsonText].is_string())
+            cp->setConfirmButtonText(btn[PropertyNames::kJsonText].get<string>());
+        if (btn.contains(PropertyNames::kJsonRect) && btn[PropertyNames::kJsonRect].is_object())
+            cp->setConfirmButtonRect(parseRect(btn[PropertyNames::kJsonRect]));
+        if (btn.contains(PropertyNames::kJsonVisible) && btn[PropertyNames::kJsonVisible].is_boolean())
+            cp->setConfirmButtonVisible(btn[PropertyNames::kJsonVisible].get<bool>());
     }
 
-    if (j.contains("buttonHeight") && j["buttonHeight"].is_number())
-        cp->setButtonHeight(j["buttonHeight"].get<float>());
-    if (j.contains("buttonGap") && j["buttonGap"].is_number())
-        cp->setButtonGap(j["buttonGap"].get<float>());
-    if (j.contains("padding") && j["padding"].is_number())
-        cp->setPadding(j["padding"].get<float>());
+    if (j.contains(PropertyNames::kJsonButtonHeight) && j[PropertyNames::kJsonButtonHeight].is_number())
+        cp->setButtonHeight(j[PropertyNames::kJsonButtonHeight].get<float>());
+    if (j.contains(PropertyNames::kJsonButtonGap) && j[PropertyNames::kJsonButtonGap].is_number())
+        cp->setButtonGap(j[PropertyNames::kJsonButtonGap].get<float>());
+    if (j.contains(PropertyNames::kJsonPadding) && j[PropertyNames::kJsonPadding].is_number())
+        cp->setPadding(j[PropertyNames::kJsonPadding].get<float>());
 
     parseEvents(cp, j);
     parseBindings(cp, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = cp;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = cp;
 
     parseChildren(cp, j);
     cp->create();
@@ -1800,66 +1800,66 @@ shared_ptr<ConfirmPopup> LayoutParser::parseConfirmPopup(const json& j, Control*
 // ==================== Dialog ====================
 
 shared_ptr<Dialog> LayoutParser::parseDialog(const json& j, Control* parent) {
-    pushJsonPath("rect");
-    SRect rect = parseRect(j["rect"]);
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
     popJsonPath();
 
     float xScale = 1.0f, yScale = 1.0f;
-    if (j.contains("scale") && j["scale"].is_object()) {
-        xScale = j["scale"].value("x", 1.0f);
-        yScale = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
     }
 
     auto dlg = make_shared<Dialog>(parent, rect, xScale, yScale);
-    m_theme.applyCommonColors(dlg, "dialog");
+    m_theme.applyCommonColors(dlg, PropertyNames::kThemeCatDialog);
     parseCommonProperties(dlg, j);
 
-    if (j.contains("centered") && j["centered"].is_boolean())
+    if (j.contains(PropertyNames::kJsonCentered) && j[PropertyNames::kJsonCentered].is_boolean())
         dlg->setCentered();
-    if (j.contains("closeOnEsc") && j["closeOnEsc"].is_boolean())
-        dlg->setCloseOnEsc(j["closeOnEsc"].get<bool>());
-    if (j.contains("closeOnClickOutside") && j["closeOnClickOutside"].is_boolean())
-        dlg->setCloseOnClickOutside(j["closeOnClickOutside"].get<bool>());
+    if (j.contains(PropertyNames::kJsonCloseOnEsc) && j[PropertyNames::kJsonCloseOnEsc].is_boolean())
+        dlg->setCloseOnEsc(j[PropertyNames::kJsonCloseOnEsc].get<bool>());
+    if (j.contains(PropertyNames::kJsonCloseOnClickOutside) && j[PropertyNames::kJsonCloseOnClickOutside].is_boolean())
+        dlg->setCloseOnClickOutside(j[PropertyNames::kJsonCloseOnClickOutside].get<bool>());
 
     // confirm button
-    if (j.contains("confirmButton") && j["confirmButton"].is_object()) {
-        const json& btn = j["confirmButton"];
-        if (btn.contains("text") && btn["text"].is_string())
-            dlg->setConfirmButtonText(btn["text"].get<string>());
-        if (btn.contains("rect") && btn["rect"].is_object())
-            dlg->setConfirmButtonRect(parseRect(btn["rect"]));
-        if (btn.contains("visible") && btn["visible"].is_boolean())
-            dlg->setConfirmButtonVisible(btn["visible"].get<bool>());
+    if (j.contains(PropertyNames::kJsonConfirmButton) && j[PropertyNames::kJsonConfirmButton].is_object()) {
+        const json& btn = j[PropertyNames::kJsonConfirmButton];
+        if (btn.contains(PropertyNames::kJsonText) && btn[PropertyNames::kJsonText].is_string())
+            dlg->setConfirmButtonText(btn[PropertyNames::kJsonText].get<string>());
+        if (btn.contains(PropertyNames::kJsonRect) && btn[PropertyNames::kJsonRect].is_object())
+            dlg->setConfirmButtonRect(parseRect(btn[PropertyNames::kJsonRect]));
+        if (btn.contains(PropertyNames::kJsonVisible) && btn[PropertyNames::kJsonVisible].is_boolean())
+            dlg->setConfirmButtonVisible(btn[PropertyNames::kJsonVisible].get<bool>());
     }
 
     // cancel button
-    if (j.contains("cancelButton") && j["cancelButton"].is_object()) {
-        const json& btn = j["cancelButton"];
-        if (btn.contains("text") && btn["text"].is_string())
-            dlg->setCancelButtonText(btn["text"].get<string>());
-        if (btn.contains("rect") && btn["rect"].is_object())
-            dlg->setCancelButtonRect(parseRect(btn["rect"]));
+    if (j.contains(PropertyNames::kJsonCancelButton) && j[PropertyNames::kJsonCancelButton].is_object()) {
+        const json& btn = j[PropertyNames::kJsonCancelButton];
+        if (btn.contains(PropertyNames::kJsonText) && btn[PropertyNames::kJsonText].is_string())
+            dlg->setCancelButtonText(btn[PropertyNames::kJsonText].get<string>());
+        if (btn.contains(PropertyNames::kJsonRect) && btn[PropertyNames::kJsonRect].is_object())
+            dlg->setCancelButtonRect(parseRect(btn[PropertyNames::kJsonRect]));
     }
 
-    if (j.contains("buttonHeight") && j["buttonHeight"].is_number())
-        dlg->setButtonHeight(j["buttonHeight"].get<float>());
-    if (j.contains("buttonGap") && j["buttonGap"].is_number())
-        dlg->setButtonGap(j["buttonGap"].get<float>());
-    if (j.contains("padding") && j["padding"].is_number())
-        dlg->setPadding(j["padding"].get<float>());
+    if (j.contains(PropertyNames::kJsonButtonHeight) && j[PropertyNames::kJsonButtonHeight].is_number())
+        dlg->setButtonHeight(j[PropertyNames::kJsonButtonHeight].get<float>());
+    if (j.contains(PropertyNames::kJsonButtonGap) && j[PropertyNames::kJsonButtonGap].is_number())
+        dlg->setButtonGap(j[PropertyNames::kJsonButtonGap].get<float>());
+    if (j.contains(PropertyNames::kJsonPadding) && j[PropertyNames::kJsonPadding].is_number())
+        dlg->setPadding(j[PropertyNames::kJsonPadding].get<float>());
 
     parseEvents(dlg, j);
     parseBindings(dlg, j);
 
-    if (j.contains("id") && j["id"].is_string())
-        m_controlsById[j["id"].get<string>()] = dlg;
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = dlg;
 
     parseChildren(dlg, j);
     dlg->create();
     // Dialog 默认隐藏：布局加载时不弹出，由事件驱动 open() 挂树显示；
     // 显式 visible:true 时立即打开（open() 以 getVisible()==false 为前提）
     dlg->setVisible(false);
-    if (j.value("visible", false)) {
+    if (j.value(PropertyNames::kJsonVisible, false)) {
         dlg->open();
     }
     return dlg;
@@ -1871,62 +1871,62 @@ void LayoutParser::parseCommonProperties(shared_ptr<ControlImpl> ctrl, const jso
     if (!ctrl) return;
 
     // scale
-    if (j.contains("scale") && j["scale"].is_object()) {
-        float sx = j["scale"].value("x", 1.0f);
-        float sy = j["scale"].value("y", 1.0f);
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        float sx = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        float sy = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
         ctrl->setScaleX(sx);
         ctrl->setScaleY(sy);
     }
 
     // margin
-    if (j.contains("margin")) {
-        ctrl->setMargin(parseMargin(j["margin"]));
+    if (j.contains(PropertyNames::kJsonMargin)) {
+        ctrl->setMargin(parseMargin(j[PropertyNames::kJsonMargin]));
     }
 
     // visible
-    ctrl->setVisible(j.value("visible", true));
+    ctrl->setVisible(j.value(PropertyNames::kJsonVisible, true));
 
     // enabled
-    ctrl->setEnable(j.value("enabled", true));
+    ctrl->setEnable(j.value(PropertyNames::kJsonEnabled, true));
 
     // borderVisible
-    if (j.contains("borderVisible") && j["borderVisible"].is_boolean())
-        ctrl->setBorderVisible(j["borderVisible"].get<bool>());
+    if (j.contains(PropertyNames::kJsonBorderVisible) && j[PropertyNames::kJsonBorderVisible].is_boolean())
+        ctrl->setBorderVisible(j[PropertyNames::kJsonBorderVisible].get<bool>());
 
     // colors
-    if (j.contains("colors") && j["colors"].is_object()) {
-        pushJsonPath("colors");
-        const json& colors = j["colors"];
-        if (colors.contains("background")) {
+    if (j.contains(PropertyNames::kJsonColors) && j[PropertyNames::kJsonColors].is_object()) {
+        pushJsonPath(PropertyNames::kJsonColors);
+        const json& colors = j[PropertyNames::kJsonColors];
+        if (colors.contains(PropertyNames::kBackground)) {
             ctrl->setBackgroundStateColor(
-                parseStateColor(colors["background"], StateColor::Type::Background));
+                parseStateColor(colors[PropertyNames::kBackground], StateColor::Type::Background));
         }
-        if (colors.contains("border")) {
+        if (colors.contains(PropertyNames::kBorder)) {
             ctrl->setBorderStateColor(
-                parseStateColor(colors["border"], StateColor::Type::Border));
+                parseStateColor(colors[PropertyNames::kBorder], StateColor::Type::Border));
         }
-        if (colors.contains("text")) {
+        if (colors.contains(PropertyNames::kJsonText)) {
             ctrl->setTextStateColor(
-                parseStateColor(colors["text"], StateColor::Type::Text));
+                parseStateColor(colors[PropertyNames::kJsonText], StateColor::Type::Text));
         }
-        if (colors.contains("textShadow")) {
+        if (colors.contains(PropertyNames::kJsonTextShadow)) {
             ctrl->setTextShadowStateColor(
-                parseStateColor(colors["textShadow"], StateColor::Type::TextShadow));
+                parseStateColor(colors[PropertyNames::kJsonTextShadow], StateColor::Type::TextShadow));
         }
         popJsonPath();
     }
 }
 
 void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
-    if (!j.contains("events") || j["events"].is_null() || !j["events"].is_object()) return;
+    if (!j.contains(PropertyNames::kJsonEvents) || j[PropertyNames::kJsonEvents].is_null() || !j[PropertyNames::kJsonEvents].is_object()) return;
 
-    pushJsonPath("events");
-    const json& events = j["events"];
+    pushJsonPath(PropertyNames::kJsonEvents);
+    const json& events = j[PropertyNames::kJsonEvents];
 
     // Button: onClick
     if (auto btn = dynamic_pointer_cast<Button>(ctrl)) {
-        if (events.contains("onClick") && events["onClick"].is_string()) {
-            string handlerName = events["onClick"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyClick) && events[PropertyNames::kEventKeyClick].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyClick].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -1939,8 +1939,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // Label: onClick (supports hyperlink mode)
     if (auto label = dynamic_pointer_cast<Label>(ctrl)) {
-        if (events.contains("onClick") && events["onClick"].is_string()) {
-            string handlerName = events["onClick"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyClick) && events[PropertyNames::kEventKeyClick].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyClick].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -1953,8 +1953,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // EditBox & TextArea: onTextChanged, onEnter
     if (auto editBox = dynamic_pointer_cast<EditBox>(ctrl)) {
-        if (events.contains("onTextChanged") && events["onTextChanged"].is_string()) {
-            string handlerName = events["onTextChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyTextChanged) && events[PropertyNames::kEventKeyTextChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyTextChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -1964,8 +1964,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
             }
         }
 
-        if (events.contains("onEnter") && events["onEnter"].is_string()) {
-            string handlerName = events["onEnter"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyEnter) && events[PropertyNames::kEventKeyEnter].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyEnter].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -1978,8 +1978,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // ComboBox: onSelectionChanged
     if (auto combo = dynamic_pointer_cast<ComboBox>(ctrl)) {
-        if (events.contains("onSelectionChanged") && events["onSelectionChanged"].is_string()) {
-            string handlerName = events["onSelectionChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeySelectionChanged) && events[PropertyNames::kEventKeySelectionChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeySelectionChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -1992,8 +1992,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // CheckBox: onCheckChanged
     if (auto cb = dynamic_pointer_cast<CheckBox>(ctrl)) {
-        if (events.contains("onCheckChanged") && events["onCheckChanged"].is_string()) {
-            string handlerName = events["onCheckChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyCheckChanged) && events[PropertyNames::kEventKeyCheckChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyCheckChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2006,8 +2006,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // TreeView: onSelect
     if (auto tv = dynamic_pointer_cast<TreeView>(ctrl)) {
-        if (events.contains("onSelect") && events["onSelect"].is_string()) {
-            string handlerName = events["onSelect"].get<string>();
+        if (events.contains(PropertyNames::kEventKeySelect) && events[PropertyNames::kEventKeySelect].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeySelect].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2020,8 +2020,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // ProgressBar: onValueChanged
     if (auto pb = dynamic_pointer_cast<ProgressBar>(ctrl)) {
-        if (events.contains("onValueChanged") && events["onValueChanged"].is_string()) {
-            string handlerName = events["onValueChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyValueChanged) && events[PropertyNames::kEventKeyValueChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyValueChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2034,8 +2034,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // ScrollBar: onPositionChanged
     if (auto sb = dynamic_pointer_cast<ScrollBar>(ctrl)) {
-        if (events.contains("onPositionChanged") && events["onPositionChanged"].is_string()) {
-            string handlerName = events["onPositionChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyPositionChanged) && events[PropertyNames::kEventKeyPositionChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyPositionChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2048,8 +2048,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // Slider: onValueChanged
     if (auto sl = dynamic_pointer_cast<Slider>(ctrl)) {
-        if (events.contains("onValueChanged") && events["onValueChanged"].is_string()) {
-            string handlerName = events["onValueChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyValueChanged) && events[PropertyNames::kEventKeyValueChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyValueChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2062,8 +2062,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // ColorPicker: onColorChanged
     if (auto cp = dynamic_pointer_cast<ColorPicker>(ctrl)) {
-        if (events.contains("onColorChanged") && events["onColorChanged"].is_string()) {
-            string handlerName = events["onColorChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyColorChanged) && events[PropertyNames::kEventKeyColorChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyColorChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2076,8 +2076,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // Dialog/ConfirmPopup/Popup: onConfirm, onCancel, onClose
     if (auto dlg = dynamic_pointer_cast<Dialog>(ctrl)) {
-        if (events.contains("onConfirm") && events["onConfirm"].is_string()) {
-            string handlerName = events["onConfirm"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyConfirm) && events[PropertyNames::kEventKeyConfirm].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyConfirm].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2086,8 +2086,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
                 });
             }
         }
-        if (events.contains("onCancel") && events["onCancel"].is_string()) {
-            string handlerName = events["onCancel"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyCancel) && events[PropertyNames::kEventKeyCancel].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyCancel].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2096,8 +2096,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
                 });
             }
         }
-        if (events.contains("onClose") && events["onClose"].is_string()) {
-            string handlerName = events["onClose"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyClose) && events[PropertyNames::kEventKeyClose].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyClose].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2107,8 +2107,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
             }
         }
     } else if (auto cp = dynamic_pointer_cast<ConfirmPopup>(ctrl)) {
-        if (events.contains("onConfirm") && events["onConfirm"].is_string()) {
-            string handlerName = events["onConfirm"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyConfirm) && events[PropertyNames::kEventKeyConfirm].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyConfirm].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2118,8 +2118,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
             }
         }
     } else if (auto pop = dynamic_pointer_cast<Popup>(ctrl)) {
-        if (events.contains("onClose") && events["onClose"].is_string()) {
-            string handlerName = events["onClose"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyClose) && events[PropertyNames::kEventKeyClose].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyClose].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2132,8 +2132,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // MenuItem: onClick
     if (auto mi = dynamic_pointer_cast<MenuItem>(ctrl)) {
-        if (events.contains("onClick") && events["onClick"].is_string()) {
-            string handlerName = events["onClick"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyClick) && events[PropertyNames::kEventKeyClick].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyClick].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2146,8 +2146,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // NumericUpDown: onValueChanged
     if (auto nud = dynamic_pointer_cast<NumericUpDown>(ctrl)) {
-        if (events.contains("onValueChanged") && events["onValueChanged"].is_string()) {
-            string handlerName = events["onValueChanged"].get<string>();
+        if (events.contains(PropertyNames::kEventKeyValueChanged) && events[PropertyNames::kEventKeyValueChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyValueChanged].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2160,8 +2160,8 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 
     // Splitter: onSplitterMoved
     if (auto sp = dynamic_pointer_cast<Splitter>(ctrl)) {
-        if (events.contains("onSplitterMoved") && events["onSplitterMoved"].is_string()) {
-            string handlerName = events["onSplitterMoved"].get<string>();
+        if (events.contains(PropertyNames::kEventKeySplitterMoved) && events[PropertyNames::kEventKeySplitterMoved].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeySplitterMoved].get<string>();
             auto it = m_handlers.find(handlerName);
             if (it != m_handlers.end()) {
                 auto handler = it->second;
@@ -2176,30 +2176,30 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
 }
 
 static void applyBinding(shared_ptr<ControlImpl> ctrl, const string& prop, const DataValue& val) {
-    if (prop == "visible") { ctrl->setVisible(val.asBool()); return; }
-    if (prop == "enabled") { ctrl->setEnable(val.asBool()); return; }
+    if (prop == PropertyNames::kJsonVisible) { ctrl->setVisible(val.asBool()); return; }
+    if (prop == PropertyNames::kJsonEnabled) { ctrl->setEnable(val.asBool()); return; }
 
-    if (prop == "caption") {
+    if (prop == PropertyNames::kJsonCaption) {
         if (auto label = dynamic_pointer_cast<Label>(ctrl)) { label->setCaption(val.asString()); return; }
         if (auto btn = dynamic_pointer_cast<Button>(ctrl)) { btn->setCaption(val.asString()); return; }
     }
-    if (prop == "text") {
+    if (prop == PropertyNames::kJsonText) {
         if (auto eb = dynamic_pointer_cast<EditBox>(ctrl)) { eb->setText(val.asString()); return; }
         if (auto ta = dynamic_pointer_cast<TextArea>(ctrl)) { ta->setText(val.asString()); return; }
     }
-    if (prop == "placeholder") {
+    if (prop == PropertyNames::kJsonPlaceholder) {
         if (auto eb = dynamic_pointer_cast<EditBox>(ctrl)) { eb->setPlaceholder(val.asString()); return; }
     }
-    if (prop == "value") {
+    if (prop == PropertyNames::kJsonValue) {
         if (auto pb = dynamic_pointer_cast<ProgressBar>(ctrl)) { pb->setValue((float)val.asDouble()); return; }
         if (auto sb = dynamic_pointer_cast<ScrollBar>(ctrl)) { sb->setValue((float)val.asDouble()); return; }
     }
-    if (prop == "checkState") {
+    if (prop == PropertyNames::kJsonCheckState) {
         if (auto cb = dynamic_pointer_cast<CheckBox>(ctrl)) {
             CheckState s = CheckState::Unchecked;
             string vs = val.asString();
-            if (vs == "Checked") s = CheckState::Checked;
-            else if (vs == "Indeterminate") s = CheckState::Indeterminate;
+            if (vs == PropertyNames::kCheckChecked) s = CheckState::Checked;
+            else if (vs == PropertyNames::kCheckIndeterminate) s = CheckState::Indeterminate;
             cb->setCheckState(s);
             return;
         }
@@ -2209,14 +2209,14 @@ static void applyBinding(shared_ptr<ControlImpl> ctrl, const string& prop, const
 static void bindProperty(DataContext* dataContext, shared_ptr<ControlImpl> ctrl, const string& prop, const string& source, const string& mode) {
     if (!dataContext) return;
     weak_ptr<ControlImpl> weakCtrl = ctrl;
-    if (mode == "oneWay" || mode == "twoWay") {
+    if (mode == PropertyNames::kBindModeOneWay || mode == PropertyNames::kBindModeTwoWay) {
         dataContext->watch(source, [weakCtrl, prop](const DataValue& val) {
             auto locked = dynamic_pointer_cast<ControlImpl>(weakCtrl.lock());
             if (locked) applyBinding(locked, prop, val);
         });
     }
-    if (mode == "twoWay") {
-        if (prop == "text") {
+    if (mode == PropertyNames::kBindModeTwoWay) {
+        if (prop == PropertyNames::kJsonText) {
             if (auto eb = dynamic_pointer_cast<EditBox>(ctrl)) {
                 auto s = source;
                 eb->setOnTextChanged([s, dataContext](shared_ptr<Control>, string text) {
@@ -2224,19 +2224,19 @@ static void bindProperty(DataContext* dataContext, shared_ptr<ControlImpl> ctrl,
                 });
             }
         }
-        if (prop == "checkState") {
+    if (prop == PropertyNames::kJsonCheckState) {
             if (auto cb = dynamic_pointer_cast<CheckBox>(ctrl)) {
                 auto s = source;
                 shared_ptr<CheckBox> weakCB = cb;
                 cb->setOnCheckChanged([s, dataContext, weakCB](shared_ptr<CheckBox>, CheckState, CheckState newState) {
-                    string vs = "Unchecked";
-                    if (newState == CheckState::Checked) vs = "Checked";
-                    else if (newState == CheckState::Indeterminate) vs = "Indeterminate";
+                    string vs = PropertyNames::kCheckUnchecked;
+                    if (newState == CheckState::Checked) vs = PropertyNames::kCheckChecked;
+                    else if (newState == CheckState::Indeterminate) vs = PropertyNames::kCheckIndeterminate;
                     dataContext->set(s, vs);
                 });
             }
         }
-        if (prop == "value") {
+        if (prop == PropertyNames::kJsonValue) {
             if (auto sb = dynamic_pointer_cast<ScrollBar>(ctrl)) {
                 auto s = source;
                 sb->setOnPositionChanged([s, dataContext](shared_ptr<ScrollBar>, float, float newValue, float, float) {
@@ -2250,18 +2250,18 @@ static void bindProperty(DataContext* dataContext, shared_ptr<ControlImpl> ctrl,
 }
 
 void LayoutParser::parseBindings(shared_ptr<ControlImpl> ctrl, const json& j) {
-    if (!j.contains("bind") || !j["bind"].is_object()) return;
-    pushJsonPath("bind");
-    const json& bind = j["bind"];
+    if (!j.contains(PropertyNames::kJsonBind) || !j[PropertyNames::kJsonBind].is_object()) return;
+    pushJsonPath(PropertyNames::kJsonBind);
+    const json& bind = j[PropertyNames::kJsonBind];
     for (auto it = bind.begin(); it != bind.end(); ++it) {
         string prop = it.key();
         string source;
-        string mode = "oneWay";
+        string mode = PropertyNames::kBindModeOneWay;
         if (it.value().is_string()) {
             source = it.value().get<string>();
         } else if (it.value().is_object()) {
-            source = it.value().value("source", "");
-            mode = it.value().value("mode", "oneWay");
+            source = it.value().value(PropertyNames::kJsonSource, "");
+            mode = it.value().value(PropertyNames::kJsonMode, PropertyNames::kBindModeOneWay);
         } else {
             continue;
         }
@@ -2271,10 +2271,10 @@ void LayoutParser::parseBindings(shared_ptr<ControlImpl> ctrl, const json& j) {
 }
 
 void LayoutParser::parseChildren(shared_ptr<Control> container, const json& j) {
-    if (!j.contains("children") || !j["children"].is_array()) return;
+    if (!j.contains(PropertyNames::kJsonChildren) || !j[PropertyNames::kJsonChildren].is_array()) return;
 
-    pushJsonPath("children");
-    const json& children = j["children"];
+    pushJsonPath(PropertyNames::kJsonChildren);
+    const json& children = j[PropertyNames::kJsonChildren];
     for (size_t i = 0; i < children.size(); ++i) {
         auto child = parseControl(children[i], container.get(), (int)i);
         if (child) {
@@ -2291,9 +2291,10 @@ void LayoutParser::parseChildren(shared_ptr<Control> container, const json& j) {
 
 SRect LayoutParser::parseRect(const json& j) {
     SRect rect;
+    vector<string> missing;
 
     if (!j.is_object()) {
-        pushJsonPath("rect");
+        pushJsonPath(PropertyNames::kJsonRect);
         logError("'rect' must be an object with {x, y, w, h}");
         popJsonPath();
         return rect;
@@ -2318,16 +2319,15 @@ SRect LayoutParser::parseRect(const json& j) {
         }
     };
 
-    parseField("x", rect.left,   rect.leftIsPct,   rect.leftPct,   0.0f);
-    parseField("y", rect.top,    rect.topIsPct,    rect.topPct,    0.0f);
-    parseField("w", rect.width,  rect.widthIsPct,  rect.widthPct,  0.0f);
-    parseField("h", rect.height, rect.heightIsPct, rect.heightPct, 0.0f);
+    parseField(PropertyNames::kJsonX, rect.left,   rect.leftIsPct,   rect.leftPct,   0.0f);
+    parseField(PropertyNames::kJsonY, rect.top,    rect.topIsPct,    rect.topPct,    0.0f);
+    parseField(PropertyNames::kJsonW, rect.width,  rect.widthIsPct,  rect.widthPct,  0.0f);
+    parseField(PropertyNames::kJsonH, rect.height, rect.heightIsPct, rect.heightPct, 0.0f);
 
-    vector<string> missing;
-    if (!j.contains("x")) missing.push_back("x");
-    if (!j.contains("y")) missing.push_back("y");
-    if (!j.contains("w")) missing.push_back("w");
-    if (!j.contains("h")) missing.push_back("h");
+    if (!j.contains(PropertyNames::kJsonX)) missing.push_back(PropertyNames::kJsonX);
+    if (!j.contains(PropertyNames::kJsonY)) missing.push_back(PropertyNames::kJsonY);
+    if (!j.contains(PropertyNames::kJsonW)) missing.push_back(PropertyNames::kJsonW);
+    if (!j.contains(PropertyNames::kJsonH)) missing.push_back(PropertyNames::kJsonH);
 
     if (!missing.empty()) {
         string fields;
@@ -2345,16 +2345,16 @@ Margin LayoutParser::parseMargin(const json& j) {
     Margin margin;
 
     if (!j.is_object()) {
-        pushJsonPath("margin");
+        pushJsonPath(PropertyNames::kJsonMargin);
         logWarn("'margin' must be an object, using defaults");
         popJsonPath();
         return margin;
     }
 
-    margin.left   = j.value("left",   0.0f);
-    margin.top    = j.value("top",    0.0f);
-    margin.right  = j.value("right",  0.0f);
-    margin.bottom = j.value("bottom", 0.0f);
+    margin.left   = j.value(PropertyNames::kJsonLeft,   0.0f);
+    margin.top    = j.value(PropertyNames::kJsonTop,    0.0f);
+    margin.right  = j.value(PropertyNames::kJsonRight,  0.0f);
+    margin.bottom = j.value(PropertyNames::kJsonBottom, 0.0f);
 
     return margin;
 }
@@ -2388,10 +2388,10 @@ SColor LayoutParser::parseColor(const json& j) {
             logWarn("invalid hex color length \"" + hex + "\", using default white");
         }
     } else if (j.is_object()) {
-        uint8_t r = (uint8_t)j.value("r", 255);
-        uint8_t g = (uint8_t)j.value("g", 255);
-        uint8_t b = (uint8_t)j.value("b", 255);
-        uint8_t a = (uint8_t)j.value("a", 255);
+        uint8_t r = (uint8_t)j.value(PropertyNames::kChannelR, 255);
+        uint8_t g = (uint8_t)j.value(PropertyNames::kChannelG, 255);
+        uint8_t b = (uint8_t)j.value(PropertyNames::kChannelB, 255);
+        uint8_t a = (uint8_t)j.value(PropertyNames::kChannelA, 255);
         return SColor(r, g, b, a);
     }
 
@@ -2403,24 +2403,24 @@ StateColor LayoutParser::parseStateColor(const json& j, StateColor::Type type) {
 
     if (j.is_null()) return stateColor;
 
-    if (j.contains("normal")) {
-        pushJsonPath("normal");
-        stateColor.setNormal(parseColor(j["normal"]));
+    if (j.contains(PropertyNames::kStateKeyNormal)) {
+        pushJsonPath(PropertyNames::kStateKeyNormal);
+        stateColor.setNormal(parseColor(j[PropertyNames::kStateKeyNormal]));
         popJsonPath();
     }
-    if (j.contains("hover")) {
-        pushJsonPath("hover");
-        stateColor.setHover(parseColor(j["hover"]));
+    if (j.contains(PropertyNames::kStateKeyHover)) {
+        pushJsonPath(PropertyNames::kStateKeyHover);
+        stateColor.setHover(parseColor(j[PropertyNames::kStateKeyHover]));
         popJsonPath();
     }
-    if (j.contains("pressed")) {
-        pushJsonPath("pressed");
-        stateColor.setPressed(parseColor(j["pressed"]));
+    if (j.contains(PropertyNames::kStateKeyPressed)) {
+        pushJsonPath(PropertyNames::kStateKeyPressed);
+        stateColor.setPressed(parseColor(j[PropertyNames::kStateKeyPressed]));
         popJsonPath();
     }
-    if (j.contains("disabled")) {
-        pushJsonPath("disabled");
-        stateColor.setDisabled(parseColor(j["disabled"]));
+    if (j.contains(PropertyNames::kStateKeyDisabled)) {
+        pushJsonPath(PropertyNames::kStateKeyDisabled);
+        stateColor.setDisabled(parseColor(j[PropertyNames::kStateKeyDisabled]));
         popJsonPath();
     }
 
@@ -2451,15 +2451,15 @@ FontName LayoutParser::parseFontName(const string& name) {
 
 AlignmentMode LayoutParser::parseAlignment(const string& align) {
     static const unordered_map<string, AlignmentMode> alignMap = {
-        {"TOP_LEFT",      AlignmentMode::AM_TOP_LEFT},
-        {"TOP_CENTER",    AlignmentMode::AM_TOP_CENTER},
-        {"TOP_RIGHT",     AlignmentMode::AM_TOP_RIGHT},
-        {"MID_LEFT",      AlignmentMode::AM_MID_LEFT},
-        {"CENTER",        AlignmentMode::AM_CENTER},
-        {"MID_RIGHT",     AlignmentMode::AM_MID_RIGHT},
-        {"BOTTOM_LEFT",   AlignmentMode::AM_BOTTOM_LEFT},
-        {"BOTTOM_CENTER", AlignmentMode::AM_BOTTOM_CENTER},
-        {"BOTTOM_RIGHT",  AlignmentMode::AM_BOTTOM_RIGHT},
+        {PropertyNames::kAlignLowerTopLeft,     AlignmentMode::AM_TOP_LEFT},
+        {PropertyNames::kAlignLowerTopCenter,   AlignmentMode::AM_TOP_CENTER},
+        {PropertyNames::kAlignLowerTopRight,    AlignmentMode::AM_TOP_RIGHT},
+        {PropertyNames::kAlignLowerMidLeft,     AlignmentMode::AM_MID_LEFT},
+        {PropertyNames::kAlignLowerCenter,      AlignmentMode::AM_CENTER},
+        {PropertyNames::kAlignLowerMidRight,    AlignmentMode::AM_MID_RIGHT},
+        {PropertyNames::kAlignLowerBottomLeft,  AlignmentMode::AM_BOTTOM_LEFT},
+        {PropertyNames::kAlignLowerBottomCenter,AlignmentMode::AM_BOTTOM_CENTER},
+        {PropertyNames::kAlignLowerBottomRight, AlignmentMode::AM_BOTTOM_RIGHT},
     };
 
     auto it = alignMap.find(align);
@@ -2471,11 +2471,11 @@ AlignmentMode LayoutParser::parseAlignment(const string& align) {
 
 int LayoutParser::parseFontStyle(const string& style) {
     static const unordered_map<string, int> styleMap = {
-        {"NORMAL",        0},
-        {"BOLD",          1},
-        {"ITALIC",        2},
-        {"UNDERLINE",     4},
-        {"STRIKETHROUGH", 8},
+        {PropertyNames::kFontStyleNormal,        0},
+        {PropertyNames::kFontStyleBold,          1},
+        {PropertyNames::kFontStyleItalic,        2},
+        {PropertyNames::kFontStyleUnderline,     4},
+        {PropertyNames::kFontStyleStrikethrough, 8},
     };
 
     auto it = styleMap.find(style);
@@ -2488,12 +2488,12 @@ GridSize LayoutParser::parseGridSize(const json& j) {
     GridSize gs;
     if (j.is_string()) {
         string s = j.get<string>();
-        if (s == "auto") {
+        if (s == PropertyNames::kGridSizeAuto) {
             gs.type = GridSize::Auto;
-        } else if (s.size() > 2 && s.substr(s.size() - 2) == "fr") {
+        } else if (s.size() > 2 && s.substr(s.size() - 2) == PropertyNames::kGridSizeFrSuffix) {
             gs.type = GridSize::Flex;
             gs.value = stof(s.substr(0, s.size() - 2));
-        } else if (s.size() > 2 && s.substr(s.size() - 2) == "px") {
+        } else if (s.size() > 2 && s.substr(s.size() - 2) == PropertyNames::kGridSizePxSuffix) {
             gs.type = GridSize::Fixed;
             gs.value = stof(s.substr(0, s.size() - 2));
         } else {
@@ -2510,17 +2510,20 @@ GridSize LayoutParser::parseGridSize(const json& j) {
 // ==================== 组件系统 ====================
 
 void LayoutParser::parseComponents(const json& j) {
-    if (!j.contains("components") || !j["components"].is_object()) return;
+    if (!j.contains(PropertyNames::kJsonComponents) || !j[PropertyNames::kJsonComponents].is_object()) return;
 
-    pushJsonPath("components");
-    const json& comps = j["components"];
+    pushJsonPath(PropertyNames::kJsonComponents);
+    const json& comps = j[PropertyNames::kJsonComponents];
 
     // Known control type names to check against
     unordered_set<string> knownTypes = {
-        "Label", "Button", "EditBox", "ComboBox", "TextArea", "CheckBox",
-        "ProgressBar", "ScrollBar", "Panel", "WinFrame", "MenuBar",
-        "ColorPicker", "Slider", "Popup", "ConfirmPopup", "Dialog",
-        "TreeView"
+        PropertyNames::kControlTypeLabel, PropertyNames::kControlTypeButton, PropertyNames::kControlTypeEditBox,
+        PropertyNames::kControlTypeComboBox, PropertyNames::kControlTypeTextArea, PropertyNames::kControlTypeCheckBox,
+        PropertyNames::kControlTypeProgressBar, PropertyNames::kControlTypeScrollBar, PropertyNames::kControlTypePanel,
+        PropertyNames::kControlTypeWinFrame, PropertyNames::kControlTypeMenuBar,
+        PropertyNames::kControlTypeColorPicker, PropertyNames::kControlTypeSlider, PropertyNames::kControlTypePopup,
+        PropertyNames::kControlTypeConfirmPopup, PropertyNames::kControlTypeDialog,
+        PropertyNames::kControlTypeTreeView
     };
 
     for (auto it = comps.begin(); it != comps.end(); ++it) {
@@ -2532,27 +2535,27 @@ void LayoutParser::parseComponents(const json& j) {
             continue;
         }
 
-        if (!def.contains("template") || !def["template"].is_object()) {
+        if (!def.contains(PropertyNames::kJsonTemplate) || !def[PropertyNames::kJsonTemplate].is_object()) {
             logWarn("component \"" + name + "\" is missing 'template' object");
             continue;
         }
 
-        if (def.contains("props") && !def["props"].is_object()) {
+        if (def.contains(PropertyNames::kJsonProps) && !def[PropertyNames::kJsonProps].is_object()) {
             logWarn("component \"" + name + "\" 'props' must be an object");
             continue;
         }
 
         // Validate props
-        if (def.contains("props")) {
-            const json& props = def["props"];
+        if (def.contains(PropertyNames::kJsonProps)) {
+            const json& props = def[PropertyNames::kJsonProps];
             bool propsValid = true;
             for (auto p = props.begin(); p != props.end(); ++p) {
-                if (!p.value().contains("type") || !p.value()["type"].is_string()) {
+                if (!p.value().contains(PropertyNames::kJsonType) || !p.value()[PropertyNames::kJsonType].is_string()) {
                     logWarn("component \"" + name + "\" prop \"" + p.key() + "\" missing 'type' field");
                     propsValid = false;
                 } else {
-                    string ptype = p.value()["type"].get<string>();
-                    if (ptype != "string" && ptype != "number" && ptype != "bool") {
+                    string ptype = p.value()[PropertyNames::kJsonType].get<string>();
+                    if (ptype != PropertyNames::kPropTypeString && ptype != PropertyNames::kPropTypeNumber && ptype != PropertyNames::kPropTypeBool) {
                         logWarn("component \"" + name + "\" prop \"" + p.key() + "\" invalid type \"" + ptype + "\"");
                         propsValid = false;
                     }
@@ -2603,9 +2606,9 @@ void LayoutParser::replacePlaceholders(json& node, const json& props, const json
                         val.replace(start, end - start + 2, propVal.get<bool>() ? "true" : "false");
                         node = val;
                     }
-                } else if (props.contains(propName) && props[propName].contains("default")) {
+                } else if (props.contains(propName) && props[propName].contains(PropertyNames::kJsonDefault)) {
                     // Use default value
-                    const json& def = props[propName]["default"];
+                    const json& def = props[propName][PropertyNames::kJsonDefault];
                     if (def.is_string()) {
                         val.replace(start, end - start + 2, def.get<string>());
                         node = val;
@@ -2635,8 +2638,8 @@ void LayoutParser::replacePlaceholders(json& node, const json& props, const json
 void LayoutParser::remapEvents(json& node, const json& instanceEvents) {
     if (node.is_object()) {
         // Check if this node has events
-        if (node.contains("events") && node["events"].is_object()) {
-            json& events = node["events"];
+        if (node.contains(PropertyNames::kJsonEvents) && node[PropertyNames::kJsonEvents].is_object()) {
+            json& events = node[PropertyNames::kJsonEvents];
             vector<string> keysToRemove;
             for (auto it = events.begin(); it != events.end(); ++it) {
                 if (it.value().is_string()) {
@@ -2668,9 +2671,9 @@ void LayoutParser::remapEvents(json& node, const json& instanceEvents) {
 void LayoutParser::prefixIds(json& node, const string& prefix) {
     if (node.is_object()) {
         // Prefix the id if present
-        if (node.contains("id") && node["id"].is_string()) {
-            string originalId = node["id"].get<string>();
-            node["id"] = prefix + "__" + originalId;
+        if (node.contains(PropertyNames::kJsonId) && node[PropertyNames::kJsonId].is_string()) {
+            string originalId = node[PropertyNames::kJsonId].get<string>();
+            node[PropertyNames::kJsonId] = prefix + "__" + originalId;
         }
 
         // Recurse
@@ -2706,8 +2709,8 @@ shared_ptr<Control> LayoutParser::instantiateComponent(const string& name, const
     }
 
     const json& compDef = compIt->second;
-    const json& templateJ = compDef["template"];
-    const json props = compDef.contains("props") ? compDef["props"] : json::object();
+    const json& templateJ = compDef[PropertyNames::kJsonTemplate];
+    const json props = compDef.contains(PropertyNames::kJsonProps) ? compDef[PropertyNames::kJsonProps] : json::object();
 
     // Get source line info for better error messages
     auto srcIt = m_componentSourceLines.find(name);
@@ -2725,21 +2728,21 @@ shared_ptr<Control> LayoutParser::instantiateComponent(const string& name, const
     replacePlaceholders(expanded, props, instanceJ);
 
     // Remap events: _comp_xxx -> instance events
-    json instanceEvents = instanceJ.contains("events") ? instanceJ["events"] : json::object();
+    json instanceEvents = instanceJ.contains(PropertyNames::kJsonEvents) ? instanceJ[PropertyNames::kJsonEvents] : json::object();
     remapEvents(expanded, instanceEvents);
 
     // Prefix IDs for uniqueness (BEFORE injecting instance id/rect, so root ID isn't double-prefixed)
-    string idPrefix = instanceJ.contains("id") && instanceJ["id"].is_string()
-        ? instanceJ["id"].get<string>()
-        : "_comp_" + name;
+    string idPrefix = instanceJ.contains(PropertyNames::kJsonId) && instanceJ[PropertyNames::kJsonId].is_string()
+        ? instanceJ[PropertyNames::kJsonId].get<string>()
+        : PropertyNames::kCompEventPrefix + name;
     prefixIds(expanded, idPrefix);
 
     // Inject instance attributes LAST so they override template/defaults without double-prefixing
-    if (instanceJ.contains("id") && instanceJ["id"].is_string()) {
-        expanded["id"] = instanceJ["id"].get<string>();
+    if (instanceJ.contains(PropertyNames::kJsonId) && instanceJ[PropertyNames::kJsonId].is_string()) {
+        expanded[PropertyNames::kJsonId] = instanceJ[PropertyNames::kJsonId].get<string>();
     }
-    if (instanceJ.contains("rect") && instanceJ["rect"].is_object()) {
-        expanded["rect"] = instanceJ["rect"];
+    if (instanceJ.contains(PropertyNames::kJsonRect) && instanceJ[PropertyNames::kJsonRect].is_object()) {
+        expanded[PropertyNames::kJsonRect] = instanceJ[PropertyNames::kJsonRect];
     }
     // Forward other standard control attributes
     for (const string& attr : {"xScale", "yScale", "enable", "visible"}) {

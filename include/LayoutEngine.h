@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include "ControlBase.h"
+#include "PropertyNames.h"
 
 using namespace std;
 
@@ -14,7 +15,7 @@ struct FlowItemProps {
 };
 
 struct AnchorInfo {
-    string anchor = "TOP_LEFT";
+    string anchor = PropertyNames::kAlignLowerTopLeft;
     Margin offset;
 };
 
@@ -46,7 +47,7 @@ public:
     void apply(const SRect& containerRect,
                vector<shared_ptr<Control>>& children,
                unordered_map<Control*, FlowItemProps>& itemProps) override;
-    string getType() const override { return "HFlow"; }
+    string getType() const override { return PropertyNames::kLayoutTypeHFlow; }
 };
 
 class VFlowLayout : public LayoutEngine {
@@ -60,7 +61,7 @@ public:
     void apply(const SRect& containerRect,
                vector<shared_ptr<Control>>& children,
                unordered_map<Control*, FlowItemProps>& itemProps) override;
-    string getType() const override { return "VFlow"; }
+    string getType() const override { return PropertyNames::kLayoutTypeVFlow; }
 };
 
 // ==================== AnchorLayout ====================
@@ -96,7 +97,7 @@ public:
     void apply(const SRect& containerRect,
                vector<shared_ptr<Control>>& children,
                unordered_map<Control*, FlowItemProps>& itemProps) override {}
-    string getType() const override { return "Grid"; }
+    string getType() const override { return PropertyNames::kLayoutTypeGrid; }
 };
 
 class AnchorLayout : public LayoutEngine {
@@ -111,7 +112,7 @@ public:
     void applyAnchor(const SRect& containerRect,
                      vector<shared_ptr<Control>>& children,
                      unordered_map<Control*, AnchorInfo>& anchorProps) override;
-    string getType() const override { return "Anchor"; }
+    string getType() const override { return PropertyNames::kLayoutTypeAnchor; }
 };
 
 #endif

@@ -372,8 +372,8 @@ int ScrollBar::setFloatProperty(const char* prop, float value) {
 
 int ScrollBar::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kOrientation) == 0) {
-        if (strcmp(value, "vertical") == 0)   { setOrientation(ScrollBarOrientation::Vertical);   return 1; }
-        if (strcmp(value, "horizontal") == 0) { setOrientation(ScrollBarOrientation::Horizontal); return 1; }
+        if (strcmp(value, PropertyNames::kOrientVertical) == 0)   { setOrientation(ScrollBarOrientation::Vertical);   return 1; }
+        if (strcmp(value, PropertyNames::kOrientHorizontal) == 0) { setOrientation(ScrollBarOrientation::Horizontal); return 1; }
         return 0;
     }
     return ControlImpl::setEnumProperty(prop, value);
@@ -399,7 +399,7 @@ int ScrollBar::getFloatProperty(const char* prop, float& out) {
 
 int ScrollBar::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kOrientation) == 0) {
-        out = (m_orientation == ScrollBarOrientation::Horizontal) ? "horizontal" : "vertical";
+        out = (m_orientation == ScrollBarOrientation::Horizontal) ? PropertyNames::kOrientHorizontal : PropertyNames::kOrientVertical;
         return 1;
     }
     return ControlImpl::getEnumProperty(prop, out);

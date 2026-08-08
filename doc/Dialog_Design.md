@@ -1,4 +1,4 @@
-# Dialog 通用弹窗控件设计文档
+﻿# Dialog 通用弹窗控件设计文档
 
 ## 1. 概述
 
@@ -232,7 +232,9 @@ Popup 构造
 
 ```
 show()  [virtual]
-├── computeTargetRect()           ← 计算屏幕绝对坐标
+├── computeTargetRect()           ← 计算父（bench）相对本地坐标（2026-08-08 修订：
+│                                    Popup m_rect 与普通控件一致为父相对；内部换算
+│                                    viewport/bench 偏移，不再使用窗口绝对坐标）
 ├── setRect(rect)
 ├── if (!m_watcherRegistered)
 │   ├── addBeforeEventHandlingWatcher(MouseDown, this)
@@ -504,7 +506,7 @@ Dialog/ConfirmPopup/Popup 支持在 JSON 布局中声明：定义弹窗的结构
 
 ```json
 {
-  "type": "Dialog",
+  "type": "dialog",
   "id": "settingsDialog",
   "rect": { "w": 400, "h": 300 },
   "centered": true,
@@ -522,13 +524,13 @@ Dialog/ConfirmPopup/Popup 支持在 JSON 布局中声明：定义弹窗的结构
   },
   "children": [
     {
-      "type": "Label",
+      "type": "label",
       "id": "title",
       "rect": { "x": 10, "y": 10, "w": 380, "h": 24 },
       "caption": "设置"
     },
     {
-      "type": "CheckBox",
+      "type": "check-box",
       "id": "autoSave",
       "rect": { "x": 20, "y": 44, "w": 200, "h": 24 },
       "caption": "自动保存"
@@ -549,7 +551,7 @@ Dialog/ConfirmPopup/Popup 支持在 JSON 布局中声明：定义弹窗的结构
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `centered` | boolean | `true` | 是否屏幕居中；`false` 则使用 `rect` 的绝对坐标 |
+| `centered` | boolean | `true` | 是否屏幕居中；`false` 则使用 `rect` 的父相对本地坐标（2026-08-08 修订：与普通控件坐标规则一致） |
 | `closeOnEsc` | boolean | `true` | ESC 是否关闭弹窗 |
 | `closeOnClickOutside` | boolean | `true` | 点击外部是否关闭弹窗 |
 | `children` | array | `[]` | 弹窗内容控件，被包装为 Panel 后通过 `setContent()` 设置 |
@@ -580,7 +582,7 @@ JSON 中 Dialog 的 `events` 对象注册到 `m_handlers`，由 C ABI 或 Layout
 
 ```json
 {
-  "type": "Dialog",
+  "type": "dialog",
   "id": "confirmDlg",
   "events": {
     "onConfirm": "handleConfirm",
@@ -618,7 +620,7 @@ btn->setOnClick([dlg](shared_ptr<Button>) {
 
 ```json
 {
-  "type": "Button",
+  "type": "button",
   "id": "openBtn",
   "caption": "打开设置",
   "events": { "onClick": "showSettings" }

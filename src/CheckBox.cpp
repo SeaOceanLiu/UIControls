@@ -658,14 +658,14 @@ int CheckBox::setEnumProperty(const char* prop, const char* value) {
         return 1;
     }
     if (strcmp(prop, PropertyNames::kLayout) == 0) {
-        if (_stricmp(value, "text-right") == 0) { setLayout(CheckBoxLayout::TextRight); return 1; }
-        if (_stricmp(value, "text-left")  == 0) { setLayout(CheckBoxLayout::TextLeft);  return 1; }
+        if (_stricmp(value, PropertyNames::kLayoutTextRight) == 0) { setLayout(CheckBoxLayout::TextRight); return 1; }
+        if (_stricmp(value, PropertyNames::kLayoutTextLeft)  == 0) { setLayout(CheckBoxLayout::TextLeft);  return 1; }
         return 0;
     }
     if (strcmp(prop, PropertyNames::kVerticalAlign) == 0) {
-        if (_stricmp(value, "center") == 0) { setVerticalAlign(CheckBoxVerticalAlign::Center); return 1; }
-        if (_stricmp(value, "top")    == 0) { setVerticalAlign(CheckBoxVerticalAlign::Top);    return 1; }
-        if (_stricmp(value, "bottom") == 0) { setVerticalAlign(CheckBoxVerticalAlign::Bottom); return 1; }
+        if (_stricmp(value, PropertyNames::kVAlignCenter) == 0) { setVerticalAlign(CheckBoxVerticalAlign::Center); return 1; }
+        if (_stricmp(value, PropertyNames::kVAlignTop)    == 0) { setVerticalAlign(CheckBoxVerticalAlign::Top);    return 1; }
+        if (_stricmp(value, PropertyNames::kVAlignBottom) == 0) { setVerticalAlign(CheckBoxVerticalAlign::Bottom); return 1; }
         return 0;
     }
     return ControlImpl::setEnumProperty(prop, value);
@@ -693,29 +693,29 @@ int CheckBox::getFloatProperty(const char* prop, float& out) {
 int CheckBox::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kCheckBoxStyle) == 0) {
         switch (m_style) {
-            case CheckBoxStyle::Classic: out = "classic"; return 1;
-            case CheckBoxStyle::Cross:   out = "cross";   return 1;
-            case CheckBoxStyle::Circle:  out = "circle";  return 1;
+            case CheckBoxStyle::Classic: out = PropertyNames::kStyleClassic; return 1;
+            case CheckBoxStyle::Cross:   out = PropertyNames::kStyleCross;   return 1;
+            case CheckBoxStyle::Circle:  out = PropertyNames::kStyleCircle;  return 1;
         }
     }
     if (strcmp(prop, PropertyNames::kCheckState) == 0) {
         switch (m_checkState) {
-            case CheckState::Unchecked:     out = "unchecked";     return 1;
-            case CheckState::Checked:       out = "checked";       return 1;
-            case CheckState::Indeterminate: out = "indeterminate"; return 1;
+            case CheckState::Unchecked:     out = PropertyNames::kCheckUnchecked;     return 1;
+            case CheckState::Checked:       out = PropertyNames::kCheckChecked;       return 1;
+            case CheckState::Indeterminate: out = PropertyNames::kCheckIndeterminate; return 1;
         }
     }
     if (strcmp(prop, PropertyNames::kLayout) == 0) {
         switch (m_layout) {
-            case CheckBoxLayout::TextRight: out = "text-right"; return 1;
-            case CheckBoxLayout::TextLeft:  out = "text-left";  return 1;
+            case CheckBoxLayout::TextRight: out = PropertyNames::kLayoutTextRight; return 1;
+            case CheckBoxLayout::TextLeft:  out = PropertyNames::kLayoutTextLeft;  return 1;
         }
     }
     if (strcmp(prop, PropertyNames::kVerticalAlign) == 0) {
         switch (m_verticalAlign) {
-            case CheckBoxVerticalAlign::Center: out = "center"; return 1;
-            case CheckBoxVerticalAlign::Top:    out = "top";    return 1;
-            case CheckBoxVerticalAlign::Bottom: out = "bottom"; return 1;
+            case CheckBoxVerticalAlign::Center: out = PropertyNames::kVAlignCenter; return 1;
+            case CheckBoxVerticalAlign::Top:    out = PropertyNames::kVAlignTop;    return 1;
+            case CheckBoxVerticalAlign::Bottom: out = PropertyNames::kVAlignBottom; return 1;
         }
     }
     return ControlImpl::getEnumProperty(prop, out);

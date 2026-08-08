@@ -176,7 +176,7 @@ int main() {
     uiRegisterAction(inst2, "act", actionCb2, &act2);
 
     const char* layoutJson =
-        "{\"controls\":[{\"type\":\"Button\",\"id\":\"ab\",\"text\":\"A\","
+        "{\"controls\":[{\"type\":\"button\",\"id\":\"ab\",\"text\":\"A\","
         "\"rect\":{\"x\":200,\"y\":200,\"w\":100,\"h\":30},"
         "\"events\":{\"onClick\":\"act\"}}]}";
     assert(uiLoadLayout(inst1, layoutJson) == 1);

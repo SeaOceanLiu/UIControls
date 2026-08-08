@@ -446,6 +446,21 @@ void ControlImpl::setFocused(bool focused, bool byKeyboard) {
 
 ### 5.1 鼠标进入/退出
 
+`ControlImpl::update()`（src/ControlBase.cpp:151-181）每帧检测鼠标进入/退出状态：
+
+```cpp
+// 获取当前鼠标位置；窗口不可用或鼠标不在本窗口内（多实例时
+// getMousePosition 返回 false）→ 视为不在任何控件上，清除 hover。
+float mouseX = 0, mouseY = 0;
+bool hasMouse = (m_context && m_context->window)
+    && m_context->window->getMousePosition(mouseX, mouseY);
+
+SRect drawRect = getDrawRect();
+bool isInside = hasMouse && drawRect.contains(mouseX, mouseY);
+```
+
+> **多实例语义（实施修订 2026-08-08）**：`Window::getMousePosition` 返回 false 表示"鼠标不在本窗口内"（sdl3 实现用 `SDL_GetGlobalMouseState` + 窗口位置/尺寸判定，`SDL_GetMouseState` 返回的是鼠标焦点窗口的坐标，与窗口是否重叠无关地串扰）——鼠标悬在 B 窗口时 A 窗口所有控件清除 hover，跨窗口不串扰。
+
 ```cpp
 void ControlImpl::onMouseEnter(float x, float y) {
     if (!getEnable() || !getVisible()) return;

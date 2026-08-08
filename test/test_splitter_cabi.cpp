@@ -113,14 +113,14 @@ static int runTest(const char* shortName, const char* displayName) {
         "version": "1.0",
         "controls": [
             {
-                "type": "Panel",
+                "type": "panel",
                 "id": "rootPanel",
                 "rect": { "x": 0, "y": 0, "w": 600, "h": 320 },
                 "colors": { "background": { "normal": "#282828FF" } },
                 "children": [
                     {
                         "id": "lblTitle",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 16, "w": 560, "h": 28 },
                         "caption": "Splitter C ABI Test",
                         "fontSize": 20,
@@ -128,13 +128,13 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "panelFirst",
-                        "type": "Panel",
+                        "type": "panel",
                         "rect": { "x": 20, "y": 60, "w": 224, "h": 200 },
                         "colors": { "background": { "normal": "#3A3A3AFF" } },
                         "children": [
                             {
                                 "id": "lblFirst",
-                                "type": "Label",
+                                "type": "label",
                                 "rect": { "x": 10, "y": 10, "w": 200, "h": 24 },
                                 "caption": "Left Panel",
                                 "fontSize": 14,
@@ -144,13 +144,13 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "panelSecond",
-                        "type": "Panel",
+                        "type": "panel",
                         "rect": { "x": 250, "y": 60, "w": 330, "h": 200 },
                         "colors": { "background": { "normal": "#3A3A3AFF" } },
                         "children": [
                             {
                                 "id": "lblSecond",
-                                "type": "Label",
+                                "type": "label",
                                 "rect": { "x": 10, "y": 10, "w": 300, "h": 24 },
                                 "caption": "Right Panel",
                                 "fontSize": 14,
@@ -160,7 +160,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "mySplitter",
-                        "type": "Splitter",
+                        "type": "splitter",
                         "rect": { "x": 244, "y": 60, "w": 6, "h": 200 },
                         "orientation": "vertical",
                         "firstPanel": "panelFirst",
@@ -173,7 +173,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblStatus",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 280, "w": 560, "h": 24 },
                         "caption": "Ratio: 0.400",
                         "fontSize": 14,
@@ -181,7 +181,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblHint",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 300, "w": 560, "h": 20 },
                         "caption": "Drag the splitter bar to resize panels. Press close button to exit.",
                         "fontSize": 11,

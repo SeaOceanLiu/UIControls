@@ -1,55 +1,26 @@
 ﻿// UICornerstone C++ Binding — 主类实现
-// 许可证 MIT。仅调用 C ABI，不引用核心库内部头。
+// 许可证 MIT。仅调用 C ABI（经动态 API 层函数指针），不引用核心库内部头。
 #include "UICornerstone.h"
 #include "Control.h"
 #include "Event.h"
 #include "Impl.h"
+#include "DynamicApi.h"
 #include "UIEventFactory.h"   // UICornerstone::Input::* 内联定义
 
 #include <chrono>
 #include <algorithm>
 
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#undef NOMINMAX
-// WinUser.h 以宏形式导出 CreateDialog*A/W 等，会污染名含 CreateDialog 的符号。
-#undef CreateDialog
-#undef CreateDialogA
-#undef CreateDialogW
-#undef CreateDialogParamA
-#undef CreateDialogParamW
-#undef DialogBoxParamA
-#undef DialogBoxParamW
-#endif
+// 仅需 kernel32 的 FreeLibrary（HMODULE 即 void*），不引入 windows.h，
+// 避免其 UNICODE 条件宏（CreateDialog→CreateDialogA/W 等）污染 API 符号。
+extern "C" int __stdcall FreeLibrary(void* hLibModule);
 
 namespace UICornerstone {
 
 // ============================================================
-// BackendResolver（内部）：自定义搜索路径 DLL 加载
+// 帧时钟（跨平台）
 // ============================================================
 namespace {
 
-struct BackendResolver {
-    // 返回回调表 + 持有的 DLL 句柄（失败返回 {nullptr, nullptr}）
-    static std::pair<UIBackendCallbacks*, void*> LoadFromPath(
-        const std::string& searchPath, const std::string& backend)
-    {
-#ifdef _WIN32
-        std::string dllPath = searchPath + "/UIBackend_" + backend + ".dll";
-        HMODULE h = LoadLibraryA(dllPath.c_str());
-        if (!h) return {nullptr, nullptr};
-        auto fn = reinterpret_cast<UIBackendCallbacks* (*)(void)>(GetProcAddress(h, "GetUIBackendCallbacks"));
-        if (!fn) { FreeLibrary(h); return {nullptr, nullptr}; }
-        return {fn(), (void*)h};
-#else
-        (void)searchPath; (void)backend;
-        return {nullptr, nullptr};
-#endif
-    }
-};
-
-// 帧时钟（跨平台）
 uint64_t nowMillis() {
     auto t = std::chrono::steady_clock::now().time_since_epoch();
     return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
@@ -71,10 +42,10 @@ UICornerstone::UICornerstone(UIInstance instance, bool ownsInstance)
 
 UICornerstone::~UICornerstone() {
     if (m_impl && m_impl->ownsInstance && m_impl->instance)
-        UICornerstone_DestroyInstance(m_impl->instance);
-    if (m_impl && m_impl->dllHandle) {
+        Dyn::API().fnDestroyInstance(m_impl->instance);
+    if (m_impl && m_impl->dllHandle) {   // 后端 DLL 句柄（实例级生命周期）
 #ifdef _WIN32
-        FreeLibrary((HMODULE)m_impl->dllHandle);
+        FreeLibrary(m_impl->dllHandle);
 #endif
         m_impl->dllHandle = nullptr;
     }
@@ -85,6 +56,13 @@ UIInstance UICornerstone::Handle() const { return m_impl ? m_impl->instance : nu
 std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
     if (config.backend.empty()) return nullptr;
 
+    // 纯动态加载模式：核心 DLL + 后端 DLL 全部经 LoadLibrary 显式加载
+    // 核心 DLL：coreLibraryDir 非空 → 目录 + "UICornerstone.dll"；空 → 系统搜索（exe 同目录）
+    std::string coreDll = config.coreLibraryDir.empty()
+        ? std::string("UICornerstone.dll")
+        : (config.coreLibraryDir + "/UICornerstone.dll");
+    if (!Dyn::LoadCore(coreDll.c_str())) return nullptr;
+
     UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
     cfg.resourceRoot  = config.resourceRoot.c_str();
     cfg.windowTitle   = config.windowTitle.c_str();
@@ -92,32 +70,33 @@ std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
     cfg.windowHeight  = config.windowHeight;
     cfg.windowFlags   = config.windowFlags;
 
-    UIInstance instance = nullptr;
-    void* dllHandle = nullptr;
+    // 后端插件 DLL：backendSearchPath 非空 → 指定路径；否则系统搜索（exe 同目录）
+    auto [callbacks, h] = Dyn::LoadBackend(config.backendSearchPath, config.backend);
+    if (!callbacks) return nullptr;
 
-    if (config.backendSearchPath.empty()) {
-        // 默认：核心库插件加载（静态符号回退）
-        instance = UICornerstone_CreateInstanceFromPlugin(config.backend.c_str(), &cfg);
-        if (!instance) return nullptr;
-    } else {
-        // 自定义搜索路径：自加载 DLL → 回调查表模式
-        auto [callbacks, h] = BackendResolver::LoadFromPath(config.backendSearchPath, config.backend);
-        if (!callbacks) return nullptr;
-        instance = UICornerstone_CreateInstance(callbacks, &cfg);
-        if (!instance) { FreeLibrary((HMODULE)h); return nullptr; }
-        dllHandle = h;
+    UIInstance instance = Dyn::API().fnCreateInstance(callbacks, &cfg);
+    if (!instance) {
+#ifdef _WIN32
+        FreeLibrary(h);
+#endif
+        return nullptr;
     }
 
     auto ui = std::unique_ptr<UICornerstone>(new UICornerstone(instance, true));
     ui->m_impl->config = config;
     ui->m_impl->resourceRoot = config.resourceRoot;
-    ui->m_impl->dllHandle = dllHandle;
+    ui->m_impl->dllHandle = h;
     return ui;
 }
 
 std::unique_ptr<UICornerstone> UICornerstone::Create(const UIBackendCallbacks* callbacks,
                                                      const Config& config) {
     if (!callbacks) return nullptr;
+    std::string coreDll = config.coreLibraryDir.empty()
+        ? std::string("UICornerstone.dll")
+        : (config.coreLibraryDir + "/UICornerstone.dll");
+    if (!Dyn::LoadCore(coreDll.c_str())) return nullptr;
+
     UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
     cfg.resourceRoot  = config.resourceRoot.c_str();
     cfg.windowTitle   = config.windowTitle.c_str();
@@ -125,7 +104,7 @@ std::unique_ptr<UICornerstone> UICornerstone::Create(const UIBackendCallbacks* c
     cfg.windowHeight  = config.windowHeight;
     cfg.windowFlags   = config.windowFlags;
 
-    UIInstance instance = UICornerstone_CreateInstance(callbacks, &cfg);
+    UIInstance instance = Dyn::API().fnCreateInstance(callbacks, &cfg);
     if (!instance) return nullptr;
 
     auto ui = std::unique_ptr<UICornerstone>(new UICornerstone(instance, true));
@@ -137,7 +116,7 @@ std::unique_ptr<UICornerstone> UICornerstone::Create(const UIBackendCallbacks* c
 std::unique_ptr<UICornerstone> UICornerstone::CreateViewport(float x, float y, float w, float h) {
     if (!m_impl->instance) return nullptr;
     UIRect rect{x, y, w, h};
-    UIInstance vp = UICornerstone_CreateViewport(m_impl->instance, rect);
+    UIInstance vp = Dyn::API().fnCreateViewport(m_impl->instance, rect);
     if (!vp) return nullptr;
     // 视口共享 owner 后端：析构时不 DestroyInstance（owner 级联销毁）
     auto ui = std::unique_ptr<UICornerstone>(new UICornerstone(vp, false));
@@ -173,16 +152,16 @@ int UICornerstone::Run(FrameCallback update, RenderCallback onRender) {
     return 0;
 }
 
-void UICornerstone::ProcessEvents() { if (m_impl->instance) UICornerstone_ProcessEvents(m_impl->instance); }
-void UICornerstone::Update(double deltaTime) { if (m_impl->instance) UICornerstone_Update(m_impl->instance, deltaTime); }
-void UICornerstone::Render() { if (m_impl->instance) UICornerstone_Render(m_impl->instance); }
-void UICornerstone::Clear() { if (m_impl->instance) UICornerstone_Clear(m_impl->instance); }
-void UICornerstone::Present() { if (m_impl->instance) UICornerstone_Present(m_impl->instance); }
-bool UICornerstone::IsQuitRequested() const { return m_impl->instance && UICornerstone_IsQuitRequested(m_impl->instance); }
+bool UICornerstone::ProcessEvents() { return m_impl->instance ? (Dyn::API().fnProcessEvents(m_impl->instance) != 0) : false; }
+void UICornerstone::Update(double deltaTime) { if (m_impl->instance) Dyn::API().fnUpdate(m_impl->instance, deltaTime); }
+void UICornerstone::Render() { if (m_impl->instance) Dyn::API().fnRender(m_impl->instance); }
+void UICornerstone::Clear() { if (m_impl->instance) Dyn::API().fnClear(m_impl->instance); }
+void UICornerstone::Present() { if (m_impl->instance) Dyn::API().fnPresent(m_impl->instance); }
+bool UICornerstone::IsQuitRequested() const { return m_impl->instance && Dyn::API().fnIsQuitRequested(m_impl->instance); }
 
 void UICornerstone::Shutdown() {
     if (m_impl->instance) {
-        if (m_impl->ownsInstance) UICornerstone_DestroyInstance(m_impl->instance);
+        if (m_impl->ownsInstance) Dyn::API().fnDestroyInstance(m_impl->instance);
         m_impl->instance = nullptr;
         m_impl->initialized = false;
     }
@@ -201,14 +180,14 @@ std::string UICornerstone::ResolveResource(const std::string& relativePath) cons
 // 布局
 // ============================================================
 bool UICornerstone::LoadLayout(const std::string& jsonContent) {
-    return m_impl->instance && UICornerstone_LoadLayout(m_impl->instance, jsonContent.c_str()) != 0;
+    return m_impl->instance && Dyn::API().fnLoadLayout(m_impl->instance, jsonContent.c_str()) != 0;
 }
 bool UICornerstone::LoadLayoutFromFile(const std::string& filePath) {
-    return m_impl->instance && UICornerstone_LoadLayoutFromFile(m_impl->instance, filePath.c_str()) != 0;
+    return m_impl->instance && Dyn::API().fnLoadLayoutFromFile(m_impl->instance, filePath.c_str()) != 0;
 }
 Control UICornerstone::FindControl(const std::string& id) {
     if (!m_impl->instance) return Control();
-    return MakeControl(UICornerstone_FindControl(m_impl->instance, id.c_str()));
+    return MakeControl(Dyn::API().fnFindControl(m_impl->instance, id.c_str()));
 }
 
 // ============================================================
@@ -235,7 +214,7 @@ Control UICornerstone::MakeControl(UIControlHandle h) {
 #define UI_FACTORY(name, argdecl, ...) \
     Control UICornerstone::name argdecl { \
         if (!m_impl->instance) return Control(); \
-        return MakeControl(UICornerstone_##name(m_impl->instance, __VA_ARGS__)); \
+        return MakeControl(Dyn::API().fn##name(m_impl->instance, __VA_ARGS__)); \
     }
 
 UI_FACTORY(CreateButton,
@@ -302,44 +281,44 @@ UI_FACTORY(CreateTreeView,
 
 Control UICornerstone::CreateMenuPanel() {
     if (!m_impl->instance) return Control();
-    return MakeControl(UICornerstone_CreateMenuPanel(m_impl->instance));
+    return MakeControl(Dyn::API().fnCreateMenuPanel(m_impl->instance));
 }
 Control UICornerstone::CreateMenuItem(const std::string& caption, int type) {
     if (!m_impl->instance) return Control();
-    return MakeControl(UICornerstone_CreateMenuItem(m_impl->instance, caption.c_str(), type));
+    return MakeControl(Dyn::API().fnCreateMenuItem(m_impl->instance, caption.c_str(), type));
 }
 Control UICornerstone::CreateHandleControl(Control target, float x, float y, float w, float h) {
     if (!m_impl->instance) return Control();
-    return MakeControl(UICornerstone_CreateHandleControl(m_impl->instance,
+    return MakeControl(Dyn::API().fnCreateHandleControl(m_impl->instance,
         target.Handle(), x, y, w, h));
 }
 
 void UICornerstone::MenuBarAddMenu(Control& bar, const std::string& caption, Control& panel) {
     if (m_impl->instance && bar.Handle() && panel.Handle())
-        UICornerstone_MenuBarAddMenu(m_impl->instance, bar.Handle(), caption.c_str(), panel.Handle());
+        Dyn::API().fnMenuBarAddMenu(m_impl->instance, bar.Handle(), caption.c_str(), panel.Handle());
 }
 void UICornerstone::MenuPanelAddItem(Control& panel, Control& item) {
     if (m_impl->instance && panel.Handle() && item.Handle())
-        UICornerstone_MenuPanelAddItem(m_impl->instance, panel.Handle(), item.Handle());
+        Dyn::API().fnMenuPanelAddItem(m_impl->instance, panel.Handle(), item.Handle());
 }
 void UICornerstone::MenuPanelAddSeparator(Control& panel) {
     if (m_impl->instance && panel.Handle())
-        UICornerstone_MenuPanelAddSeparator(m_impl->instance, panel.Handle());
+        Dyn::API().fnMenuPanelAddSeparator(m_impl->instance, panel.Handle());
 }
 void UICornerstone::MenuItemSetSubMenu(Control& item, Control& panel) {
     if (m_impl->instance && item.Handle() && panel.Handle())
-        UICornerstone_MenuItemSetSubMenu(m_impl->instance, item.Handle(), panel.Handle());
+        Dyn::API().fnMenuItemSetSubMenu(m_impl->instance, item.Handle(), panel.Handle());
 }
 
 // ============================================================
 // 视口
 // ============================================================
 void UICornerstone::SetViewport(float x, float y, float w, float h) {
-    if (m_impl->instance) UICornerstone_SetViewport(m_impl->instance, x, y, w, h);
+    if (m_impl->instance) Dyn::API().fnSetViewport(m_impl->instance, x, y, w, h);
 }
 UIRect UICornerstone::GetViewport() const {
     UIRect r{0, 0, 0, 0};
-    if (m_impl->instance) UICornerstone_GetViewport(m_impl->instance, &r.x, &r.y, &r.w, &r.h);
+    if (m_impl->instance) Dyn::API().fnGetViewport(m_impl->instance, &r.x, &r.y, &r.w, &r.h);
     return r;
 }
 
@@ -347,7 +326,7 @@ UIRect UICornerstone::GetViewport() const {
 // 事件注入
 // ============================================================
 void UICornerstone::PushEvent(const UIEvent& event) {
-    if (m_impl->instance) UICornerstone_PushUIEvent(m_impl->instance, &event);
+    if (m_impl->instance) Dyn::API().fnPushUIEvent(m_impl->instance, &event);
 }
 void UICornerstone::PushMouseButton(int button, float x, float y, bool down) {
     PushEvent(Input::MouseButton(button, x, y, down));
@@ -372,7 +351,7 @@ void UICornerstone::RegisterAction(const std::string& name, ActionCallback callb
     if (!m_impl->instance) return;
     auto cb = std::make_shared<ActionCallback>(std::move(callback));
     m_impl->actions[name] = cb;
-    UICornerstone_RegisterAction(m_impl->instance, name.c_str(),
+    Dyn::API().fnRegisterAction(m_impl->instance, name.c_str(),
         [](UIControlHandle ctl, void* userData) {
             auto& fn = *static_cast<ActionCallback*>(userData);
             if (!ctl) return;
@@ -388,15 +367,15 @@ void UICornerstone::RegisterAction(const std::string& name, ActionCallback callb
 // 后端配置
 // ============================================================
 bool UICornerstone::SetBackendConfig(const char* key, const char* value) {
-    return m_impl->instance && UICornerstone_SetBackendConfig(m_impl->instance, key, value) != 0;
+    return m_impl->instance && Dyn::API().fnSetBackendConfig(m_impl->instance, key, value) != 0;
 }
 bool UICornerstone::SetBackendConfigBool(const char* key, bool value) {
-    return m_impl->instance && UICornerstone_SetBackendConfigBool(m_impl->instance, key, value ? 1 : 0) != 0;
+    return m_impl->instance && Dyn::API().fnSetBackendConfigBool(m_impl->instance, key, value ? 1 : 0) != 0;
 }
 bool UICornerstone::GetBackendConfigBool(const char* key, bool& out) const {
     if (!m_impl->instance) return false;
     int v = 0;
-    if (!UICornerstone_GetBackendConfigBool(m_impl->instance, key, &v)) return false;
+    if (!Dyn::API().fnGetBackendConfigBool(m_impl->instance, key, &v)) return false;
     out = (v != 0);
     return true;
 }
@@ -406,11 +385,21 @@ bool UICornerstone::GetBackendConfigBool(const char* key, bool& out) const {
 // ============================================================
 const std::string& UICornerstone::GetLastError() const { return m_impl->lastError; }
 
-int UICornerstone::DebugGetAliveCount() { return UICornerstone_Debug_GetAliveCount(); }
-UIInstance UICornerstone::DebugGetAliveInstance(int index) { return UICornerstone_Debug_GetAliveInstance(index); }
-UIInstance UICornerstone::DebugGetActiveViewport(UIInstance instance) { return UICornerstone_Debug_GetActiveViewport(instance); }
+int UICornerstone::DebugGetAliveCount() {
+    auto& api = Dyn::API();
+    return api.fnDebug_GetAliveCount ? api.fnDebug_GetAliveCount() : 0;
+}
+UIInstance UICornerstone::DebugGetAliveInstance(int index) {
+    auto& api = Dyn::API();
+    return api.fnDebug_GetAliveInstance ? api.fnDebug_GetAliveInstance(index) : nullptr;
+}
+UIInstance UICornerstone::DebugGetActiveViewport(UIInstance instance) {
+    auto& api = Dyn::API();
+    return api.fnDebug_GetActiveViewport ? api.fnDebug_GetActiveViewport(instance) : nullptr;
+}
 bool UICornerstone::DebugIsControlFocused(UIInstance instance, UIControlHandle control) {
-    return UICornerstone_Debug_IsControlFocused(instance, control) != 0;
+    auto& api = Dyn::API();
+    return api.fnDebug_IsControlFocused ? api.fnDebug_IsControlFocused(instance, control) != 0 : false;
 }
 
 } // namespace UICornerstone

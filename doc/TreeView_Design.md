@@ -1,4 +1,4 @@
-# TreeView 树形控件设计文档
+﻿# TreeView 树形控件设计文档
 
 ## 1. 概述
 
@@ -577,7 +577,7 @@ void TreeView::updateScrollBar() {
 
 ```json
 {
-  "type": "TreeView",
+  "type": "tree-view",
   "id": "controlTree",
   "rect": { "x": 0, "y": 24, "w": 200, "h": 300 },
   "scale": { "x": 1.0, "y": 1.0 },

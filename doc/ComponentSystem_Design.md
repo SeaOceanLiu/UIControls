@@ -1,4 +1,4 @@
-# 组件系统（Component System）设计文档
+﻿# 组件系统（Component System）设计文档
 
 ## 1. 概述
 
@@ -65,7 +65,7 @@
 
 // 实例化
 {
-  "type": "SearchBar",
+  "type": "search-bar",
   "events": { "onSearch": "handleSearch" }
 }
 ```
@@ -78,7 +78,7 @@
 
 ```json
 {
-  "type": "SearchBar",
+  "type": "search-bar",
   "id": "mySearch",
   "rect": { "x": 50, "y": 50, "w": 400, "h": 40 },
   "placeholder": "Type keyword...",
@@ -260,17 +260,17 @@ instantiateComponent(name, instanceJ, parent)
         "buttonText":  { "type": "string", "default": "Go" }
       },
       "template": {
-        "type": "Panel",
+        "type": "panel",
         "children": [
           {
-            "type": "EditBox",
+            "type": "edit-box",
             "id": "input",
             "rect": { "x": 0, "y": 0, "w": "75%", "h": 40 },
             "placeholder": "{{placeholder}}",
             "events": { "onEnter": "_comp_onSearch" }
           },
           {
-            "type": "Button",
+            "type": "button",
             "id": "btn",
             "rect": { "x": "78%", "y": 0, "w": "22%", "h": 40 },
             "caption": "{{buttonText}}",
@@ -283,15 +283,15 @@ instantiateComponent(name, instanceJ, parent)
 
   "layouts": [
     {
-      "type": "Panel",
+      "type": "panel",
       "children": [
         {
-          "type": "Label",
+          "type": "label",
           "rect": { "x": 10, "y": 10 },
           "caption": "Search Demo:"
         },
         {
-          "type": "SearchBar",
+          "type": "search-bar",
           "id": "search1",
           "rect": { "x": 10, "y": 40, "w": 500, "h": 40 },
           "placeholder": "Type keyword...",
@@ -312,23 +312,23 @@ instantiateComponent(name, instanceJ, parent)
 
   "layouts": [
     {
-      "type": "Panel",
+      "type": "panel",
       "children": [
-        { "type": "Label", ... },
+        { "type": "label", ... },
         {
-          "type": "Panel",
+          "type": "panel",
           "id": "search1",
           "rect": { "x": 10, "y": 40, "w": 500, "h": 40 },
           "children": [
             {
-              "type": "EditBox",
+              "type": "edit-box",
               "id": "search1__input",
               "rect": { "x": 0, "y": 0, "w": "75%", "h": 40 },
               "placeholder": "Type keyword...",
               "events": { "onEnter": "handleSearch" }
             },
             {
-              "type": "Button",
+              "type": "button",
               "id": "search1__btn",
               "rect": { "x": "78%", "y": 0, "w": "22%", "h": 40 },
               "caption": "Search",

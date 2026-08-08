@@ -20,8 +20,9 @@ class UICornerstone {
 public:
     struct Config {
         std::string backend = "sdl3";             // "sdl3" | "sfml" | "raylib"
-        std::string backendSearchPath;            // DLL 搜索目录（空=核心库默认搜索）
-        std::string resourceRoot   = "./assets";  // 资源根路径
+        std::string backendSearchPath;            // 后端 DLL 搜索目录（空=exe 同目录/系统搜索）
+        std::string coreLibraryDir;               // 核心 DLL 所在目录（空=exe 同目录/系统搜索）
+        std::string resourceRoot;                 // 资源根路径（空 → 核心默认 exe 目录/assets，任何 cwd 均可运行）
         std::string windowTitle    = "UICornerstone";
         int windowWidth  = 1024;
         int windowHeight = 768;
@@ -29,13 +30,14 @@ public:
 
         Config& WithBackend(const std::string& name)          { backend = name; return *this; }
         Config& WithBackendSearchPath(const std::string& p)   { backendSearchPath = p; return *this; }
+        Config& WithCoreLibraryDir(const std::string& p)      { coreLibraryDir = p; return *this; }
         Config& WithResourceRoot(const std::string& r)        { resourceRoot = r; return *this; }
         Config& WithWindow(const std::string& t, int w, int h)
             { windowTitle = t; windowWidth = w; windowHeight = h; return *this; }
         Config& WithWindowFlags(uint32_t f)                   { windowFlags = f; return *this; }
     };
 
-    // 通过 Config 创建（默认路径 → CreateInstanceFromPlugin；自定义搜索路径 → 自加载 DLL）
+    // 通过 Config 创建（核心/后端 DLL 均经 LoadLibrary 纯动态加载，见 §5.15）
     static std::unique_ptr<UICornerstone> Create(const Config& config);
     // 通过回调查表创建（不管理后端生命周期）
     static std::unique_ptr<UICornerstone> Create(const UIBackendCallbacks* callbacks,
@@ -54,7 +56,7 @@ public:
     int Run(FrameCallback update, RenderCallback onRender = nullptr);
 
     // ── Embedded 模式 ──
-    void ProcessEvents();
+    bool ProcessEvents();   // 返回是否处理了至少一个事件（多实例主循环调度用）
     void Update(double deltaTime);
     void Render();
     void Clear();

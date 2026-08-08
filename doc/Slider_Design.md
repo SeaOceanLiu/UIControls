@@ -1,4 +1,4 @@
-# Slider 滑块控件设计文档
+﻿# Slider 滑块控件设计文档
 
 ## 1. 概述
 
@@ -452,11 +452,11 @@ static const SColor SLIDER_TICK_COLOR(100, 100, 100, 255);
 
 ## 7. JSON 布局支持
 
-在 `LayoutParser` 中通过 `"type": "Slider"` 解析：
+在 `LayoutParser` 中通过 `"type": "slider"` 解析：
 
 ```json
 {
-    "type": "Slider",
+    "type": "slider",
     "id": "volumeSlider",
     "rect": { "x": 20, "y": 10, "w": 200, "h": 30 },
     "range": { "min": 0, "max": 100 },

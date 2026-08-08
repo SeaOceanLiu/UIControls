@@ -191,10 +191,93 @@ public:
     }
 
     bool pollEvent(Event& event) override {
+        // 关键：SDL_PeepEvents 不会像 SDL_PollEvent 那样自动 pump 窗口消息。
+        // 必须显式 SDL_PumpEvents()，否则窗口的 WM_ 消息（移动/重绘/关闭）
+        // 无人处理 → 窗口显示"未响应"（沙漏）。
+        SDL_PumpEvents();
+
         SDL_Event sdlEvent;
-        if (!SDL_PollEvent(&sdlEvent)) {
-            return false;
+        const Uint32 myWinId = SDL_GetWindowID(m_window);
+
+        // 多实例（多窗口）隔离：SDL 事件队列是全局的，多个实例共享。
+        // 只消费属于本窗口的事件（Peep 不消费 + 确认队头同 type 是自
+        // 己窗口的再 GET），其他窗口的事件留在队列由对应实例消费：
+        // a) 不消费其他窗口的事件（不丢失）；b) 不改变事件先后顺序。
+        SDL_Event peekBuf[32];
+        int n = SDL_PeepEvents(peekBuf, 32, SDL_PEEKEVENT,
+                               SDL_EVENT_FIRST, SDL_EVENT_LAST);
+        if (n <= 0) return false;
+
+        bool gotEvent = false;
+        for (int i = 0; i < n && !gotEvent; ++i) {
+            Uint32 winId = 0;
+            bool hasWinId = true;
+            switch (peekBuf[i].type) {
+                case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                case SDL_EVENT_WINDOW_RESIZED:
+                case SDL_EVENT_WINDOW_MOVED:
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    winId = peekBuf[i].window.windowID; break;
+                case SDL_EVENT_KEY_DOWN:
+                case SDL_EVENT_KEY_UP:
+                    winId = peekBuf[i].key.windowID; break;
+                case SDL_EVENT_TEXT_INPUT:
+                case SDL_EVENT_TEXT_EDITING:
+                    winId = peekBuf[i].text.windowID; break;
+                case SDL_EVENT_MOUSE_WHEEL:
+                    winId = peekBuf[i].wheel.windowID; break;
+                case SDL_EVENT_MOUSE_MOTION:
+                    winId = peekBuf[i].motion.windowID; break;
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                case SDL_EVENT_MOUSE_BUTTON_UP:
+                    winId = peekBuf[i].button.windowID; break;
+                default:
+                    hasWinId = false; break;   // 全局事件（如 QUIT）不按窗口隔离
+            }
+            if (hasWinId && winId != myWinId) continue;   // 其他窗口的事件，留给对应实例
+
+            // 找到本窗口的候选事件：确认队头该 type 的第一个事件就是它，
+            // 避免 GETEVENT（按 type 取队头）拿到同 type 的其他窗口事件。
+            SDL_Event headOne;
+            if (SDL_PeepEvents(&headOne, 1, SDL_PEEKEVENT,
+                               peekBuf[i].type, peekBuf[i].type) != 1)
+                return false;
+            Uint32 hw = 0;
+            bool hHas = true;
+            switch (headOne.type) {
+                case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                case SDL_EVENT_WINDOW_RESIZED:
+                case SDL_EVENT_WINDOW_MOVED:
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    hw = headOne.window.windowID; break;
+                case SDL_EVENT_KEY_DOWN:
+                case SDL_EVENT_KEY_UP:
+                    hw = headOne.key.windowID; break;
+                case SDL_EVENT_TEXT_INPUT:
+                case SDL_EVENT_TEXT_EDITING:
+                    hw = headOne.text.windowID; break;
+                case SDL_EVENT_MOUSE_WHEEL:
+                    hw = headOne.wheel.windowID; break;
+                case SDL_EVENT_MOUSE_MOTION:
+                    hw = headOne.motion.windowID; break;
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                case SDL_EVENT_MOUSE_BUTTON_UP:
+                    hw = headOne.button.windowID; break;
+                default:
+                    hHas = false; break;
+            }
+            if (hHas && hw != myWinId) continue;   // 队头同 type 是其他窗口的，等对方消费
+
+            if (SDL_PeepEvents(&sdlEvent, 1, SDL_GETEVENT,
+                               peekBuf[i].type, peekBuf[i].type) != 1)
+                return false;
+            gotEvent = true;
         }
+        // 队列中没有属于本窗口的可消费事件（可能全是其他窗口的）→ 返回 false，
+        // 事件留在队列由对应实例消费；不得用未初始化的 sdlEvent 继续处理。
+        if (!gotEvent) return false;
 
         event.m_type = EventType::None;
         event.customInt = 0;
@@ -216,6 +299,14 @@ public:
                 event.m_type = EventType::WindowMoved;
                 event.windowMoved.x = sdlEvent.window.data1;
                 event.windowMoved.y = sdlEvent.window.data2;
+                break;
+
+            case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                event.m_type = EventType::FocusGained;
+                break;
+
+            case SDL_EVENT_WINDOW_FOCUS_LOST:
+                event.m_type = EventType::FocusLost;
                 break;
 
             case SDL_EVENT_KEY_DOWN:

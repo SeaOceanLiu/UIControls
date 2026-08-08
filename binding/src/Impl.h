@@ -27,7 +27,8 @@ struct Impl {
     // 资源根（Binding 侧路径解析）
     std::string resourceRoot;
 
-    // 自定义搜索路径模式下持有的 DLL 句柄
+    // 后端插件 DLL 句柄（纯动态加载模式；实例析构时 FreeLibrary）
+    // 核心 DLL 由 DynamicApi 进程级持有（不随实例卸载）
     void* dllHandle = nullptr;
 
     // Action 注册表（实例私有，无全局 static）

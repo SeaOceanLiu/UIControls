@@ -1,7 +1,7 @@
 ﻿// UICornerstone C++ Binding — 事件包装实现
-// 许可证 MIT。仅读取 C ABI 的 UIEventData（事件字典见 Names.h）。
+// 许可证 MIT。仅读取 C ABI 的 UIEventData（事件字典见 PropertyNames.h）。
 #include "Event.h"
-#include "Names.h"
+#include "PropertyNames.h"
 
 #include <cstring>
 
@@ -10,19 +10,19 @@ std::string Event::GetName() const {
 }
 
 // ── 事件名鉴别（字符串比较；值与核心库事件字典一致）──
-bool Event::IsClick()          const { return GetName() == UICornerstone::Names::kClick; }
-bool Event::IsValueChanged()   const { return GetName() == UICornerstone::Names::kValueChanged; }
+bool Event::IsClick()          const { return GetName() == PropertyNames::kEventClick; }
+bool Event::IsValueChanged()   const { return GetName() == PropertyNames::kEventValueChanged; }
 float Event::GetValueChanged() const { return m_raw->data.floatVal; }
 double Event::GetValueChangedDouble() const { return m_raw->data.doubleVal; }
 
-bool Event::IsTextChanged()    const { return GetName() == UICornerstone::Names::kTextChanged; }
+bool Event::IsTextChanged()    const { return GetName() == PropertyNames::kEventTextChanged; }
 std::string Event::GetTextChanged() const { return m_raw->data.strVal ? m_raw->data.strVal : ""; }
 
-bool Event::IsSelectionChanged() const { return GetName() == UICornerstone::Names::kSelectionChanged; }
+bool Event::IsSelectionChanged() const { return GetName() == PropertyNames::kEventSelectionChanged; }
 int Event::GetSelectedIndex() const { return m_raw->data.selection.idx; }
 std::string Event::GetSelectedValue() const { return m_raw->data.selection.val ? m_raw->data.selection.val : ""; }
 
-bool Event::IsCheckChanged() const { return GetName() == UICornerstone::Names::kCheckChanged; }
+bool Event::IsCheckChanged() const { return GetName() == PropertyNames::kEventCheckChanged; }
 int Event::GetCheckState() const { return m_raw->data.intVal; }
 
 // ColorPicker 用轮询，绑定不做颜色变更事件推送
@@ -32,22 +32,22 @@ UIColor Event::GetChangedColor() const {
     return c;
 }
 
-bool Event::IsPositionChanged() const { return GetName() == UICornerstone::Names::kPositionChanged; }
+bool Event::IsPositionChanged() const { return GetName() == PropertyNames::kEventPositionChanged; }
 float Event::GetPositionChanged() const { return m_raw->data.floatVal; }
 
-bool Event::IsMoved() const { return GetName() == UICornerstone::Names::kMoved; }
+bool Event::IsMoved() const { return GetName() == PropertyNames::kEventMoved; }
 float Event::GetMovedPosition() const { return m_raw->data.floatVal; }
 
-bool Event::IsConfirm() const { return GetName() == UICornerstone::Names::kConfirm; }
-bool Event::IsCancel()  const { return GetName() == UICornerstone::Names::kCancel; }
+bool Event::IsConfirm() const { return GetName() == PropertyNames::kEventConfirm; }
+bool Event::IsCancel()  const { return GetName() == PropertyNames::kEventCancel; }
 
-bool Event::IsClose() const { return GetName() == UICornerstone::Names::kClose; }
+bool Event::IsClose() const { return GetName() == PropertyNames::kEventClose; }
 int Event::GetCloseResult() const { return m_raw->data.intVal; }
 
-bool Event::IsEnter() const { return GetName() == UICornerstone::Names::kEnter; }
-bool Event::IsSelect()   const { return GetName() == UICornerstone::Names::kSelect; }
-bool Event::IsExpand()   const { return GetName() == UICornerstone::Names::kExpand; }
-bool Event::IsCollapse() const { return GetName() == UICornerstone::Names::kCollapse; }
+bool Event::IsEnter() const { return GetName() == PropertyNames::kEventEnter; }
+bool Event::IsSelect()   const { return GetName() == PropertyNames::kEventSelect; }
+bool Event::IsExpand()   const { return GetName() == PropertyNames::kEventExpand; }
+bool Event::IsCollapse() const { return GetName() == PropertyNames::kEventCollapse; }
 std::string Event::GetNodeId() const { return m_raw->data.treeNode.id ? m_raw->data.treeNode.id : ""; }
 void* Event::GetNodeUserData() const { return m_raw->data.treeNode.userData; }
 

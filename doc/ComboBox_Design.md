@@ -1,4 +1,4 @@
-# ComboBox 下拉选择框控件设计文档
+﻿# ComboBox 下拉选择框控件设计文档
 
 ## 1. 概述
 
@@ -406,6 +406,9 @@ public:
     │     ├── 尝试下方
     │     ├── 空间不足 → 尝试上方
     │     └── 均不足 → 选空间更大一侧
+    ├── 绝对坐标（基于 getDrawRect）转父（bench）相对本地坐标
+    │     （减 BENCH->getDrawRect() 偏移，2026-08-08 修订：Popup m_rect 与普通
+    │      控件一致为父相对，不再使用窗口绝对坐标）
     ├── m_popup->setAbsolute(popupRect)
     ├── m_popup->open()                             注册 watcher + add to BENCH
     └── 焦点保持在 EditBox（用户可继续输入）
@@ -1000,7 +1003,7 @@ int ComboBox::findItemByText(const string& text) const {
 
 ```json
 {
-  "type": "ComboBox",
+  "type": "combo-box",
   "id": "orientationPicker",
   "rect": { "x": 10, "y": 10, "w": 150, "h": 24 },
   "scale": { "x": 1.0, "y": 1.0 },

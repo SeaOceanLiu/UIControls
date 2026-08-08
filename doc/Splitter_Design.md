@@ -1,4 +1,4 @@
-# Splitter 分割条控件设计文档
+﻿# Splitter 分割条控件设计文档
 
 ## 1. 概述
 
@@ -714,17 +714,17 @@ if (auto sp = dynamic_pointer_cast<Splitter>(ctrl)) {
 
 ```json
 {
-    "type": "Panel",
+    "type": "panel",
     "id": "mainArea",
     "rect": { "x": 0, "y": 24, "w": 1200, "h": 776 },
     "children": [
         {
-            "type": "Panel",
+            "type": "panel",
             "id": "leftPanel",
             "rect": { "x": 0, "y": 0, "w": 200, "h": 776 }
         },
         {
-            "type": "Splitter",
+            "type": "splitter",
             "id": "split1",
             "orientation": "vertical",
             "firstPanel": "leftPanel",
@@ -736,7 +736,7 @@ if (auto sp = dynamic_pointer_cast<Splitter>(ctrl)) {
             "events": { "onSplitterMoved": "onSplitChanged" }
         },
         {
-            "type": "Panel",
+            "type": "panel",
             "id": "rightPanel",
             "rect": { "x": 206, "y": 0, "w": 994, "h": 776 }
         }
@@ -881,20 +881,20 @@ assert(fabs(firstDelta - 25.0f) < 0.5f);
 
 ```json
 {
-    "type": "Panel",
+    "type": "panel",
     "id": "rootPanel",
     "rect": { "x": 0, "y": 0, "w": 600, "h": 400 },
     "colors": { "background": { "normal": "#282828FF" } },
     "children": [
         {
-            "type": "Panel",
+            "type": "panel",
             "id": "leftPanel",
             "rect": { "x": 10, "y": 10, "w": 200, "h": 380 },
             "colors": { "background": { "normal": "#2D2D2DFF" } },
             "children": [
                 {
                     "id": "lblLeft",
-                    "type": "Label",
+                    "type": "label",
                     "rect": { "x": 10, "y": 10, "w": 180, "h": 24 },
                     "caption": "Left Panel (drag to resize)",
                     "fontSize": 12,
@@ -903,7 +903,7 @@ assert(fabs(firstDelta - 25.0f) < 0.5f);
             ]
         },
         {
-            "type": "Splitter",
+            "type": "splitter",
             "id": "splitter1",
             "orientation": "vertical",
             "firstPanel": "leftPanel",
@@ -915,14 +915,14 @@ assert(fabs(firstDelta - 25.0f) < 0.5f);
             "events": { "onSplitterMoved": "onSplitterMoved" }
         },
         {
-            "type": "Panel",
+            "type": "panel",
             "id": "rightPanel",
             "rect": { "x": 216, "y": 10, "w": 374, "h": 380 },
             "colors": { "background": { "normal": "#2D2D2DFF" } },
             "children": [
                 {
                     "id": "lblRight",
-                    "type": "Label",
+                    "type": "label",
                     "rect": { "x": 10, "y": 10, "w": 354, "h": 24 },
                     "caption": "Right Panel",
                     "fontSize": 12,

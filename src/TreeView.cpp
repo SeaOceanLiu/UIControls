@@ -693,7 +693,7 @@ int TreeView::setStringProperty(const char* prop, const char* value) {
 }
 
 int TreeView::getStringProperty(const char* prop, const char*& out) {
-    if (strcmp(prop, "selected-id") == 0) { out = m_selectedId.c_str(); return 1; }
+    if (strcmp(prop, PropertyNames::kSelectedId) == 0) { out = m_selectedId.c_str(); return 1; }
     return ControlImpl::getStringProperty(prop, out);
 }
 

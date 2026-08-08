@@ -797,7 +797,7 @@ if (auto nud = dynamic_pointer_cast<NumericUpDown>(ctrl)) {
 
 ```json
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "posX",
     "rect": { "x": 10, "y": 10, "w": 120, "h": 24 },
     "value": 100,
@@ -818,7 +818,7 @@ if (auto nud = dynamic_pointer_cast<NumericUpDown>(ctrl)) {
 
 ```json
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "fontSize",
     "rect": { "x": 100, "y": 50, "w": 100, "h": 24 },
     "value": 14,
@@ -831,7 +831,7 @@ if (auto nud = dynamic_pointer_cast<NumericUpDown>(ctrl)) {
 }
 
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "scale",
     "rect": { "x": 100, "y": 80, "w": 100, "h": 24 },
     "value": 1.0,
@@ -844,7 +844,7 @@ if (auto nud = dynamic_pointer_cast<NumericUpDown>(ctrl)) {
 }
 
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "opacity",
     "rect": { "x": 100, "y": 110, "w": 100, "h": 24 },
     "value": 1.0,
@@ -1220,7 +1220,7 @@ auto longPressBtn = ButtonBuilder(BENCH.get(), {50, 540, 150, 30})
 
 ```json
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "jsonTest1",
     "rect": { "x": 50, "y": 580, "w": 150, "h": 24 },
     "value": 50,
@@ -1229,7 +1229,7 @@ auto longPressBtn = ButtonBuilder(BENCH.get(), {50, 540, 150, 30})
     "events": { "onValueChanged": "onJsonTest1Changed" }
 },
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "jsonTest2_float",
     "rect": { "x": 50, "y": 610, "w": 150, "h": 24 },
     "value": 1.0,
@@ -1238,7 +1238,7 @@ auto longPressBtn = ButtonBuilder(BENCH.get(), {50, 540, 150, 30})
     "decimals": 2
 },
 {
-    "type": "NumericUpDown",
+    "type": "numeric-up-down",
     "id": "jsonTest3_defaults",
     "rect": { "x": 50, "y": 640, "w": 150, "h": 24 }
 }
@@ -1740,14 +1740,14 @@ static int runTest(const char* shortName, const char* displayName) {
         "version": "1.0",
         "controls": [
             {
-                "type": "Panel",
+                "type": "panel",
                 "id": "rootPanel",
                 "rect": { "x": 0, "y": 0, "w": 600, "h": 480 },
                 "colors": { "background": { "normal": "#282828FF" } },
                 "children": [
                     {
                         "id": "lblTitle",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 16, "w": 560, "h": 28 },
                         "caption": "NumericUpDown C ABI Test",
                         "fontSize": 20,
@@ -1755,7 +1755,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblHint1",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 56, "w": 200, "h": 22 },
                         "caption": "nudInteger (step=1)",
                         "fontSize": 13,
@@ -1763,7 +1763,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "nudInteger",
-                        "type": "NumericUpDown",
+                        "type": "numeric-up-down",
                         "rect": { "x": 20, "y": 80, "w": 200, "h": 26 },
                         "value": 50,
                         "range": { "min": 0, "max": 100 },
@@ -1773,7 +1773,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblHint2",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 116, "w": 200, "h": 22 },
                         "caption": "nudFloat02 (step=0.2, decimals=2)",
                         "fontSize": 13,
@@ -1781,7 +1781,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "nudFloat02",
-                        "type": "NumericUpDown",
+                        "type": "numeric-up-down",
                         "rect": { "x": 20, "y": 140, "w": 200, "h": 26 },
                         "value": 0.6,
                         "range": { "min": 0.0, "max": 1.0 },
@@ -1791,7 +1791,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblHint3",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 176, "w": 200, "h": 22 },
                         "caption": "nudBigStep (step=50)",
                         "fontSize": 13,
@@ -1799,7 +1799,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "nudBigStep",
-                        "type": "NumericUpDown",
+                        "type": "numeric-up-down",
                         "rect": { "x": 20, "y": 200, "w": 200, "h": 26 },
                         "value": 100,
                         "range": { "min": 0, "max": 1000 },
@@ -1808,7 +1808,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblHint4",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 236, "w": 200, "h": 22 },
                         "caption": "nudReadOnly",
                         "fontSize": 13,
@@ -1816,7 +1816,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "nudReadOnly",
-                        "type": "NumericUpDown",
+                        "type": "numeric-up-down",
                         "rect": { "x": 20, "y": 260, "w": 200, "h": 26 },
                         "value": 42,
                         "range": { "min": 0, "max": 100 },
@@ -1825,7 +1825,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblHint5",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 296, "w": 200, "h": 22 },
                         "caption": "nudInline (InlineEditBox)",
                         "fontSize": 13,
@@ -1833,7 +1833,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "nudInline",
-                        "type": "NumericUpDown",
+                        "type": "numeric-up-down",
                         "rect": { "x": 20, "y": 320, "w": 200, "h": 26 },
                         "value": 3.14,
                         "range": { "min": 0.0, "max": 10.0 },
@@ -1843,7 +1843,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "lblStatus",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 380, "w": 560, "h": 24 },
                         "caption": "Last: (none)",
                         "fontSize": 14,
@@ -1851,7 +1851,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "btnQuit",
-                        "type": "Button",
+                        "type": "button",
                         "rect": { "x": 480, "y": 420, "w": 100, "h": 36 },
                         "caption": "Quit",
                         "events": { "onClick": "onQuitClicked" }

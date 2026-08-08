@@ -1,4 +1,4 @@
-# 测试用例规范
+﻿# 测试用例规范
 
 新控件或新功能的测试应包含以下三个层次，缺一不可：
 
@@ -22,7 +22,7 @@ const char* layoutJson = R"json({
     "version": "1.0",
     "controls": [
         {
-            "type": "NumericUpDown",
+            "type": "numeric-up-down",
             "id": "myNud",
             "rect": { "x": 20, "y": 80, "w": 200, "h": 26 },
             "value": 50,

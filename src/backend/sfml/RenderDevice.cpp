@@ -2,6 +2,7 @@
 #include "Texture.h"
 #include "Surface.h"
 #include "ConstDef.h"
+#include "PropertyNames.h"
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
 #include <vector>
@@ -646,7 +647,7 @@ public:
         } else {
             return 0;
         }
-        if (strcmp(key, "vsync") == 0) {
+        if (strcmp(key, PropertyNames::kBackendKeyVsync) == 0) {
             if (!m_window) return 0;
             m_window->setVerticalSyncEnabled(v != 0);
             m_vsyncEnabled = (v != 0);
@@ -656,7 +657,7 @@ public:
     }
 
     int getConfig(const char* key, int type, void* value, int maxLen) override {
-        if (strcmp(key, "vsync") != 0) return 0;
+        if (strcmp(key, PropertyNames::kBackendKeyVsync) != 0) return 0;
         if (type == 1 || type == 2) {
             *static_cast<int*>(value) = m_vsyncEnabled ? 1 : 0;
         } else if (type == 0) {

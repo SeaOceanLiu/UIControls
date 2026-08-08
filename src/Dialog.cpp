@@ -50,27 +50,32 @@ void Popup::layoutContent() {
 SRect Popup::computeTargetRect() {
     float sx = getScaleXX();
     float sy = getScaleYY();
-    // 视口相对定位（多视口场景弹出层按视口区域钳制）
+    // 父相对坐标语义：m_rect 为相对父（bench）的本地坐标（与普通控件一致，
+    // getDrawRect 由通用实现叠加父偏移）。视口/bench 为绝对区域，居中与
+    // 锚定计算在本函数内换算为本地坐标。
     SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
-    float screenW = vp.width;
-    float screenH = vp.height;
+    float localW = vp.width;
+    float localH = vp.height;
+    SRect benchRect = BENCH ? BENCH->getDrawRect() : SRect(0, 0, 0, 0);
+    float bx = benchRect.left;
+    float by = benchRect.top;
 
     switch (m_anchorMode) {
     case AnchorMode::Centered: {
-        float cx = (screenW - m_rect.width * sx) / 2.0f;
-        float cy = (screenH - m_rect.height * sy) / 2.0f;
+        float cx = (localW - m_rect.width * sx) / 2.0f;
+        float cy = (localH - m_rect.height * sy) / 2.0f;
         return SRect(cx, cy, m_rect.width, m_rect.height);
     }
     case AnchorMode::Anchored: {
         if (!m_anchorControl)
             return SRect(0, 0, m_rect.width, m_rect.height);
         SRect adr = m_anchorControl->getDrawRect();
-        float x = adr.left + m_anchorOffset.left * sx;
-        float y = adr.bottom() + m_anchorOffset.top * sy;
-        // Clamp to screen
-        if (x + m_rect.width * sx > screenW) x = screenW - m_rect.width * sx;
+        float x = adr.left - bx + m_anchorOffset.left * sx;
+        float y = adr.bottom() - by + m_anchorOffset.top * sy;
+        // Clamp to viewport (local coordinates)
+        if (x + m_rect.width * sx > localW) x = localW - m_rect.width * sx;
         if (x < 0) x = 0;
-        if (y + m_rect.height * sy > screenH) y = screenH - m_rect.height * sy;
+        if (y + m_rect.height * sy > localH) y = localH - m_rect.height * sy;
         if (y < 0) y = 0;
         return SRect(x, y, m_rect.width, m_rect.height);
     }

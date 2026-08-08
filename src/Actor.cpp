@@ -268,22 +268,22 @@ int Actor::setIntProperty(const char* prop, int value) {
 
 int Actor::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kScaleType) == 0) {
-        if (_stricmp(value, "stretch") == 0)     { setScaleType(ScaleType::STRETCH);     return 1; }
-        if (_stricmp(value, "fit-center") == 0)  { setScaleType(ScaleType::FIT_CENTER);  return 1; }
-        if (_stricmp(value, "center-crop") == 0) { setScaleType(ScaleType::CENTER_CROP); return 1; }
-        if (_stricmp(value, "none") == 0)        { setScaleType(ScaleType::NONE);        return 1; }
+        if (_stricmp(value, PropertyNames::kScaleTypeStretch) == 0)     { setScaleType(ScaleType::STRETCH);     return 1; }
+        if (_stricmp(value, PropertyNames::kScaleTypeFitCenter) == 0)  { setScaleType(ScaleType::FIT_CENTER);  return 1; }
+        if (_stricmp(value, PropertyNames::kScaleTypeCenterCrop) == 0) { setScaleType(ScaleType::CENTER_CROP); return 1; }
+        if (_stricmp(value, PropertyNames::kScaleTypeNone) == 0)        { setScaleType(ScaleType::NONE);        return 1; }
         return 0;
     }
     if (strcmp(prop, PropertyNames::kAnchor) == 0) {
-        if (_stricmp(value, "top-left") == 0)      { setAnchorPoint(AnchorType::AT_TOP_LEFT);      return 1; }
-        if (_stricmp(value, "mid-left") == 0)      { setAnchorPoint(AnchorType::AT_MID_LEFT);      return 1; }
-        if (_stricmp(value, "bottom-left") == 0)   { setAnchorPoint(AnchorType::AT_BOTTOM_LEFT);   return 1; }
-        if (_stricmp(value, "top-right") == 0)     { setAnchorPoint(AnchorType::AT_TOP_RIGHT);     return 1; }
-        if (_stricmp(value, "mid-right") == 0)     { setAnchorPoint(AnchorType::AT_MID_RIGHT);     return 1; }
-        if (_stricmp(value, "bottom-right") == 0)  { setAnchorPoint(AnchorType::AT_BOTTOM_RIGHT);  return 1; }
-        if (_stricmp(value, "top-center") == 0)    { setAnchorPoint(AnchorType::AT_TOP_CENTER);    return 1; }
-        if (_stricmp(value, "center") == 0)        { setAnchorPoint(AnchorType::AT_CENTER);        return 1; }
-        if (_stricmp(value, "bottom-center") == 0) { setAnchorPoint(AnchorType::AT_BOTTOM_CENTER); return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerTopLeft) == 0)      { setAnchorPoint(AnchorType::AT_TOP_LEFT);      return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerMidLeft) == 0)      { setAnchorPoint(AnchorType::AT_MID_LEFT);      return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerBottomLeft) == 0)   { setAnchorPoint(AnchorType::AT_BOTTOM_LEFT);   return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerTopRight) == 0)     { setAnchorPoint(AnchorType::AT_TOP_RIGHT);     return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerMidRight) == 0)     { setAnchorPoint(AnchorType::AT_MID_RIGHT);     return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerBottomRight) == 0)  { setAnchorPoint(AnchorType::AT_BOTTOM_RIGHT);  return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerTopCenter) == 0)    { setAnchorPoint(AnchorType::AT_TOP_CENTER);    return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerCenter) == 0)        { setAnchorPoint(AnchorType::AT_CENTER);        return 1; }
+        if (_stricmp(value, PropertyNames::kAlignLowerBottomCenter) == 0) { setAnchorPoint(AnchorType::AT_BOTTOM_CENTER); return 1; }
         return 0;
     }
     return ControlImpl::setEnumProperty(prop, value);
@@ -292,26 +292,26 @@ int Actor::setEnumProperty(const char* prop, const char* value) {
 int Actor::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kScaleType) == 0) {
         switch (m_scaleType) {
-            case ScaleType::STRETCH:     out = "stretch";     break;
-            case ScaleType::FIT_CENTER:  out = "fit-center";  break;
-            case ScaleType::CENTER_CROP: out = "center-crop"; break;
-            case ScaleType::NONE:        out = "none";        break;
-            default:                     out = "stretch";     break;
+            case ScaleType::STRETCH:     out = PropertyNames::kScaleTypeStretch;     break;
+            case ScaleType::FIT_CENTER:  out = PropertyNames::kScaleTypeFitCenter;  break;
+            case ScaleType::CENTER_CROP: out = PropertyNames::kScaleTypeCenterCrop; break;
+            case ScaleType::NONE:        out = PropertyNames::kScaleTypeNone;        break;
+            default:                     out = PropertyNames::kScaleTypeStretch;     break;
         }
         return 1;
     }
     if (strcmp(prop, PropertyNames::kAnchor) == 0) {
         switch (m_anchorType) {
-            case AnchorType::AT_TOP_LEFT:      out = "top-left";      break;
-            case AnchorType::AT_MID_LEFT:      out = "mid-left";      break;
-            case AnchorType::AT_BOTTOM_LEFT:   out = "bottom-left";   break;
-            case AnchorType::AT_TOP_RIGHT:     out = "top-right";     break;
-            case AnchorType::AT_MID_RIGHT:     out = "mid-right";     break;
-            case AnchorType::AT_BOTTOM_RIGHT:  out = "bottom-right";  break;
-            case AnchorType::AT_TOP_CENTER:    out = "top-center";    break;
-            case AnchorType::AT_CENTER:        out = "center";        break;
-            case AnchorType::AT_BOTTOM_CENTER: out = "bottom-center"; break;
-            default:                           out = "top-left";      break;
+            case AnchorType::AT_TOP_LEFT:      out = PropertyNames::kAlignLowerTopLeft;      break;
+            case AnchorType::AT_MID_LEFT:      out = PropertyNames::kAlignLowerMidLeft;      break;
+            case AnchorType::AT_BOTTOM_LEFT:   out = PropertyNames::kAlignLowerBottomLeft;   break;
+            case AnchorType::AT_TOP_RIGHT:     out = PropertyNames::kAlignLowerTopRight;     break;
+            case AnchorType::AT_MID_RIGHT:     out = PropertyNames::kAlignLowerMidRight;     break;
+            case AnchorType::AT_BOTTOM_RIGHT:  out = PropertyNames::kAlignLowerBottomRight;  break;
+            case AnchorType::AT_TOP_CENTER:    out = PropertyNames::kAlignLowerTopCenter;    break;
+            case AnchorType::AT_CENTER:        out = PropertyNames::kAlignLowerCenter;        break;
+            case AnchorType::AT_BOTTOM_CENTER: out = PropertyNames::kAlignLowerBottomCenter; break;
+            default:                           out = PropertyNames::kAlignLowerTopLeft;      break;
         }
         return 1;
     }

@@ -153,7 +153,7 @@ flowchart LR
     end
 
     subgraph 改造后["改造后 — 实例隔离"]
-        C1["C ABI 函数<br/>void ProcessEvents(UIInstance i)"]
+        C1["C ABI 函数<br/>int ProcessEvents(UIInstance i)<br/>（handled ≥ 1）"]
         C2["C ABI 函数<br/>void Update(UIInstance i, dt)"]
         CTX["UIContext 1<br/>（后端/窗口/控件树/...）"]
         CTX2["UIContext 2<br/>（后端/窗口/控件树/...）"]
@@ -428,7 +428,7 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
 |---------|--------|
 | `SetViewport(x, y, w, h)` | `SetViewport(UIInstance, float x, float y, float w, float h)` |
 | `GetViewport(float*...)` | `GetViewport(UIInstance, float*...)` |
-| `ProcessEvents()` | `ProcessEvents(UIInstance)` |
+| `ProcessEvents()` | `ProcessEvents(UIInstance) → int`（handled ≥ 1；调用者驱动所有实例直到队列空，见 §5.13.5） |
 | `Update(dt)` | `Update(UIInstance, double deltaTime)` |
 | `PushUIEvent(const UIEvent*)` | `PushUIEvent(UIInstance, const UIEvent*)` |
 | `Render()` | `Render(UIInstance)` |
@@ -1694,16 +1694,26 @@ struct UIContext {
 
 ```
 UIInstance (owner) → ProcessEvents:
-  1. 轮询 inputBackend->pollEvent()
+  1. 轮询 inputBackend->pollEvent() —— 只消费**本窗口**的事件（窗口级隔离，见下）
   2. 对每个事件，检查所有子 viewport 的 rect
   3. 匹配坐标 → 转视口本地坐标后直接 dispatch 到该 viewport 的 bench（复核修订：新实现为直接 dispatch，不经子视口队列）
   4. 不匹配 → dispatch 到 owner 自身 bench（兜底，owner 视口 = 全窗口）；MouseDown/Up
      同时清旧视口焦点 + activeViewport=nullptr（复核修订 2026-07-31 第六/七轮：焦点回 owner 树）
+  5. FocusLost（窗口失去系统焦点）→ 清除本实例焦点（含活动子视口），见下
 
 UIInstance (viewport) → ProcessEvents:
   1. 只处理自己的 queuedEvents（不轮询 inputBackend）
   2. dispatch 到自己的 Bench
 ```
+
+**窗口级事件隔离（实施修订 2026-08-08）**：多窗口（多实例）场景下，各窗口由 SDL 统一投递事件到全局队列。`sdl3 pollEvent` 按以下规则只消费**本窗口**的事件（`src/backend/sdl3/InputBackend.cpp`）：
+
+- 开头必须显式 `SDL_PumpEvents()`——`SDL_PeepEvents` 不像 `SDL_PollEvent` 那样内部 pump 窗口消息，不调用则窗口"未响应"（沙漏）
+- `SDL_PeepEvents` peek 找本窗口第一个事件；**headOne 同 type 队头检查**（防止 GETEVENT 取到其他窗口的同 type 事件）；GETEVENT 消费
+- **`gotEvent` 守卫**：peek 循环结束仍未取到自己的事件时必须 `return false`——不得用未初始化的 `sdlEvent` 继续处理，否则永远返回 true → 调用者的内层 while 死循环
+- 窗口（mouse/keyboard/wheel/focus）事件与 text/mouse 事件按各自结构体的 `windowID` 提取窗口标识
+
+**跨窗口焦点隔离（实施修订 2026-08-08）**：每个实例的 FocusManager 相互独立，点击 B 窗口的 EditBox 只聚焦 B 实例，**A 实例的焦点不会被自动清除**。解决依赖窗口级焦点事件：sdl3 将 `SDL_EVENT_WINDOW_FOCUS_GAINED/LOST` 转换为 `FocusGained/FocusLost` 事件（此前落入默认分支被忽略），`ProcessEvents` 分发 `FocusLost` 时清除本实例（含活动子视口）焦点——保证系统内同一时刻只有一个焦点环。
 
 实现策略——`UICornerstone_ProcessEvents` 内部判断 `ownsBackend`。核心新增：**`activeViewport` 追踪 + 焦点转移逻辑**。
 
@@ -1715,14 +1725,17 @@ UIInstance (viewport) → ProcessEvents:
 
 ```cpp
 // 伪代码（owner 层窗口级路由，合流后基于 C++ Event）
-void UICornerstone_ProcessEvents(UIInstance instance) {
-    if (!instance || !instance->initialized) return;
+// 实施修订（2026-08-08）：返回 int —— 本次调用处理的事件数（handled ≥ 1）
+int UICornerstone_ProcessEvents(UIInstance instance) {
+    int handled = 0;
+    if (!instance || !instance->initialized) return handled;
 
     if (instance->ownsBackend) {
         // 窗口级别：轮询输入并分发到子视口（产出 C++ Event，非 UIEvent）
         instance->inputBackend->newFrame();                  // InputBackend.h:31
         Event evt;
-        while (instance->inputBackend->pollEvent(evt)) {
+        while (instance->inputBackend->pollEvent(evt)) {     // 只消费本窗口事件（窗口级隔离）
+            handled = 1;
             switch (evt.m_type) {
             case EventType::MouseMove:
             case EventType::MouseDown:
@@ -1783,12 +1796,20 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
                 }
                 break;
             default:
-                // 窗口事件（WindowClose/WindowResize）→ owner 自身处理（同现实现 cpp:319-324）
+                // 窗口事件（WindowClose/WindowResize/FocusLost）→ owner 自身处理
                 if (evt.m_type == EventType::WindowClose) {
                     instance->quit = true;
                 } else if (evt.m_type == EventType::WindowResize) {
                     instance->bench->resized(SRect(0, 0,
                         (float)evt.resizeEvent.width, (float)evt.resizeEvent.height));
+                } else if (evt.m_type == EventType::FocusLost) {
+                    // 实施修订（2026-08-08）：窗口失去系统焦点（用户点击了其他窗口/实例）→
+                    // 清除本实例焦点（含活动子视口）。每个实例的 FocusManager 相互独立，
+                    // 只有靠窗口级焦点事件才能跨实例清除焦点环
+                    instance->focusManager->clearFocus();
+                    if (instance->activeViewport) {
+                        instance->activeViewport->focusManager->clearFocus();
+                    }
                 }
                 break;
             }
@@ -1799,6 +1820,7 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
     while (!instance->queuedEvents.empty()) {
         UIEvent ue = instance->queuedEvents.front();
         instance->queuedEvents.pop();
+        handled = 1;
         Event event;
         if (!uiEventToEvent(ue, event)) continue;   // 两参数形式（cpp:223）
         // 复核修订：注入通路与轮询通路行为对齐——WindowClose/Resize 走实例自身
@@ -1820,8 +1842,22 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
             instance->bench->inputControl(std::make_shared<Event>(event));
         }
     }
+    return handled;
 }
 ```
+
+**多实例事件泵（实施修订 2026-08-08）**：`ProcessEvents` 返回 int（本次调用是否处理了 ≥1 个事件）后，**驱动所有实例直到队列空**成为调用者（样例/测试帧循环）的职责——用户定案伪码：
+
+```cpp
+int processedCount;
+do {
+    processedCount = 0;
+    if (A.ProcessEvents()) processedCount = 1;   // 每个实例只消费自己窗口的事件
+    if (B.ProcessEvents()) processedCount = 1;
+} while (processedCount > 0);
+```
+
+每个窗口实例的 `ProcessEvents` 只消费本窗口的事件（窗口级隔离），内层 while 依次驱动所有实例直到全局队列空。返回值语义与单实例一致（忽略返回值的旧调用完全兼容）。
 
 > **实施状态（2026-08-03）**：实际实现（UICornerstoneAPI.cpp:443-539）与上方伪代码的差异：
 > 1. **入口守卫**：增加 `if (!instance || !instance->initialized || instance->destroying) return;`（destroying 防重入，见 §7 风险 4）
@@ -1829,6 +1865,12 @@ void UICornerstone_ProcessEvents(UIInstance instance) {
 > 3. **dispatchToBench 辅助**：实际实现用 `static void dispatchToBench(UIInstance, const Event&)`（cpp:219-223）统一封装 `bench->inputControl(std::make_shared<Event>(evt))`，轮询与注入两条通路共用
 > 4. 伪代码中 `evt.mousePos.x = mx - target->viewport.x` 对应的实际为 `evt.mousePos.x = mx - target->viewport.left`（SRect 字段名）
 > 5. `tryViewportScopeSwitch`/`findViewportByCoord`/`nextViewport`/`prevViewport` 均已实现（cpp:215-258），`countVisibleBoundaries` 实现为 `cur->focusManager->getVisibleBoundaryCount()`（FocusManager.h:32 / FocusManager.cpp:53）
+
+> **实施状态补充（2026-08-08，多窗口隔离）**：
+> 1. **返回类型**：实际实现返回 `int`（handled ≥ 1），提取 `pumpInstanceEvents` 静态函数（while pollEvent 处理本实例事件）——返回值与单实例语义一致，绑定层 `ProcessEvents()` 返回 bool，忽略返回值的旧调用完全兼容
+> 2. **FocusLost 分发**：伪代码中 FocusLost 分支已实现（clearFocus 本实例 + activeViewport）；sdl3 pollEvent 补全 `SDL_EVENT_WINDOW_FOCUS_GAINED/LOST` → `FocusGained/FocusLost` 事件转换（此前落入默认被忽略，焦点事件无法到达分发层）
+> 3. **窗口级事件隔离**：sdl3 pollEvent 只消费本窗口事件（`SDL_PumpEvents` + `SDL_PeepEvents` peek + headOne 同 type 检查 + GETEVENT + gotEvent 守卫）——多窗口事件不再跨窗口串扰（鼠标/hover/键盘/滚轮）
+> 4. **hover 隔离**（后端侧，非 ProcessEvents 内）：`Window::getMousePosition` 改用 `SDL_GetGlobalMouseState` + 窗口位置/尺寸判定（`SDL_GetMouseState` 返回鼠标焦点窗口坐标，跨窗口串扰）；`ControlImpl::update()` 中 `isInside = hasMouse && drawRect.contains(...)`
 
 > **注意**（复核修订 2026-07-31）：owner 轮询的输入事件已**直接 dispatch** 到目标视口的 bench，不依赖子视口是否调用 `ProcessEvents`。`queuedEvents` 仅承载**外部注入**（`PushUIEvent(inst, ...)`）的事件，须由各实例自己的 `ProcessEvents` 消费——若外部向子视口 `PushUIEvent(vpA, ...)` 而从不调用 `ProcessEvents(vpA)`，注入事件会积压；owner 轮询输入不受影响。
 
@@ -2250,7 +2292,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 18 | `include/PlatformUtils.h` | 移除旧宏定义检查 | 小 |
 | 19 | `src/ConstDef.cpp` | 若需要实例独立路径，将 `g_pathPrefix` 迁入 `UIContext`（见 §7）。**替代方案已采用**：`UIInstanceConfig.resourceRoot` 提供 per-instance 覆盖（MainWindow.cpp:13），此项关闭跟踪 | 小 |
 | 20 | 测试 + samples | 测试 1: `CreateInstance`×1 → 完整运行 → `DestroyInstance`；测试 2: `CreateInstance`×2 → 两个独立窗口循环 → `DestroyInstance`；**samples ×4（hello_uicornerstone/sample_programmatic/sample_fromsource/sample_loadlibrary）与 test_fromsource_cabi 按 §5.12.1 适配**（纯 DLL 插件场景走 `CreateInstanceFromPlugin`，fromsource 架构走 `CreateInstance(callbacks, NULL)`） | 中 |
-| 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员（**未实施**：仓库无 binding 文件，`doc/CppBinding_Design.md` 为草案，待实际实施时随该文档一并刷新本文档，见 §6 顶部注） | 小 |
+| 21 | C++ Binding 适配 | `UICornerstone` 类的 `Impl` 中持有 `UIInstance` 成员（**已实施**：2026-08-06 起 `binding/` 落地（P1-P14 动态加载模式），2026-08-08 P16 多窗口隔离完成——`ProcessEvents()` 返回 bool 驱动多窗口事件泵、Config.resourceRoot 默认空串、`sample_cpp_multiinstance` 双窗口样例；设计见 `doc/CppBinding_Design.md`） | 小 |
 | 22 | `include/UIContext.h` | 新增 `owner`、`ownsBackend`、`children` 字段 | 小 |
 | 23 | `include/UICornerstoneAPI.h` | 新增 `CreateViewport(UIInstance parent, UIRect rect)`（复核修订：UIRect 为纯 C 结构体，UICornerstoneAPI.h:52；SRect 是 C++ 类型，C ABI 不可用） | 小 |
 | 24 | `src/UICornerstoneAPI.cpp` | 实现 `CreateViewport`；`ProcessEvents` 增加：owner 轮询（基于 C++ `Event` 层路由，见 §5.13.5）+ 坐标路由 + `activeViewport` 追踪 + 跨视口焦点转移（`clearFocus`）+ 键盘事件发到 activeViewport（nullptr 回退 owner，复核修订 2026-07-31 第六轮） | 中 |

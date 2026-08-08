@@ -1,6 +1,6 @@
 # CAPI C++ Binding 设计
 
-> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel | 修订 2026-08-06：**P1-P13 全部实施并验证**（sdl3/sfml/raylib 三后端构建+冒烟通过）
+> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel | 修订 2026-08-06：**P1-P13 全部实施并验证**（sdl3/sfml/raylib 三后端构建+冒烟通过）| 修订 2026-08-07：**P14 纯动态加载模式实施**——核心 DLL + 后端 DLL 全部经 LoadLibrary 显式加载（DynamicApi 层），不再链接任何导入库；Config 新增 coreLibraryDir；删除便捷方法族（SetText/SetVisible 等）；PropertyNames.h 构建时从核心复制（CopyPropertyNames.cmake）；示例改为平铺 cpp | 修订 2026-08-08：**P16 多窗口隔离**——`ProcessEvents()` 返回 bool（handled ≥ 1，多窗口事件泵 §5.6.1）；Config.resourceRoot 默认空串（核心回退 exe 目录/assets）；新增 §7.4 sample_cpp_multiinstance
 
 ## 目录
 
@@ -27,10 +27,13 @@
     - [5.12 Config 校验规则](#512-config-校验规则)
     - [5.13 CMake 构建集成](#513-cmake-构建集成)
     - [5.14 UIEvent 输入事件构造辅助](#514-uievent-输入事件构造辅助类型安全)
+    - [5.15 DynamicApi 纯动态加载层](#515-dynamicapi-纯动态加载层)
 6. [文件布局与许可证](#6-文件布局与许可证)
 7. [示例程序设计](#7-示例程序设计)
    - [7.1 sample_cpp_hosted](#71-sample_cpp_hosted--在-uicornerstone-循环中嵌入游戏逻辑)
    - [7.2 sample_cpp_embed](#72-sample_cpp_embed--在用户游戏循环中嵌入-uicornerstone)
+   - [7.3 sample_cpp_multiview](#73-sample_cpp_multiview--多视口一个窗口两个-bench)
+   - [7.4 sample_cpp_multiinstance](#74-sample_cpp_multiinstance--多窗口两独立实例双向通信)
 8. [实施计划](#8-实施计划)
 9. [与现有 C ABI 的关系](#9-与现有-c-abi-的关系)
 
@@ -75,12 +78,13 @@ C++ binding 旨在消除这些摩擦，同时**不破坏**现有 C ABI 的兼容
 | C. 调用方提供回调查表 | ✅ | 无 | 低 | ✅ 可行 |
 | D. 条件编译 + 全链接 | ❌ | 链接器冲突 | 高 | 不可行 |
 
-**决策**：C++ Binding 同时支持方案 B 和方案 C，**但方案 B 由核心库承担**（多实例改造后核心库已内置插件加载）：
+**决策**：C++ Binding 采用**纯动态加载（LoadLibrary）**模式（P14，2026-08-07），核心 DLL 与后端 DLL 均由 Binding 显式加载，不链接任何导入库：
 
-- **方案 B（核心库自动管理，已内建）**：核心库提供 `UICornerstone_CreateInstanceFromPlugin(pluginName, config)`（UICornerstoneAPI.h:186），内部按 `UIBackend_<pluginName>.dll` 搜索并加载，失败时回退静态链接符号 `GetUIBackendCallbacks`。Binding 的 `Config::backend` 直接映射为 `pluginName`，**Binding 不再自研 DLL 加载器**（原 BackendResolver 的 DLL 搜索/加载逻辑删除，仅保留"自定义搜索路径"场景的加载）。
-- **方案 C（回调查表）**：用户自行构造 `UIBackendCallbacks`，经 `UICornerstone_CreateInstance(callbacks, config)`（:177）传入。Binding 不参与后端生命周期管理。该模式同时覆盖"自定义 `backendSearchPath`"场景：`backendSearchPath` 非空时 Binding 自 `LoadLibrary(backendSearchPath + "/UIBackend_<name>.dll")` → `GetProcAddress("GetUIBackendCallbacks")` → 以回调查表模式调用 CreateInstance。
+- **核心 DLL（方案 B'）**：Binding 自 `LoadLibrary("UICornerstone.dll")`（目录可经 `Config::coreLibraryDir` 指定），经 `GetProcAddress` 全量解析 C ABI 导出函数指针（`DynamicApi` 层，见 §5.15）。**不再调用 `UICornerstone_CreateInstanceFromPlugin`**——它属于核心库 DLL 内部插件加载路径，Binding 侧不使用。
+- **后端 DLL（方案 C 变体）**：Binding 自 `LoadLibrary("UIBackend_<name>.dll")`（目录可经 `Config::backendSearchPath` 指定）→ `GetProcAddress("GetUIBackendCallbacks")` → 以回调查表模式调用 `UICornerstone_CreateInstance(callbacks, cfg)`。
+- **方案 C（纯回调查表）**：用户自行构造 `UIBackendCallbacks`，经 `Create(callbacks, config)` 传入。核心函数仍动态加载。
 
-两种方案可共存于同一进程（不同实例可各自选择后端）。方案 B 适用于快速集成（无需 SDK），方案 C 适用于自定义后端或特殊加载需求。
+两种方式可共存于同一进程（不同实例可各自选择后端）。纯动态加载适用于快速集成（无需 SDK、无需导入库、可自定义 DLL 路径、支持插件热加载）。
 
 ### 3.2 资源路径
 
@@ -97,7 +101,7 @@ C++ binding 旨在消除这些摩擦，同时**不破坏**现有 C ABI 的兼容
 
 **决策**：采用方案 A（单一根路径）。用户只需设置一个 `resourceRoot`，所有资源路径以此为基础解析。`fontFiles` 表中的相对路径保持不变。
 
-**传递链路（多实例改造后）**：资源根路径经 `UIInstanceConfig.resourceRoot` 字段直接传入核心库（UICornerstoneAPI.h:40；NULL → 核心库默认路径）——核心库 `MainWindow` 创建 `ResourceProvider` 时使用该路径。**无需新增 `UICornerstone_SetResourceRoot` C ABI 函数**（原方案作废）。Binding 侧 `ResourceManager` 只负责"用户可见的路径拼接 + 记录根路径"，路径解析语义：
+**传递链路（多实例改造后）**：资源根路径经 `UIInstanceConfig.resourceRoot` 字段直接传入核心库（UICornerstoneAPI.h:40；**NULL 或空串 → 核心库默认路径** `ConstDef::pathPrefix`（exe 目录/assets））——核心库 `MainWindow` 创建 `ResourceProvider` 时按 `!resourceRoot.empty() ? resourceRoot : pathPrefix` 选择（MainWindow.cpp:12-13）。**无需新增 `UICornerstone_SetResourceRoot` C ABI 函数**（原方案作废）。Binding 侧 `SetResourceRoot`/`GetResourceRoot`/`ResolveResource` 只负责"用户可见的路径拼接 + 记录根路径"（§5.4），路径解析语义：
 
 用户代码：
 
@@ -146,27 +150,26 @@ flowchart TB
 
     subgraph Binding["binding/ — C++ Binding (MIT)"]
         UIC["UICornerstone<br/>Config + 工厂 + 控件创建 + 双模式循环"]
-        Ctrl["Control<br/>类型安全属性访问 + 便捷方法"]
+        Ctrl["Control<br/>类型安全属性访问"]
         Evt["Event<br/>具名事件数据访问"]
-        RM["ResourceManager<br/>resourceRoot 管理"]
-        BR["BackendResolver<br/>DLL 加载 / 回调查表适配"]
+        IF["UIEventFactory<br/>输入事件构造（header-only）"]
+        DA["DynamicApi<br/>LoadLibrary + GetProcAddress 全量解析"]
     end
 
     subgraph CAPI["include/UICornerstoneAPI.h — C ABI"]
-        CF["UICornerstone_CreateInstance<br/>UICornerstone_CreateInstanceFromPlugin<br/>UICornerstone_ProcessEvents<br/>UICornerstone_SetColor<br/>..."]
+        CF["UICornerstone_CreateInstance<br/>UICornerstone_ProcessEvents<br/>UICornerstone_SetColor<br/>..."]
     end
 
-    subgraph Core["src/ + include/ — UICornerstone 核心 (GPL)"]
-        BM["BackendManager"]
-        Controls["控件 (Button, Label, ...)"]
-        Layout["LayoutParser"]
-    end
-
-    subgraph Backend["后端实现"]
+    subgraph RuntimeDLLs["运行期 DLL（LoadLibrary 显式加载）"]
+        CORE["UICornerstone.dll<br/>（核心库导出 C ABI）"]
         SDL3["UIBackend_sdl3.dll"]
         SFML["UIBackend_sfml.dll"]
         RL["UIBackend_raylib.dll"]
-        CB["调用方自定义后端"]
+    end
+
+    subgraph Core["UICornerstone 核心 (GPL)"]
+        Controls["控件 (Button, Label, ...)"]
+        Layout["LayoutParser"]
     end
 
     App -->|"Create(Config)"| UIC
@@ -174,33 +177,30 @@ flowchart TB
 
     UIC --> Ctrl
     UIC --> Evt
-    UIC --> RM
-    UIC --> BR
+    UIC --> IF
 
-    UIC -->|"调用 C ABI"| CF
-    Ctrl -->|"转发"| CF
+    DA -.->|"LoadLibrary + GetProcAddress"| CORE
+    DA -.->|"LoadLibrary"| SDL3
+    DA -.->|"LoadLibrary"| SFML
+    DA -.->|"LoadLibrary"| RL
+
+    UIC -->|"函数指针调用 C ABI"| CF
+    Ctrl -->|"函数指针转发"| CF
     Evt -->|"通过 C 回调"| CF
 
-    CF --> Core
-    CF -->|"默认路径模式：核心库内建插件加载"| Core
-    BR -.->|"仅自定义搜索路径模式：LoadLibrary"| SDL3
-    BR -.->|"LoadLibrary"| SFML
-    BR -.->|"LoadLibrary"| RL
-    BR -.->|"直接使用"| CB
-
+    CORE --> Core
     SDL3 --> Core
     SFML --> Core
     RL --> Core
-    CB --> Core
 ```
 
 **层间依赖**：
 
 ```
-用户代码 → binding/ (MIT) → include/UICornerstoneAPI.h (C ABI) → UICornerstone 核心 (GPL)
+用户代码 → binding/ (MIT) → include/UICornerstoneAPI.h (C ABI，仅类型声明) → UICornerstone.dll / UIBackend_*.dll (LoadLibrary)
 ```
 
-Binding 层仅依赖 C ABI 头文件中声明的 `extern "C"` 函数和 POD 结构体。不 `#include` 任何核心库的内部头文件（`ControlBase.h`、`Bench.h` 等）。
+Binding 层仅依赖 C ABI 头文件中声明的 `extern "C"` 函数签名与 POD 结构体，**不链接任何导入库**（`UICornerstone_dll.lib` / `UICornerstone.lib`），全部 C ABI 调用经 `DynamicApi` 函数指针运行时解析。不 `#include` 任何核心库的内部头文件（`ControlBase.h`、`Bench.h` 等）。
 
 ## 5. 详细设计
 
@@ -215,17 +215,23 @@ Binding 层仅依赖 C ABI 头文件中声明的 `extern "C"` 函数和 POD 结�
 #include "UICornerstoneAPI.h"
 
 class Control;
+class Event;
+
+namespace UICornerstone {
 
 class UICornerstone {
 public:
     struct Config {
         // 后端选择
         std::string backend = "sdl3";            // "sdl3" | "sfml" | "raylib"
-        std::string backendSearchPath;            // DLL 搜索目录（空=核心库默认搜索顺序）
+        std::string backendSearchPath;            // 后端 DLL 搜索目录（空=exe 同目录/系统搜索）
+        std::string coreLibraryDir;               // 核心 DLL 所在目录（空=exe 同目录/系统搜索）
 
         // 资源根路径
         // 所有资源相对此路径解析：字体 → {root}/fonts/A.ttf、布局 → {root}/layouts/demo.json
-        std::string resourceRoot   = "./assets";
+        // 默认空串 → 核心库使用 exe 目录/assets（任意 cwd 可运行；"./assets" 相对 cwd 会导致
+        // 工作目录不在项目根时找不到字体）
+        std::string resourceRoot   = "";
 
         // 窗口参数
         std::string windowTitle    = "UICornerstone";
@@ -235,26 +241,28 @@ public:
         // 直接映射 UIInstanceConfig.windowFlags（UICornerstoneAPI.h:44）
         uint32_t windowFlags = 0;
 
-        Config& WithBackend(const std::string& name)
-            { backend = name; return *this; }
-        Config& WithBackendSearchPath(const std::string& path)
-            { backendSearchPath = path; return *this; }
-        Config& WithResourceRoot(const std::string& root)
-            { resourceRoot = root; return *this; }
-        Config& WithWindow(const std::string& title, int w, int h)
-            { windowTitle = title; windowWidth = w; windowHeight = h; return *this; }
-        Config& WithWindowFlags(uint32_t flags)
-            { windowFlags = flags; return *this; }
+        Config& WithBackend(const std::string& name)          { backend = name; return *this; }
+        Config& WithBackendSearchPath(const std::string& p)   { backendSearchPath = p; return *this; }
+        Config& WithCoreLibraryDir(const std::string& p)      { coreLibraryDir = p; return *this; }
+        Config& WithResourceRoot(const std::string& r)        { resourceRoot = r; return *this; }
+        Config& WithWindow(const std::string& t, int w, int h)
+            { windowTitle = t; windowWidth = w; windowHeight = h; return *this; }
+        Config& WithWindowFlags(uint32_t f)                   { windowFlags = f; return *this; }
     };
 
-    // 通过 Config 创建（默认路径 → CreateInstanceFromPlugin；自定义搜索路径 → 自加载 DLL + CreateInstance(callbacks)）
+    // 通过 Config 创建（纯动态加载：LoadCore → LoadBackend → CreateInstance(callbacks)）
     static std::unique_ptr<UICornerstone> Create(const Config& config);
 
-    // 通过回调查表创建（不管理后端生命周期，直接 CreateInstance(callbacks, config)）
+    // 通过回调查表创建（核心函数仍动态加载，不管理后端生命周期）
     static std::unique_ptr<UICornerstone> Create(const UIBackendCallbacks* callbacks,
                                                  const Config& config = Config{});
 
     ~UICornerstone();
+    UICornerstone(const UICornerstone&) = delete;
+    UICornerstone& operator=(const UICornerstone&) = delete;
+
+    // ── 实例句柄 ──
+    UIInstance Handle() const;
 
     // ── Hosted 模式 ──
     using FrameCallback = std::function<void(double deltaTime)>;
@@ -263,20 +271,23 @@ public:
     int Run(FrameCallback update, RenderCallback onRender = nullptr);
 
     // ── Embedded 模式（Create 即完成初始化，无需独立 Init()）──
-    void ProcessEvents();
+    // 返回 true 表示本次调用处理了 ≥1 个事件（多窗口场景用返回值驱动所有实例直到队列空，见 §5.6.1）
+    bool ProcessEvents();
     void Update(double deltaTime);
     void Render();
+    void Clear();
     void Present();
     bool IsQuitRequested() const;
     void Shutdown();
 
-    // ── 子视口（多实例改造后新增，可选）──
-    // 在实例窗口中创建子视口：共享后端，独立控制树/事件队列（C ABI: UICornerstone_CreateViewport(parent, UIRect)）
+    // ── 子视口（可选）──
+    // 在实例窗口中创建子视口：共享后端，独立控制树/事件队列（C ABI: UICornerstone_CreateViewport）
     std::unique_ptr<UICornerstone> CreateViewport(float x, float y, float w, float h);
 
-    // ── 资源路径 ──
-    void SetResourceRoot(const std::string& path);   // 仅影响 Binding 侧路径解析（核心库 config 已固化）
+    // ── 资源路径（仅影响 Binding 侧路径拼接；核心库由 UIInstanceConfig.resourceRoot 固化）──
+    void SetResourceRoot(const std::string& path);
     std::string GetResourceRoot() const;
+    std::string ResolveResource(const std::string& relativePath) const;
 
     // ── 布局 ──
     bool LoadLayout(const std::string& jsonContent);
@@ -284,47 +295,39 @@ public:
     Control FindControl(const std::string& id);
 
     // ── 控件工厂（编程式创建，不全依赖 JSON） ──
-    Control CreateButton(const std::string& text,
-                         float x, float y, float w, float h);
-    Control CreateLabel(const std::string& text, float fontSize,
-                        float x, float y, float w, float h);
-    Control CreateCheckBox(const std::string& text,
-                           float x, float y, float w, float h);
+    Control CreateButton(const std::string& text, float x, float y, float w, float h);
+    Control CreateLabel(const std::string& text, float fontSize, float x, float y, float w, float h);
+    Control CreateCheckBox(const std::string& text, float x, float y, float w, float h);
     Control CreateEditBox(float x, float y, float w, float h);
     Control CreateProgressBar(float x, float y, float w, float h);
-    Control CreateSlider(float x, float y, float w, float h,
-                         float min, float max, float value);
+    Control CreateSlider(float x, float y, float w, float h, float min, float max, float value);
     Control CreatePanel(float x, float y, float w, float h);
     Control CreateTextArea(float x, float y, float w, float h);
-    Control CreateWinFrame(const std::string& title,
-                           float x, float y, float w, float h);
+    Control CreateWinFrame(const std::string& title, float x, float y, float w, float h);
     Control CreateComboBox(float x, float y, float w, float h);
-    Control CreateColorPicker(float x, float y, float w, float h,
-                              const std::string& color);
+    Control CreateColorPicker(float x, float y, float w, float h, const std::string& color);
     Control CreateNumericUpDown(float x, float y, float w, float h);
     Control CreateSplitter(float x, float y, float w, float h, int orientation);
-    Control CreateImageButton(const std::string& normal,
-                              const std::string& hover,
-                              const std::string& pressed,
-                              float x, float y, float w, float h);
-    Control CreateDialog(const std::string& confirmText,
-                         const std::string& cancelText,
+    Control CreateImageButton(const std::string& normal, const std::string& hover,
+                              const std::string& pressed, float x, float y, float w, float h);
+    Control CreateImage(const std::string& image, float x, float y, float w, float h);
+    Control CreateAnimation(const std::string& jsoncPath, float x, float y, float w, float h);
+    Control CreateDialog(const std::string& confirmText, const std::string& cancelText,
                          float x, float y, float w, float h);
 
-    // ── 控件工厂（多实例改造后补齐：菜单族 / 滚动条 / 树 / 句柄） ──
-    // 组装顺序（对齐 C ABI 注释，UICornerstoneAPI.h:255-263）：
+    // ── 控件工厂（菜单族 / 滚动条 / 树 / 句柄） ──
+    // 组装顺序（对齐 C ABI 注释，UICornerstoneAPI.h）：
     //   panel = CreateMenuPanel(); item = CreateMenuItem("Open", 0);
     //   MenuPanelAddItem(panel, item); MenuItemSetSubMenu(item, subPanel);
     //   bar = CreateMenuBar(...); MenuBarAddMenu(bar, "File", panel);
     // type: 0=Normal, 1=Separator, 2=SubMenu
-    // MenuItem 的 caption/checked/shortcut/click 走统一属性系统（事件名 "click"）
     Control CreateMenuBar(float x, float y, float w, float h);
-    Control CreateMenuPanel();                                     // MenuPanel（弹层）
-    Control CreateMenuItem(const std::string& caption, int type);  // 0=Normal,1=Separator,2=SubMenu
-    void    MenuBarAddMenu(Control bar, const std::string& caption, Control panel);
-    void    MenuPanelAddItem(Control panel, Control item);
-    void    MenuPanelAddSeparator(Control panel);
-    void    MenuItemSetSubMenu(Control item, Control subMenu);
+    Control CreateMenuPanel();
+    Control CreateMenuItem(const std::string& caption, int type);
+    void    MenuBarAddMenu(Control& bar, const std::string& caption, Control& panel);
+    void    MenuPanelAddItem(Control& panel, Control& item);
+    void    MenuPanelAddSeparator(Control& panel);
+    void    MenuItemSetSubMenu(Control& item, Control& panel);
     Control CreateScrollBar(float x, float y, float w, float h, int orientation);
     Control CreateTreeView(float x, float y, float w, float h);
     Control CreateHandleControl(Control target, float x, float y, float w, float h);
@@ -334,8 +337,7 @@ public:
     UIRect GetViewport() const;
 
     // ── 事件注入（外部输入系统 → UICornerstone）──
-    // UIEvent 为 type + data[128] 字节缓冲（UI_EVENT_* 宏布局），Binding 提供
-    // 类型安全构造辅助（见 §5.14），避免用户手拼字节布局。
+    // UIEvent 为 type + data[128] 字节缓冲，用 UICornerstone::Input::* 构造辅助（§5.14）
     void PushEvent(const UIEvent& event);
     void PushMouseButton(int button, float x, float y, bool down);
     void PushMouseMove(float x, float y);
@@ -344,29 +346,32 @@ public:
     void PushTextInput(const std::string& text);    // UI_TEXT_MAX=32 字节上限
 
     // ── JSON 布局动作注册 ──
-    // 为 JSON 布局中的 "events": { "onClick": "myAction" } 注册回调。
     using ActionCallback = std::function<void(Control)>;
     void RegisterAction(const std::string& name, ActionCallback callback);
+
+    // ── 后端配置（vsync 等，C ABI: UICornerstone_SetBackendConfig*）──
+    bool SetBackendConfig(const char* key, const char* value);
+    bool SetBackendConfigBool(const char* key, bool value);
+    bool GetBackendConfigBool(const char* key, bool& out) const;
 
     // ── 错误查询 ──
     const std::string& GetLastError() const;
 
-    // ── 调试（多实例改造后新增，可选）──
+    // ── Debug 辅助 ──
     static int  DebugGetAliveCount();                    // Release 构建返回 0
     static UIInstance DebugGetAliveInstance(int index);  // Release 构建返回 NULL
-    static UIInstance DebugGetActiveViewport(UIInstance instance);  // owner 的当前焦点视口
+    static UIInstance DebugGetActiveViewport(UIInstance instance);
     static bool DebugIsControlFocused(UIInstance instance, UIControlHandle control);
-
-    UICornerstone(const UICornerstone&) = delete;
-    UICornerstone& operator=(const UICornerstone&) = delete;
 
 private:
     explicit UICornerstone(UIInstance instance, bool ownsInstance);
     Control MakeControl(UIControlHandle h);
+    friend class ::Control;
 
-    struct Impl;
     std::unique_ptr<Impl> m_impl;
 };
+
+} // namespace UICornerstone
 ```
 
 ### 5.2 Control 代理类
@@ -375,16 +380,29 @@ private:
 // binding/include/Control.h
 
 #include <string>
+#include <memory>
 #include <functional>
 #include "UICornerstoneAPI.h"
+
+class Event;
+
+// 共享状态（§5.7.1）：句柄有效性追踪。Control 拷贝共享同一状态。
+struct ControlState {
+    UIInstance instance = nullptr;
+    UIControlHandle handle = nullptr;
+    void* ownerImpl = nullptr;      // UICornerstone::Impl*（回调 userData 注册表）
+    bool alive = true;
+};
 
 class Control {
 public:
     Control() = default;
-    explicit Control(UIControlHandle handle);
-    Control(std::shared_ptr<ControlState> state);   // MakeControl 内部路径
+    explicit Control(std::shared_ptr<ControlState> state);
 
-    // ── 属性设置 ──
+    bool IsValid() const;
+    UIControlHandle Handle() const { return m_state ? m_state->handle : nullptr; }
+
+    // ── 属性设置（一一对应 C ABI：UICornerstone_Set*）──
     void SetColor(const char* prop, UIColor value);
     void SetStateColor(const char* prop, UIStateColor value);
     void SetBool(const char* prop, bool value);
@@ -394,29 +412,21 @@ public:
     void SetEnum(const char* prop, const std::string& value);
     void SetPtr(const char* prop, void* value);
 
-    // ── 属性读取 ──
-    UIColor     GetColor(const char* prop) const;
+    // ── 属性读取（一一对应 C ABI：UICornerstone_Get*）──
+    UIColor      GetColor(const char* prop) const;
     UIStateColor GetStateColor(const char* prop) const;
-    bool        GetBool(const char* prop) const;
-    int         GetInt(const char* prop) const;
-    float       GetFloat(const char* prop) const;
-    std::string GetString(const char* prop) const;
-    void*       GetPtr(const char* prop) const;
+    bool         GetBool(const char* prop) const;
+    int          GetInt(const char* prop) const;
+    float        GetFloat(const char* prop) const;
+    std::string  GetString(const char* prop) const;
+    std::string  GetEnum(const char* prop) const;
+    void*        GetPtr(const char* prop) const;
 
-    // ── 枚举值读取（GetEnum 输出到栈 buffer，返回字符串）──
-    std::string GetEnum(const char* prop) const;
+    // ── 回调（类型安全 lambda 桥接）──
+    using EventCallback = std::function<void(const Event&)>;
+    void SetCallback(const char* event, EventCallback callback);
 
-    // ── 回调 ──
-    template<typename Fn>
-    void SetCallback(const char* event, Fn&& callback);
-
-    // ── 便捷方法 ──
-    void SetText(const std::string& text);
-    std::string GetText() const;
-    void SetVisible(bool visible);
-    bool IsVisible() const;
-    void SetEnabled(bool enabled);
-    bool IsEnabled() const;
+    // ── 控件操作（一一对应 C ABI：UICornerstone_*Control / SetRect 等）──
     void SetRect(float x, float y, float w, float h);
     UIRect GetRect() const;
     void AddChild(Control child);
@@ -424,16 +434,14 @@ public:
     std::string GetId() const;
 
 private:
-    // 共享状态（§5.7.1）：句柄有效性追踪
     std::shared_ptr<ControlState> m_state;
 
-    UIControlHandle RawHandle() const {
-        return m_state ? m_state->handle : nullptr;
-    }
+    // C 回调 thunk（静态，经 userData 指向 shared_ptr<EventCallback>）
+    static void CallbackThunk(UIControlHandle ctl, const UIEventData* event, void* userData);
 };
 ```
 
-> 注：`IsValid()` 基于 `m_state->alive`（§5.7.1/§5.7.2），`Handle()` 返回原始句柄（可能已失效）。`Control` 需访问 `Impl`（SetCallback 的 userData 注册表）——经 `ControlState` 持有所属 `UICornerstone::Impl*`（或回调函数指针）实现，见 §5.7.3。
+> 注：`IsValid()` 基于 `m_state->alive`（§5.7.1/§5.7.2），`Handle()` 返回原始句柄（可能已失效）。`Control` 经 `ControlState::ownerImpl` 访问 `Impl`（SetCallback 的 userData 注册表），见 §5.7.3。**便捷方法族（SetText/GetText/SetVisible/IsVisible/SetEnabled/IsEnabled）已删除**（2026-08-07）：统一走 `SetString("text"/"visible"/"enabled")` 等通用属性接口，避免与 C ABI 属性系统产生第二套命名。
 
 ### 5.3 事件系统
 
@@ -533,8 +541,7 @@ private:
 };
 ```
 
-> 事件名/属性名字符串常量由 Binding 自带（`binding/include/EventNames.h`、`PropertyNames.h`）——
-> Binding 只依赖 C ABI 头（MIT），**不得 include 核心库 GPL 头**（PropertyNames.h、EventTypes.h）。字符串值与核心库事件字典（CABI_Property_Design.md §6.9）保持一致。
+> 事件名/属性名字符串常量由 `PropertyNames.h` 提供（`kEventClick`/`kEventValueChanged` 等）。该头为核心库统一数据源（`include/PropertyNames.h`），binding 构建时经 `cmake/CopyPropertyNames.cmake` 复制到构建目录 `include/` 后引用——字符串值与核心库事件字典（CABI_Property_Design.md §6.9）严格一致，且随核心库常量统一更新。
 
 ```mermaid
 flowchart LR
@@ -588,25 +595,25 @@ float Event::GetValueChanged() const {
 **解析规则**：Binding 对路径做简单拼接 `resourceRoot + "/" + userPath`，**不自动插入任何子目录前缀**。目录结构完全由用户在参数中控制。
 
 ```
-resourceRoot = "./assets"
+resourceRoot = "my_assets"    // 示例值；Config 默认空串 → 核心库回退 exe 目录/assets
 
 传参                      → 实际路径
 ─────────────────────────────────────────────
-"btn.png"                 → ./assets/btn.png
-"images/btn.png"          → ./assets/images/btn.png
-"ui/icons/btn.png"        → ./assets/ui/icons/btn.png
-"layouts/demo.json"       → ./assets/layouts/demo.json
+"btn.png"                 → my_assets/btn.png
+"images/btn.png"          → my_assets/images/btn.png
+"ui/icons/btn.png"        → my_assets/ui/icons/btn.png
+"layouts/demo.json"       → my_assets/layouts/demo.json
 ```
 
-```mermaid
-flowchart LR
-    R["Config.resourceRoot<br/>'./assets'"]
-    U["用户传参<br/>(自由决定相对路径)"]
-    RES["实际路径<br/>resourceRoot + '/' + userPath"]
+**API 形态**：无独立 ResourceManager 类——资源路径操作内联为 `UICornerstone` 的 3 个方法：
 
-    R --> RES
-    U --> RES
+```cpp
+void SetResourceRoot(const std::string& path);              // 修改 Binding 侧解析根
+std::string GetResourceRoot() const;                        // 查询当前根
+std::string ResolveResource(const std::string& relative) const;  // root + "/" + relative
 ```
+
+> 核心库侧的 ResourceProvider 由 `UIInstanceConfig.resourceRoot` 驱动（Create 时固化）；Binding 的 `SetResourceRoot` 仅影响 Binding 侧路径拼接查询，不跨库传递（Create 之后再改 root 不影响核心库已建 Provider）。
 
 **三种资源类型的路径出处**：
 
@@ -618,29 +625,9 @@ flowchart LR
 
 用户统一改 `resourceRoot` 即可重定向所有资源。如需把图片移到别处而字体不动，直接在调用 `CreateImageButton` 时传不同的相对路径即可，无需额外配置项。
 
-```cpp
-// binding/include/ResourceManager.h
+#### resourceRoot 生效链路
 
-class ResourceManager {
-public:
-    explicit ResourceManager(const std::string& root);
-
-    void SetRoot(const std::string& root);
-    std::string GetRoot() const;
-
-    // 统一路径解析（Binding 侧便捷 API）
-    std::string Resolve(const std::string& relativePath) const;
-
-private:
-    std::string m_root;
-};
-```
-
-> 核心库侧的 ResourceProvider 由 `UIInstanceConfig.resourceRoot` 驱动（§5.4 生效链路），Binding 的 `ResourceManager` 仅用于路径拼接查询与记录，不跨库传递。
-
-#### resourceRoot 生效链路（多实例改造后）
-
-资源根路径经 `UIInstanceConfig.resourceRoot` 在 `CreateInstance`/`CreateInstanceFromPlugin` 时传入核心库：
+资源根路径经 `UIInstanceConfig.resourceRoot` 在 `CreateInstance` 时传入核心库：
 
 ```
 Config.resourceRoot = "./my_assets"
@@ -648,117 +635,120 @@ Config.resourceRoot = "./my_assets"
         ▼
 UICornerstone::Create(Config)
         │
-        ├── BackendResolver：默认路径 → CreateInstanceFromPlugin("sdl3", cfg)
-        │                   自定义搜索路径 → LoadLibrary + CreateInstance(callbacks, cfg)
-        └── cfg.resourceRoot = "./my_assets"（UIInstanceConfig 字段）
+        ├── Dyn::LoadCore("UICornerstone.dll")          ← 纯动态加载（§5.15）
+        ├── Dyn::LoadBackend(path, backend)             ← UIBackend_<name>.dll
+        └── Dyn::API().CreateInstance(callbacks, &cfg)  ← cfg.resourceRoot = "./my_assets"
 
 核心库内部:
     MainWindow 构造函数:
-        m_resourceProvider = ResourceProvider::createFilesystem(pathPrefix)
-                                                    ▲
-                                                    └── 由 UIInstanceConfig.resourceRoot 写入
+        m_resourceProvider = ResourceProvider::createFilesystem(resourceRoot)
 ```
 
 ```cpp
-// UICornerstone::Create 中的关键步骤（伪代码）
+// UICornerstone::Create 中的关键步骤（节选）
 std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
-    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;   // structSize 由宏填好
+    if (!Dyn::LoadCore(coreDllPath.c_str())) return nullptr;      // 核心 DLL
+    auto [callbacks, h] = Dyn::LoadBackend(config.backendSearchPath, config.backend);
+    if (!callbacks) return nullptr;                               // 后端 DLL
+
+    UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;            // structSize 由宏填好
     cfg.resourceRoot = config.resourceRoot.c_str();
     cfg.windowTitle  = config.windowTitle.c_str();
     cfg.windowWidth  = config.windowWidth;
     cfg.windowHeight = config.windowHeight;
+    cfg.windowFlags  = config.windowFlags;
 
-    UIInstance instance;
-    if (config.backendSearchPath.empty()) {
-        instance = UICornerstone_CreateInstanceFromPlugin(config.backend.c_str(), &cfg);
-    } else {
-        // 自定义搜索路径：自加载 DLL → 回调查表模式
-        auto* callbacks = BackendResolver::LoadFromPath(
-            config.backendSearchPath, config.backend);
-        if (!callbacks) { m_impl->lastError = "..."; return nullptr; }
-        instance = UICornerstone_CreateInstance(callbacks, &cfg);
-    }
-    if (!instance) { m_impl->lastError = "CreateInstance failed"; return nullptr; }
-    // ...
+    UIInstance instance = Dyn::API().CreateInstance(callbacks, &cfg);
+    if (!instance) { FreeLibrary(h); return nullptr; }
+    // ... 构造 UICornerstone 对象，持有 h 为后端 DLL 句柄
 }
 ```
 
-> 注：`UI_INSTANCE_CONFIG_DEFAULT` 宏（UICornerstoneAPI.h:47）自动填充 `structSize`——Binding 必须使用该宏或显式填 `sizeof(UIInstanceConfig)`（版本兼容检查）。
+> 注：`UI_INSTANCE_CONFIG_DEFAULT` 宏（UICornerstoneAPI.h:48）自动填充 `structSize`——Binding 必须使用该宏或显式填 `sizeof(UIInstanceConfig)`（版本兼容检查）。
 
-### 5.5 后端管理（多实例改造后简化）
+### 5.5 后端管理（纯动态加载）
 
 ```mermaid
 flowchart TD
-    Start["UICornerstone::Create(Config)"] --> Check{"backendSearchPath 非空?"}
-    Check -->|是| Search1["自加载 backendSearchPath/UIBackend_{name}.dll<br/>GetProcAddress 获取 GetUIBackendCallbacks"]
-    Check -->|否| Core["转发核心库 UICornerstone_CreateInstanceFromPlugin(name, cfg)<br/>（核心库内置 DLL 搜索 + 静态符号回退）"]
-    Search1 --> Found{"成功?"}
-    Core --> Created{"CreateInstanceFromPlugin 返回?"}
-    Found -->|是| CI["UICornerstone_CreateInstance(callbacks, cfg)"]
-    Found -->|否| Return1["返回 nullptr + lastError"]
-    CI --> Created2{"成功?"}
-    Created -->|非空| OK["绑定实例建立"]
-    Created -->|NULL| Return2["返回 nullptr + lastError"]
-    Created2 -->|非空| OK
-    Created2 -->|NULL| Return3["返回 nullptr + lastError"]
+    Start["UICornerstone::Create(Config)"] --> L1["Dyn::LoadCore<br/>LoadLibrary(coreLibraryDir/UICornerstone.dll)"]
+    L1 --> L1OK{"成功?"}
+    L1OK -->|否| Fail1["返回 nullptr"]
+    L1OK -->|是| L2["Dyn::LoadBackend<br/>LoadLibrary(backendSearchPath/UIBackend_{name}.dll)<br/>GetProcAddress(GetUIBackendCallbacks)"]
+    L2 --> L2OK{"成功?"}
+    L2OK -->|否| Fail2["返回 nullptr"]
+    L2OK -->|是| CI["Dyn::API().CreateInstance(callbacks, cfg)"]
+    CI --> CIOK{"成功?"}
+    CIOK -->|否| Fail3["FreeLibrary(后端) + 返回 nullptr"]
+    CIOK -->|是| OK["绑定实例建立<br/>Impl::dllHandle = 后端 DLL 句柄"]
 ```
 
-**默认模式（backendSearchPath 为空）**：直接转发 `UICornerstone_CreateInstanceFromPlugin(backend, cfg)`——核心库负责按 `UIBackend_{name}.dll` 搜索（插件目录 + 静态符号 `GetUIBackendCallbacks` 回退）。Binding 不接触 DLL。
+**加载顺序与目录语义**（与 `Config` 两字段一一对应）：
 
-**自定义搜索路径模式**：Binding 的 `BackendResolver` 仅在该模式下加载 DLL：
-1. `backendSearchPath` + `UIBackend_{name}.dll`
-2. `LoadLibrary` → `GetProcAddress("GetUIBackendCallbacks")`
-3. 以回调查表模式调用 `UICornerstone_CreateInstance(callbacks, cfg)`
+| Config 字段 | 为空时 | 非空时 |
+|------------|--------|--------|
+| `coreLibraryDir` | `LoadLibrary("UICornerstone.dll")`（exe 同目录/系统搜索） | `LoadLibrary(dir + "/UICornerstone.dll")` |
+| `backendSearchPath` | `LoadLibrary("UIBackend_<backend>.dll")`（exe 同目录/系统搜索） | `LoadLibrary(dir + "/UIBackend_<backend>.dll")` |
 
-> 原设计中"exe 目录/plugins/PATH 搜索顺序"由核心库承担，Binding 不再重复实现。
+**生命周期**：
+- 核心 DLL 句柄由 `DynamicApi` 进程级持有（静态单例，重复 `Create` 幂等；不随实例卸载——与"静态链接"行为等价）。
+- 后端 DLL 句柄由 `Impl::dllHandle` 持有，`~UICornerstone()` 时先 `DestroyInstance` 再 `FreeLibrary`。
+- 实例级错误路径（LoadBackend 失败 / CreateInstance 失败）均及时 `FreeLibrary` 后端句柄，不泄漏。
+
+> 原设计"核心库内建插件加载（CreateInstanceFromPlugin）+ 自定义路径 BackendResolver"（2026-08-06 及以前）已废弃，Binding 不再调用 `UICornerstone_CreateInstanceFromPlugin`。
 
 ### 5.6 架构约束分析
 
 #### 5.6.1 多实例支持（多实例改造完成后已解除限制）
 
-**现状（2026-08-01 实测）**：核心库 C ABI 已完成多实例改造并落地实施（提交 a0fcfa7/6064bd5）——`UICornerstone_CreateInstance(callbacks, config)` 一次完成 alloc+init（UICornerstoneAPI.h:178），返回 `UIInstance` 句柄（`struct UIContext*`，:34）；`DestroyInstance` 级联销毁子视口、owner 才 shutdown BackendManager（:183）；`CreateInstanceFromPlugin` 支持插件 DLL + 静态符号回退（:187，src/UICornerstoneAPI.cpp:377-414）；`CreateViewport(parent, rect)` 支持子视口（:193）。原"全局单实例（g_initialized）"限制**已不存在**。附加能力：`_DEBUG` 下句柄归属校验（跨实例误用断言，src/UICornerstoneAPI.cpp:79-116）、实例活跃注册表（析构守卫，UIContext.h:93-101）、Debug 辅助 4 件套（:220-226）。
+**现状（2026-08-01 实测，核心库侧能力）**：核心库 C ABI 已完成多实例改造并落地实施（提交 a0fcfa7/6064bd5）——`UICornerstone_CreateInstance(callbacks, config)` 一次完成 alloc+init（UICornerstoneAPI.h:178），返回 `UIInstance` 句柄（`struct UIContext*`，:34）；`DestroyInstance` 级联销毁子视口、owner 才 shutdown BackendManager（:183）；`CreateInstanceFromPlugin` 支持插件 DLL + 静态符号回退（:187，src/UICornerstoneAPI.cpp:377-414，**Binding 不使用**，见 §5.5）；`CreateViewport(parent, rect)` 支持子视口（:193）。原"全局单实例（g_initialized）"限制**已不存在**。附加能力：`_DEBUG` 下句柄归属校验（跨实例误用断言，src/UICornerstoneAPI.cpp:79-116）、实例活跃注册表（析构守卫，UIContext.h:93-101）、Debug 辅助 4 件套（:220-226）。
+
+**多窗口事件泵（实施修订 2026-08-08）**：每个窗口实例的 `ProcessEvents()` 只消费**自己窗口**的事件（sdl3 后端按 `windowID` 隔离，`SDL_PumpEvents` + `SDL_PeepEvents` peek + headOne 同 type 检查 + GETEVENT + gotEvent 守卫）。多窗口帧循环须用返回值驱动所有实例**直到全局队列空**：
+
+```cpp
+int processedCount;
+do {
+    processedCount = 0;
+    if (winA->ProcessEvents()) processedCount = 1;   // 每实例只消费自己窗口事件
+    if (winB->ProcessEvents()) processedCount = 1;
+} while (processedCount > 0);
+winA->Update(dt);  winB->Update(dt);
+winA->Render();    winB->Render();
+winA->Present();   winB->Present();
+```
+
+（`ProcessEvents()` 返回 bool；忽略返回值时行为与单实例一致，旧代码完全兼容。参考样例：`binding/samples/sample_cpp_multiinstance.cpp`，AUTO 模式双向注入验证通过。）
 
 **Binding 设计**：
 
 ```cpp
-// binding/src/UICornerstone.cpp — Impl 结构（多实例版）
+// binding/src/Impl.h — Impl 结构（多实例版）
 
-struct UICornerstone::Impl {
-    Config config;
+struct Impl {
+    UICornerstone::Config config;
     UIInstance instance = nullptr;      // C ABI 实例句柄（唯一真源）
-    bool ownsInstance = false;          // 由 Binding 创建（CreateInstance/CreateInstanceFromPlugin）
-    uint64_t lastTicks = 0;
+    bool ownsInstance = false;          // 由 Binding 创建（析构时 DestroyInstance）
+    bool initialized = false;
     std::string lastError;
 
-    // Action 注册表（实例私有，非全局）
-    std::unordered_map<std::string,
-        std::shared_ptr<ActionCallback>> actions;
-
-    // Backend 资源（仅自定义搜索路径模式持有）
+    // 后端插件 DLL 句柄（纯动态加载模式；实例析构时 FreeLibrary）
+    // 核心 DLL 由 DynamicApi 进程级持有（不随实例卸载）
     void* dllHandle = nullptr;
 
-    // Control 生命周期追踪（weak_ptr 不保活，仅有效性登记）
+    // 资源根（Binding 侧路径解析；核心库侧由 UIInstanceConfig.resourceRoot 固化）
+    std::string resourceRoot;
+
+    // Action 注册表（实例私有）
+    std::unordered_map<std::string, std::shared_ptr<UICornerstone::ActionCallback>> actions;
+
+    // Control 生命周期追踪（weak 不保活）
     std::unordered_map<UIControlHandle, std::weak_ptr<ControlState>> liveControls;
 
     // 回调 userData 注册表（Impl 级持有，与 Control 生命周期解耦——见 §5.7.3）
-    std::unordered_map<UIControlHandle,
-        std::vector<std::shared_ptr<void>>> callbackUserData;
+    std::unordered_map<UIControlHandle, std::vector<std::shared_ptr<void>>> callbackUserData;
 };
 ```
 
-```cpp
-// Create() 实现（多实例：无进程级单例限制，可创建多个实例）
-
-std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
-    auto ui = std::unique_ptr<UICornerstone>(new UICornerstone());
-    ui->m_impl->config = config;
-    return ui;   // 实例真正创建发生在 ~/构造/首次使用时按需执行
-}
-```
-
-> 多实例语义：每个 `UICornerstone` 对象 ↔ 一个 `UIInstance`（窗口或视口），可多个并存；`CreateViewport` 创建共享后端的子视口实例。实例生命周期由 `UICornerstone` 对象管理（析构时 `DestroyInstance`）。
->
-> 实例的实际创建在构造时完成（直接调用 C ABI `CreateInstance`/`CreateInstanceFromPlugin`，见 §5.5/§5.10）；上例为简化示意——错误路径返回 nullptr 的场景由 `Create` 静态工厂在调用 C ABI 后检查结果实现。
+> 多实例语义：每个 `UICornerstone` 对象 ↔ 一个 `UIInstance`（窗口或视口），可多个并存；`CreateViewport` 创建共享后端的子视口实例。实例生命周期由 `UICornerstone` 对象管理（析构时 `DestroyInstance`）。实例的实际创建在 `Create` 静态工厂内完成（LoadCore → LoadBackend → CreateInstance，见 §5.5/§5.10），失败路径返回 nullptr。
 
 #### 5.6.2 线程安全
 
@@ -790,54 +780,53 @@ struct UICornerstone::Impl {
 const std::string& UICornerstone::GetLastError() const {
     return m_impl->lastError;
 }
+```
 
-// 内部辅助宏（Create 工厂用：失败返回 nullptr）
-#define UI_CHECK_INIT(ui, expr, msg) \
-    do { \
-        if (!(expr)) { \
-            ui->m_impl->lastError = msg; \
-            return nullptr; \
-        } \
-    } while(0)
+**Create 工厂实现（对齐当前代码）**——创建失败返回 `nullptr`，不抛出：
 
-// 使用示例（多实例版）
+```cpp
+// binding/src/UICornerstone.cpp
 std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
-    auto ui = std::unique_ptr<UICornerstone>(new UICornerstone());
-    auto& impl = ui->m_impl;
+    if (config.backend.empty()) return nullptr;
 
-    UI_CHECK_INIT(config, !config.backend.empty(), "backend name is empty");
+    // 核心 DLL：coreLibraryDir 非空 → 目录 + "UICornerstone.dll"；空 → 系统搜索（exe 同目录）
+    std::string coreDll = config.coreLibraryDir.empty()
+        ? std::string("UICornerstone.dll")
+        : (config.coreLibraryDir + "/UICornerstone.dll");
+    if (!Dyn::LoadCore(coreDll.c_str())) return nullptr;
 
     UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
     cfg.resourceRoot  = config.resourceRoot.c_str();
     cfg.windowTitle   = config.windowTitle.c_str();
     cfg.windowWidth   = config.windowWidth;
     cfg.windowHeight  = config.windowHeight;
+    cfg.windowFlags   = config.windowFlags;
 
-    if (config.backendSearchPath.empty()) {
-        // 默认：核心库插件加载
-        impl->instance = UICornerstone_CreateInstanceFromPlugin(
-            config.backend.c_str(), &cfg);
-        if (!impl->instance) { impl->lastError = "CreateInstanceFromPlugin failed"; return nullptr; }
-        impl->ownsInstance = true;
-    } else {
-        // 自定义搜索路径：自加载 DLL → 回调查表模式
-        auto* callbacks = BackendResolver::LoadFromPath(
-            config.backendSearchPath, config.backend);
-        if (!callbacks) { impl->lastError = "Failed to load backend plugin: " + config.backend; return nullptr; }
-        impl->instance = UICornerstone_CreateInstance(callbacks, &cfg);
-        if (!impl->instance) { impl->lastError = "CreateInstance failed"; return nullptr; }
-        impl->ownsInstance = true;
+    // 后端插件 DLL：backendSearchPath 非空 → 指定路径；否则系统搜索（exe 同目录）
+    auto [callbacks, h] = Dyn::LoadBackend(config.backendSearchPath, config.backend);
+    if (!callbacks) return nullptr;
+
+    UIInstance instance = Dyn::API().fnCreateInstance(callbacks, &cfg);
+    if (!instance) {
+#ifdef _WIN32
+        FreeLibrary(h);      // 创建失败：立即释放后端 DLL，不泄漏
+#endif
+        return nullptr;
     }
-    impl->initialized = true;
+
+    auto ui = std::unique_ptr<UICornerstone>(new UICornerstone(instance, true));
+    ui->m_impl->config = config;
+    ui->m_impl->resourceRoot = config.resourceRoot;
+    ui->m_impl->dllHandle = h;   // 后端 DLL 句柄（~UICornerstone 时 FreeLibrary）
     return ui;
 }
 ```
 
 | 方法 | 错误指示 | 详情查询 |
 |------|---------|---------|
-| `Create(Config)` | 返回 `nullptr`（实例创建失败/后端加载失败） | `GetLastError()`（实例创建失败前，Binding 先缓存 lastError 于内部静态缓冲或打印） |
+| `Create(Config)` | 返回 `nullptr`（核心/后端 DLL 加载失败、CreateInstance 失败） | `GetLastError()`（DLL 加载失败时 lastError 同步设置；若 LoadCore/LoadBackend 失败） |
 | `Create(callbacks)` | 返回 `nullptr`（callbacks 非法） | 同上 |
-| `ProcessEvents()` | 返回 `void`；不指示窗口关闭 | 退出判断用 `IsQuitRequested()`（独立查询，:215） |
+| `ProcessEvents()` | 返回 `bool`：是否处理了 ≥1 个事件；不指示窗口关闭 | 退出判断用 `IsQuitRequested()`（独立查询，:215）；多实例时用返回值驱动"所有实例直到队列空"（§5.6.1） |
 | `Run()` | 返回 1（内部循环异常退出） | 正常退出返回 0；创建失败在 `Create` 已返回 nullptr |
 | `CreateXxx / FindControl` | 返回 `Control()`（空句柄） | `ctl.IsValid()` 判断 |
 | `Control::SetXxx` | 静默失败 | 无（C ABI 返回 0 时忽略） |
@@ -852,33 +841,17 @@ C ABI 返回的 `UIControlHandle` 是一个裸指针 `void*`（实际是 `Contro
 **防护设计**：引入 `ControlState` 共享状态对象，通过 `shared_ptr/weak_ptr` 追踪句柄有效性。
 
 ```cpp
-// binding/src/ControlState.h (内部类)
+// binding/include/Control.h（ControlState 定义，内部）
 
 struct ControlState {
-    UIControlHandle handle;
+    UIInstance instance = nullptr;
+    UIControlHandle handle = nullptr;
+    void* ownerImpl = nullptr;      // UICornerstone::Impl*（回调 userData 注册表）
     bool alive = true;
-};
-
-// binding/include/Control.h 更新
-class Control {
-public:
-    Control() = default;
-    explicit Control(UIControlHandle handle);
-
-    bool IsValid() const;
-
-    // ... 原有方法
-
-private:
-    std::shared_ptr<ControlState> m_state;
-
-    UIControlHandle RawHandle() const {
-        return m_state ? m_state->handle : nullptr;
-    }
 };
 ```
 
-> 注：`callbackUserData` 不再存放在 `ControlState`（原设计缺陷，见 §5.7.3）——`std::function` 的生命周期由 `Impl` 统一管理，避免"Control 对象析构但 C 侧控件仍存活"时 userData 悬垂。
+> `ControlState` 不再存放 `callbackUserData`（原设计缺陷，见 §5.7.3）——`std::function` 的生命周期由 `Impl` 统一管理，避免"Control 对象析构但 C 侧控件仍存活"时 userData 悬垂。`ownerImpl` 使 `Control` 在无 `UICornerstone` 对象引用的情况下也能访问 Impl 级注册表。
 
 **工厂方法更新**——创建/查询 Control 时统一注册到 `Impl::liveControls`（`FindControl` 同样走 `MakeControl`，保证查到的 Control 与工厂创建的一致）：
 
@@ -886,12 +859,12 @@ private:
 // binding/src/UICornerstone.cpp
 Control UICornerstone::CreateButton(const std::string& text,
                                     float x, float y, float w, float h) {
-    UIControlHandle h = UICornerstone_CreateButton(text.c_str(), x, y, w, h);
+    UIControlHandle h = Dyn::API().fnCreateButton(text.c_str(), x, y, w, h);
     return MakeControl(h);
 }
 
 Control UICornerstone::FindControl(const std::string& id) {
-    UIControlHandle h = UICornerstone_FindControl(id.c_str());
+    UIControlHandle h = Dyn::API().fnFindControl(id.c_str());
     return MakeControl(h);
 }
 
@@ -903,7 +876,9 @@ Control UICornerstone::MakeControl(UIControlHandle h) {
         m_impl->liveControls.erase(it);   // 弱引用已死，重注册
     }
     auto state = std::make_shared<ControlState>();
+    state->instance = m_impl->instance;
     state->handle = h;
+    state->ownerImpl = m_impl.get();
     m_impl->liveControls[h] = state;
     return Control(std::move(state));
 }
@@ -916,15 +891,15 @@ void Control::Destroy() {
     if (!m_state || !m_state->alive) return;
 
     UIControlHandle h = m_state->handle;
+    auto* impl = static_cast<UICornerstone::Impl*>(m_state->ownerImpl);
 
     // 清理 Impl 级 callback userData（见 §5.7.3）
+    if (impl) impl->callbackUserData.erase(h);
     // 通知核心库销毁控件
-    UICornerstone_DestroyControl(h);
+    UICornerstone::Dyn::API().fnDestroyControl(h);
 
-    // 从注册表移除（weak_ptr 同时失效）
-    // 标记失效
+    // 标记失效（weak_ptr 同时失效；MakeControl 命中时惰性清理注册表）
     m_state->alive = false;
-    // Impl::NotifyControlDestroyed(h) —— 由 Destroy 与核心库自动销毁路径共用
 }
 ```
 
@@ -934,7 +909,7 @@ void Control::Destroy() {
 
 | 方法 | 已销毁的 Control 上调用 |
 |------|----------------------|
-| `SetColor / SetText / SetCallback` 等 | 静默跳过（检查 `m_state->alive`） |
+| `SetColor / SetString / SetCallback` 等 | 静默跳过（检查 `m_state->alive`） |
 | `Destroy()` | 幂等，第二次调用无效果 |
 | `GetId()` | 返回空字符串 |
 | `IsValid()` | 返回 `false` |
@@ -961,13 +936,19 @@ struct UICornerstone::Impl {
         std::vector<std::shared_ptr<void>>> callbackUserData;
 };
 
-// Control::SetCallback 实现（伪代码）
-void Control::SetCallback(const ControlCallback& callback) {
-    auto userData = std::make_shared<ControlCallback>(callback);
-    auto& vec = m_impl->callbackUserData[m_state->handle];
-    vec.push_back(userData);                       // 追加持有
-    UICornerstone_SetCallback(m_state->handle,
-        &ControlCallbackThunk, userData.get());
+// Control::SetCallback 实现（节选，binding/src/Control.cpp）
+void Control::SetCallback(const char* event, EventCallback callback) {
+    if (!m_state || !m_state->alive) return;
+
+    auto impl = static_cast<UICornerstone::Impl*>(m_state->ownerImpl);
+    auto userData = std::make_shared<EventCallback>(std::move(callback));
+    if (impl) {
+        auto& vec = impl->callbackUserData[m_state->handle];
+        vec.clear();                              // 同句柄仅保留最新一个，不堆积
+        vec.push_back(userData);
+        UICornerstone::Dyn::API().fnSetCallback(
+            m_state->handle, event, &Control::CallbackThunk, userData.get());
+    }
 }
 
 // 清理时机：
@@ -976,7 +957,7 @@ void Control::SetCallback(const ControlCallback& callback) {
 //      实例析构（~UICornerstone）    → 整体清空
 ```
 
-> 注：同一句柄重复 SetCallback 会产生堆积（每次 push 一个 shared_ptr）。控制为：同句柄再次 SetCallback 时先移除旧条目（`vec` 中该句柄仅保留最新一个），避免无限增长。
+> 注：同一句柄重复 SetCallback 时先 `clear()` 再 push，仅保留最新一个 `std::function`（防堆积）。`CallbackThunk` 是 `Control` 的静态成员（`static void CallbackThunk(UIControlHandle, const UIEventData*, void*)`），经 userData 反解出 `EventCallback` 后构造 `Event` 并调用；`friend class ::Control` 使 `UICornerstone` 可将其作为回调函数传入 `fnSetCallback`。
 
 #### 5.7.4 父-子销毁语义（明确约定）
 
@@ -997,8 +978,8 @@ void UICornerstone::RegisterAction(const std::string& name,
     auto cb = std::make_shared<ActionCallback>(std::move(callback));
     m_impl->actions[name] = cb;
 
-    // 注册 C 回调
-    UICornerstone_RegisterAction(name.c_str(),
+    // 注册 C 回调（经 DynamicApi 转发）
+    Dyn::API().fnRegisterAction(name.c_str(),
         [](UIControlHandle ctl, void* userData) {
             auto& fn = *static_cast<ActionCallback*>(userData);
             fn(Control(ctl));
@@ -1018,18 +999,15 @@ void UICornerstone::RegisterAction(const std::string& name,
 #include <unordered_map>
 #include <vector>
 
-struct ControlState;
-
 struct UICornerstone::Impl {
     Config config;
     UIInstance instance = nullptr;      // C ABI 实例句柄（唯一真源）
-    bool ownsInstance = false;          // 由 Binding 创建（CreateInstance/CreateInstanceFromPlugin）
+    bool ownsInstance = false;          // 由 Binding 创建（CreateInstance）
     bool initialized = false;
-    uint64_t lastTicks = 0;
     std::string lastError;
 
-    // Backend（仅自定义搜索路径模式持有 DLL）
-    void* dllHandle = nullptr;
+    // 后端 DLL 句柄（纯动态加载模式；实例析构时 FreeLibrary）
+    void* dllHandle = nullptr;          // 核心 DLL 由 DynamicApi 进程级持有
 
     // Resource（Binding 侧路径解析根；核心库侧由 UIInstanceConfig.resourceRoot 固化）
     std::string resourceRoot;
@@ -1037,7 +1015,7 @@ struct UICornerstone::Impl {
     // Action 注册表（实例私有）
     std::unordered_map<
         std::string,
-        std::shared_ptr<std::function<void(Control)>>
+        std::shared_ptr<ActionCallback>
     > actions;
 
     // Control 生命周期追踪
@@ -1054,46 +1032,46 @@ struct UICornerstone::Impl {
 };
 ```
 
+> 与 §5.6.1 的 Impl 定义一致；`lastTicks` 已移除——`Run()` 的帧计时改由局部变量完成（§5.11），不再占用 Impl 状态。
+
 ### 5.10 Create(Config) 全链路（含错误处理）
 
 ```mermaid
 sequenceDiagram
     participant User as 用户代码
     participant B as UICornerstone
-    participant BR as BackendResolver
+    participant DA as DynamicApi
     participant C as C ABI
     participant Core as 核心库
+    participant BE as 后端 DLL
 
     User->>B: Create(Config)
-    B->>B: 校验 Config 字段合法性
+    B->>B: 校验 Config 字段合法性（backend 非空、resourceRoot 非空）
     B->>B: 组装 UIInstanceConfig（含 resourceRoot/窗口参数）
 
-    alt backendSearchPath 为空（默认）
-        B->>C: CreateInstanceFromPlugin(backend, cfg)
-        C->>Core: 按 UIBackend_{name}.dll 搜索 + 静态符号回退
-        alt 创建失败
-            C-->>B: NULL
-            B->>B: lastError = "CreateInstanceFromPlugin 失败"
-            B-->>User: nullptr
-        else 成功
-            C-->>B: UIInstance
-            B->>B: ownsInstance = true
-        end
-    else 自定义 backendSearchPath
-        B->>BR: LoadFromPath(searchPath, backend)
-        alt DLL/符号加载失败
-            BR-->>B: nullptr
-            B->>B: lastError = "找不到 UIBackend_sdl3.dll"
+    B->>DA: LoadCore(coreLibraryDir)
+    DA->>Core: LoadLibrary(dir + "/UICornerstone.dll")<br/>GetProcAddress(UICornerstone_CreateInstance)
+    alt 核心 DLL 加载失败
+        DA-->>B: false
+        B->>B: lastError = "Failed to load core: UICornerstone.dll"
+        B-->>User: nullptr
+    else 成功
+        B->>DA: LoadBackend(backendSearchPath, backend)
+        DA->>BE: LoadLibrary(dir + "/UIBackend_{name}.dll")<br/>GetProcAddress(GetUIBackendCallbacks)
+        alt 后端 DLL 加载失败
+            DA-->>B: {nullptr, nullptr}
+            B->>B: lastError = "Failed to load backend plugin: {name}"
             B-->>User: nullptr
         else 成功
             B->>C: CreateInstance(callbacks, cfg)
+            C->>Core: 创建 MainWindow + ResourceProvider
             alt 创建失败
                 C-->>B: NULL
-                B->>B: lastError = "CreateInstance 失败"
+                B->>B: FreeLibrary(后端 DLL) + lastError = "CreateInstance failed"
                 B-->>User: nullptr
             else 成功
                 C-->>B: UIInstance
-                B->>B: ownsInstance = true
+                B->>B: dllHandle = 后端句柄；ownsInstance = true
             end
         end
     end
@@ -1101,32 +1079,40 @@ sequenceDiagram
     B-->>User: unique_ptr<UICornerstone>（创建即初始化完成，无独立 Init()）
 ```
 
-> 实例销毁：`~UICornerstone()` 时 `ownsInstance` 为 true 则调用 `UICornerstone_DestroyInstance(m_impl->instance)`（:182，级联销毁窗口/资源）；false 则仅解引用不销毁（视口实例共享后端，见 §5.6.1）。
+> 实例销毁：`~UICornerstone()` 时 `ownsInstance` 为 true 则调用 `Dyn::API().fnDestroyInstance(m_impl->instance)`（级联销毁窗口/资源），随后 `FreeLibrary(m_impl->dllHandle)` 释放后端 DLL；false 则仅解引用不销毁（视口实例共享后端，见 §5.6.1）。核心 DLL 句柄由 DynamicApi 进程级持有，不随实例卸载（§5.5）。
 
 ### 5.11 Hosted Run 内部实现
 
 ```cpp
+// binding/src/UICornerstone.cpp — Run()（节选，帧计时用局部变量 + std::chrono）
+
+static uint64_t nowMillis() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 int UICornerstone::Run(FrameCallback update, RenderCallback onRender) {
     if (!m_impl->initialized) return 1;   // Create 失败时不会产生对象（返回 nullptr）
 
-    m_impl->lastTicks = Platform::GetTicks();  // 首次 dt≈0，游戏逻辑自行处理首帧
+    auto& api = Dyn::API();               // 纯动态加载（§5.15）
+    uint64_t lastTicks = nowMillis();     // 首次 dt≈0，游戏逻辑自行处理首帧
 
     while (!IsQuitRequested()) {
         ProcessEvents();                  // void；窗口关闭经 IsQuitRequested() 感知
 
-        uint64_t now = Platform::GetTicks();
-        double dt = (now - m_impl->lastTicks) / 1000.0;
-        m_impl->lastTicks = now;
+        uint64_t now = nowMillis();
+        double dt = (now - lastTicks) / 1000.0;
+        lastTicks = now;
 
         dt = std::min(dt, 0.1);  // 防止长时间挂起后的 dt 暴增（如调试断点）
 
         Update(dt);
         if (update) update(dt);
 
-        UICornerstone_Clear();
-        UICornerstone_Render();
+        api.fnClear(m_impl->instance);
+        api.fnRender(m_impl->instance);
         if (onRender) onRender();
-        UICornerstone_Present();
+        api.fnPresent(m_impl->instance);
     }
 
     Shutdown();
@@ -1134,18 +1120,19 @@ int UICornerstone::Run(FrameCallback update, RenderCallback onRender) {
 }
 ```
 
-**首帧处理**：`lastTicks` 在进入 Run 前由构造函数置位，第一帧 dt ≈ 0。游戏逻辑的 update 回调需要处理 dt=0 的情况（跳过或正常处理）。
+**首帧处理**：`lastTicks` 在进入 Run 前置位，第一帧 dt ≈ 0。游戏逻辑的 update 回调需要处理 dt=0 的情况（跳过或正常处理）。
 
 ### 5.12 Config 校验规则
 
 | 字段 | 校验 | 不通过时 |
 |------|------|---------|
 | `backend` | 非空 | `Create()` 返回 nullptr |
-| `backendSearchPath` | 可选，空 → 核心库默认搜索顺序 | — |
+| `coreLibraryDir` | 可选，空 → exe 同目录/系统搜索 `UICornerstone.dll` | — |
+| `backendSearchPath` | 可选，空 → exe 同目录/系统搜索 `UIBackend_<name>.dll` | — |
 | `resourceRoot` | 非空 | `Create()` 返回 nullptr |
 | `windowTitle` | 非空（"UICornerstone" 默认） | 使用默认值 |
 | `windowWidth / windowHeight` | > 0 | 使用默认值（0 → 核心库默认 1024x768） |
-| `windowFlags` | 无校验 | 直接映射（UIInstanceConfig.windowFlags，:44；核心库按 structSize 守卫兼容旧客户端，src/UICornerstoneAPI.cpp:285-286） |
+| `windowFlags` | 无校验 | 直接映射（UIInstanceConfig.windowFlags；核心库按 structSize 守卫兼容旧客户端） |
 
 `windowFlags` 含义（跨后端统一标志，值对齐 SDL_WINDOW_*，核心库注释 :44）：
 
@@ -1160,79 +1147,143 @@ Binding 不封装 flags 的符号常量，保持与核心库一致的裸值（`C
 ### 5.13 CMake 构建集成
 
 ```cmake
-# binding/CMakeLists.txt
+# binding/CMakeLists.txt（节选，对齐当前实现）
 
 cmake_minimum_required(VERSION 3.16)
 project(UICornerstoneBinding)
 
-# 引入导入目标：core 项目提供 UICornerstone_dll 导入库
-# 用户需先构建核心库的 DLL 模式。
-# 核心库 DLL 输出路径经 UICORNERSTONE_DLL_DIR 传入（默认 ../build/sdl3_dll）——
-# 路径不硬编码，供外部构建系统/IDE 覆盖。
-if(NOT DEFINED UICORNERSTONE_DLL_DIR)
-    set(UICORNERSTONE_DLL_DIR "${CMAKE_SOURCE_DIR}/../build/sdl3_dll")
-endif()
-
-find_package(UICornerstone REQUIRED
-    PATHS "${UICORNERSTONE_DLL_DIR}"
-    NO_DEFAULT_PATH
-)
-
-add_library(uic_binding INTERFACE)
-target_include_directories(uic_binding INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(uic_binding INTERFACE
-    UICornerstone_dll
-)
-
-# 编译 binding 实现为静态库（内部转发逻辑）
-add_library(uic_binding_impl STATIC
+# 编译绑定实现为静态库（纯动态加载：不链接核心库导入库，仅需 C ABI 头）
+add_library(UICornerstoneBinding STATIC
     src/UICornerstone.cpp
     src/Control.cpp
     src/Event.cpp
-    src/ResourceManager.cpp
-    src/BackendResolver.cpp
+    src/DynamicApi.cpp
 )
-target_include_directories(uic_binding_impl PUBLIC include)
-target_link_libraries(uic_binding_impl PUBLIC UICornerstone_dll)
+target_include_directories(UICornerstoneBinding PUBLIC
+    include                      # 公共头
+    "${CMAKE_CURRENT_BINARY_DIR}/include"   # CopyPropertyNames.cmake 复制的 PropertyNames.h
+)
+target_include_directories(UICornerstoneBinding PRIVATE
+    ${UICORNERSTONE_API_INCLUDE_DIR}        # 核心库 C ABI 头目录（include/）
+)
 
-# 示例可执行文件
-add_subdirectory(samples)
+# PropertyNames.h 复制（事件/属性名字符串常量，源在核心库 include/PropertyNames.h）
+include(cmake/CopyPropertyNames.cmake)
+
+# 示例可执行文件（samples/*.cpp 平铺；仅链接 UICornerstoneBinding 静态库）
+add_executable(sample_cpp_hosted samples/sample_cpp_hosted.cpp)
+target_link_libraries(sample_cpp_hosted PRIVATE UICornerstoneBinding)
+
+# 运行时 DLL 部署（POST_BUILD 拷贝到 exe 同目录）：
+#   UICornerstone.dll（核心库，TARGET UICornerstone_dll）
+#   UIBackend_<backend>.dll（后端插件，TARGET ${UIBACKEND_TARGET}）
+#   BACKEND_DLLS（后端运行库，如 SDL3.dll/SDL3_image.dll/SDL3_ttf.dll）
+add_custom_command(TARGET sample_cpp_hosted POST_BUILD ...)
 ```
+
+> 要点（对齐当前实现）：
+> - **不链接 `UICornerstone_dll` 导入库**——exe 运行时经 `LoadLibrary` 加载核心/后端 DLL（§5.15），链接期零依赖核心库；运行期依赖经 POST_BUILD 拷贝到 exe 同目录满足。
+> - 构建目录 `include/` 中的 `PropertyNames.h` 由 `CopyPropertyNames.cmake` 从核心库 `include/PropertyNames.h` 复制（字符串常量唯一数据源，见 §5.3）。
+> - 两个样例（sample_cpp_hosted / sample_cpp_embed）均为 `samples/` 下平铺的单 `.cpp`；不依赖任何核心库 GPL 头（仅 `UICornerstoneAPI.h`）。
 
 ### 5.14 UIEvent 输入事件构造辅助（类型安全）
 
-C ABI 的 `UIEvent` 是 `UIEventType + data[128]` 字节缓冲，通过 `UI_EVENT_*` 便捷宏读写（UICornerstoneAPI.h:87-97：`UI_EVENT_MOUSE_X/Y`（float）、`UI_EVENT_BUTTON`（int, data+8）、`UI_EVENT_WHEEL_DELTA/X/Y`（float）、`UI_EVENT_KEY_CODE`（int）、`UI_EVENT_KEY_MOD`（uint16, data+4）、`UI_EVENT_TEXT`（data 即 char 缓冲 ≤ UI_TEXT_MAX=32）、`UI_EVENT_RESIZE_W/H`（int））。事件类型枚举 `UIEventType`（:63-76）：`UI_EVENT_MOUSE_MOVE/DOWN/UP/WHEEL/KEY_DOWN/KEY_UP/TEXT_INPUT/WINDOW_RESIZE/WINDOW_CLOSE/FOCUS_GAINED/LOST`。
+C ABI 的 `UIEvent` 是 `UIEventType + data[128]` 字节缓冲，通过 `UI_EVENT_*` 便捷宏读写（UICornerstoneAPI.h：`UI_EVENT_MOUSE_X/Y`（float）、`UI_EVENT_BUTTON`（int, data+8）、`UI_EVENT_WHEEL_DELTA/X/Y`（float）、`UI_EVENT_KEY_CODE`（int）、`UI_EVENT_KEY_MOD`（uint16, data+4）、`UI_EVENT_TEXT`（data 即 char 缓冲 ≤ UI_TEXT_MAX=32）、`UI_EVENT_RESIZE_W/H`（int））。事件类型枚举 `UIEventType`：`UI_EVENT_MOUSE_MOVE/DOWN/UP/WHEEL/KEY_DOWN/KEY_UP/TEXT_INPUT/WINDOW_RESIZE/WINDOW_CLOSE/FOCUS_GAINED/LOST`。
 
-Binding 提供类型安全构造函数，内部按上述宏布局填充字节：
+Binding 提供类型安全构造函数，内部按上述宏布局填充字节——**header-only**（全部 `inline`，`binding/include/UIEventFactory.h`）：
 
 ```cpp
-// binding/include/UIEventFactory.h（或并入 UICornerstone.h）
+// binding/include/UIEventFactory.h（header-only）
 
 namespace UICornerstone::Input {
 
 // 鼠标：UI_EVENT_MOUSE_DOWN/UP/MOVE（x,y 前 8 字节，button 在 data+8）
-UIEvent MouseButton(int button, float x, float y, bool down);
-UIEvent MouseMove(float x, float y);
+inline UIEvent MouseButton(int button, float x, float y, bool down);
+inline UIEvent MouseMove(float x, float y);
 
 // 滚轮：UI_EVENT_MOUSE_WHEEL（delta, x, y）
-UIEvent MouseWheel(float dx, float dy, float x, float y);
+inline UIEvent MouseWheel(float dx, float dy, float x, float y);
 
 // 键盘：UI_EVENT_KEY_DOWN/UP（keyCode 前 4 字节，mod 在 data+4）
-UIEvent Key(int keyCode, uint16_t mod, bool down);
+inline UIEvent Key(int keyCode, uint16_t mod, bool down);
 
 // 文本：UI_EVENT_TEXT_INPUT（data 即 char 缓冲，上限 UI_TEXT_MAX=32 字节）
-UIEvent TextInput(const std::string& text);
+inline UIEvent TextInput(const std::string& text);
 
 // 窗口：UI_EVENT_WINDOW_RESIZE / WINDOW_CLOSE
-UIEvent WindowResize(int w, int h);
-UIEvent WindowClose();
+inline UIEvent WindowResize(int w, int h);
+inline UIEvent WindowClose();
 
 }
 ```
 
-> 实现要点：各构造函数内部按上表宏布局填充 `data[128]` 并设置 `type`。若后续 C ABI 新增强类型构造辅助，Binding 转为转发。事件名常量（`"click"` 等）由 Binding 自带常量表（EventNames.h），不引用核心库 GPL 头。
+> 实现要点：各构造函数内部按上表宏布局填充 `data[128]` 并设置 `type`，头内联实现无独立 .cpp。若后续 C ABI 新增强类型构造辅助，Binding 转为转发。事件名常量（`"click"` 等）来自核心库 `include/PropertyNames.h`（经 CopyPropertyNames 复制，见 §5.3）。
+
+### 5.15 DynamicApi 纯动态加载层
+
+`binding/src/DynamicApi.h/.cpp` 是链接期零核心库依赖的关键（P14）。所有 C ABI 调用统一经 `Dyn::API().fnXxx()` 转发，**不链接 `UICornerstone_dll` 导入库**。
+
+```cpp
+// binding/src/DynamicApi.h（节选）
+
+namespace UICornerstone::Dyn {
+
+// Api 结构体：与 UICornerstoneAPI.h 导出函数一一对应，统一 fn 前缀
+// （fn 前缀同时规避 windows.h CreateDialogA/W 等宏对同名函数指针的展开冲突）
+struct Api {
+    UIInstance(*fnCreateInstance)(const UIBackendCallbacks*, const UIInstanceConfig*);
+    void(*fnDestroyInstance)(UIInstance);
+    UIControlHandle(*fnCreateButton)(const char*, float, float, float, float);
+    // ... 全部 C ABI 导出函数
+};
+
+// 进程级单一状态（static）：核心 DLL 句柄 + 已解析的 Api
+Api& API();
+bool LoadCore(const char* dllName);                    // 核心 DLL（"UICornerstone.dll"）
+std::pair<const UIBackendCallbacks*, void*> LoadBackend(  // 后端 DLL → 回调查表 + 句柄
+    const char* searchPath, const std::string& backend);
+
+}
+```
+
+```cpp
+// binding/src/DynamicApi.cpp（核心机制）
+
+// RESOLVE 宏：token paste 组装成员名，字符串化导出名恒为 "UICornerstone_<name>"
+// （#name 阻止宏展开；CreateDialogA/W 宏只影响成员引用形式 api.fnCreateDialog，安全）
+#define RESOLVE(name) \
+    api.fn##name = (decltype(api.fn##name))::GetProcAddress(h, "UICornerstone_" #name); \
+    if (!api.fn##name) return false;
+
+bool LoadCore(const char* dllName) {
+    if (API().fnCreateInstance) return true;          // 已加载，幂等
+    HMODULE h = ::LoadLibraryA(dllName ? dllName : "UICornerstone.dll");
+    if (!h) return false;
+    auto& api = API();
+    RESOLVE(CreateInstance) RESOLVE(DestroyInstance) RESOLVE(CreateButton) // ...
+    return true;   // 句柄留在进程级 static，不随实例卸载（与静态链接行为等价）
+}
+
+std::pair<const UIBackendCallbacks*, void*> LoadBackend(
+        const char* searchPath, const std::string& backend) {
+    std::string dll = backend.empty() ? "UIBackend_.dll"
+                    : (searchPath && *searchPath
+                        ? std::string(searchPath) + "/UIBackend_" + backend + ".dll"
+                        : "UIBackend_" + backend + ".dll");
+    HMODULE h = ::LoadLibraryA(dll.c_str());
+    if (!h) return {nullptr, nullptr};
+    auto fn = (GetUIBackendCallbacksFn)::GetProcAddress(h, "GetUIBackendCallbacks");
+    if (!fn) { ::FreeLibrary(h); return {nullptr, nullptr}; }
+    return {fn(), h};                                // 后端句柄由 Impl::dllHandle 持有
+}
+```
+
+**要点**：
+
+- **调用形态**：`UICornerstone.cpp` 内直接用 `Dyn::API().fnXxx()`（同命名空间）；`Control.cpp` 用 `UICornerstone::Dyn::API().fnXxx()`（全限定，因 Control 在全局命名空间）。
+- **windows.h 规避**：不用 `#undef`（用户否决）；`Api` 成员 `fn` 前缀 + token paste（`api.fn##name` 不匹配 `CreateDialogA` 类宏——宏要求紧邻标识符），导出名经 `#name` 字符串化恒精确。
+- **FreeLibrary**：UICornerstone.cpp 不再 include windows.h，直接 `extern "C" int __stdcall FreeLibrary(void*);` 声明调用。
+- **句柄归属**：核心 DLL → DynamicApi 进程级持有；后端 DLL → `Impl::dllHandle`（随实例析构释放）。
 
 ## 6. 文件布局与许可证
 
@@ -1241,28 +1292,31 @@ UIControls/
 ├── binding/                      ← C++ Binding 独立目录 (MIT)
 │   ├── LICENSE                   ← MIT License（与核心 GPL 分开）
 │   ├── CMakeLists.txt            ← Binding 构建配置
+│   ├── cmake/
+│   │   └── CopyPropertyNames.cmake ← 复制核心库 PropertyNames.h（§5.3）
 │   │
 │   ├── include/                  ← Binding 公共头文件
-│   │   ├── UICornerstone.h       ← 主类（应用入口）
-│   │   ├── Control.h             ← 控件代理（属性访问）
+│   │   ├── UICornerstone.h       ← 主类（应用入口，含 Config）
+│   │   ├── Control.h             ← 控件代理（属性访问 + ControlState）
 │   │   ├── Event.h               ← 事件包装（类型安全回调数据）
-│   │   └── EventNames.h          ← 事件/属性名字符串常量（MIT，不引用 GPL 头）
+│   │   └── UIEventFactory.h      ← UIEvent 输入事件构造辅助（header-only，§5.14）
 │   │
 │   ├── src/                      ← Binding 实现
-│   │   ├── UICornerstone.cpp     ← 主类（多实例工厂 + 双模式循环）
-│   │   ├── Control.cpp           ← Control 属性转发
+│   │   ├── UICornerstone.cpp     ← 主类（多实例工厂 + 双模式循环 + 资源路径）
+│   │   ├── Control.cpp           ← Control 属性转发 + 回调 thunk
 │   │   ├── Event.cpp             ← Event 事件数据解析
-│   │   ├── UIEventFactory.cpp    ← UIEvent 输入事件构造辅助（§5.14）
-│   │   ├── ResourceManager.h/.cpp← 资源路径管理（内部类）
-│   │   └── BackendResolver.h/.cpp← 自定义搜索路径 DLL 加载（内部类）
+│   │   ├── DynamicApi.h/.cpp     ← 纯动态加载层（LoadCore/LoadBackend/API()，§5.15）
+│   │   └── Impl.h                ← Impl 内部结构（§5.6.1/§5.9）
 │   │
-│   ├── samples/                  ← Binding 示例
-│   │   ├── CMakeLists.txt
-│   │   ├── sample_cpp_hosted/    ← Hosted 模式
-│   │   └── sample_cpp_embed/     ← Embedded 模式
+│   ├── samples/                  ← Binding 示例（平铺 .cpp，由 binding/CMakeLists.txt 的 BINDING_SAMPLES 注册）
+│   │   ├── sample_cpp_hosted.cpp ← Hosted 模式
+│   │   ├── sample_cpp_embed.cpp  ← Embedded 模式
+│   │   ├── sample_cpp_multiview.cpp ← 多视口（子视口×2 Bench）
+│   │   └── sample_cpp_multiinstance.cpp ← 多窗口（两独立实例双向通信，§7.4）
 │
 ├── include/                      ← 核心库公共头文件 (GPL)
-│   └── UICornerstoneAPI.h        ← C ABI（Binding 的唯一 #include 依赖）
+│   ├── UICornerstoneAPI.h        ← C ABI（Binding 的唯一 #include 依赖）
+│   └── PropertyNames.h           ← 事件/属性名字符串常量（经 CopyPropertyNames 复制）
 │
 ├── src/                          ← 核心库实现 (GPL)
 ├── samples/                      ← 核心库示例 (GPL)
@@ -1273,16 +1327,17 @@ UIControls/
 **依赖关系**：
 
 ```
-binding/ 只依赖 include/UICornerstoneAPI.h（通过 #include "UICornerstoneAPI.h"）
-binding/ 不依赖 src/ 或 include/ 中的任何 C++ 内部头文件
-binding/ 不链接 UICornerstone 核心库，只链接 UICornerstone.dll（导入库）
+binding/ 只依赖 include/UICornerstoneAPI.h（编译期 #include）
+binding/ 不依赖 src/ 或 include/ 中的任何 C++ 内部头文件（PropertyNames.h 为纯字符串常量头，经复制使用）
+binding/ 不链接 UICornerstone 核心库（无导入库依赖）；运行期经 LoadLibrary 纯动态加载
+binding/ 的 PropertyNames.h 复制自核心库 include/PropertyNames.h（构建时经 CopyPropertyNames.cmake）
 ```
 
 ## 7. 示例程序设计
 
 ### 7.1 sample_cpp_hosted — 在 UICornerstone 循环中嵌入游戏逻辑
 
-**文件**：`binding/samples/sample_cpp_hosted/main.cpp`
+**文件**：`binding/samples/sample_cpp_hosted.cpp`（平铺单文件，~70 行）
 
 **结构**：
 
@@ -1291,8 +1346,7 @@ flowchart TB
     subgraph main
         C1["配置 Config"]
         C2["Create(config)"]
-        C3["LoadLayout + 绑定事件"]
-        C4["Run(update, render)"]
+        C3["创建控件 + 绑定事件"]
     end
 
     subgraph UICornerstone::Run 内部
@@ -1304,69 +1358,59 @@ flowchart TB
         L6["Present()"]
     end
 
-    C1 --> C2 --> C3 --> C4
+    C1 --> C2 --> C3
 
-    C4 --> L1
+    C3 --> L1
     L1 -->|"false"| L2
     L2 --> L3 --> L4 --> L5 --> L6
     L6 --> L1
     L1 -->|"true"| E["Run 返回 0"]
 ```
 
-**代码**（~50 行，展示编程式 + JSON 布局两种控件创建方式）：
+**代码**（节选，展示编程式创建 + 事件绑定 + 双模式切换）：
 
 ```cpp
 #include "UICornerstone.h"
-#include <cstdio>
-
-static int g_clickCount = 0;
-
-static void setupUI(UICornerstone& ui) {
-    // 方式一：编程式创建控件
-    auto root = ui.CreatePanel(0, 0, 800, 600);
-    auto title = ui.CreateLabel("C++ Hosted Sample", 18, 20, 10, 760, 30);
-
-    auto btn = ui.CreateButton("Click Me", 20, 60, 200, 80);
-    btn.SetColor("background", {74, 144, 217, 255});
-    btn.SetCallback("click", [&](const Event&) {
-        g_clickCount++;
-        auto status = ui.FindControl("status_label");
-        status.SetText("Clicked: " + std::to_string(g_clickCount));
-    });
-
-    auto status = ui.CreateLabel("Click the button above", 14,
-                                 20, 160, 400, 24);
-    status.SetString("id", "status_label");
-
-    root.AddChild(title);
-    root.AddChild(btn);
-    root.AddChild(status);
-
-    // 方式二：JSON 布局（可选，适合复杂界面）
-    // ui.LoadLayoutFromFile("demo_layout.json");
-}
+#include "Control.h"
+#include "Event.h"
+#include "PropertyNames.h"
 
 int main() {
-    auto config = UICornerstone::Config{}
-        .WithBackend("sdl3")
-        .WithResourceRoot("./my_assets")
-        .WithWindow("Hosted Sample", 800, 600);
-
-    auto ui = UICornerstone::Create(config);
+    auto ui = UICornerstone::UICornerstone::Create(
+        UICornerstone::UICornerstone::Config{}
+            .WithBackend("sdl3")
+            .WithWindow("C++ Hosted Sample", 800, 600));
     if (!ui) return 1;
 
-    setupUI(*ui);
+    // ── 控件（编程式创建）──
+    auto button = ui->CreateButton("Click Me", 20, 20, 140, 36);
+    auto slider = ui->CreateSlider(20, 70, 260, 32, 0.f, 100.f, 50.f);
+    auto label  = ui->CreateLabel("Slider: 50.0", 20.0f, 120, 110, 220, 40);
+
+    int clickCount = 0;
+    button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
+        ++clickCount;
+        label.SetString(PropertyNames::kCaption,
+                        "Clicked " + std::to_string(clickCount) + " times");
+    });
+    slider.SetCallback(PropertyNames::kEventValueChanged, [&](const Event& e) {
+        label.SetString(PropertyNames::kCaption,
+                        "Slider: " + std::to_string((int)e.GetValueChanged()));
+    });
 
     return ui->Run(
-        [](double dt) { updateGameLogic(dt); },
-        []()          { renderGame();         }
-    );
+        [](double dt) { (void)dt; },   // 游戏逻辑更新
+        []() { });                     // 每帧绘制后回调
 }
 ```
 
+> 事件名/属性名一律使用 `PropertyNames.h` 常量（`kEventClick`/`kCaption` 等），避免魔法字符串。
+>
+> **AUTO 回归模式**：设置环境变量 `UICORN_AUTO` 后走手动循环，每帧注入鼠标点击/拖动（`PushMouseButton`/`PushMouseMove`），240 帧后干净退出（exit=0）——供自动化冒烟测试，人工运行时不带该变量。
+
 ### 7.2 sample_cpp_embed — 在用户游戏循环中嵌入 UICornerstone
 
-**文件**：`binding/samples/sample_cpp_embed/main.cpp`
+**文件**：`binding/samples/sample_cpp_embed.cpp`（平铺单文件，~70 行）
 
 **结构**：
 
@@ -1375,7 +1419,7 @@ flowchart TB
     subgraph main
         C1["配置 Config"]
         C2["Create(config)"]
-        C3["LoadLayout + 绑定事件"]
+        C3["创建控件 + 绑定事件"]
     end
 
     subgraph 用户游戏循环
@@ -1396,63 +1440,68 @@ flowchart TB
     L3 -->|"true"| E["Shutdown() 返回"]
 ```
 
-**代码**（~60 行，展示在用户循环中精确控制 UI 更新时机）：
+**代码**（节选，展示在用户循环中精确控制 UI 更新时机）：
 
 ```cpp
 #include "UICornerstone.h"
-#include <cstdio>
+#include "Control.h"
+#include "Event.h"
+#include "PropertyNames.h"
 
 int main() {
-    auto config = UICornerstone::Config{}
-        .WithBackend("sdl3")
-        .WithResourceRoot("./my_assets")
-        .WithWindow("Embed Sample", 800, 600);
-
-    auto ui = UICornerstone::Create(config);
+    auto ui = UICornerstone::UICornerstone::Create(
+        UICornerstone::UICornerstone::Config{}
+            .WithBackend("sdl3")
+            .WithWindow("C++ Embed Sample", 800, 600));
     if (!ui) return 1;
 
-    // Create 即完成初始化（UIInstance 已创建），无需独立 Init() 步骤
+    auto label  = ui->CreateLabel("Embedded loop", 24.0f, 20, 20, 240, 40);
+    auto button = ui->CreateButton("Toggle", 20, 80, 120, 36);
+    int count = 0;
+    button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
+        bool vis = label.GetBool(PropertyNames::kVisible);
+        label.SetBool(PropertyNames::kVisible, !vis);
+        label.SetString(PropertyNames::kCaption, "Clicked " + std::to_string(++count));
+    });
 
-    // 混合使用工厂 + JSON 布局
-    auto root = ui->CreatePanel(0, 0, 800, 600);
-
-    auto label = ui->CreateLabel("Game UI Overlay", 16, 10, 10, 300, 24);
-    label.SetColor("text", {255, 255, 255, 255});
-    root.AddChild(label);
-
-    // 也可以通过 JSON 加载复杂布局
-    // ui->LoadLayoutFromFile("hud_layout.json");
-
-    // 用户自己的游戏循环
-    uint64_t lastTime = getTicks();
-    bool running = true;
-    while (running) {
-        uint64_t now = getTicks();
-        double dt = (now - lastTime) / 1000.0;
-        lastTime = now;
-
-        // 1. 处理 UI 事件（不阻塞，立即返回）；退出判断用 IsQuitRequested()
-        ui->ProcessEvents();
-        if (ui->IsQuitRequested()) break;
-
-        // 2. 游戏逻辑更新
-        updateGameLogic(dt);
-        updateParticles(dt);
-
-        // 3. UI 更新（布局、动画等）
-        ui->Update(dt);
-
-        // 4. 渲染：先游戏 → 后 UI（或先 UI → 后游戏，由用户决定）
-        renderGameScene();        // 用户自己的渲染
-        ui->Present();            // 内部 Clear → UI Render → Present
-
+    // ── 用户主循环（游戏/应用逻辑在前，UI 帧在其中）──
+    while (!ui->IsQuitRequested()) {
+        ui->ProcessEvents();               // 1. 处理 UI 事件（不阻塞）
+        updateGameLogic(dt);               // 2. 游戏逻辑更新
+        ui->Update(dt);                    // 3. UI 更新（布局、动画等）
+        renderGameScene();                 // 4. 游戏渲染
+        ui->Present();                     //    内部 Clear → UI Render → Present
         limitFramerate(60);
     }
-
     ui->Shutdown();
     return 0;
 }
 ```
+
+> 渲染顺序由用户决定（先游戏后 UI，或反之）。真实样例支持 `UICORN_AUTO` 环境变量进入自动冒烟模式（点击切换 label 可见性，240 帧干净退出）。
+
+### 7.3 sample_cpp_multiview — 多视口（一个窗口两个 Bench）
+
+**文件**：`binding/samples/sample_cpp_multiview.cpp`（平铺单文件，~120 行）
+
+**要点**（完整讲解与代码见 `doc/CppBinding_UserManual.md` §12.3）：
+
+- 一个窗口内两个子视口：左上 `CreateViewport(0, 0, 400, 300)`、右下 `CreateViewport(400, 300, 400, 300)`——各自独立控件树，共享后端
+- 每个视口（Bench）内：Label（caption 标明 Bench A/B）、EditBox、Button；按钮点击 → `GetString("text")` 读 EditBox → `CreateDialog("OK", "", ...)` 居中弹窗 + `CreateLabel` 内容 + `dialog.AddChild(label)`（实施修订 2026-08-08：CreateDialog 不再内置文本，内容用 Label 挂入）
+- **多视口驱动**：`Run()` 只驱动 owner——主循环必须显式 `vp->ProcessEvents()/Update()/Render()`（Render 按视口区域裁剪），最后 `ui->Present()`
+- **事件注入**：`UICORN_AUTO` 下 `vp->PushMouseButton(...)` 用**视口本地坐标**（注入直达视口队列，不经坐标路由）；owner 注入只进 owner 队列
+- **验证**：AUTO 输出 `[Bench A] popup: Hello from Bench A` / `[Bench B] popup: Hello from Bench B`，240 帧后 3 实例（owner + 2 视口）干净销毁，exit=0
+
+### 7.4 sample_cpp_multiinstance — 多窗口（两独立实例双向通信）
+
+**文件**：`binding/samples/sample_cpp_multiinstance.cpp`（平铺单文件，~120 行）
+
+**要点**（完整讲解见 `doc/CppBinding_UserManual.md` §12.1）：
+
+- 两个独立窗口实例 A/B（各自 `Create(Config)`），每窗口内 Label + EditBox + Button
+- **跨实例通信**：A 的按钮 → 把 A 的 EditBox 内容发到 B 的 Label（`B.FindControl("statusB")`），B 的按钮反向——验证多实例并存 + 各自控件树独立
+- **多窗口事件泵**（实施修订 2026-08-08）：主循环内层 `do { processed = A.ProcessEvents()?1:0 + B.ProcessEvents()?1:0; } while (processed > 0)` 驱动所有实例直到队列空——每个实例只消费自己窗口的事件（sdl3 按 windowID 隔离），不再跨窗口串扰
+- **验证**：AUTO 双向注入输出 `[A] sent to B: hello from A` / `[B] sent to A: hello from B`，exit=0；手动验证 hover/焦点/键盘跨窗口隔离（点击 B 的 EditBox → A 的焦点环消失）
 
 ## 8. 实施计划
 
@@ -1462,25 +1511,27 @@ int main() {
 | **P2** | `UICornerstone` 主类骨架：Config + 多实例 Create（默认/自定义搜索路径两种）+ ~dtor | 两种 Create 均工作；实例销毁走 DestroyInstance；多实例并存 | ✅ 2026-08-06 |
 | **P3** | `UIInstanceConfig` 组装（structSize/resourceRoot/窗口参数）+ CreateViewport 转发 | 窗口尺寸/标题/资源根生效；CreateViewport 返回子实例 | ✅ 2026-08-06 |
 | **P4** | `Control` + `ControlState` 共享状态 + 悬挂句柄检测 | Destroy 后 IsValid=false，SetXxx 静默跳过 | ✅ 2026-08-06 |
-| **P5** | 全部属性转发（含 SetPtr/GetPtr/GetEnum） | 控件 Set/Get 17 种属性操作正常 | ✅ 2026-08-06 |
+| **P5** | 全部属性转发（含 SetPtr/GetPtr/GetEnum） | 控件 Set/Get 属性操作正常 | ✅ 2026-08-06 |
 | **P6** | `Event` 包装 + SetCallback `std::function` 桥接 + Impl 级 userData 注册表 | lambda 绑定后事件触发、数据读取正确；临时 Control 场景无悬垂 | ✅ 2026-08-06 |
 | **P7** | 双模式循环：`Run()` + tick API（ProcessEvents/Update/Present/Shutdown）+ IsQuitRequested | dt 上限 0.1s，两种模式均 60fps 正常运行 | ✅ 2026-08-06 |
-| **P8** | `BackendResolver`：自定义搜索路径 DLL 加载 + 错误分支 | 切换 backend="sfml" 换后端；找不到 DLL 时 lastError 有内容 | ✅ 2026-08-06 |
+| **P8** | `BackendResolver`：自定义搜索路径 DLL 加载 + 错误分支 | 切换 backend 换后端；找不到 DLL 时 lastError 有内容 | ✅ 2026-08-06 |
 | **P9** | `Impl` 封装：actions 注册表从全局 static 迁入 + `GetLastError` | 无全局 static 容器；error 可查询 | ✅ 2026-08-06 |
 | **P10** | 工厂补全：菜单族（MenuBar/MenuPanel/MenuItem + 4 辅助）、ScrollBar、TreeView、HandleControl | 各工厂创建成功且事件可达 | ✅ 2026-08-06 |
 | **P11** | UIEvent 输入构造辅助（§5.14）+ PushEvent 转发 | 外部输入系统可经 PushEvent 注入 | ✅ 2026-08-06 |
 | **P12** | `sample_cpp_hosted`：编程式创建 + `Run()` | 编译运行，按钮点击计数更新 Label | ✅ 2026-08-06 |
 | **P13** | `sample_cpp_embed`：工厂创建 + 用户循环 + 分步渲染 | 编译运行，用户循环内 UI 交互正常 | ✅ 2026-08-06 |
+| **P14** | **纯动态加载重构**：DynamicApi 层（LoadCore/LoadBackend）+ 删除 ResourceManager/BackendResolver + 便捷方法族删除 + PropertyNames 复用 + UIEventFactory header-only | 链接期零核心库依赖（`nm -u UICornerstoneBinding.lib` 无 UICornerstone_ 符号）；核心/后端均 LoadLibrary；两样例 AUTO 冒烟 exit=0 | ✅ 2026-08-07 |
+| **P15** | **多视口例程** `sample_cpp_multiview`：一个窗口两个子视口（左上/右下），每视口内 Label/EditBox/Button + 弹窗；用户手册 §12 扩展 | 视口注入点击 → 读 EditBox → 弹窗显示（AUTO 输出 `popup: Hello from Bench A/B`），240 帧 exit=0 | ✅ 2026-08-07 |
+| **P16** | **多窗口隔离**：`ProcessEvents()` 返回 bool（handled ≥ 1）；sdl3 pollEvent 窗口级隔离（PumpEvents/PeepEvents/headOne/gotEvent）；FocusLost 清除焦点；hover 全局坐标判定；`sample_cpp_multiinstance` 双窗口例程 | AUTO 双向通信 exit=0；手动验证 hover/焦点/键盘跨窗口隔离 | ✅ 2026-08-08 |
 
-> 依赖前置：P3 依赖核心库多实例 C ABI（**已完成**：a0fcfa7/6064bd5 提交）；P10 依赖核心库菜单族/ScrollBar/TreeView/HandleControl 工厂（**已存在**：UICornerstoneAPI.h:264-288，无缺口）；CreateImage/CreateAnimation 工厂待 Image/LuotiAni 控件化设计审核后并入 P5/P10。
+> 依赖前置：P3 依赖核心库多实例 C ABI（**已完成**：a0fcfa7/6064bd5 提交）；P10 依赖核心库菜单族/ScrollBar/TreeView/HandleControl 工厂（**已存在**：UICornerstoneAPI.h，无缺口）；P14 后 samples 平铺为单 .cpp（空子目录 sample_cpp_embed/、sample_cpp_hosted/ 已删除）。
 
 ## 9. 与现有 C ABI 的关系
 
 ```
 C ABI 函数                        C++ Binding 封装
 ─────────────────────             ─────────────────────────────
-UICornerstone_CreateInstance      Create(Config)/Create(callbacks)
-UICornerstone_CreateInstanceFromPlugin  Create(Config) 默认路径模式
+UICornerstone_CreateInstance      Create(Config)（经 DynamicApi 转发）
 UICornerstone_DestroyInstance     ~UICornerstone() / Shutdown()
 UICornerstone_CreateViewport      CreateViewport(x, y, w, h)
 UICornerstone_ProcessEvents       ProcessEvents()
@@ -1507,8 +1558,9 @@ UICornerstone_CreateNumericUpDown ui.CreateNumericUpDown(x, y, w, h)
 UICornerstone_CreateSplitter      ui.CreateSplitter(x, y, w, h, orientation)
 UICornerstone_CreateImageButton   ui.CreateImageButton(n, h, p, x, y, w, h)
 UICornerstone_CreateDialog        ui.CreateDialog(confirm, cancel, x, y, w, h)
+UICornerstone_CreateImage / CreateAnimation  ui.CreateImage / CreateAnimation
 
-── 控件工厂（菜单族 / 滚动条 / 树 / 句柄，已存在 :264-288）──
+── 控件工厂（菜单族 / 滚动条 / 树 / 句柄）──
 UICornerstone_CreateMenuBar       ui.CreateMenuBar(x, y, w, h)
 UICornerstone_CreateMenuPanel     ui.CreateMenuPanel()
 UICornerstone_CreateMenuItem      ui.CreateMenuItem(caption, type)  // 0=Normal,1=Separator,2=SubMenu
@@ -1525,13 +1577,13 @@ UICornerstone_LoadLayout(json)    ui.LoadLayout(json)
 UICornerstone_LoadLayoutFromFile  ui.LoadLayoutFromFile(path)
 UICornerstone_FindControl(id)     ui.FindControl(id)
 
-── 属性系统 ─────────────────────────────────────────────────
+── 属性系统（便捷方法族已删除，统一走通用接口）──
 UICornerstone_SetColor(prop)      ctl.SetColor("prop", color)
 UICornerstone_SetStateColor(prop) ctl.SetStateColor("prop", stateColor)
-UICornerstone_SetBool(prop, v)    ctl.SetBool("prop", v) / SetVisible(bool)
+UICornerstone_SetBool(prop, v)    ctl.SetBool("prop", v)
 UICornerstone_SetInt(prop, v)     ctl.SetInt("prop", v)
 UICornerstone_SetFloat(prop, v)   ctl.SetFloat("prop", v)
-UICornerstone_SetString(prop, s)  ctl.SetString("prop", s) / SetText(s)
+UICornerstone_SetString(prop, s)  ctl.SetString("prop", s)
 UICornerstone_SetEnum(prop, s)    ctl.SetEnum("prop", s)
 UICornerstone_SetPtr(prop, p)     ctl.SetPtr("prop", p)
 UICornerstone_GetColor(prop)      ctl.GetColor("prop")
@@ -1551,11 +1603,14 @@ UICornerstone_DestroyControl      ctl.Destroy()
 UICornerstone_GetControlId        ctl.GetId()
 
 ── 资源与配置 ───────────────────────────────────────────────
-UIInstanceConfig.resourceRoot     Config::resourceRoot（Create 时传入，无 SetResourceRoot）
+UIInstanceConfig.resourceRoot     Config::resourceRoot（Create 时传入）
+                                  + SetResourceRoot/GetResourceRoot/ResolveResource（Binding 侧查询）
 UIInstanceConfig.windowTitle/Width/Height  Config::WithWindow(...)
 UIInstanceConfig.windowFlags      Config::WithWindowFlags(...)
 UIInstanceConfig.debugLabel       Config 预留（调试标签，null → "Instance_<id>"）
 UIInstanceConfig.structSize       宏 UI_INSTANCE_CONFIG_DEFAULT 自动填充
+-- 核心库加载位置                  Config::coreLibraryDir（空=exe 同目录/系统搜索）
+-- 后端 DLL 搜索位置               Config::backendSearchPath（空=exe 同目录/系统搜索）
 
 ── Debug 辅助 ───────────────────────────────────────────────
 UICornerstone_Debug_GetAliveCount     DebugGetAliveCount()（Release 返回 0）
@@ -1566,7 +1621,13 @@ UICornerstone_Debug_IsControlFocused  DebugIsControlFocused(inst, ctl)
 ── 事件注入与动作注册 ─────────────────────────────────────
 UICornerstone_PushUIEvent         ui.PushEvent(event)（§5.14 构造辅助）
 UICornerstone_RegisterAction      ui.RegisterAction("name", lambda)
+
+── 后端配置 ────────────────────────────────────────────────
+UICornerstone_SetBackendConfig / SetBackendConfigBool / GetBackendConfigBool
+                                  ui.SetBackendConfig / SetBackendConfigBool / GetBackendConfigBool
 ```
+
+> `UICornerstone_CreateInstanceFromPlugin` 已不再被 Binding 使用（P14 后核心库自带函数；Binding 恒走 LoadLibrary + CreateInstance 回调查表模式，见 §5.5）。
 
 **兼容性保证**：
 
@@ -1574,6 +1635,6 @@ UICornerstone_RegisterAction      ui.RegisterAction("name", lambda)
 - 同一进程中可混合使用 C ABI 和 C++ Binding（同一 UIInstance 句柄可同时被两者操作）
 - `Control::Handle()` 暴露原始 `UIControlHandle`，需要时回退到 C API
 - Binding 状态封装在 `UICornerstone::Impl`（多实例安全，见 §5.6.1）
-- `include/UICornerstoneAPI.h` 是 Binding 的唯一头文件依赖（不 include 核心库 GPL 内部头）
-- `UIEventData`（:349-361）的 `treeNode` 联合体由 `Event` 类按事件名解析（§5.3）
+- `include/UICornerstoneAPI.h` 是 Binding 的唯一头文件依赖（不 include 核心库 GPL 内部头；`PropertyNames.h` 为纯字符串常量头，构建期复制，见 §5.3）
+- `UIEventData` 的 `treeNode` 联合体由 `Event` 类按事件名解析（§5.3）
 - 跨实例句柄误用：`_DEBUG` 下核心库断言失败（src/UICornerstoneAPI.cpp:79-116）——Binding 不做二次校验，以核心库为准

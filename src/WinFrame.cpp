@@ -4,7 +4,7 @@
 
 WinFrame::WinFrame(Control* parent, SRect rect, float xScale, float yScale):
     Panel(parent, rect, xScale, yScale),
-    m_title("WinFrame"),
+    m_title(PropertyNames::kDefaultWinFrameTitle),
     m_titleBar(nullptr),
     m_titleLabel(nullptr),
     m_closeButton(nullptr),

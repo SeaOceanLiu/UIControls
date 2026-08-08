@@ -153,14 +153,14 @@ void ControlImpl::update(void){
 
     // 检测鼠标进入/退出状态
     if (getVisible() && getEnable()) {
-        // 获取当前鼠标位置
+        // 获取当前鼠标位置；窗口不可用或鼠标不在本窗口内（多实例时
+        // getMousePosition 返回 false）→ 视为不在任何控件上，清除 hover。
         float mouseX = 0, mouseY = 0;
-        if (m_context && m_context->window) {
-            m_context->window->getMousePosition(mouseX, mouseY);
-        }
+        bool hasMouse = (m_context && m_context->window)
+            && m_context->window->getMousePosition(mouseX, mouseY);
 
         SRect drawRect = getDrawRect();
-        bool isInside = drawRect.contains(mouseX, mouseY);
+        bool isInside = hasMouse && drawRect.contains(mouseX, mouseY);
 
         // 检测鼠标进入/退出状态变化
         if (isInside && !m_mouseInside) {
@@ -927,35 +927,35 @@ int ControlImpl::getColorProperty(const char* prop, SColor& out) {
     StateColor bd = getBorderStateColor();
     StateColor txt = getTextStateColor();
     StateColor shd = getTextShadowStateColor();
-    if (strcmp(prop, "background") == 0)          { out = bg.getNormal();  return 1; }
-    if (strcmp(prop, "background.hover") == 0)    { out = bg.getHover();   return 1; }
-    if (strcmp(prop, "background.pressed") == 0)  { out = bg.getPressed(); return 1; }
-    if (strcmp(prop, "background.disabled") == 0) { out = bg.getDisabled();return 1; }
-    if (strcmp(prop, "border") == 0)              { out = bd.getNormal();  return 1; }
-    if (strcmp(prop, "border.hover") == 0)        { out = bd.getHover();   return 1; }
-    if (strcmp(prop, "border.pressed") == 0)      { out = bd.getPressed(); return 1; }
-    if (strcmp(prop, "border.disabled") == 0)     { out = bd.getDisabled();return 1; }
-    if (strcmp(prop, "text") == 0)                { out = txt.getNormal();  return 1; }
-    if (strcmp(prop, "text.hover") == 0)          { out = txt.getHover();   return 1; }
-    if (strcmp(prop, "text.pressed") == 0)        { out = txt.getPressed(); return 1; }
-    if (strcmp(prop, "text.disabled") == 0)       { out = txt.getDisabled();return 1; }
-    if (strcmp(prop, "text-shadow") == 0)         { out = shd.getNormal();  return 1; }
+    if (strcmp(prop, PropertyNames::kBackground) == 0)          { out = bg.getNormal();  return 1; }
+    if (strcmp(prop, PropertyNames::kStateHover) == 0)    { out = bg.getHover();   return 1; }
+    if (strcmp(prop, PropertyNames::kStatePressed) == 0)  { out = bg.getPressed(); return 1; }
+    if (strcmp(prop, PropertyNames::kStateDisabled) == 0) { out = bg.getDisabled();return 1; }
+    if (strcmp(prop, PropertyNames::kBorder) == 0)              { out = bd.getNormal();  return 1; }
+    if (strcmp(prop, PropertyNames::kBorderHover) == 0)        { out = bd.getHover();   return 1; }
+    if (strcmp(prop, PropertyNames::kBorderPressed) == 0)      { out = bd.getPressed(); return 1; }
+    if (strcmp(prop, PropertyNames::kBorderDisabled) == 0)     { out = bd.getDisabled();return 1; }
+    if (strcmp(prop, PropertyNames::kText) == 0)                { out = txt.getNormal();  return 1; }
+    if (strcmp(prop, PropertyNames::kTextHover) == 0)          { out = txt.getHover();   return 1; }
+    if (strcmp(prop, PropertyNames::kTextPressed) == 0)        { out = txt.getPressed(); return 1; }
+    if (strcmp(prop, PropertyNames::kTextDisabled) == 0)       { out = txt.getDisabled();return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadow) == 0)         { out = shd.getNormal();  return 1; }
     return 0;
 }
 
 int ControlImpl::getStateColorProperty(const char* prop, StateColor& out) {
-    if (strcmp(prop, "background") == 0) { out = getBackgroundStateColor(); return 1; }
-    if (strcmp(prop, "border") == 0)     { out = getBorderStateColor();     return 1; }
-    if (strcmp(prop, "text") == 0)       { out = getTextStateColor();       return 1; }
-    if (strcmp(prop, "text-shadow") == 0){ out = getTextShadowStateColor(); return 1; }
+    if (strcmp(prop, PropertyNames::kBackground) == 0) { out = getBackgroundStateColor(); return 1; }
+    if (strcmp(prop, PropertyNames::kBorder) == 0)     { out = getBorderStateColor();     return 1; }
+    if (strcmp(prop, PropertyNames::kText) == 0)       { out = getTextStateColor();       return 1; }
+    if (strcmp(prop, PropertyNames::kTextShadow) == 0){ out = getTextShadowStateColor(); return 1; }
     return 0;
 }
 
 int ControlImpl::getBoolProperty(const char* prop, int& out) {
-    if (strcmp(prop, "visible") == 0)         { out = getVisible() ? 1 : 0; return 1; }
-    if (strcmp(prop, "enabled") == 0)         { out = getEnable()  ? 1 : 0; return 1; }
-    if (strcmp(prop, "transparent") == 0)     { out = getTransparent() ? 1 : 0; return 1; }
-    if (strcmp(prop, "border-visible") == 0)  { out = getBorderVisible() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kVisible) == 0)         { out = getVisible() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kEnabled) == 0)         { out = getEnable()  ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kTransparent) == 0)     { out = getTransparent() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kJsonBorderVisible) == 0)  { out = getBorderVisible() ? 1 : 0; return 1; }
     return 0;
 }
 

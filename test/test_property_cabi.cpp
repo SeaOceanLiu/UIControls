@@ -341,14 +341,14 @@ static int runTest(const char* shortName, const char* displayName) {
         "version": "1.0",
         "controls": [
             {
-                "type": "Panel",
+                "type": "panel",
                 "id": "rootPanel",
                 "rect": { "x": 0, "y": 0, "w": 540, "h": 520 },
                 "colors": { "background": { "normal": "#1E1E2EFF" } },
                 "children": [
                     {
                         "id": "lblTitle",
-                        "type": "Label",
+                        "type": "label",
                         "rect": { "x": 20, "y": 12, "w": 500, "h": 28 },
                         "caption": "Property System C ABI Test",
                         "fontSize": 20,
@@ -356,28 +356,28 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "sliderProp",
-                        "type": "Slider",
+                        "type": "slider",
                         "rect": { "x": 20, "y": 60, "w": 200, "h": 40 }
                     },
                     {
                         "id": "checkProp",
-                        "type": "CheckBox",
+                        "type": "check-box",
                         "rect": { "x": 20, "y": 120, "w": 160, "h": 28 },
                         "caption": "Test checkbox"
                     },
                     {
                         "id": "progProp",
-                        "type": "ProgressBar",
+                        "type": "progress-bar",
                         "rect": { "x": 20, "y": 168, "w": 200, "h": 24 }
                     },
                     {
                         "id": "scrollProp",
-                        "type": "ScrollBar",
+                        "type": "scroll-bar",
                         "rect": { "x": 20, "y": 212, "w": 200, "h": 18 }
                     },
                     {
                         "id": "comboProp",
-                        "type": "ComboBox",
+                        "type": "combo-box",
                         "rect": { "x": 20, "y": 256, "w": 200, "h": 32 },
                         "items": [
                             { "label": "A", "value": "a" },
@@ -387,7 +387,7 @@ static int runTest(const char* shortName, const char* displayName) {
                     },
                     {
                         "id": "nudProp",
-                        "type": "NumericUpDown",
+                        "type": "numeric-up-down",
                         "rect": { "x": 20, "y": 308, "w": 160, "h": 32 }
                     }
                 ]

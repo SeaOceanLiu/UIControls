@@ -1,5 +1,6 @@
 ﻿// 由AI(DeepSeek V4 Flash)生成，可能不完整或有错误，请自行检查和修改
 #include "Theme.h"
+#include "PropertyNames.h"
 #include <algorithm>
 
 static SColor parseHexColor(const json& j) {
@@ -25,10 +26,10 @@ static SColor parseHexColor(const json& j) {
             return SColor(r, g, b, a);
         }
     } else if (j.is_object()) {
-        uint8_t r = (uint8_t)j.value("r", 255);
-        uint8_t g = (uint8_t)j.value("g", 255);
-        uint8_t b = (uint8_t)j.value("b", 255);
-        uint8_t a = (uint8_t)j.value("a", 255);
+        uint8_t r = (uint8_t)j.value(PropertyNames::kChannelR, 255);
+        uint8_t g = (uint8_t)j.value(PropertyNames::kChannelG, 255);
+        uint8_t b = (uint8_t)j.value(PropertyNames::kChannelB, 255);
+        uint8_t a = (uint8_t)j.value(PropertyNames::kChannelA, 255);
         return SColor(r, g, b, a);
     }
     return SColor(255, 255, 255, 255);
@@ -85,10 +86,10 @@ StateColor Theme::getStateColor(const string& path, StateColor::Type type) const
     StateColor sc(type);
     const json* j = navigate(m_data, path);
     if (!j || !j->is_object()) return sc;
-    if ((*j).contains("normal")) sc.setNormal(parseHexColor((*j)["normal"]));
-    if ((*j).contains("hover"))  sc.setHover(parseHexColor((*j)["hover"]));
-    if ((*j).contains("pressed")) sc.setPressed(parseHexColor((*j)["pressed"]));
-    if ((*j).contains("disabled")) sc.setDisabled(parseHexColor((*j)["disabled"]));
+    if ((*j).contains(PropertyNames::kStateKeyNormal)) sc.setNormal(parseHexColor((*j)[PropertyNames::kStateKeyNormal]));
+    if ((*j).contains(PropertyNames::kStateKeyHover))  sc.setHover(parseHexColor((*j)[PropertyNames::kStateKeyHover]));
+    if ((*j).contains(PropertyNames::kStateKeyPressed)) sc.setPressed(parseHexColor((*j)[PropertyNames::kStateKeyPressed]));
+    if ((*j).contains(PropertyNames::kStateKeyDisabled)) sc.setDisabled(parseHexColor((*j)[PropertyNames::kStateKeyDisabled]));
     return sc;
 }
 
@@ -107,29 +108,29 @@ bool Theme::getColorOpt(const string& path, SColor& out) const {
 }
 
 FontName Theme::getFontName(const string& category) const {
-    string path = "fonts." + category + ".name";
+    string path = PropertyNames::kThemeFontsPrefix + category + PropertyNames::kThemeNameSuffix;
     const json* j = navigate(m_data, path);
     if (j && j->is_string()) return parseFontName(j->get<string>());
-    if (category != "default") return getFontName("default");
+    if (category != PropertyNames::kThemeCategoryDefault) return getFontName(PropertyNames::kThemeCategoryDefault);
     return FontName::HarmonyOS_Sans_SC_Regular;
 }
 
 int Theme::getFontSize(const string& category) const {
-    string path = "fonts." + category + ".size";
+    string path = PropertyNames::kThemeFontsPrefix + category + PropertyNames::kThemeSizeSuffix;
     const json* j = navigate(m_data, path);
     if (j && j->is_number()) return j->get<int>();
-    if (category != "default") return getFontSize("default");
+    if (category != PropertyNames::kThemeCategoryDefault) return getFontSize(PropertyNames::kThemeCategoryDefault);
     return 16;
 }
 
 void Theme::applyCommonColors(shared_ptr<ControlImpl> ctrl, const string& category) const {
-    string bg = "colors." + category + ".bg";
+    string bg = PropertyNames::kThemeColorsPrefix + category + PropertyNames::kThemeBgSuffix;
     if (has(bg)) ctrl->setBackgroundStateColor(getStateColor(bg, StateColor::Type::Background));
-    string border = "colors." + category + ".border";
+    string border = PropertyNames::kThemeColorsPrefix + category + PropertyNames::kThemeBorderSuffix;
     if (has(border)) ctrl->setBorderStateColor(getStateColor(border, StateColor::Type::Border));
-    string text = "colors." + category + ".text";
+    string text = PropertyNames::kThemeColorsPrefix + category + PropertyNames::kThemeTextSuffix;
     if (has(text)) ctrl->setTextStateColor(getStateColor(text, StateColor::Type::Text));
-    string textShadow = "colors." + category + ".textShadow";
+    string textShadow = PropertyNames::kThemeColorsPrefix + category + PropertyNames::kThemeTextShadowSuffix;
     if (has(textShadow)) ctrl->setTextShadowStateColor(getStateColor(textShadow, StateColor::Type::TextShadow));
 }
 

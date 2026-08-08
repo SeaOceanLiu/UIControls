@@ -368,6 +368,8 @@ UICornerstone 为多实例架构：`UIInstance` 是根句柄（含窗口、控�
 - 两个实例的事件、Action 注册表（`RegisterAction`）、控件 id 互不干扰；`ProcessEvents`/`Update` 分别驱动各自实例
 - Debug 构建下，跨实例句柄误用（把 A 实例的控件句柄传给 B 实例）会被归属校验断言捕获
 
+- 多窗口事件隔离：sdl3 后端 `UICornerstone_ProcessEvents` 只消费**本窗口**的事件（按 windowID 隔离）——鼠标/焦点/键盘事件不跨窗口串扰；窗口失去系统焦点（`FocusLost`）会清除本实例焦点
+
 ```c
 // 双实例示例（sdl3 后端，两个独立窗口）
 UIInstance win1 = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
@@ -375,7 +377,14 @@ UIInstance win2 = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
 // ... 各自 SetViewport / LoadLayout / 创建控件 ...
 while (!UICornerstone_IsQuitRequested(win1) &&
        !UICornerstone_IsQuitRequested(win2)) {
-    UICornerstone_ProcessEvents(win1);
+    // 多窗口事件泵：ProcessEvents 返回本次是否处理了 ≥1 个事件，
+    // 用返回值驱动所有实例直到全局队列空（每实例只消费自己窗口的事件）
+    int processed = 0;
+    do {
+        processed = (UICornerstone_ProcessEvents(win1) ? 1 : 0)
+                  + (UICornerstone_ProcessEvents(win2) ? 1 : 0);
+    } while (processed > 0);
+
     UICornerstone_Update(win1, 1.0 / 60.0);
     UICornerstone_Clear(win1);
     UICornerstone_Render(win1);

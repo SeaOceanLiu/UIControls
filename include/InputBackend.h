@@ -19,7 +19,8 @@ public:
     virtual std::string getClipboardText() const = 0;
     virtual bool hasScreenKeyboard() const = 0;
 
-    // Poll an abstract event from the backend.
+    // Poll an abstract event from the backend（仅取属于本窗口的事件，
+    // 不消费其他窗口的事件——多实例共享全局队列时的隔离保证）。
     // Populates EventType+union fields.
     // Returns true if an event was polled, false if no events pending.
     virtual bool pollEvent(Event& event) = 0;

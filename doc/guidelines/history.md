@@ -2092,3 +2092,98 @@ Done, 180 frames                        # 帧循环正常完成
 
 **文档同步**（本会话补充）：doc/UICornerstone_DLL_Design.md（API 清单加 CreateImage）、doc/CABI_MultiInstance_Design.md（迁移表 + §6 清单 #33）、doc/CABI_Property_Design.md（Bool/Int/String/Enum 四表 Image 行）。
 
+### 2026-08-07: PropertyNames 常量统一 — 枚举值全量小写 kebab-case（Complete）
+
+**背景**：LuotiAni/LayoutParser/Theme/后端/CABI 属性系统的硬编码字符串存在多套大小写风格（Upper 组、camelCase、小写组并存）。按 `doc/CABI_Property_Design.md` §6.1（属性名/值全小写、多词用连字符）统一收口到 `include/PropertyNames.h` 单一数据源。
+
+**约定**：
+
+- **JSON 键名**（数据契约键）保持 cocoa camelCase：`kJsonXxx` 前缀（frameRate/bgColor/arrowWidth/onClick 等）。
+- **枚举值**（控件类型、对齐、布局类型、字体样式、BlendMode、绑定模式、CheckState、textMode、scaleType 等）全量小写 kebab-case：`label`/`edit-box`/`combo-box`/`check-box`/`progress-bar`/`scroll-bar`/`win-frame`/`color-picker`/`menu-bar`/`text-area`/`confirm-popup`/`numeric-up-down`/`treeview`、`h-flow`/`v-flow`/`anchor`/`grid`、`top-left`~`bottom-center`、`top-stretch`/`bottom-stretch`/`left-stretch`/`right-stretch`/`fill`、`normal`/`bold`/`italic`/`underline`/`strikethrough`、`oneway`/`twoway`、`additive-premultiplied`/`blend-premultiplied`、`separator` 等。
+
+**去重与删除**：
+
+- 删除 `*Upper` 后缀常量组（kCheckState*Upper/kCheckBoxStyle*Upper/kProgressStyleVerticalUpper 等）与 `kAlignJson*` 组，统一复用既有小写常量（kCheckUnchecked/kVAlignTop/kLayoutTextRight/kStyleCross/kOrientVertical/kTextModeNone/kScaleTypeFitCenter 等）。
+- 新增 `kAlignLower*` 组同时服务 LayoutParser JSON 与 LayoutEngine/CABI；`kAlignLowerCenter == kVAlignCenter`（"center"）。
+- 补缺口常量：kEditable/kSelectedId/kDefaultMenuTitle/kDefaultWinFrameTitle/kJsonBorderVisible。
+
+**替换范围**：
+
+- `src/LayoutParser.cpp`（控件类型分派、事件键 on*→kEventKey*、菜单 menuJson/itemJson、CheckBox 主题色段 kThemeCheckbox*、CheckState 解析、parseAlignment、parseGridSize auto/fr/px、组件系统 template/props、stateColor 键、字体、颜色通道、rect 字段、knownTypes 集合）。
+- `src/Theme.cpp`（parseHexColor/parseStateColor 通道键、fonts./colors. 路径拼接、default 类别）；`src/Actor.cpp`（scaleType/anchor 读写双向）；`src/ControlBase.cpp`（getColorProperty/getStateColorProperty 复合键 background.hover/pressed/disabled、text-shadow 等）；`src/ComboBox.cpp`（editable、items 子键）；`src/TreeView.cpp`（selected-id）；`src/ScrollBar.cpp`（vertical/horizontal）；`src/WinFrame.cpp`（默认标题）；`src/Panel.cpp`（Grid/Anchor）；`src/LayoutEngine.cpp`（anchor 12 值）；`src/EditBox.cpp`/`src/Label.cpp`/`src/ProgressBar.cpp`/`src/CheckBox.cpp`/`src/Slider.cpp`（对齐/方向/textMode/style/checkState 枚举读写）。
+- `include/LayoutEngine.h`：getType() 四布局名 + AnchorInfo::anchor 默认值 → 常量。
+- 后端：`src/UICornerstoneAPI.cpp`、`src/backend/sdl3|sfml|raylib/RenderDevice.cpp`（vsync/swap-ratio/renderer-name 键），补 PropertyNames.h include。
+- 数据：`layouts/test_layout.json`、`layouts/test_layout_advanced.json` 枚举值同步为小写 kebab-case（caption 显示文本保留原样）。
+
+**修复的编译问题**：kSelectedId 重复定义（C2086）、LayoutParser shadow 变量缺失、ProgressBar colors 块重复残留、parseRect missing 未声明、ProgressBar kTextModeNoneLower 残留引用。
+
+**验证**：`cmake --build build --config Debug --target sample_cpp_hosted sample_cpp_embed test_layout test_layout_advanced` 0 错误；test_layout/test_layout_advanced 带 `auto=N` 参数干净退出（无参运行挂起等窗口属测试设计：TestInstance.h scheduleAutoQuit 需 `auto=<秒>`，非缺陷），JSON 全量解析与事件驱动（菜单/自动绑定/按钮点击）正常，无回归。
+
+**相关文件**：include/PropertyNames.h（唯一数据源）、src/LayoutParser.cpp、src/Theme.cpp、src/Actor.cpp、src/ControlBase.cpp、src/ComboBox.cpp、src/TreeView.cpp、src/ScrollBar.cpp、src/WinFrame.cpp、src/Panel.cpp、src/LayoutEngine.cpp、src/EditBox.cpp、src/Label.cpp、src/ProgressBar.cpp、src/CheckBox.cpp、src/Slider.cpp、include/LayoutEngine.h、src/UICornerstoneAPI.cpp、src/backend/{sdl3,sfml,raylib}/RenderDevice.cpp、layouts/test_layout.json、layouts/test_layout_advanced.json。
+
+
+
+
+### 2026-08-07: JSON type 规范统一收尾 + 重构回归修复（Complete）
+
+**背景**：PropertyNames 常量统一后，test/*.cpp、test/test_api.c、doc/*.md、layouts/*.json 的 JSON type 仍有残留大写写法（`"type": "Button"`、`"type": "Panel"`、`	ype\: \Panel\` 等多种引号转义变体），LayoutParser 不做归一化（大小写不匹配即 unknown），导致多处 LoadLayout 失败。
+
+**本次工作**：
+
+- **JSON type 全量统一 kebab 小写**：正则清理 test/*.cpp、test/test_api.c（双重转义变体）、binding/samples/*.cpp、layouts/*.json、doc/*.md（12 个设计文档 + guidelines/testing.md）全部 type 值（含 Panel/Label/Button/EditBox/CheckBox/ProgressBar/TreeView 等）。
+- **doc/LayoutSystem_Design.md §4.2**：type 字段补规范声明——必须 kebab 小写（如 `"label"`/`"edit-box"`），大小写不匹配一律视为未知类型跳过，不兼容 `"Label"`/`"NumericUpDown"` 等写法。
+- **修复 Actor.cpp setEnumProperty 重构回归**：anchor 枚举 9 值被错误合并进 scale-type 分支（git diff 确认重构引入），恢复独立 kAnchor 分支 → test_image 的 `uiSetEnum(inst,img,"anchor","center")` 断言通过。
+- **test_multi_instance / test_multi_instance_cabi / test_treeview_cabi**：内嵌 JSON 转义引号变体未覆盖导致 LoadLayout 失败，正则统一清理后通过。
+
+**验证**：全量测试集（含 test_api auto=5、test_aniviewer 带 jsonc 路径参数 auto=3 loop=0）全部 exit=0，无回归。
+
+**相关文件**：src/Actor.cpp、test/test_api.c、test/test_multi_instance.cpp、test/test_multi_instance_cabi.cpp、test/test_treeview_cabi.cpp、doc/LayoutSystem_Design.md、doc/guidelines/testing.md 及 doc/*.md 示例。
+
+### 2026-08-08: 多实例事件隔离 + hover/焦点跨窗口修复 + C++ Binding 多实例样例（Complete）
+
+**背景**：`sample_cpp_multiview` 右下视口 Popup 不显示；新样例 `sample_cpp_multiinstance`（双窗口双向通信）暴露出多窗口场景的系列问题：跨窗口鼠标事件串扰、窗口"未响应"（沙漏）、hover 跨窗口串扰、跨窗口焦点环并存。逐项排查修复，最终按用户伪码方案实现多实例事件泵。
+
+**1. Popup 坐标语义统一（用户定案）**：
+
+- `Popup::m_rect` 为**父（bench）相对本地坐标**（与普通控件一致），`computeTargetRect` 内部换算视口/bench 偏移（Centered 用 vp 尺寸本地居中，Anchored 用 `adr - bench 偏移` + 本地钳制 0..vp 尺寸）
+- 曾加的 `Popup::getDrawRect` 重载（返回绝对 m_rect）按用户要求**删除**，用通用实现（叠加父偏移）
+- `src/ComboBox.cpp`/`src/ColorPicker.cpp` `computePopupRect` 弹层绝对坐标 → 本地坐标转换（减 BENCH getDrawRect 偏移）
+- `UICornerstone_CreateDialog` 补 `ctl->open()`（`create()` 内 setVisible(false)，不 open 永远不可见）
+
+**2. binding Config.resourceRoot 默认改为空串**：
+
+- 原 `"./assets"` 相对 cwd，任意 cwd 下找不到字体；空 → 核心默认 exe 目录/assets
+
+**3. 多实例事件泵（用户定案伪码）**：
+
+- `UICornerstone_ProcessEvents` 返回 `int`（handled ≥ 1），提取 `pumpInstanceEvents` 静态函数（while pollEvent 处理本实例事件）；`include/UICornerstoneAPI.h` 声明同步 int；binding `fnProcessEvents` 类型 int、`ProcessEvents()` 返回 bool（忽略返回值的旧调用完全兼容）
+- **调用者驱动所有实例直到队列空**：样例层内层 `while (processedCount > 0) { processedCount = A.ProcessEvents()?1:0 + B.ProcessEvents()?1:0; }`
+- 核心外层"遍历全部实例泵"方案撤销（`UIContext::allActive()` 成为死代码，本会话删除）
+
+**4. sdl3 pollEvent 窗口隔离 + 未响应修复**（`src/backend/sdl3/InputBackend.cpp`）：
+
+- **`SDL_PumpEvents()` 必须显式调用**（SDL_PeepEvents 不像 SDL_PollEvent 那样 pump 窗口消息 → 窗口 hung/沙漏）
+- `SDL_PeepEvents` peek 找本窗口第一个事件 → **headOne 同 type 队头检查**（防 GETEVENT 拿错窗口同 type 事件）→ GETEVENT 消费 → **`gotEvent` 守卫**（循环结束未取到自己的事件必须 return false，不得用未初始化 sdlEvent 处理，否则永远 true → 内层 while 死循环）
+- SDL_EVENT_WINDOW_FOCUS_GAINED/LOST → FocusGained/FocusLost 事件转换补全（此前落入默认被忽略）
+
+**5. hover 跨窗口隔离**（`src/backend/sdl3/Window.cpp` + `src/ControlBase.cpp`）：
+
+- `getMousePosition` 不能用 `SDL_GetMouseState`（返回**鼠标焦点窗口**坐标，与窗口重叠无关地串扰）→ 用 `SDL_GetGlobalMouseState` + 窗口位置/尺寸判定，鼠标不在本窗口返回 false
+- `ControlImpl::update()`：`isInside = hasMouse && drawRect.contains(...)`
+
+**6. 焦点跨实例隔离**（`src/UICornerstoneAPI.cpp`）：
+
+- 每个实例的 FocusManager 相互独立，点击 B 窗口的 EditBox 不会清除 A 的焦点 → 利用**窗口级焦点事件**：分发 `FocusLost`（窗口失去系统焦点）→ 清除本实例（含活动子视口）焦点，保证同一时刻只有一个焦点环
+
+**7. 新样例 `sample_cpp_multiinstance`**（binding/samples，已注册 BINDING_SAMPLES）：
+
+- 两独立窗口实例双向通信（A 按钮→B Label，B 按钮→A Label），主循环按用户伪码内层 while 驱动，AUTO 模式双向注入验证（`[A] sent to B: hello from A` / `[B] sent to A: hello from B`）
+- `sample_cpp_multiview` 内容改为 `CreateDialog` + `CreateLabel` + `dialog.AddChild(label)`（用户指令：不新增 API，`CreateDialogWithText` 已回退）
+
+**8. 死代码清理**：`UIContext::allActive()`（include/UIContext.h + src/UIContext.cpp）无调用者，删除。
+
+**验证**：构建 0 错误；全量回归——4 个 binding 样例（multiinstance/multiview/hosted/embed）AUTO exit=0，34 个 test（auto=N 无人值守）全部 exit=0（test_aniviewer 需 jsonc 路径参数，exit=2 为用法错误非回归）；用户手动验证：多窗口 hover 隔离、焦点环单一（点击 B EditBox → A 焦点环消失）、窗口交互正常。
+
+**文档刷新**（实施后两轮同步）：`doc/CABI_MultiInstance_Design.md`（ProcessEvents→int、语义分化表、§5.13.5 伪代码、多实例事件泵伪代码、实施状态 2026-08-08、清单 #21 改为已实施）、`doc/CppBinding_Design.md`（ProcessEvents bool、resourceRoot 空串回退链路、§5.6.1 事件泵、§7.4 新样例、P16、TOC 补 7.3/7.4、samples 目录树）、`doc/CppBinding_UserManual.md`（§12.1 事件泵、§12.3 CreateDialog+Label+AddChild、§3/§9 resourceRoot 默认、§15.2 改"四个样例"+构建目标）、`doc/EventSystem_Design.md`（§3.2 窗口隔离+焦点事件转换、§3.3 多实例路径 pumpInstanceEvents、变更历史）、`doc/BackendAbstraction_Design.md`（Phase 16i 进度表+执行清单）、`doc/Dialog_Design.md`/`doc/ComboBox_Design.md`/`doc/ColorPicker_Design.md`（Popup 父相对坐标）、`doc/UICornerstone_DLL_Design.md`（版本历史 1.18）、`doc/ControlBase_Design.md`（§5.1 补 update() hover 判定+多实例语义）、`doc/FocusSystem_Design.md`（§9 补窗口级焦点丢失）、`doc/Tutorial.md`（§8.1 双实例示例改事件泵模式+焦点/hover 隔离说明）、`doc/guidelines/history.md`（本条目）。
+
+**相关文件**：src/UICornerstoneAPI.cpp（ProcessEvents 返回 int、pumpInstanceEvents、FocusLost 清除焦点、CreateDialog 补 open）、src/Dialog.cpp / include/Dialog.h（computeTargetRect 本地坐标）、src/ComboBox.cpp / src/ColorPicker.cpp（popup 本地坐标）、src/backend/sdl3/InputBackend.cpp（PumpEvents/PeepEvents 窗口隔离/headOne/gotEvent/FocusLost 转换）、src/backend/sdl3/Window.cpp（getMousePosition 全局坐标判定）、src/ControlBase.cpp（isInside 判定）、binding/include/UICornerstone.h（resourceRoot 空、ProcessEvents bool）、binding/src/DynamicApi.h、binding/src/UICornerstone.cpp、binding/src/DynamicApi.cpp、include/UICornerstoneAPI.h、binding/samples/sample_cpp_multiinstance.cpp（新）、binding/samples/sample_cpp_multiview.cpp、binding/CMakeLists.txt、include/UIContext.h / src/UIContext.cpp（allActive 删除）。

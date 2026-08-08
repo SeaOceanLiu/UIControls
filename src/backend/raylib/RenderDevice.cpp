@@ -4,6 +4,7 @@
 #include "Surface.h"
 #include "RaylibCompat.h"
 #include "rlgl.h"
+#include "PropertyNames.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -718,7 +719,7 @@ public:
     }
 
     int getConfig(const char* key, int type, void* value, int maxLen) override {
-        if (strcmp(key, "vsync") != 0) return 0;
+        if (strcmp(key, PropertyNames::kBackendKeyVsync) != 0) return 0;
         if (type == 1 || type == 2) {
             *static_cast<int*>(value) = IsWindowState(FLAG_VSYNC_HINT) ? 1 : 0;
         } else if (type == 0) {

@@ -11,12 +11,14 @@ if(WIN32)
 endif()
 
 # ============================================================
-# Binding 静态库（不链接核心库；符号由使用者链接 core 或 dll 提供）
+# Binding 静态库（纯动态加载模式：核心 DLL + 后端 DLL 均经
+# LoadLibrary 显式加载；不链接 UICornerstone_dll.lib / UICornerstone.lib）
 # ============================================================
 add_library(UICornerstoneBinding STATIC
     src/UICornerstone.cpp
     src/Control.cpp
     src/Event.cpp
+    src/DynamicApi.cpp
 )
 
 target_include_directories(UICornerstoneBinding PUBLIC
@@ -24,23 +26,61 @@ target_include_directories(UICornerstoneBinding PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../include          # UICornerstoneAPI.h
 )
 
+# ============================================================
+# 字符串枚举头（PropertyNames.h）：每次构建时从核心复制到
+# binding 构建目录 include，供用户直接 include 使用（避免裸字符串）。
+# 复制失败时保留现有的（上次复制）副本，不中断构建。
+# 许可边界：核心头不进入 binding 源码树，仅作构建产物输出。
+# ============================================================
+set(BINDING_GEN_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/include)
+add_custom_command(TARGET UICornerstoneBinding PRE_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -D SRC_PROPERTY_NAMES=${CMAKE_CURRENT_SOURCE_DIR}/../include/PropertyNames.h
+        -D DST_DIR=${BINDING_GEN_INCLUDE}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CopyPropertyNames.cmake)
+target_include_directories(UICornerstoneBinding PUBLIC
+    ${BINDING_GEN_INCLUDE})
+
 if(WIN32)
     target_link_libraries(UICornerstoneBinding PRIVATE kernel32)
 endif()
 
 # ============================================================
 # Samples（仅当位于主工程构建树内且存在核心库 target 时构建）
-# 核心库（静态 UICornerstone）内含后端，直接链接即可。
+# 纯动态加载：仅链接 UICornerstoneBinding（静态包装），不链接核心库。
+# 运行依赖：UICornerstone.dll + UIBackend_<backend>.dll（POST_BUILD 拷贝）。
 # ============================================================
 if(TARGET UICornerstone)
     set(BINDING_SAMPLES
         sample_cpp_hosted
         sample_cpp_embed
+        sample_cpp_multiview
+        sample_cpp_multiinstance
     )
     foreach(sample IN LISTS BINDING_SAMPLES)
         add_executable(${sample} samples/${sample}.cpp)
-        target_link_libraries(${sample} PRIVATE UICornerstoneBinding UICornerstone)
+        target_link_libraries(${sample} PRIVATE UICornerstoneBinding)
     endforeach()
+
+    # 核心 DLL（UICornerstone.dll）拷贝到各样例输出目录
+    if(WIN32 AND TARGET UICornerstone_dll)
+        foreach(sample IN LISTS BINDING_SAMPLES)
+            add_custom_command(TARGET ${sample} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE:UICornerstone_dll>"
+                    $<TARGET_FILE_DIR:${sample}>)
+        endforeach()
+    endif()
+
+    # 后端插件 DLL（UIBackend_<backend>.dll）拷贝到各样例输出目录
+    if(WIN32 AND DEFINED UIBACKEND_TARGET AND TARGET ${UIBACKEND_TARGET})
+        foreach(sample IN LISTS BINDING_SAMPLES)
+            add_custom_command(TARGET ${sample} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE:${UIBACKEND_TARGET}>"
+                    $<TARGET_FILE_DIR:${sample}>)
+        endforeach()
+    endif()
 
     # 后端 DLL 拷贝到各样例输出目录（SDL3/SFML/raylib 运行库）
     if(WIN32 AND DEFINED BACKEND_DLLS)

@@ -66,7 +66,20 @@ public:
 
     bool getMousePosition(float& x, float& y) override {
         if (!m_window) return false;
-        SDL_GetMouseState(&x, &y);
+        // SDL_GetMouseState 返回的是鼠标相对"当前鼠标焦点窗口"的坐标：
+        // 鼠标在另一窗口（多实例）时拿到的坐标属于别的窗口，会造成 hover
+        // 串扰。须用全局坐标判断鼠标是否在本窗口内，不在则返回 false
+        // （调用方按"鼠标不在本窗口"处理，清除 hover 状态）。
+        float gx, gy;
+        SDL_GetGlobalMouseState(&gx, &gy);
+        int wx, wy;
+        SDL_GetWindowPosition(m_window, &wx, &wy);
+        int ww, wh;
+        SDL_GetWindowSize(m_window, &ww, &wh);
+        if (gx < wx || gx >= wx + ww || gy < wy || gy >= wy + wh)
+            return false;
+        x = gx - wx;
+        y = gy - wy;
         return true;
     }
 

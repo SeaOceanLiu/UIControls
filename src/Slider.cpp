@@ -829,8 +829,8 @@ int Slider::setStringProperty(const char* prop, const char* value) {
 
 int Slider::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kSliderStyle) == 0) {
-        if (_stricmp(value, "horizontal") == 0) { setStyle(SliderStyle::Horizontal); return 1; }
-        if (_stricmp(value, "vertical") == 0)   { setStyle(SliderStyle::Vertical);   return 1; }
+        if (_stricmp(value, PropertyNames::kOrientHorizontal) == 0) { setStyle(SliderStyle::Horizontal); return 1; }
+        if (_stricmp(value, PropertyNames::kOrientVertical) == 0)   { setStyle(SliderStyle::Vertical);   return 1; }
         return 0;
     }
     if (strcmp(prop, PropertyNames::kLabelFont) == 0) {
@@ -877,7 +877,7 @@ int Slider::getStringProperty(const char* prop, const char*& out) {
 
 int Slider::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kSliderStyle) == 0) {
-        out = (m_style == SliderStyle::Horizontal) ? "horizontal" : "vertical";
+        out = (m_style == SliderStyle::Horizontal) ? PropertyNames::kOrientHorizontal : PropertyNames::kOrientVertical;
         return 1;
     }
     if (strcmp(prop, PropertyNames::kLabelFont) == 0) {

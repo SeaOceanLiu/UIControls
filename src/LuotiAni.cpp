@@ -206,59 +206,59 @@ void LuotiAni::parseJsonDesc(){
     m_layers.clear();
     m_frameToDraw = 0;
 
-    json overview = m_jsonAniDesc["overview"];
+    json overview = m_jsonAniDesc[PropertyNames::kJsonOverview];
     if (overview.is_null()) {
         printf("Animation Description json error: 'overview' section missing.\n");
         throw "Animation Description json error: 'overview' section missing.";
         return;
     }
-    m_name = overview["name"].get<string>();
-    m_version = overview["version"].get<string>();
-    m_canvasSize.width = overview["view"].at("width").get<float>();
-    m_canvasSize.height = overview["view"].at("height").get<float>();
-    m_frameRate = overview["frameRate"].get<int>();
+    m_name = overview[PropertyNames::kJsonName].get<string>();
+    m_version = overview[PropertyNames::kJsonVersion].get<string>();
+    m_canvasSize.width = overview[PropertyNames::kJsonView].at(PropertyNames::kJsonWidth).get<float>();
+    m_canvasSize.height = overview[PropertyNames::kJsonView].at(PropertyNames::kJsonHeight).get<float>();
+    m_frameRate = overview[PropertyNames::kJsonFrameRate].get<int>();
     if(m_frameRate == 0) {
         printf("Animation Description json error: 'frameRate' cannot be zero.\n");
         throw "Animation Description json error: 'frameRate' cannot be zero.";
         return;
     }
     m_frameMSDuration = 1000 / m_frameRate;
-    m_totalFrames = overview["totalFrames"].get<uint32_t>();
-    m_loop = overview.at("loop").get<bool>();
+    m_totalFrames = overview[PropertyNames::kJsonTotalFrames].get<uint32_t>();
+    m_loop = overview.at(PropertyNames::kJsonLoop).get<bool>();
 
-    const auto& layersData = m_jsonAniDesc["layers"];
+    const auto& layersData = m_jsonAniDesc[PropertyNames::kJsonLayers];
     for (size_t l = 0; l < layersData.size(); l++) {
         const auto& layerData = layersData[l];
         auto layer = make_shared<Layer>();
-        layer->setName(layerData.at("name").get<string>())
-            ->setType(Layer::strToLayerType(layerData.at("type").get<string>()))
-            ->setSrc(layerData.at("src").get<string>())
-            ->setSize(SSize(layerData.contains("width") && layerData.contains("height") ?
-                            SSize(layerData.at("width").get<float>(), layerData.at("height").get<float>()) :
+        layer->setName(layerData.at(PropertyNames::kJsonName).get<string>())
+            ->setType(Layer::strToLayerType(layerData.at(PropertyNames::kJsonType).get<string>()))
+            ->setSrc(layerData.at(PropertyNames::kJsonSrc).get<string>())
+            ->setSize(SSize(layerData.contains(PropertyNames::kJsonWidth) && layerData.contains(PropertyNames::kJsonHeight) ?
+                            SSize(layerData.at(PropertyNames::kJsonWidth).get<float>(), layerData.at(PropertyNames::kJsonHeight).get<float>()) :
                             SSize(0, 0)))
-            ->setOpacity(layerData.at("opacity").get<float>() / 100.0f)
-            ->setBlendMode(Layer::blendModeStrToBlendMode(layerData.at("blendMode").get<string>()));
+            ->setOpacity(layerData.at(PropertyNames::kJsonOpacity).get<float>() / 100.0f)
+            ->setBlendMode(Layer::blendModeStrToBlendMode(layerData.at(PropertyNames::kJsonBlendMode).get<string>()));
         m_layerSegs.push_back(map<uint32_t, SegmentInfo>());
-        for (const auto& keyFrameData : layerData["keyFrames"]) {
+        for (const auto& keyFrameData : layerData[PropertyNames::kJsonKeyFrames]) {
             auto keyFrame = make_shared<KeyFrame>();
-            uint32_t frameNumber = keyFrameData.at("frame").get<uint32_t>();
+            uint32_t frameNumber = keyFrameData.at(PropertyNames::kJsonFrame).get<uint32_t>();
 
-            auto operationsData = keyFrameData.at("operation");
+            auto operationsData = keyFrameData.at(PropertyNames::kJsonOperation);
             SegmentInfo keyFrameSegInfo;
             for (const auto& operationData : operationsData) {
-                string type = operationData.at("type").get<string>();
+                string type = operationData.at(PropertyNames::kJsonType).get<string>();
                 Operation::OPERATION_TYPE opType = Operation::strToOperationType(type);
 
-                if (operationData.contains("easing") && operationData.at("easing").is_string()) {
-                    string easing = operationData.at("easing").get<string>();
+                if (operationData.contains(PropertyNames::kJsonEasing) && operationData.at(PropertyNames::kJsonEasing).is_string()) {
+                    string easing = operationData.at(PropertyNames::kJsonEasing).get<string>();
                     if (parseEasing(easing, keyFrameSegInfo) != 0) {
                         printf("KeyFrame Operation: Unknown easing: %s, fallback to linear\n", easing.c_str());
                     }
                 }
-                if (opType == Operation::OPERATION_TYPE::TRANSLATE && operationData.contains("path")) {
-                    if (!operationData.at("path").is_object()) {
+                if (opType == Operation::OPERATION_TYPE::TRANSLATE && operationData.contains(PropertyNames::kJsonPath)) {
+                    if (!operationData.at(PropertyNames::kJsonPath).is_object()) {
                         printf("KeyFrame Operation: 'path' must be an object, fallback to linear\n");
-                    } else if (parsePath(operationData.at("path"), keyFrameSegInfo) != 0) {
+                    } else if (parsePath(operationData.at(PropertyNames::kJsonPath), keyFrameSegInfo) != 0) {
                         printf("KeyFrame Operation: Unknown path type, fallback to linear\n");
                     }
                 }
@@ -266,19 +266,19 @@ void LuotiAni::parseJsonDesc(){
                 shared_ptr<Operation> operation = nullptr;
                 switch(opType) {
                     case Operation::OPERATION_TYPE::TRANSLATE:
-                        operation = make_shared<Operation>(opType, operationData.at("tx").get<float>(), operationData.at("ty").get<float>());
+                        operation = make_shared<Operation>(opType, operationData.at(PropertyNames::kJsonTx).get<float>(), operationData.at(PropertyNames::kJsonTy).get<float>());
                         break;
                     case Operation::OPERATION_TYPE::SCALE:
-                        operation = make_shared<Operation>(opType, operationData.at("sx").get<float>(), operationData.at("sy").get<float>());
+                        operation = make_shared<Operation>(opType, operationData.at(PropertyNames::kJsonSx).get<float>(), operationData.at(PropertyNames::kJsonSy).get<float>());
                         break;
                     case Operation::OPERATION_TYPE::ROTATE:
-                        operation = make_shared<Operation>(opType, operationData.at("angle").get<float>(), operationData.at("cx").get<float>(), operationData.at("cy").get<float>());
+                        operation = make_shared<Operation>(opType, operationData.at(PropertyNames::kJsonAngle).get<float>(), operationData.at(PropertyNames::kJsonCx).get<float>(), operationData.at(PropertyNames::kJsonCy).get<float>());
                         break;
                     case Operation::OPERATION_TYPE::OPACITY:
-                        operation = make_shared<Operation>(opType, operationData.at("opacity").get<float>());
+                        operation = make_shared<Operation>(opType, operationData.at(PropertyNames::kJsonOpacity).get<float>());
                         break;
                     case Operation::OPERATION_TYPE::VISIBLE:
-                        operation = make_shared<Operation>(opType, operationData.at("visible").get<bool>() ? 1.0f : 0.0f);
+                        operation = make_shared<Operation>(opType, operationData.at(PropertyNames::kJsonVisible).get<bool>() ? 1.0f : 0.0f);
                         break;
                     default:
                         printf("KeyFrame Operation: Unknown operation type: %s\n", type.c_str());
@@ -297,13 +297,13 @@ void LuotiAni::parseJsonDesc(){
 }
 
 int LuotiAni::parseEasing(const string& easing, SegmentInfo& segInfo){
-    if (easing == "linear") { segInfo.easeType = 0; return 0; }
-    if (easing == "ease-in") { segInfo.easeType = 1; return 0; }
-    if (easing == "ease-out") { segInfo.easeType = 2; return 0; }
-    if (easing == "ease-in-out") { segInfo.easeType = 3; return 0; }
-    if (easing == "quad") { segInfo.easeType = 4; return 0; }
-    if (easing == "sine") { segInfo.easeType = 5; return 0; }
-    if (easing.rfind("cubic-bezier(", 0) == 0 && easing.back() == ')') {
+    if (easing == PropertyNames::kEasingLinear) { segInfo.easeType = 0; return 0; }
+    if (easing == PropertyNames::kEasingEaseIn) { segInfo.easeType = 1; return 0; }
+    if (easing == PropertyNames::kEasingEaseOut) { segInfo.easeType = 2; return 0; }
+    if (easing == PropertyNames::kEasingEaseInOut) { segInfo.easeType = 3; return 0; }
+    if (easing == PropertyNames::kEasingQuad) { segInfo.easeType = 4; return 0; }
+    if (easing == PropertyNames::kEasingSine) { segInfo.easeType = 5; return 0; }
+    if (easing.rfind(PropertyNames::kEasingCubicBezierPrefix, 0) == 0 && easing.back() == ')') {
         float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
         if (sscanf(easing.c_str(), "cubic-bezier(%f,%f,%f,%f)", &x1, &y1, &x2, &y2) == 4) {
             if (x1 >= 0.0f && x1 <= 1.0f && x2 >= 0.0f && x2 <= 1.0f) {
@@ -320,29 +320,29 @@ int LuotiAni::parseEasing(const string& easing, SegmentInfo& segInfo){
 }
 
 int LuotiAni::parsePath(const json& path, SegmentInfo& segInfo){
-    string type = path.at("type").get<string>();
-    if (type == "bezier") {
+    string type = path.at(PropertyNames::kJsonType).get<string>();
+    if (type == PropertyNames::kPathBezier) {
         segInfo.pathType = 1;
-        segInfo.p1 = path.value("c1x", 0.0f);
-        segInfo.p2 = path.value("c1y", 0.0f);
-        if (path.contains("c2x") && path.contains("c2y")) {
+        segInfo.p1 = path.value(PropertyNames::kJsonC1x, 0.0f);
+        segInfo.p2 = path.value(PropertyNames::kJsonC1y, 0.0f);
+        if (path.contains(PropertyNames::kJsonC2x) && path.contains(PropertyNames::kJsonC2y)) {
             segInfo.bezierCubic = 1;
-            segInfo.p3 = path.value("c2x", 0.0f);
-            segInfo.p4 = path.value("c2y", 0.0f);
+            segInfo.p3 = path.value(PropertyNames::kJsonC2x, 0.0f);
+            segInfo.p4 = path.value(PropertyNames::kJsonC2y, 0.0f);
         }
         return 0;
     }
-    if (type == "parabola") {
+    if (type == PropertyNames::kPathParabola) {
         segInfo.pathType = 2;
-        segInfo.vx = path.value("vx", 0.0f);
-        segInfo.vy = path.value("vy", 0.0f);
+        segInfo.vx = path.value(PropertyNames::kJsonVx, 0.0f);
+        segInfo.vy = path.value(PropertyNames::kJsonVy, 0.0f);
         return 0;
     }
-    if (type == "catmull-rom") {
+    if (type == PropertyNames::kPathCatmullRom) {
         segInfo.pathType = 3;
-        if (path.contains("points") && path.at("points").is_array()) {
-            for (const auto& p : path.at("points")) {
-                segInfo.points.push_back(SPoint(p.at("x").get<float>(), p.at("y").get<float>()));
+        if (path.contains(PropertyNames::kJsonPoints) && path.at(PropertyNames::kJsonPoints).is_array()) {
+            for (const auto& p : path.at(PropertyNames::kJsonPoints)) {
+                segInfo.points.push_back(SPoint(p.at(PropertyNames::kJsonX).get<float>(), p.at(PropertyNames::kJsonY).get<float>()));
             }
         }
         return 0;
