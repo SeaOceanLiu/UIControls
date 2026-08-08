@@ -1,4 +1,4 @@
-# 构建与测试
+﻿# 构建与测试
 
 ## Build library + all tests
 
@@ -97,3 +97,4 @@ test_treeview_cabi.exe
 - `PollInputEvents()` is called only in `InputBackend::newFrame()`, once per frame
 - `SetTargetFPS` is not used — frame rate limited by `WaitTime` in `RenderDevice::present()`
 - Fonts loaded at `size * 96/72` and cached by `(data, size, cpHash)`
+- **单窗口架构**：raylib 为单窗口后端（CORE 全局只跟踪最近创建的窗口，预编译 DLL 无源码）。多实例下仅**首个实例** `InitWindow`，后续实例为 headless（`Window::isHeadless()`），窗口/输入 API 全部守卫；能力位声明无 `MULTI_WINDOW`——多窗口测试/样例对第二实例渲染前须查 `GetBackendCapabilities`（详见 BackendAbstraction_Design.md §20）

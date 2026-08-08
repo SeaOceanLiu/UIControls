@@ -65,6 +65,8 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(10, 50, 120, 24);
 3. **test_aniviewer 例外规则**：路径参数**不限定为第 1 个位置**——任何非 `key=` 键值且非纯 `0`/`1` 的参数视为 jsonc 路径（任意位置）；**未提供路径时使用缺省路径** `assets/animations/rotateBtn/rotateBtn.jsonc`（相对 exe 同目录解析）。
 4. **样例程序**：`binding/samples/sample_cpp_*` **不要求**支持 `auto=`，但**必须支持**命令行参数 `backend=<后端名>`（sdl3/sfml/raylib，任意顺序）设定加载哪个后端，缺省 sdl3。
 
+**多实例渲染能力约定（强制）**：多窗口/多实例视觉测试（`test_multiinstance_visual_cabi`、`test_multi_instance_cabi`、`sample_cpp_multiinstance`）在渲染第二个实例前**必须查询后端能力位** `UICornerstone_GetBackendCapabilities`，仅当 `UICORN_BACKEND_CAP_MULTI_WINDOW` 存在时才对其渲染/交换；否则该实例为 headless（无窗口），渲染会串扰到主实例窗口（raylib 单窗口架构，见 BackendAbstraction_Design.md §20）。非 MULTI_WINDOW 后端下渲染冒烟断言弱化为 SKIP（打印 SKIP 即通过），其余断言不受影响。测试头部打印后端能力信息，方便人工模式识别单窗口限制。
+
 ## C ABI 测试常见陷阱
 
 ### 属性名不匹配

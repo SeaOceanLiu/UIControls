@@ -1,4 +1,4 @@
-# 后端抽象层设计文档
+﻿# 后端抽象层设计文档
 
 ## 1. 概述
 
@@ -73,6 +73,7 @@ UICornerstone 当前硬编码绑定 SDL3，所有控件直接在头文件中引�
 | 16g — Raylib 纹理不可见根因排查 + 彻底修复 | ✅ **已完成** | 双根因：(1)bridge_drawTexture nullptr src→零SRect；(2)rlPushMatrix+rScalef+DrawTextureEx DLL 边界不可见。修复：bridge 传 nullptr 而非 &zeroRect；改用 DrawTexturePro |
 | 16h — UIBackendCallbacks Cursor 工厂 | ✅ **已完成** | UIBackendCallbacks 新增 createSystemCursor/getDefaultCursor/setCurrentCursor；BackendManager::initialize(callbacks) 调用 Cursor::registerFactories()；test_dialog_cabi 三后端验证通过 |
 | 16i — SDL3 多窗口事件隔离 | ✅ **已完成** | sdl3 pollEvent 只消费本窗口事件（SDL_PumpEvents 显式调用 + SDL_PeepEvents peek + headOne 同 type 检查 + GETEVENT + gotEvent 守卫）；`SDL_EVENT_WINDOW_FOCUS_GAINED/LOST` → FocusGained/FocusLost 转换补全；Window::getMousePosition 改用全局坐标窗口内判定（hover 跨窗口隔离）；ControlImpl::update() isInside = hasMouse && drawRect.contains |
+| 16j — 后端能力位机制 + raylib 单窗口 headless 化 | ✅ **已完成** | 能力位 `UICORN_BACKEND_CAP_MULTI_WINDOW/RENDER_TARGET/CLIP_RECT/READBACK`（双路径保存 + `UICornerstone_GetBackendCapabilities` 导出）；raylib 单窗口架构（CORE 全局只跟踪最近窗口）声明无 MULTI_WINDOW，多实例仅首个实例建窗口（其余 headless，`Window::isHeadless()`）；详见 §20 |
 
 ## 2. Phase 1——SColor 统一
 
@@ -2021,3 +2022,75 @@ virtual int getConfig(const char* key, int type, void* value, int maxLen);
 **验证状态（2026-08-06，本地桌面已完成）**：vsync 三后端实测——sdl3 运行期 `SDL_SetRenderVSync`（direct3d11 renderer，vsync=1→60fps、0→420fps）；raylib 创建期 `FLAG_VSYNC_HINT`（vsync=1→59fps、0→~1050fps）；sfml 运行期 `setVerticalSyncEnabled`。全程由 `test_aniviewer` 顶部 fps 覆盖层人工确认无撕裂、回读一致。另补：raylib/sfml 静态回调表注册 `setBackendConfig`/`getBackendConfig`。
 
 **环境备注（2026-08-06）**：`UICornerstone_CreateInstance` 的 vsync 全局默认合并进窗口标志逻辑原位于 `if (config)` 块内，config 为 NULL 时（如 `test_api.c` 传 NULL）失效——已移出，全局默认在实例创建时恒生效。
+
+## 20. 后端能力位机制（Phase 16j）
+
+### 20.1 动机：raylib 单窗口架构的多实例闪动
+
+raylib 多实例双窗口测试人工验证时发现两窗口内容**交替闪动**。根因：
+
+- `subModules/raylib/lib/raylib.dll` 为**单窗口架构**——raylib CORE 全局状态只跟踪最近一次 `InitWindow` 的窗口，第二个实例的 `InitWindow` 直接覆盖第一个实例的窗口状态；
+- 预编译 DLL **不导出 glfw 符号、无源码**，无法从 DLL 侧修补（升级/重建代价高且绑定 raylib 内部状态）；
+- 结果：两个实例的渲染全部画到同一窗口，A/B 内容每帧交替。
+
+用户决策（否决方案）：
+
+| 方案 | 结论 | 原因 |
+|------|------|------|
+| Win32 辅窗口方案 | ❌ 否决 | Windows 专属，跨平台需重写三套 |
+| raylib 源码 patch | ❌ 否决 | 绑定 raylib 内部状态，升级成本高 |
+| **能力限制（采纳）** | ✅ | 声明后端能力位，调用方按能力决定行为；**同时为后续原生 GPU 后端（GL/GLFW/DirectX/Vulkan）架构预留能力声明机制** |
+
+### 20.2 能力位定义（include/UICornerstoneAPI.h）
+
+```c
+#define UICORN_BACKEND_CAP_MULTI_WINDOW  (1u << 0)  // 多实例各具独立窗口（可多窗口并行渲染）
+#define UICORN_BACKEND_CAP_RENDER_TARGET (1u << 1)  // 渲染到纹理
+#define UICORN_BACKEND_CAP_CLIP_RECT     (1u << 2)  // 裁剪矩形
+#define UICORN_BACKEND_CAP_READBACK      (1u << 3)  // 像素回读
+```
+
+能力位放在 `BackendAPI`（BackendPlugin.h）与 `UIBackendCallbacks`（UICornerstoneAPI.h）**两处结构体末尾**——结构体末尾追加字段，旧客户端不读取该偏移即完全兼容（与 `UIInstanceConfig.structSize` 版本守卫不同的"向后兼容追加"策略）。
+
+### 20.3 双路径保存与查询
+
+`BackendManager` 在 `initialize()` 的两条路径均保存能力位（静态链接路径读 `api.capabilities`，回调表路径读 `callbacks->capabilities`），查询入口：
+
+```c
+uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance);
+// → instance->backendManager->capabilities()
+```
+
+### 20.4 各后端能力声明
+
+| 后端 | capabilities | 说明 |
+|------|--------------|------|
+| sdl3 | `MULTI_WINDOW\|RENDER_TARGET\|CLIP_RECT\|READBACK` | 四能力全有 |
+| sfml | 同上 | 四能力全有 |
+| raylib | `RENDER_TARGET\|CLIP_RECT\|READBACK` | **无 MULTI_WINDOW**（单窗口架构） |
+
+三后端 `BackendPlugin.cpp` 均在两处赋值：静态结构体 `g_xxxBackend.capabilities` 与回调表 `cb.capabilities`。
+
+### 20.5 raylib headless 化（单窗口架构的多实例适配）
+
+`src/backend/raylib/Window.cpp`：
+
+- `static int s_windowCount` + `bool m_hasOwnWindow`：**仅首个实例 `InitWindow`**（防覆盖 CORE 全局窗口状态），后续实例不建窗口（headless）；
+- 窗口相关 API 全部加 `if (!m_hasOwnWindow)` 守卫：getSize/getPosition/getDisplayWidth/Height/getDpiScale/setTitle/getMousePosition/setResizable；
+- 析构仅 `m_hasOwnWindow && IsWindowReady()` 时 `CloseWindow`（配合 16i 前已加的 `IsWindowReady` 守卫，防止二次 CloseWindow 崩溃）。
+
+`include/Window.h` 新增虚函数（为 headless 实例预留能力声明）：
+
+```cpp
+virtual bool isHeadless() const { return false; }   // raylib 覆写返回 !m_hasOwnWindow
+```
+
+`src/backend/raylib/InputBackend.cpp`：`m_hasWindow`（构造时 `window ? !window->isHeadless() : false`）守卫 pollEvent/setClipboardText/getClipboardText/getModState/newFrame（跳过 `PollInputEvents`）——防串扰并**防止抢先消费主实例的事件**。
+
+### 20.6 调用方约定
+
+- **C ABI 层**：多窗口场景先查 `UICornerstone_GetBackendCapabilities(instA) & UICORN_BACKEND_CAP_MULTI_WINDOW`，再决定是否对第二实例做渲染/交换（单窗口后端的 headless 实例渲染会串扰到主实例窗口）。
+- **Binding 层**：`GetBackendCapabilities()` 同语义封装（见 CppBinding_Design.md）。
+- **样例/测试**：`sample_cpp_multiinstance`、`test_multiinstance_visual_cabi`、`test_multi_instance_cabi` 均按能力位条件化第二实例渲染；非 MULTI_WINDOW 后端渲染冒烟打印 SKIP。
+
+**验证（2026-08-08）**：raylib 多实例测试 auto=3 渲染冒烟 SKIP + exit=0；人工模式主实例窗口正常无闪动；三后端全量回归 exit=0；4 个 binding 样例 UICORN_AUTO=1 全过。

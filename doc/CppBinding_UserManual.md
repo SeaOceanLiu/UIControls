@@ -1,4 +1,4 @@
-# C++ Binding 用户手册
+﻿# C++ Binding 用户手册
 
 > 对应 Phase 17 | 编制 2026-08-07 | 状态: **初版** | 配套设计文档：`doc/CppBinding_Design.md`
 
@@ -473,6 +473,17 @@ while (!uiA->IsQuitRequested() && !uiB->IsQuitRequested()) {
 
 > `ProcessEvents()` 返回 `bool`（是否处理了 ≥1 个事件）；单窗口场景忽略返回值即可，行为与旧版一致。跨窗口隔离（鼠标/hover/焦点/键盘）由核心库与 sdl3 后端按窗口 ID 过滤，Binding 无感知。参考样例：`binding/samples/sample_cpp_multiinstance.cpp`（双窗口双向通信，`UICORN_AUTO=1` 冒烟验证）。
 
+**能力位查询（后端差异，必读）**：多窗口渲染前先查询后端能力 `uiA->GetBackendCapabilities()`，与 `UICORN_BACKEND_CAP_MULTI_WINDOW` 按位与后再决定是否渲染第二个实例：
+
+```cpp
+uint32_t caps = uiA->GetBackendCapabilities();
+bool multiWindow = (caps & UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
+...
+if (multiWindow) { uiB->Clear(); uiB->Render(); uiB->Present(); }
+```
+
+原因：**raylib 后端是单窗口架构**（内部全局只跟踪最近创建的窗口，且预编译 DLL 无源码不可修补）。它声明的能力位**不含 MULTI_WINDOW**——多实例下只有第一个实例有真实窗口，其余实例为 headless（`Window::isHeadless()`）。此时若照常渲染第二实例，内容会串扰到主实例窗口（A/B 交替闪动）。sdl3/sfml 具备完整四能力（`MULTI_WINDOW|RENDER_TARGET|CLIP_RECT|READBACK`），双窗口渲染不受限。详见 `doc/BackendAbstraction_Design.md` §20。
+
 ### 12.2 子视口（同一窗口内的多个视图）
 
 `CreateViewport(x, y, w, h)` 在 owner 窗口内划分一个子视图区域——**共享后端与渲染设备，但拥有独立的控件树、事件队列与焦点管理**：
@@ -691,6 +702,7 @@ UICornerstone::Create(config)                  // → unique_ptr<UICornerstone>�
 ui->Run(update, onRender)                      // Hosted：返回退出码
 ui->ProcessEvents() / Update(dt) / Clear() / Render() / Present()   // Embedded
 ui->IsQuitRequested() / Shutdown()
+ui->GetBackendCapabilities()                   // UICORN_BACKEND_CAP_* 位组合（§12.1）
 ui->Handle()                                   // UIInstance 裸句柄
 
 // 控件工厂（返回 Control）

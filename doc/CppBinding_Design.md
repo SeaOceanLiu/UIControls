@@ -1,4 +1,4 @@
-# CAPI C++ Binding 设计
+﻿# CAPI C++ Binding 设计
 
 > 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel | 修订 2026-08-06：**P1-P13 全部实施并验证**（sdl3/sfml/raylib 三后端构建+冒烟通过）| 修订 2026-08-07：**P14 纯动态加载模式实施**——核心 DLL + 后端 DLL 全部经 LoadLibrary 显式加载（DynamicApi 层），不再链接任何导入库；Config 新增 coreLibraryDir；删除便捷方法族（SetText/SetVisible 等）；PropertyNames.h 构建时从核心复制（CopyPropertyNames.cmake）；示例改为平铺 cpp | 修订 2026-08-08：**P16 多窗口隔离**——`ProcessEvents()` 返回 bool（handled ≥ 1，多窗口事件泵 §5.6.1）；Config.resourceRoot 默认空串（核心回退 exe 目录/assets）；新增 §7.4 sample_cpp_multiinstance
 
@@ -353,6 +353,12 @@ public:
     bool SetBackendConfig(const char* key, const char* value);
     bool SetBackendConfigBool(const char* key, bool value);
     bool GetBackendConfigBool(const char* key, bool& out) const;
+
+    // ── 后端能力（C ABI: UICornerstone_GetBackendCapabilities）──
+    // 返回 UICORN_BACKEND_CAP_* 位组合（按位与），调用方据此决定行为。
+    // 典型场景：多窗口渲染前查询 MULTI_WINDOW——单窗口架构后端（raylib）
+    // 声明无该位，其非首个实例为 headless，渲染需跳过（防串扰到主实例窗口）
+    uint32_t GetBackendCapabilities() const;
 
     // ── 错误查询 ──
     const std::string& GetLastError() const;
@@ -1501,6 +1507,7 @@ int main() {
 - 两个独立窗口实例 A/B（各自 `Create(Config)`），每窗口内 Label + EditBox + Button
 - **跨实例通信**：A 的按钮 → 把 A 的 EditBox 内容发到 B 的 Label（`B.FindControl("statusB")`），B 的按钮反向——验证多实例并存 + 各自控件树独立
 - **多窗口事件泵**（实施修订 2026-08-08）：主循环内层 `do { processed = A.ProcessEvents()?1:0 + B.ProcessEvents()?1:0; } while (processed > 0)` 驱动所有实例直到队列空——每个实例只消费自己窗口的事件（sdl3 按 windowID 隔离），不再跨窗口串扰
+- **能力位条件化渲染**（实施修订 2026-08-08）：第二实例的 Clear/Render/Present 包在 `if (uiA->GetBackendCapabilities() & UICORN_BACKEND_CAP_MULTI_WINDOW)` 内——单窗口架构后端（raylib）非首个实例为 headless，无条件渲染会串扰到主实例窗口（内容闪动，见 BackendAbstraction_Design.md §20）；`GetBackendCapabilities()` 封装 C ABI `UICornerstone_GetBackendCapabilities`（§5.1）
 - **验证**：AUTO 双向注入输出 `[A] sent to B: hello from A` / `[B] sent to A: hello from B`，exit=0；手动验证 hover/焦点/键盘跨窗口隔离（点击 B 的 EditBox → A 的焦点环消失）
 
 ## 8. 实施计划
@@ -1523,6 +1530,7 @@ int main() {
 | **P14** | **纯动态加载重构**：DynamicApi 层（LoadCore/LoadBackend）+ 删除 ResourceManager/BackendResolver + 便捷方法族删除 + PropertyNames 复用 + UIEventFactory header-only | 链接期零核心库依赖（`nm -u UICornerstoneBinding.lib` 无 UICornerstone_ 符号）；核心/后端均 LoadLibrary；两样例 AUTO 冒烟 exit=0 | ✅ 2026-08-07 |
 | **P15** | **多视口例程** `sample_cpp_multiview`：一个窗口两个子视口（左上/右下），每视口内 Label/EditBox/Button + 弹窗；用户手册 §12 扩展 | 视口注入点击 → 读 EditBox → 弹窗显示（AUTO 输出 `popup: Hello from Bench A/B`），240 帧 exit=0 | ✅ 2026-08-07 |
 | **P16** | **多窗口隔离**：`ProcessEvents()` 返回 bool（handled ≥ 1）；sdl3 pollEvent 窗口级隔离（PumpEvents/PeepEvents/headOne/gotEvent）；FocusLost 清除焦点；hover 全局坐标判定；`sample_cpp_multiinstance` 双窗口例程 | AUTO 双向通信 exit=0；手动验证 hover/焦点/键盘跨窗口隔离 | ✅ 2026-08-08 |
+| **P17** | **后端能力位封装**：`GetBackendCapabilities()`（DynamicApi RESOLVE + 主类转发，返回 `UICORN_BACKEND_CAP_*` 组合）；`sample_cpp_multiinstance` 第二实例渲染按 MULTI_WINDOW 能力条件化（raylib 单窗口后端 headless 适配）；sfml FocusLost/FocusGained 事件转换修复 | 三后端样例 AUTO exit=0；raylib 双实例人工模式主窗口无闪动 | ✅ 2026-08-08 |
 
 > 依赖前置：P3 依赖核心库多实例 C ABI（**已完成**：a0fcfa7/6064bd5 提交）；P10 依赖核心库菜单族/ScrollBar/TreeView/HandleControl 工厂（**已存在**：UICornerstoneAPI.h，无缺口）；P14 后 samples 平铺为单 .cpp（空子目录 sample_cpp_embed/、sample_cpp_hosted/ 已删除）。
 
@@ -1541,6 +1549,7 @@ UICornerstone_Clear / Present     Present()
 UICornerstone_SetViewport         SetViewport(x, y, w, h)
 UICornerstone_GetViewport         GetViewport()
 UICornerstone_IsQuitRequested     IsQuitRequested()
+UICornerstone_GetBackendCapabilities  GetBackendCapabilities()
 
 ── 控件工厂 ─────────────────────────────────────────────────
 UICornerstone_CreateButton(...)   ui.CreateButton(text, x, y, w, h)

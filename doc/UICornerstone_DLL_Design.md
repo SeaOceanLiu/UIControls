@@ -371,6 +371,11 @@ typedef struct {
     void* (*createSystemCursor)(int type);
     void* (*getDefaultCursor)();
     void  (*setCurrentCursor)(void* cursor);
+
+    // --- 后端能力位（2026-08-08 新增，Phase 16j；末尾追加字段向后兼容）---
+    // UICORN_BACKEND_CAP_* 位组合；raylib 声明 RENDER_TARGET|CLIP_RECT|READBACK
+    // （无 MULTI_WINDOW——单窗口架构），sdl3/sfml 四能力全有
+    uint32_t capabilities;
 } UIBackendCallbacks;
 
 /* ============ 初始化 ============ */
@@ -496,6 +501,19 @@ void UICornerstone_SetCancelButtonText(UIControlHandle ctl, const char* text);
 
 /* ============ 控件查询 ============ */
 const char* UICornerstone_GetControlId(UIControlHandle ctl);
+
+/* ============ 后端能力查询（2026-08-08 新增，Phase 16j）============
+   返回 UICORN_BACKEND_CAP_* 位组合；instance 无效返回 0。
+   能力位同时存于 UIBackendCallbacks 结构体末尾（capabilities 字段）与
+   BackendAPI（BackendPlugin.h）——结构体末尾追加字段，旧客户端不读取即兼容。
+   典型用途：多实例双窗口渲染前查询 MULTI_WINDOW 能力——单窗口架构后端
+   （raylib，CORE 全局只跟踪最近窗口且 DLL 无源码）声明无该位，其非首个
+   实例为 headless（Window::isHeadless()），渲染会串扰到主实例窗口。 */
+uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance);
+#define UICORN_BACKEND_CAP_MULTI_WINDOW  (1u << 0)
+#define UICORN_BACKEND_CAP_RENDER_TARGET (1u << 1)
+#define UICORN_BACKEND_CAP_CLIP_RECT     (1u << 2)
+#define UICORN_BACKEND_CAP_READBACK      (1u << 3)
 
 #ifdef __cplusplus
 }

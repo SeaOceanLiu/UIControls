@@ -1,6 +1,6 @@
 ﻿# C ABI 多实例支持改造设计
 
-> 对应 Phase 16ii | 编制 2026-07-30 | 修订 2026-07-31 | **2026-08-03 实施完成（核心框架），状态：已实施** | **2026-08-04 收尾：专项测试 + #17 + 校验 + 标题标记全部落地（见各节 2026-08-04 实施状态注）**
+> 对应 Phase 16ii | 编制 2026-07-30 | 修订 2026-07-31 | **2026-08-03 实施完成（核心框架），状态：已实施** | **2026-08-04 收尾：专项测试 + #17 + 校验 + 标题标记全部落地（见各节 2026-08-04 实施状态注）** | **2026-08-08 能力位 + raylib headless 化（见 §5.2/§5.6/§5.12.2/§6 #34）**
 
 ## 目录
 
@@ -509,10 +509,19 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
 
 ```c
 UICORNERSTONE_API int      UICornerstone_Debug_GetAliveCount(void);
-UICORNERSTONE_API UIInstance UICornerstone_Debug_GetAliveInstance(int index);
 UICORNERSTONE_API UIInstance UICornerstone_Debug_GetActiveViewport(UIInstance instance);
 UICORNERSTONE_API int      UICornerstone_Debug_IsControlFocused(UIInstance instance, UIControlHandle control);
 ```
+
+**新增能力查询**（2026-08-08，Phase 16j，见 BackendAbstraction_Design.md §20）：
+
+```c
+UICORNERSTONE_API uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance);
+```
+
+- 返回 `UICORN_BACKEND_CAP_*` 位组合（MULTI_WINDOW=1<<0 / RENDER_TARGET=1<<1 / CLIP_RECT=1<<2 / READBACK=1<<3），查询失败（instance 无效）返回 0。
+- 能力位同时存在于 `BackendAPI`（BackendPlugin.h，静态链接路径）与 `UIBackendCallbacks`（回调表路径，结构体末尾追加字段，向后兼容）——`BackendManager::initialize` 两条路径均保存，`BackendManager::capabilities()` 查询。
+- **用途**：raylib 后端为单窗口架构（CORE 全局只跟踪最近窗口，DLL 无源码不可修补），声明 `RENDER_TARGET|CLIP_RECT|READBACK`（**无 MULTI_WINDOW**）；sdl3/sfml 四能力全有。调用方（测试/样例/Binding）据此条件化第二实例的渲染/交换——单窗口后端非首个实例为 headless，渲染会串扰到主实例窗口（闪动）。
 
 > **控件句柄归属校验**：`UIControlHandle` 是裸指针，C ABI 层无法判断句柄属于哪个实例。建议所有带句柄的函数入口校验：句柄为空 → 直接返回 0/NULL；句柄非本实例（遍历 `instance->controlsById` 或控件树，O(n)，仅 Debug 构建开启）→ 断言。Release 构建不做归属校验（性能优先），行为由调用方保证，见 §7 风险 5。
 >
@@ -856,6 +865,8 @@ UIControlHandle UICornerstone_CreateButton(
 > **实施状态（2026-08-03）**：**本小节未实施**。三个后端（SDL3/SFML/raylib）的 `BackendPlugin.cpp` 仍保留 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存（创建函数 `if (!g_pluginXxx) ...` 单例化返回）。当前 `CreateInstance` 单实例场景下 BackendManager 每个 owner 只创建一次后端对象，静态缓存与其不冲突（第二次 CreateInstance 拿到的仍是同一窗口，即"多窗口同时"受限）。若未来需要真正多窗口（多个 owner 各自独立窗口），须按下方方案移除静态缓存。**destroy 回调已确认接线**（`bridge_destroyWindow` 等已在回调表，见下方 §5.6 修订说明）。
 >
 > **实施状态（2026-08-04）**：**本小节已实施（#17）**——三后端 `BackendPlugin.cpp` 的 `g_pluginWin`/`g_pluginRD`/`g_pluginTR`/`g_pluginIB` 静态缓存已全部移除，创建函数改为每次 `new`（`plugin_createWindow` → `raylibCreateWindow` 等直接构造；`plugin_createRenderDevice`/`plugin_createTextRenderer`/`plugin_createInputBackend` 从传入的 nativeContext 派生，不再依赖模块级缓存）。`BackendManager::shutdown`（BackendManager.cpp:156-173）按 TR→IB→RD→Window 逆序释放，多实例隔离测试（§5.12.2 测试 4：销毁再创建 x100）已验证无泄漏。**新增 raylib 适配**（本项实施后暴露）：raylib 为单窗口架构，全局 `CORE` 仅跟踪最近一次 `InitWindow`；多实例并发时先创建实例的窗口会被后续实例覆盖，其析构二次 `CloseWindow` 会崩溃——`RaylibWindow::~RaylibWindow` 已加 `IsWindowReady()` 守卫（raylib/Window.cpp:30-40），其余两后端原生多窗口无此问题。
+>
+> **实施状态（2026-08-08，升级：headless 化 + 能力位）**：`IsWindowReady()` 守卫只能防崩溃，**无法阻止渲染串扰**——多实例双窗口测试人工验证发现两窗口内容交替闪动（所有渲染都画到同一窗口）。最终方案（用户决策，否决 Win32 辅窗口 / raylib 源码 patch）：**能力限制**——新增 `UICORN_BACKEND_CAP_*` 能力位 + `UICornerstone_GetBackendCapabilities` 导出（§5.2），raylib 声明**无 MULTI_WINDOW**；`RaylibWindow` 升级为 **headless 化**：`static int s_windowCount` + `m_hasOwnWindow`，仅首个实例 `InitWindow`（防覆盖 CORE 全局窗口状态），后续实例不建窗口；窗口相关 API 全部 `if (!m_hasOwnWindow)` 守卫；`Window` 抽象新增 `virtual bool isHeadless()`（raylib 覆写返回 `!m_hasOwnWindow`）；`RaylibInputBackend` 加 `m_hasWindow` 守卫（pollEvent/剪贴板/getModState/newFrame 跳过，防串扰并防止抢先消费主实例事件）。详见 BackendAbstraction_Design.md §20。
 
 #### 移除静态缓存
 
@@ -1403,6 +1414,8 @@ UICornerstone_DestroyInstance(inst);
 > **实施状态（2026-08-04，收尾）**：另新增 **纯 DLL 动态加载变体** `test/test_multi_instance_cabi.cpp`（`UICORNERSTONE_BUILD_DLL` 下注册）：`LoadLibrary("UICornerstone.dll")` + `GetProcAddress` 解析全部 C ABI 函数指针，经 `CreateInstanceFromPlugin` → 核心 DLL 内部 `LoadLibrary(UIBackend_xxx.dll)` + `GetUIBackendCallbacks` 回调表创建实例，与静态版逻辑（测试 1-5）一致。test/CMakeLists.txt 中该变体**不链接 `UICornerstone_dll` 导入库**（动态解析），仅 POST_BUILD 拷贝运行所需 DLL（核心 `UICornerstone.dll`、后端插件 `UIBackend_xxx.dll`、后端依赖如 SDL3.dll/raylib.dll/SFML dll）；编译宏 `UICORNERSTONE_BACKEND_NAME`（如 `sdl3`）传入 `CreateInstanceFromPlugin`。三后端（SDL3/SFML/raylib）全部 `ALL PASS: multi-instance isolation (CABI dynamic DLL)`（各 7 PASS，exit=0）。
 >
 > **实施状态（2026-08-08，视觉状态测试补充）**：新增 `test/test_multiinstance_visual_cabi.cpp` 与 `test/test_multiviewport_visual_cabi.cpp`（同属 `foreach(cabi_test_name ...)` 动态加载注册，三后端全部 `ALL PASS: multi-instance/multiviewport visual states`）。背景：`test_multi_instance_cabi` 只测事件隔离，无视觉状态断言——sample_cpp_multiinstance/multiview 开发中暴露的 hover 串扰、焦点环并存、右下视口 Popup 不显示等"看得见"的问题无自动化覆盖。为此核心新增 Debug 辅助 API：`Debug_IsControlHovered`（读控件 `m_mouseInside`，Control 基类新增 `isMouseInside()` 纯虚）、`Debug_SetMousePosition`/`Debug_ClearMousePosition`（per-instance 鼠标位置注入，`ControlImpl::update()` 的 hover 判定优先用注入坐标——无头环境真实鼠标不可控；Release 返回 0 不生效）。另补注入通路缺口：`ProcessEvents` 注入队列的 `FocusLost` 事件此前落入默认分支被 dispatch 到 bench（不清除焦点），现与轮询通路 `pumpInstanceEvents` 一致地 clearFocus 本实例 + 活动子视口（此前轮询通路已修，注入通路遗漏）。测试覆盖：hover 跨窗口/跨视口隔离（A 窗口内坐标 → A hover、B 窗口外坐标 → B 无 hover）、点击聚焦 + 双实例/双视口焦点环并存 → FocusLost 清除本实例、Dialog 弹窗视口内居中定位（1024×768 默认窗口 (372,324)、512×384 视口 (116,132)，父相对本地坐标——右下视口 Popup bug 回归）、双窗口/多视口渲染冒烟、逆序销毁泄漏检查。
+>
+> **实施状态（2026-08-08，能力位适配）**：raylib 多实例双窗口渲染冒烟暴露单窗口架构闪动（见 §5.6）。两个多实例视觉测试现均先 `RESOLVE(GetBackendCapabilities)` 查询能力：仅 `UICORN_BACKEND_CAP_MULTI_WINDOW` 下对第二实例渲染/交换，否则渲染冒烟打印 SKIP（断言弱化为"SKIP 即通过"）；测试头部打印后端能力信息（人工模式提示单窗口限制）。三后端 auto=3 全部 exit=0。
 
 新建 `test/test_multi_instance.cpp`，专测多实例隔离性。编译为独立可执行文件，与现有测试并列。
 
@@ -2310,6 +2323,7 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | 31 | `src/Dialog.cpp` / `ColorPicker.cpp` / `ComboBox.cpp` | `MAINWIN->getWindowSize()` → `m_context->viewport`（弹出定位改为视口相对） | 小 |
 | 32 | `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` | 新增 Debug 辅助 API：`Debug_GetActiveViewport`、`Debug_IsControlFocused`（供测试断言） | 小 |
 | 33 | `include/Actor.h` / `src/Actor.cpp` / `include/PropertyNames.h` / `include/UICornerstoneAPI.h` / `src/UICornerstoneAPI.cpp` / 新增 `test/test_image.cpp` | **已实施（2026-08-05）**：`UICornerstone_CreateImage` 工厂 + Actor rect 语义修正（显式尺寸保留、自然尺寸跟随新图、match-parent-rect 覆盖 w/h，见 doc/Image_Design.md §6.1）+ `isContainsPoint`=false 遮挡修正（§6.2）+ 属性分发（image/image-resource 只写不读、scale-type/anchor/alpha/match-parent-rect 可读）；test_image T1-T8 三后端 DLL 树全绿 | 中 |
+| 34 | `include/UICornerstoneAPI.h` / `include/BackendPlugin.h` / `src/BackendManager.cpp` / `src/UICornerstoneAPI.cpp` / 三后端 `BackendPlugin.cpp` / `include/Window.h` / `src/backend/raylib/Window.cpp` / `src/backend/raylib/InputBackend.cpp` / 测试 ×2 / binding ×4 / `sample_cpp_multiinstance.cpp` | **已实施（2026-08-08，Phase 16j）**：能力位机制（`UICORN_BACKEND_CAP_*` 宏 + `BackendAPI`/`UIBackendCallbacks` 末尾 `capabilities` 字段 + `UICornerstone_GetBackendCapabilities` 导出 + `BackendManager::capabilities()` 双路径保存）+ raylib 单窗口架构 headless 化（`s_windowCount`/`m_hasOwnWindow` 仅首个实例建窗口 + 窗口/输入 API 守卫 + `Window::isHeadless()`）+ sfml FocusLost/FocusGained 事件转换补全；Binding 封装 `GetBackendCapabilities()`；多实例测试/样例渲染条件化。详见 BackendAbstraction_Design.md §20 | 中 |
 
 ### 影响范围汇总
 
@@ -2341,6 +2355,8 @@ UICORNERSTONE_API int UICornerstone_Debug_IsControlFocused(
 | SDL3 | `bridge_createWindow / Device / ...` | destroy 回调 + Plugin_Shutdown 兜底 | 已验证：destroy 回调接线 + x100 销毁再创建无泄漏（§5.6） |
 | SFML | 同上 | 同上 | 已验证：同上 |
 | raylib | 同上 | 同上 | 已验证：同上（另加 `IsWindowReady` 析构守卫，§5.6） |
+
+> 修订说明（2026-08-08）：raylib 行升级为 **headless 化**（§5.6）——多实例下仅首个实例建窗口，其余实例无窗口（`isHeadless()`），窗口相关 API 全部守卫；输入后端 `m_hasWindow` 守卫跳过轮询。析构 `IsWindowReady()` 守卫仍保留。能力限制由调用方经 `GetBackendCapabilities` 查询（§5.2）。
 
 若某个后端的 Plugin_Shutdown 未清理创建对象（例如依赖析构函数自动释放），需追加清理逻辑。修订说明（2026-07-31）：销毁主路径是回调表 5 个 `destroyXxx`（已存在，§5.6），`Plugin_Shutdown` 仅作 DLL 卸载兜底；需逐后端确认 destroy 回调与 Plugin_Shutdown 的重叠销毁不会 double-free（在 DestroyInstance 中置空插件侧引用或由核心侧只调用一次）。
 
