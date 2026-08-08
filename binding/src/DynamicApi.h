@@ -40,6 +40,7 @@ struct Api {
     void (*fnClear)(UIInstance) = nullptr;
     void (*fnPresent)(UIInstance) = nullptr;
     int  (*fnIsQuitRequested)(UIInstance) = nullptr;
+    uint32_t (*fnGetBackendCapabilities)(UIInstance) = nullptr;
 
     // Debug 辅助
     int        (*fnDebug_GetAliveCount)(void) = nullptr;

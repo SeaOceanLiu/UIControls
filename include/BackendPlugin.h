@@ -25,6 +25,7 @@ struct BackendAPI {
     TextRenderer* (*createTextRenderer)(RenderDevice* device);
     InputBackend* (*createInputBackend)(Window* window);
     void (*destroy)();
+    uint32_t capabilities;   // UICORN_BACKEND_CAP_* 位，0 = 无声明能力
 };
 
 // BackendManager - owns one instance's backend lifecycle.
@@ -51,6 +52,8 @@ public:
     RenderDevice* renderDevice() const { return m_renderDevice; }
     TextRenderer* textRenderer() const { return m_textRenderer; }
     InputBackend* inputBackend() const { return m_inputBackend; }
+    // 后端能力位（UICORN_BACKEND_CAP_*），initialize 后有效
+    uint32_t capabilities() const { return m_capabilities; }
 
     // Register a backend statically (called from backend init functions).
     // s_registeredAPI 保留为静态（进程级后端注册表，只读）
@@ -62,6 +65,7 @@ private:
     RenderDevice* m_renderDevice = nullptr;
     TextRenderer* m_textRenderer = nullptr;
     InputBackend* m_inputBackend = nullptr;
+    uint32_t m_capabilities = 0;
     bool m_initialized = false;
 
     static BackendAPI s_registeredAPI;

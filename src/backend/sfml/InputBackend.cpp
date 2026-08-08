@@ -147,6 +147,14 @@ public:
         if (sfmlEvent.is<sf::Event::Closed>()) {
             event.m_type = EventType::WindowClose;
         }
+        else if (sfmlEvent.is<sf::Event::FocusLost>()) {
+            event.m_type = EventType::FocusLost;
+            event.focusEvent.focused = false;
+        }
+        else if (sfmlEvent.is<sf::Event::FocusGained>()) {
+            event.m_type = EventType::FocusGained;
+            event.focusEvent.focused = true;
+        }
         else if (const auto* resized = sfmlEvent.getIf<sf::Event::Resized>()) {
             event.m_type = EventType::WindowResize;
             event.resizeEvent.width = static_cast<int>(resized->size.x);

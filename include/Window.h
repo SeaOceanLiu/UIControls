@@ -30,6 +30,11 @@ public:
     virtual bool getMousePosition(float& x, float& y) = 0;
     virtual void setResizable(bool resizable) { (void)resizable; }
     virtual void onResized(int width, int height) {}
+    // 无原生窗口（headless）查询：单窗口架构后端（raylib）的多实例中，
+    // 非首个实例不创建真实窗口（防止覆盖全局窗口状态），据此跳过
+    // 渲染/输入等窗口相关操作。默认有窗口；原生 GPU 后端（GLFW 等）
+    // 多窗口天然支持，无需覆写。
+    virtual bool isHeadless() const { return false; }
 };
 
 Window* CreateSDL3Window(const char* title, int width, int height, uint32_t flags);

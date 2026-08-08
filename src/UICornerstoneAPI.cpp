@@ -531,6 +531,11 @@ void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w
     if (h) *h = instance->viewport.height;
 }
 
+uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance) {
+    if (!instance || !instance->backendManager) return 0;
+    return instance->backendManager->capabilities();
+}
+
 // ============================================================
 // 帧循环
 // ============================================================

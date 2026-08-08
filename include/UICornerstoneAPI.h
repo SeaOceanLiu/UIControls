@@ -97,6 +97,15 @@ typedef struct {
 #define UI_EVENT_RESIZE_H(ev)    (*(int*)((ev)->data + 4))
 
 /* ============ 后端回调表 ============ */
+/* 后端能力位（UIBackendCallbacks::capabilities，0 = 无声明能力）：
+   - MULTI_WINDOW：支持多实例独立窗口渲染（单窗口架构的后端如 raylib 不声明）
+   - RENDER_TARGET / CLIP_RECT / READBACK：渲染设备能力，原生 GPU 后端（OpenGL/
+     DirectX/Vulkan）天然具备；测试与调用方可按位查询后决定行为 */
+#define UICORN_BACKEND_CAP_MULTI_WINDOW  (1u << 0)
+#define UICORN_BACKEND_CAP_RENDER_TARGET (1u << 1)
+#define UICORN_BACKEND_CAP_CLIP_RECT     (1u << 2)
+#define UICORN_BACKEND_CAP_READBACK      (1u << 3)
+
 typedef struct {
     int version;  // 必须设为 1
 
@@ -175,6 +184,9 @@ typedef struct {
     void                     (*destroyResourceProvider)(UIResourceProviderHandle);
     int                      (*readFile)(UIResourceProviderHandle, const char* path, void* buf, int maxLen);
     int                      (*fileExists)(UIResourceProviderHandle, const char* path);
+
+    // 后端能力位（UICORN_BACKEND_CAP_*），0 = 无声明能力
+    uint32_t                 capabilities;
 } UIBackendCallbacks;
 
 /* ============ 实例生命周期 ============ */
@@ -191,6 +203,11 @@ UICORNERSTONE_API void UICornerstone_DestroyInstance(UIInstance instance);
 UICORNERSTONE_API UIInstance UICornerstone_CreateInstanceFromPlugin(
     const char* pluginName,
     const UIInstanceConfig* config);
+
+/* 查询实例后端能力位（UICORN_BACKEND_CAP_*，按位与）。instance 为 NULL 时返回 0。
+   用途：调用方/测试据此决定行为——例如多实例双窗口视觉断言仅在
+   MULTI_WINDOW 能力下执行，单窗口架构的后端（raylib）跳过。 */
+UICORNERSTONE_API uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance);
 
 /* ============ 后端配置 ============ */
 /* 后端键值配置（vsync / swap-ratio / renderer-name 等，各后端支持子集见文档）。

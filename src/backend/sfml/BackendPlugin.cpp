@@ -49,7 +49,9 @@ BackendAPI g_sfmlBackend = {
     sfmlCreateRenderDevice,
     sfmlCreateTextRenderer,
     sfmlCreateInputBackend,
-    sfmlDestroy
+    sfmlDestroy,
+    UICORN_BACKEND_CAP_MULTI_WINDOW | UICORN_BACKEND_CAP_RENDER_TARGET
+        | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK
 };
 
 // ============================================================
@@ -90,6 +92,8 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     init = true;
 
     cb.version = 1;
+    cb.capabilities = UICORN_BACKEND_CAP_MULTI_WINDOW | UICORN_BACKEND_CAP_RENDER_TARGET
+                    | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK;
 
     // Register surface factories so the DLL's Surface::loadFromFile/Surface::create/Surface::loadFromMemory work
     RegisterSFMLSurfaceFactories();

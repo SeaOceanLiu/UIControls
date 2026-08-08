@@ -49,7 +49,10 @@ BackendAPI g_raylibBackend = {
     raylibCreateRenderDevice,
     raylibCreateTextRenderer,
     raylibCreateInputBackend,
-    raylibDestroy
+    raylibDestroy,
+    // raylib 单窗口架构（全局 CORE 只跟踪最近 InitWindow 的窗口）：多实例时
+    // 所有渲染/输入 API 作用于同一窗口，无法多窗口独立显示 → 不声明 MULTI_WINDOW
+    UICORN_BACKEND_CAP_RENDER_TARGET | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK
 };
 
 // ============================================================
@@ -90,6 +93,8 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     init = true;
 
     cb.version = 1;
+    cb.capabilities = UICORN_BACKEND_CAP_RENDER_TARGET | UICORN_BACKEND_CAP_CLIP_RECT
+                    | UICORN_BACKEND_CAP_READBACK;   // 无 MULTI_WINDOW：单窗口架构
 
     // Register surface factories so the DLL's Surface::* work
     RegisterRaylibSurfaceFactories();

@@ -158,6 +158,10 @@ void UICornerstone::Render() { if (m_impl->instance) Dyn::API().fnRender(m_impl-
 void UICornerstone::Clear() { if (m_impl->instance) Dyn::API().fnClear(m_impl->instance); }
 void UICornerstone::Present() { if (m_impl->instance) Dyn::API().fnPresent(m_impl->instance); }
 bool UICornerstone::IsQuitRequested() const { return m_impl->instance && Dyn::API().fnIsQuitRequested(m_impl->instance); }
+uint32_t UICornerstone::GetBackendCapabilities() const {
+    return m_impl->instance && Dyn::API().fnGetBackendCapabilities
+        ? Dyn::API().fnGetBackendCapabilities(m_impl->instance) : 0;
+}
 
 void UICornerstone::Shutdown() {
     if (m_impl->instance) {

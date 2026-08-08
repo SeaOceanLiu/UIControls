@@ -120,9 +120,13 @@ int main(int argc, char* argv[]) {
         uiA->Clear();
         uiA->Render();
         uiA->Present();
-        uiB->Clear();
-        uiB->Render();
-        uiB->Present();
+        // 单窗口架构后端（raylib）的非首个实例为 headless：跳过其渲染/
+        // 交换（否则内容串扰到主实例窗口），多窗口后端按能力位正常渲染
+        if (uiA->GetBackendCapabilities() & UICORN_BACKEND_CAP_MULTI_WINDOW) {
+            uiB->Clear();
+            uiB->Render();
+            uiB->Present();
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
         ++frame;
     }

@@ -23,6 +23,7 @@ typedef void       (*UIDestroyInstanceFn)(UIInstance);
 typedef void       (*UIProcessEventsFn)(UIInstance);
 typedef void       (*UIUpdateFn)(UIInstance, double);
 typedef void       (*UIRenderFn)(UIInstance);
+typedef uint32_t   (*UIGetBackendCapabilitiesFn)(UIInstance);
 typedef void       (*UIPushUIEventFn)(UIInstance, const UIEvent*);
 typedef int        (*UIIsQuitRequestedFn)(UIInstance);
 typedef void*      (*UICreateButtonFn)(UIInstance, const char*, float, float, float, float);
@@ -39,6 +40,7 @@ static UIDestroyInstanceFn      uiDestroyInstance          = nullptr;
 static UIProcessEventsFn        uiProcessEvents            = nullptr;
 static UIUpdateFn               uiUpdate                   = nullptr;
 static UIRenderFn               uiRender                   = nullptr;
+static UIGetBackendCapabilitiesFn uiGetBackendCapabilities = nullptr;
 static UIPushUIEventFn          uiPushUIEvent              = nullptr;
 static UIIsQuitRequestedFn      uiIsQuitRequested          = nullptr;
 static UICreateButtonFn         uiCreateButton             = nullptr;
@@ -61,6 +63,7 @@ static bool loadAllProcs() {
     RESOLVE(ProcessEvents)
     RESOLVE(Update)
     RESOLVE(Render)
+    RESOLVE(GetBackendCapabilities)
     RESOLVE(PushUIEvent)
     RESOLVE(IsQuitRequested)
     RESOLVE(CreateButton)
@@ -98,10 +101,13 @@ static void injectMouseClick(UIInstance inst, float x, float y) {
     uiUpdate(inst, 0.016);   // 事件入队后经 eventLoopEntry 分发
 }
 
-static void runFrame(UIInstance inst) {
+static void runFrame(UIInstance inst, bool doRender) {
     uiProcessEvents(inst);
     uiUpdate(inst, 0.016);
-    uiRender(inst);
+    // 渲染冒烟仅在后端声明 MULTI_WINDOW 能力时执行：单窗口架构后端
+    // （raylib）的多实例中非首个实例无真实窗口（headless），渲染调用
+    // 会串扰到主实例窗口（顶点混入下一帧绘制）。
+    if (doRender) uiRender(inst);
 }
 
 int main(int argc, char* argv[]) {
@@ -153,14 +159,18 @@ int main(int argc, char* argv[]) {
     assert(inst1 && inst2);
     assert(inst1 != inst2);
 
+    // 渲染冒烟仅在后端声明 MULTI_WINDOW 能力时执行（单窗口后端非首个
+    // 实例为 headless，渲染会串扰到主实例窗口）
+    bool multiWindow = (uiGetBackendCapabilities(inst1) & UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
+
     UIControlHandle btn1 = uiCreateButton(inst1, "OK", 0, 0, 100, 30);
     UIControlHandle btn2 = uiCreateButton(inst2, "OK", 0, 0, 100, 30);
     assert(btn1 && btn2);
     assert(btn1 != btn2);
 
     for (int i = 0; i < 2; i++) {
-        runFrame(inst1);
-        runFrame(inst2);
+        runFrame(inst1, multiWindow);
+        runFrame(inst2, multiWindow);
     }
     printf("PASS: dual instance lifecycle\n");
 

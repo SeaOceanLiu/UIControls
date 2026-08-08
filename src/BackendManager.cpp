@@ -85,6 +85,7 @@ bool BackendManager::initialize(const std::string& backendName,
     m_inputBackend = api.createInputBackend(m_window);
 
     m_api = api;
+    m_capabilities = api.capabilities;
     m_initialized = true;
     return true;
 }
@@ -149,6 +150,7 @@ bool BackendManager::initialize(const UIBackendCallbacks* callbacks,
     }
 
     printf("BackendManager: initialized from callback table\n");
+    m_capabilities = callbacks->capabilities;
     m_initialized = true;
     return true;
 }

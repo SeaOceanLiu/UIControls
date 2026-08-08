@@ -62,6 +62,10 @@ public:
     void Clear();
     void Present();
     bool IsQuitRequested() const;
+    // 后端能力位（UICORN_BACKEND_CAP_*，按位与）：调用方据此决定行为——
+    // 例如多实例双窗口渲染仅在 MULTI_WINDOW 能力下执行（单窗口架构后端
+    // 如 raylib 非首个实例为 headless，渲染会串扰到主实例窗口）。
+    uint32_t GetBackendCapabilities() const;
     void Shutdown();
 
     // ── 子视口 ──

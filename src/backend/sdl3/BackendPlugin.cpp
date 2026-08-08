@@ -63,7 +63,9 @@ BackendAPI g_sdl3Backend = {
     sdl3CreateRenderDevice,
     sdl3CreateTextRenderer,
     sdl3CreateInputBackend,
-    sdl3Destroy
+    sdl3Destroy,
+    UICORN_BACKEND_CAP_MULTI_WINDOW | UICORN_BACKEND_CAP_RENDER_TARGET
+        | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK
 };
 
 // ============================================================
@@ -136,6 +138,8 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     };
 
     cb.version = 1;
+    cb.capabilities = UICORN_BACKEND_CAP_MULTI_WINDOW | UICORN_BACKEND_CAP_RENDER_TARGET
+                    | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK;
 
     // Window
     cb.createWindow         = plugin_createWindow;

@@ -14,6 +14,7 @@ public:
     explicit RaylibInputBackend(Window* window)
         : m_window(window)
         , m_textInputActive(false)
+        , m_hasWindow(window ? !window->isHeadless() : false)
         , m_lastMouseX(0.0f)
         , m_lastMouseY(0.0f)
         , m_lastFrameTime(0.0)
@@ -37,10 +38,12 @@ public:
     bool isTextInputActive() const override { return m_textInputActive; }
 
     void setClipboardText(const std::string& text) override {
+        if (!m_hasWindow) return;
         SetClipboardText(text.c_str());
     }
 
     std::string getClipboardText() const override {
+        if (!m_hasWindow) return std::string();
         const char* text = GetClipboardText();
         return text ? std::string(text) : std::string();
     }
@@ -54,7 +57,9 @@ public:
         // This is the ONLY PollInputEvents call per frame — present() no
         // longer calls EndDrawing() (which would double-poll and destroy
         // the just-pressed/released state).
-        PollInputEvents();
+        // headless 实例跳过：PollInputEvents 是 CORE 级，会拉空主实例
+        // 窗口的事件队列（本实例 pollEvent 已不消费）。
+        if (m_hasWindow) PollInputEvents();
 
         m_phase = Phase::Keyboard;
         m_consumedMouseButtons = 0;
@@ -66,6 +71,10 @@ public:
     }
 
     bool pollEvent(Event& event) override {
+        // 无窗口实例（非主实例）：不拉取事件——raylib 输入 API 操作的是全局
+        // CORE（主实例窗口），读取会串扰并抢先消费主实例的事件。
+        if (!m_hasWindow) return false;
+
         // 相位由 newFrame() 每帧重置，此处不依赖 GetTime() 判断"新帧"：
         // 浮点秒在同一渲染帧内多次调用 pollEvent 时也会跳动，会导致 phase
         // 被反复重置、单帧内无限重放同一事件（如 WindowClose）→ 关闭窗口后
@@ -223,6 +232,7 @@ public:
     }
 
     KeyMod getModState() override {
+        if (!m_hasWindow) return KeyMod::None;
         KeyMod mod = KeyMod::None;
         if (IsKeyDown(KEY_LEFT_SHIFT))   mod = mod | KeyMod::LShift;
         if (IsKeyDown(KEY_RIGHT_SHIFT))  mod = mod | KeyMod::RShift;
@@ -382,6 +392,7 @@ private:
     double m_lastFrameTime;
     Phase m_phase;
     bool m_lastFocused;
+    bool m_hasWindow;
     uint8_t m_consumedMouseButtons;
     uint8_t m_consumedMouseReleases;
     bool m_wheelConsumed;

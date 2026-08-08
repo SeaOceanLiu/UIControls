@@ -40,6 +40,7 @@ typedef int        (*UIGetStringFn)(UIInstance, void*, const char*, char*, int);
 typedef int        (*UISetStringFn)(UIInstance, void*, const char*, const char*);
 typedef void       (*UIGetRectFn)(UIInstance, void*, float*, float*, float*, float*);
 typedef int        (*UIGetBoolFn)(UIInstance, void*, const char*, int*);
+typedef uint32_t   (*UIGetBackendCapabilitiesFn)(UIInstance);
 typedef int        (*UIDebugIsControlFocusedFn)(UIInstance, void*);
 typedef int        (*UIDebugIsControlHoveredFn)(UIInstance, void*);
 typedef int        (*UIDebugSetMousePositionFn)(UIInstance, float, float);
@@ -62,6 +63,7 @@ static UIGetStringFn               uiGetString                 = nullptr;
 static UISetStringFn               uiSetString                 = nullptr;
 static UIGetRectFn                 uiGetRect                   = nullptr;
 static UIGetBoolFn                 uiGetBool                   = nullptr;
+static UIGetBackendCapabilitiesFn  uiGetBackendCapabilities    = nullptr;
 static UIDebugIsControlFocusedFn   uiDebug_IsControlFocused    = nullptr;
 static UIDebugIsControlHoveredFn   uiDebug_IsControlHovered    = nullptr;
 static UIDebugSetMousePositionFn   uiDebug_SetMousePosition    = nullptr;
@@ -90,6 +92,7 @@ static bool loadAllProcs() {
     RESOLVE(SetString)
     RESOLVE(GetRect)
     RESOLVE(GetBool)
+    RESOLVE(GetBackendCapabilities)
     RESOLVE(Debug_IsControlFocused)
     RESOLVE(Debug_IsControlHovered)
     RESOLVE(Debug_SetMousePosition)
@@ -205,6 +208,13 @@ int main(int argc, char** argv) {
     UIInstance winB = uiCreateInstanceFromPlugin(UICORNERSTONE_BACKEND_NAME, NULL);
     assert(winA && winB && winA != winB);
 
+    // 后端能力：MULTI_WINDOW 才做双窗口渲染；单窗口架构后端（raylib）
+    // 非首个实例为 headless（无真实窗口），人工模式仅见主实例窗口
+    uint32_t caps = uiGetBackendCapabilities(winA);
+    bool multiWindow = (caps & UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
+    printf("后端能力: %s\n", multiWindow ? "MULTI_WINDOW（双窗口渲染）"
+                                        : "单窗口（多实例仅首个实例有窗口，渲染冒烟跳过）");
+
     // 跨窗口通信上下文：A 按钮 → 显示到 B 的消息 Label；B 按钮 → 显示到 A
     SendCtx ctxA = { winA, winB, NULL, NULL, NULL, 0 };
     SendCtx ctxB = { winB, winA, NULL, NULL, NULL, 0 };
@@ -283,13 +293,23 @@ int main(int argc, char** argv) {
         assert(strcmp(got, "Message: hello from B") == 0);
         printf("PASS: reverse direction content shown in other window (\"%s\")\n", got);
 
-        // 渲染冒烟：双窗口渲染不崩溃
-        uiRender(winA);
-        uiRender(winB);
-        printf("PASS: dual-window render smoke\n");
+        // 渲染冒烟：双窗口渲染不崩溃。
+        // 仅在后端声明 MULTI_WINDOW 能力时执行——单窗口架构后端（raylib：
+        // 全局 CORE 只跟踪最近 InitWindow 的窗口，多实例渲染全画到同一窗口）
+        // 下"双窗口独立渲染"无视觉意义，按能力位跳过（逻辑断言均已执行）。
+        if (uiGetBackendCapabilities(winA) & UICORN_BACKEND_CAP_MULTI_WINDOW) {
+            uiRender(winA);
+            uiRender(winB);
+            printf("PASS: dual-window render smoke\n");
+        } else {
+            printf("SKIP: dual-window render smoke (backend without MULTI_WINDOW capability)\n");
+        }
     }
 
     // ── 帧循环：auto 模式超时退出；人工模式等窗口关闭 ──
+    // 仅当后端声明 MULTI_WINDOW 能力时对第二个实例做渲染/交换——单窗口
+    // 架构后端（raylib）的第二实例无真实窗口（headless），渲染会串扰到
+    // 主实例窗口（内容闪动）。
     uint64_t t0 = GetTickCount64();
     while (!uiIsQuitRequested(winA) && !uiIsQuitRequested(winB)) {
         if (autoSec && GetTickCount64() - t0 >= (uint64_t)autoSec * 1000) break;
@@ -300,9 +320,11 @@ int main(int argc, char** argv) {
         uiClear(winA);
         uiRender(winA);
         uiPresent(winA);
-        uiClear(winB);
-        uiRender(winB);
-        uiPresent(winB);
+        if (multiWindow) {
+            uiClear(winB);
+            uiRender(winB);
+            uiPresent(winB);
+        }
     }
     printf("窗口已关闭（%s）\n", autoSec ? "自动超时" : "人工");
 

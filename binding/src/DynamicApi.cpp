@@ -55,6 +55,7 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(Clear);
     RESOLVE(Present);
     RESOLVE(IsQuitRequested);
+    RESOLVE(GetBackendCapabilities);
 
     RESOLVE(Debug_GetAliveCount);
     RESOLVE(Debug_GetAliveInstance);
