@@ -1,5 +1,43 @@
 ﻿## Session History
 
+### 2026-08-08（午夜）: 后端能力位机制 + raylib 单窗口架构多实例 headless 化 + sfml 焦点事件修复（Complete）
+
+**背景**：raylib 后端多实例双窗口测试人工验证时两窗口内容交替闪动；顺带暴露 sfml 焦点环切换失效（点按失去焦点后无法切回）。
+
+**1. sfml 焦点事件转换修复（焦点环切换失效）**：
+
+- 根因：sfml InputBackend 未转换 FocusLost/FocusGained 事件（sdl3/raylib 均有转换），窗口失焦后焦点状态不更新，键盘焦点环（Tab）无法切回。
+- 修复：`src/backend/sfml/InputBackend.cpp` 补 `event.focusEvent.focused = false/true` 转换。视觉验证 OK。
+
+**2. raylib 多实例双窗口闪动根因定位（单窗口架构限制）**：
+
+- 根因：`subModules/raylib/lib/raylib.dll` 为**单窗口架构**——raylib CORE 全局状态只跟踪最近一次 InitWindow 的窗口，第二个 InitWindow 直接覆盖第一个；且 DLL 不导出 glfw 符号、无源码，多实例渲染全部画到同一窗口（A/B 内容交替闪动）。
+- 用户否决方案：Win32 辅窗口方案（Windows 专属，跨平台要重写三套）；raylib 源码 patch 方案（绑定 raylib 内部状态，升级成本高）。
+- 采纳方案：**能力限制**——声明后端能力位，调用方按能力决定行为；同时为后续原生 GPU 后端（GL/GLFW/DirectX/Vulkan）架构预留能力声明机制。
+
+**3. 能力位机制（跨平台架构预留）**：
+
+- `include/UICornerstoneAPI.h`：`UICORN_BACKEND_CAP_MULTI_WINDOW(1<<0)/RENDER_TARGET(1<<1)/CLIP_RECT(1<<2)/READBACK(1<<3)` 四个宏；`UIBackendCallbacks` 末尾加 `uint32_t capabilities`；导出 `UICornerstone_GetBackendCapabilities(UIInstance)`。
+- `include/BackendPlugin.h`：`BackendAPI` 末尾加 `uint32_t capabilities`。
+- `src/BackendManager.cpp`：静态 api 路径（`api.capabilities`）与回调表路径（`callbacks->capabilities`）均保存，`BackendManager::capabilities()` 查询。
+- 三后端 BackendPlugin.cpp（g_xxxBackend 结构体 + cb.capabilities 两处）均设能力位：raylib = RENDER_TARGET|CLIP_RECT|READBACK（**无 MULTI_WINDOW**）；sdl3/sfml = 四能力全有。
+
+**4. raylib headless 化（单窗口架构多实例适配）**：
+
+- `src/backend/raylib/Window.cpp`：`static int s_windowCount` + `m_hasOwnWindow`——仅首个实例 InitWindow（防覆盖 CORE 全局窗口状态），后续实例不建窗口；getSize/getPosition/getDisplayWidth/Height/getDpiScale/setTitle/getMousePosition/setResizable 全部 `if (!m_hasOwnWindow)` 守卫；析构仅在 `m_hasOwnWindow && IsWindowReady()` 时 CloseWindow。
+- `include/Window.h`：新增 `virtual bool isHeadless() const { return false; }`；raylib 覆写返回 `!m_hasOwnWindow`（为 headless 实例预留）。
+- `src/backend/raylib/InputBackend.cpp`：`m_hasWindow`（构造时 `window ? !window->isHeadless() : false`）；pollEvent/setClipboardText/getClipboardText/getModState/newFrame（跳过 PollInputEvents）全部守卫，防串扰并抢先消费主实例事件。
+
+**5. Binding 与测试/样例适配**：
+
+- binding：`GetBackendCapabilities()` 封装（DynamicApi.h/cpp + UICornerstone.h/cpp），调用方按能力位决定行为。
+- `test/test_multiinstance_visual_cabi.cpp` / `test/test_multi_instance_cabi.cpp`：RESOLVE(GetBackendCapabilities)；仅 MULTI_WINDOW 能力下对第二实例渲染/交换，否则渲染冒烟 SKIP 打印；测试头部打印后端能力信息（人工模式提示单窗口限制）。
+- `binding/samples/sample_cpp_multiinstance.cpp`：第二实例 Clear/Render/Present 包在 `GetBackendCapabilities() & UICORN_BACKEND_CAP_MULTI_WINDOW` 条件内。
+
+**验证**：三后端全量 test `auto=3` exit=0；4 binding 样例 UICORN_AUTO=1 exit=0（multiinstance 样例双窗口交互断言全过）；raylib 多实例测试 auto=3 ALL PASS（渲染冒烟 SKIP）+ 人工模式主实例窗口显示正常无闪动。
+
+**相关文件**：include/UICornerstoneAPI.h、include/BackendPlugin.h、include/Window.h、src/BackendManager.cpp、src/UICornerstoneAPI.cpp、src/backend/{sdl3,sfml,raylib}/BackendPlugin.cpp、src/backend/raylib/Window.cpp、src/backend/raylib/InputBackend.cpp、src/backend/sfml/InputBackend.cpp、binding/src/DynamicApi.{h,cpp}、binding/include/UICornerstone.h、binding/src/UICornerstone.cpp、binding/samples/sample_cpp_multiinstance.cpp、test/test_multiinstance_visual_cabi.cpp、test/test_multi_instance_cabi.cpp。
+
 ### 2026-08-08（深夜）: 视觉测试 JSON 布局改造 + LoadLayout 多平级控件悬垂修复（Complete）
 
 **背景**：两个 CABI 视觉测试改用 JSON 创建后暴露 LoadLayout 的一个 bug（测试崩溃 + 控件不显示）。
