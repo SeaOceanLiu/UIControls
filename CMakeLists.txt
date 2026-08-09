@@ -12,6 +12,10 @@ set(UICORNERSTONE_BACKEND "SDL3" CACHE STRING "Backend library (SDL3|SFML|RAYLIB
 set_property(CACHE UICORNERSTONE_BACKEND PROPERTY STRINGS SDL3 SFML RAYLIB)
 
 if(WIN32)
+    # 定义 _HAS_STD_BYTE=0 以规避 Windows SDK（rpcndr.h/wtypes.h）的 ::byte
+    # 与 std::byte 的 C2872 歧义（详见 design/guidelines/dependencies.md）。
+    # 注意：SFML 官方头依赖 std::byte，因此子模块须使用打了兼容补丁的
+    # fork 提交（见 subModules/SFML 提交历史）。
     add_definitions(-D_HAS_STD_BYTE=0)
     add_compile_options(/FS)
 endif()
