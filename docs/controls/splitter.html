@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -40,6 +40,8 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 <h2>4.18.2 控件的方法</h2>
 
 <table>
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>create()</code> / <code>draw()</code> / <code>handleEvent(Event)</code> / <code>setRect(SRect)</code></td><td>生命周期与绘制 / 事件 / 位置</td></tr>
 <tr><td><code>setOrientation(bool horizontal)</code> / <code>isHorizontal()</code></td><td>方向：true=水平分割（纵向分栏），false=垂直分割（横向分行）</td></tr>

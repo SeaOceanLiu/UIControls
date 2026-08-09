@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -28,6 +28,8 @@ BENCH->setOnInitial(callback);     // 资源加载完成回调</code></pre>
 <h2>4.2.2 控件的方法</h2>
 
 <table>
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>initial()</code></td><td>资源加载完成后的初始化：置标志、触发 <code>onInitial</code> 回调并 fire C ABI 事件 <code>"initial"</code></td></tr>
 <tr><td><code>inputControl(shared_ptr&lt;Event&gt;)</code></td><td>向控件树注入一条事件（<code>triggerEvent</code> 入队）</td></tr>

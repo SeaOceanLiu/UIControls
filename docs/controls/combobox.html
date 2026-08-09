@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -40,6 +40,8 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32);
 <h2>4.6.2 控件的方法</h2>
 
 <table>
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>setItems(const vector&lt;ComboBoxItem&gt;&amp;)</code></td><td>整体设置选项（ComboBoxItem = {label, value, disabled}）</td></tr>
 <tr><td><code>addItem(label, value, disabled = false)</code> / <code>clearItems()</code> / <code>removeItem(int)</code></td><td>追加 / 清空 / 删除选项</td></tr>

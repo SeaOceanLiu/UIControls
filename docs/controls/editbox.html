@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -34,6 +34,8 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95);
 <h2>4.8.2 控件的方法</h2>
 
 <table>
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>setText(string)</code> / <code>getText()</code> / <code>getCursorPosition()</code></td><td>文本与光标位置</td></tr>
 <tr><td><code>setPlaceholder(string)</code> / <code>getPlaceholder()</code></td><td>占位符文本</td></tr>

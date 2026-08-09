@@ -36,9 +36,9 @@
 <table>
 <tr><th>节</th><th>内容</th></tr>
 <tr><td>控件的创建</td><td>C++ 构造 / Builder / C ABI 创建函数 / JSON type</td></tr>
-<tr><td>控件的方法</td><td>全部公开方法（签名 + 说明）</td></tr>
-<tr><td>控件的属性</td><td>属性系统键名：类型、默认值、说明</td></tr>
-<tr><td>控件的回调</td><td>事件名、触发时机、负载</td></tr>
+<tr><td>控件的方法</td><td>核心引擎 C++ 类的全部公开方法（签名 + 说明）</td></tr>
+<tr><td>控件的属性</td><td>属性系统键名：类型、默认值、说明（C ABI / C++ Binding 的 Set*/Get* 键）</td></tr>
+<tr><td>控件的回调</td><td>事件名、触发时机、负载（C ABI / C++ Binding 的 SetCallback 事件名）</td></tr>
 <tr><td>JSON 语法</td><td>真实布局 JSON 节点示例</td></tr>
 <tr><td>C++ Binding 样例</td><td>可运行的绑定用法代码</td></tr>
 </table>
@@ -106,6 +106,24 @@ c.SetBool(PropertyNames::kEnabled, false);
 c.SetCallback(PropertyNames::kEventClick, [](const Event&){ /* ... */ });
 c.SetStateColor("background", n, h, p, d);   // 四态背景
 std::string s = c.GetString("caption");</code></pre>
+
+<h3>方法表与 C ABI / C++ Binding 的关系（重要）</h3>
+
+<p>每个控件页「控件的方法」一节列出的 <code>setXxx</code> 是<strong>核心引擎 C++ 类</strong>（<code>include/</code> 头文件）的公开方法——仅当直接以 C++ 方式继承/使用核心类（源码级集成）时才能调用。C ABI 与 C++ Binding 是<strong>扁平化属性接口</strong>，不导出同名方法：</p>
+
+<table>
+<tr><th>能力</th><th>核心 C++ 类</th><th>C ABI（UICornerstoneAPI.h）</th><th>C++ Binding（Control.h）</th></tr>
+<tr><td>设置文本 / 数值 / 开关</td><td><code>setCaption(...)</code> 等</td><td><code>UICornerstone_SetString / SetInt / SetFloat / SetBool(inst, ctl, 属性名, ...)</code></td><td><code>Control.SetString / SetInt / SetFloat / SetBool(属性名, ...)</code></td></tr>
+<tr><td>设置颜色</td><td><code>setColor(...)</code> 等</td><td><code>UICornerstone_SetColor / SetStateColor(inst, ctl, 属性名, ...)</code></td><td><code>Control.SetColor / SetStateColor(属性名, ...)</code></td></tr>
+<tr><td>绑定事件</td><td><code>setOnClick(...)</code> 等</td><td><code>UICornerstone_SetCallback(inst, ctl, 事件名, cb, ud)</code></td><td><code>Control.SetCallback(事件名, lambda)</code></td></tr>
+<tr><td>位置尺寸</td><td><code>setRect(...)</code></td><td><code>UICornerstone_SetRect(inst, ctl, x, y, w, h)</code></td><td><code>Control.SetRect(x, y, w, h)</code></td></tr>
+<tr><td>树操作</td><td><code>addControl(...)</code> / <code>removeControl(...)</code></td><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td><code>Control.AddChild(child)</code></td></tr>
+<tr><td>销毁</td><td>—（引用计数释放）</td><td><code>UICornerstone_DestroyControl(inst, ctl)</code></td><td><code>Control.Destroy()</code></td></tr>
+</table>
+
+<p>因此：<strong>只使用 C ABI / C++ Binding 的用户请以「控件的属性」表的键名 + 「控件的回调」表的事件名通过泛型 <code>Set*/Get*</code> / <code>SetCallback</code> 操作控件</strong>；属性键名（如 <code>caption</code>、<code>text-shadow-enable</code>）在 <a href="../appendix/properties.html">附录 9.2 属性总表</a> 与 <code>include/PropertyNames.h</code> 中列出。</p>
+
+<div class="note">「控件的方法」一节仅供源码级集成（直接使用核心类）的开发者参考；方法表中部分高级方法（如挂载 Actor / LuotiAni 对象、自定义 CaptionLabel）在 C ABI / Binding 中不一定有等价属性键，属核心类专属能力。</div>
 
 <h2>4.0.4 截图</h2>
 

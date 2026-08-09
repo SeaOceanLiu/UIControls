@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -32,6 +32,8 @@ UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 50, 50, 100,
 <h2>4.4.2 控件的方法</h2>
 
 <table>
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>setCheckState(CheckState)</code> / <code>getCheckState()</code></td><td>状态：Unchecked / Checked / Indeterminate</td></tr>
 <tr><td><code>setStyle(CheckBoxStyle)</code> / <code>getStyle()</code></td><td>符号样式：Classic / Cross / Circle</td></tr>

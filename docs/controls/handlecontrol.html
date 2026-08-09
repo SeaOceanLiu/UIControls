@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -31,6 +31,8 @@ UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 
 <h2>4.9.2 控件的方法</h2>
 
 <table>
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>setTarget(shared_ptr&lt;Control&gt;)</code> / <code>setTarget(Control*)</code></td><td>附加到目标（shared_ptr 版本监控生命周期并自动加入目标父容器；裸指针版本专为 C ABI，生命周期由调用方保证）</td></tr>
 <tr><td><code>getTarget()</code></td><td>查询目标（原始指针）</td></tr>
