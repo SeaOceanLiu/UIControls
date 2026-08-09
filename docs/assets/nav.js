@@ -45,7 +45,11 @@
       ["controls/index.html", "4.0 控件概念与共性"]
     ]],
     ["advanced.html", "进阶主题", [
-      ["advanced.html", "5 进阶主题"]
+      ["advanced.html", "5 进阶主题"],
+      ["advanced/luotiani.html", "5.1 洛蒂动画引擎"],
+      ["advanced/multiwindow.html", "5.2 多视口与多窗口"],
+      ["advanced/tools.html", "5.3 非可视化控件"],
+      ["advanced/cabi.html", "5.4 C ABI 程序化构建"]
     ]],
     ["backends.html", "其它后端", [
       ["backends.html", "6 使用其它后端（SFML/raylib）"]

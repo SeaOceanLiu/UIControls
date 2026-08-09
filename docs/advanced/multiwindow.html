@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.2 多视口与多窗口 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="advanced/multiwindow.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>5.2 多视口与多窗口</h1>
+
+<p>UICornerstone 支持单进程多个 UI 实例：<strong>多实例</strong> = 多个独立窗口（各自控件树 / 事件队列 / 焦点 / 数据上下文完全隔离）；<strong>多视口</strong> = 一个窗口内划分多个子区域（共享后端，各自独立控件树）。</p>
+
+<h2>5.2.1 视图层次与能力位</h2>
+
+<pre><code>UIInstance (owner，一个窗口)
+├── ownsBackend = true；持有 Window / RenderDevice / InputBackend / TextRenderer
+├── viewport = 整个窗口区域 (0,0,w,h)
+├── bench（owner 自身控件根）
+├── activeViewport：当前键盘焦点子视口（首个子视口创建时自动赋值；销毁时清 NULL）
+└── children[]：CreateViewport 注册的子视口
+    └── 每个子视口 = 一个 UIContext：
+        ├── owner = 父；ownsBackend = false（共享后端）
+        ├── viewport = 窗口坐标系的区域（渲染时 clip 到该区域）
+        ├── bench / eventQueue / DataContext / FocusManager —— 每实例独立
+        └── 注入队列 queuedEvents —— 每实例独立</code></pre>
+
+<p>后端能力决定多实例渲染策略，必须条件化：</p>
+
+<pre><code>uint32_t caps = UICornerstone_GetBackendCapabilities(g_inst);
+if (caps &amp; UICORN_BACKEND_CAP_MULTI_WINDOW)  { /* 非首个实例可真实开窗 */ }
+if (caps &amp; UICORN_BACKEND_CAP_RENDER_TARGET) { /* 可离屏渲染 */ }</code></pre>
+
+<table>
+<tr><th>能力位</th><th>sdl3</th><th>sfml</th><th>raylib</th></tr>
+<tr><td><code>MULTI_WINDOW</code></td><td>✓</td><td>✓</td><td><strong>✗</strong>（单窗口架构）</td></tr>
+<tr><td><code>RENDER_TARGET</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td><code>CLIP_RECT</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td><code>READBACK</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
+</table>
+
+<div class="warn">raylib 为单窗口架构：多实例下仅首个实例有真实窗口，其余为 headless，对其渲染会串扰到主实例窗口。多窗口渲染前必须查能力位条件化。</div>
+
+<h2>5.2.2 单窗口多视口（C++ Binding）</h2>
+
+<p>一个 800×600 窗口划分两个子视口：左上 (0,0,400,300) + 右下 (400,300,400,300)，各自独立控件树，按钮点击弹窗显示本视口内容（sample_cpp_multiview 完整模式）：</p>
+
+<pre><code>auto ui = UICornerstone::Create(Config{}.WithBackend("sdl3").WithWindow("Multi-View Sample", 800, 600));
+
+// 两个子视口（窗口坐标系下绝对区域）
+auto vpA = ui-&gt;CreateViewport(0, 0, 400, 300);
+auto vpB = ui-&gt;CreateViewport(400, 300, 400, 300);
+
+// 每个子视口独立创建控件（句柄属于各自实例）
+auto labelA = vpA-&gt;CreateLabel("Viewport A", 16.0f, 20, 12, 200, 28);
+auto btnA   = vpA-&gt;CreateButton("Show Dialog", 20, 60, 160, 34);
+btnA.SetCallback(PropertyNames::kEventClick, [&amp;](const Event&amp;) {
+    vpA-&gt;CreateDialog("Hello from A", "", 0, 0, 280, 120);   // 弹窗在 vpA 内居中
+});
+
+// ── 主循环：子视口必须显式驱动 ──
+while (!ui-&gt;IsQuitRequested()) {
+    ui-&gt;ProcessEvents();      // 窗口输入轮询（按坐标路由到子视口）+ owner 注入队列
+    vpA-&gt;ProcessEvents();     // 子视口各自消费自己的注入队列
+    vpB-&gt;ProcessEvents();
+    vpA-&gt;Update(dt);  vpB-&gt;Update(dt);
+    ui-&gt;Clear();
+    vpA-&gt;Render();            // 各自 clip 到自身视口区域
+    vpB-&gt;Render();
+    ui-&gt;Present();
+}
+ui-&gt;Shutdown();</code></pre>
+
+<p>事件路由要点：窗口输入按<strong>窗口绝对坐标</strong>路由到命中的子视口；未命中任何子视口 → owner 树；键盘事件先做 Ctrl+Tab 跨视口智能路由，再投递到活动视口。</p>
+
+<h2>5.2.3 多实例双窗口（C++ Binding）</h2>
+
+<p>两个独立窗口实例，跨实例通信通过普通 C++ 回调（控件句柄属于各自实例，不可混用）（sample_cpp_multiinstance 完整模式）：</p>
+
+<pre><code>auto uiA = UICornerstone::Create(
+    Config{}.WithBackend("sdl3").WithWindow("Sample A", 640, 480));
+auto uiB = UICornerstone::Create(
+    Config{}.WithBackend("sdl3").WithWindow("Sample B", 640, 480));
+
+auto labelA = uiA-&gt;CreateLabel("Window A (independent instance)", 18.0f, 20, 12, 420, 30);
+auto editA  = uiA-&gt;CreateEditBox(20, 60, 380, 32);
+auto btnA   = uiA-&gt;CreateButton("Send to B", 20, 110, 140, 36);
+auto msgB   = uiB-&gt;CreateLabel("(no message)", 16.0f, 20, 110, 420, 30);
+
+// A 窗口按钮 → 写 B 窗口的控件（跨实例）
+btnA.SetCallback(PropertyNames::kEventClick, [&amp;](const Event&amp;) {
+    msgB.SetString(PropertyNames::kCaption,
+                   "Message: " + editA.GetString(PropertyNames::kTextContent));
+});
+
+// ── 主循环：全局事件泵 + 渲染条件化 ──
+while (!uiA-&gt;IsQuitRequested() &amp;&amp; !uiB-&gt;IsQuitRequested()) {
+    int processed = 1;                 // 依次驱动每个实例，直到队列空
+    while (processed &gt; 0) {
+        processed = (uiA-&gt;ProcessEvents() ? 1 : 0) + (uiB-&gt;ProcessEvents() ? 1 : 0);
+    }
+    uiA-&gt;Update(dt);  uiB-&gt;Update(dt);
+    uiA-&gt;Clear(); uiA-&gt;Render(); uiA-&gt;Present();
+    if (uiA-&gt;GetBackendCapabilities() &amp; UICORN_BACKEND_CAP_MULTI_WINDOW) {
+        uiB-&gt;Clear(); uiB-&gt;Render(); uiB-&gt;Present();   // raylib 下跳过
+    }
+}
+uiA-&gt;Shutdown();  uiB-&gt;Shutdown();</code></pre>
+
+<h2>5.2.4 C ABI 层</h2>
+
+<p>实例配置结构（可全 NULL/0 走默认）：</p>
+
+<pre><code>UIInstanceConfig cfg = { sizeof(UIInstanceConfig),   // 版本兼容检查必填
+    "Secondary",        // debugLabel
+    NULL,               // resourceRoot → 默认
+    "第二窗口",          // windowTitle
+    640, 480,           // windowWidth / Height
+    0, 0,0,0,0,0,0 };   // windowFlags + reserved
+
+UIInstance inst2 = UICornerstone_CreateInstanceFromPlugin("sdl3", &amp;cfg);
+// 或直接传后端回调表（静态链接路径）：
+UIInstance inst1 = UICornerstone_CreateInstance(GetUIBackendCallbacks(), NULL);
+
+// 子视口：在 owner 的窗口中划区域（仅 owner 可建，rect 为窗口坐标系）
+UIInstance vp = UICornerstone_CreateViewport(inst1,
+    (UIRect){ .x = 0, .y = 0, .w = 400, .h = 300 });
+// 视口控制
+UICornerstone_SetViewport(inst1, 0, 0, 400, 300);
+float x,y,w,h;  UICornerstone_GetViewport(inst1, &amp;x, &amp;y, &amp;w, &amp;h);
+// 销毁：级联销毁子视口；销毁活动视口自动清引用（防悬垂）
+UICornerstone_DestroyInstance(inst1);</code></pre>
+
+<p>调试辅助（_DEBUG 构建）：<code>Debug_GetActiveViewport(inst)</code> 查询活动子视口；<code>Debug_IsControlFocused / Debug_IsControlHovered</code> 断言焦点 / 悬停；<code>Debug_SetMousePosition(inst, x, y)</code> 注入鼠标坐标驱动 hover（无人值守测试用，Release 恒 0）。</p>
+
+<h2>5.2.5 隔离性保证</h2>
+
+<p>多实例 / 多视口的隔离是引擎设计保证（test_multi_instance_cabi 测试 1-5、test_multiviewport_cabi K1-K8 全覆盖）：</p>
+
+<ul>
+  <li><strong>事件隔离</strong>：同位置点击各自实例各自触发，事件不跨实例；</li>
+  <li><strong>Action 隔离</strong>：两实例可注册同名 action，各绑各的控件；</li>
+  <li><strong>焦点隔离</strong>：每实例独立 FocusManager，多窗口可同时各有焦点环；FocusLost 清本实例 + 活动子视口焦点；</li>
+  <li><strong>悬停隔离</strong>：注入鼠标到 A 窗口不影响 B 窗口 hover；</li>
+  <li><strong>销毁安全</strong>：销毁活动视口 / 实例后 Debug 断言无悬垂引用（AliveCount 精确）；</li>
+  <li><strong>Ctrl+Tab 跨视口规则</strong>：视口内存在可见焦点边界（WinFrame/Dialog）时优先视口内切换；全部隐藏才跨视口；<code>Ctrl+Shift+Tab</code> 反向。</li>
+</ul>
+
+
+<div class="chapter-nav">
+  <a href="luotiani.html">← 5.1 洛蒂动画</a>
+  <a href="tools.html">下一节：5.3 非可视化控件 →</a>
+</div>
+
+</div>
+</body>
+</html>

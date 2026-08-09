@@ -1,0 +1,91 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.4 C ABI 程序化生成 UI - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="advanced/cabi.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>5.4 直接使用 C ABI 接口程序化生成 UI</h1>
+
+<p>不用 JSON、不用 C++ 类，纯 C 程序化构建界面（工厂函数 + 属性系统 + 回调）。完整工程可运行：</p>
+
+<h2>5.4.1 完整工程样例</h2>
+
+<pre><code>#include "UICornerstoneAPI.h"
+
+static UIInstance g_inst;
+
+static void onBtnClick(UIControlHandle ctl, const UIEventData* ev, void* user) {
+    UIControlHandle status = UICornerstone_FindControl(g_inst, "status");
+    if (status) UICornerstone_SetString(g_inst, status, "caption", "Clicked!");
+}
+
+static void onCheck(UIControlHandle ctl, const UIEventData* ev, void* user) {
+    // 事件负载：union 按事件类型取对应字段
+    int state = ev-&gt;data.intVal;                    // check-changed → 新状态
+    // selection-changed → ev-&gt;data.selection.idx/.val
+    // color-changed     → ev-&gt;data.color.r/g/b/a
+    // text-changed      → ev-&gt;data.strVal
+    // value-changed     → ev-&gt;data.doubleVal / floatVal
+}
+
+int main(void) {
+    g_inst = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
+    if (!g_inst) return 1;
+    UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
+
+    // ── 程序化创建控件树：容器 + 子控件 ──
+    UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 360, 220);
+    UIControlHandle btn   = UICornerstone_CreateButton(g_inst, "Click Me", 30, 30, 140, 36);
+    UIControlHandle cb    = UICornerstone_CreateCheckBox(g_inst, "Enable", 30, 80, 24, 24);
+    UIControlHandle lbl   = UICornerstone_CreateLabel(g_inst, "Idle", 16.0f, 30, 130, 200, 28);
+    UICornerstone_AddChildControl(g_inst, panel, btn);   // 挂树
+    UICornerstone_AddChildControl(g_inst, panel, cb);
+
+    UICornerstone_SetString(g_inst, lbl, "id", "status");   // 属性系统 + FindControl 检索
+    UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+    UICornerstone_SetCallback(g_inst, cb, "check-changed", onCheck, NULL);
+
+    // ── 菜单三件套程序化组装 ──
+    UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst);
+    UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0);
+    UICornerstone_MenuPanelAddItem(g_inst, file, open);
+    UICornerstone_MenuPanelAddSeparator(g_inst, file);
+    UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26);
+    UICornerstone_MenuBarAddMenu(g_inst, bar, "File", file);
+
+    // ── 主循环（六步顺序不可颠倒）──
+    while (!UICornerstone_IsQuitRequested(g_inst)) {
+        UICornerstone_ProcessEvents(g_inst);
+        UICornerstone_Update(g_inst, 1.0 / 60.0);
+        UICornerstone_Clear(g_inst);
+        UICornerstone_Render(g_inst);
+        UICornerstone_Present(g_inst);
+    }
+    UICornerstone_DestroyInstance(g_inst);
+    return 0;
+}</code></pre>
+
+<h2>5.4.2 程序化与声明式混用</h2>
+
+<div class="tip">JSON 布局其实走的是同一条属性系统：<code>LoadLayout</code> 内部创建 <code>LayoutParser</code> 并把 <code>RegisterAction</code> 注册的 action 自动转为 parser handler。程序化与声明式可混用——先 <code>LoadLayout</code> 建骨架，再 <code>FindControl</code> 细化操作。</div>
+
+<h2>5.4.3 速查与事件负载</h2>
+
+<p>C ABI 完整函数速查见 <a href="../appendix/capi.html">9.3 C ABI 速查表</a>；<code>UIEventData</code> 事件负载结构见 <a href="../appendix/capi.html">9.3</a> 与各控件回调节。</p>
+
+<div class="chapter-nav">
+  <a href="tools.html">← 5.3 非可视化控件</a>
+  <a href="../backends.html">下一章：6 使用其它后端 →</a>
+</div>
+
+</div>
+</body>
+</html>
+

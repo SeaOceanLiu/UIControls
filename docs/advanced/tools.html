@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.3 非可视化控件 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="advanced/tools.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>5.3 非可视化控件（功能控件）</h1>
+
+<p>以下组件不直接显示，而是为控件树提供功能能力。它们大多挂在 <code>UIContext</code> 上（每 UI 实例一份）或在应用层手动创建。</p>
+
+<h2>5.3.1 HotReloader：布局文件热重载</h2>
+
+<p>开发期利器：监视布局 JSON 文件，保存后约 0.5 秒自动重建控件树。策略为<strong>完全重建</strong>（不保留输入框内容、悬停等控件状态）。</p>
+
+<pre><code>LayoutParser g_parser;
+HotReloader g_reloader;
+fs::path g_layoutPath;
+
+// 重建回调（保存布局文件后自动执行）
+void reloadLayout() {
+    BENCH-&gt;removeAllControls();   // 1. 清除 Bench 所有子控件
+    g_parser.clear();             // 2. 清 ID 映射（已注册 handlers 保留）
+    auto root = g_parser.parseLayoutFile(g_layoutPath);  // 3. 重新解析
+    if (!root) return;
+    BENCH-&gt;addControl(root);      // 4. 重新挂根控件
+    for (auto&amp; bar : g_parser.getMenuBars())            // 5. 重新挂 MenuBar
+        BENCH-&gt;addControl(bar);
+}
+
+// 初始化（实例创建后）
+g_layoutPath = fs::path(Platform::GetBasePath()) / "layouts" / "test_layout_advanced.json";
+g_reloader = HotReloader(g_layoutPath, reloadLayout);
+g_reloader.setPollInterval(15);   // 每 15 帧检查一次（默认 30 ≈ 0.5s@60fps）
+
+// 帧循环
+void onUpdate() { g_reloader.poll(); BENCH-&gt;eventLoopEntry(); BENCH-&gt;update(); }</code></pre>
+
+<div class="note">局限：轮询检测（非 OS 文件事件），延迟约 0.5 秒；只支持单文件监视；重建不保留控件状态。JSON 中 <code>events</code> 引用的 handler 在 <code>clear()</code> 后依然有效，新控件自动重新绑定。</div>
+
+<h2>5.3.2 DataContext：数据绑定</h2>
+
+<p>命名数据源存储 + 变更通知中心（每 UI 实例一份，<code>UIContext::dataContext</code>）。控件经 JSON <code>bind</code> 挂到 key 上，实现 data→UI 单向与 UI→data 双向同步。</p>
+
+<pre><code>class DataContext {
+    void set(const string&amp; key, const DataValue&amp; value);   // 存储并通知所有 watcher
+    DataValue get(const string&amp; key) const;
+    bool has(const string&amp; key) const;
+    void watch(const string&amp; key, function&lt;void(const DataValue&amp;)&gt; watcher);
+    void unwatchAll();            // 布局热加载前自动调用
+    void clear();
+};
+// DataValue 可承载 string / double / bool（isString/asString/asDouble/asBool）</code></pre>
+
+<p>C++ 侧手动读写：</p>
+
+<pre><code>auto ctx = g_uiInstance-&gt;dataContext;
+ctx-&gt;set("sharedText", string("Hello from DataContext!"));
+ctx-&gt;set("progressValue", 42.0);
+double v = ctx-&gt;get("progressValue").asDouble();
+
+// 布局 JSON 中绑定（mode: oneWay 缺省 / twoWay）
+// "bind": { "text": { "source": "userName", "mode": "twoWay" },
+//           "visible": "isEditable" }</code></pre>
+
+<p>可绑定属性：<code>caption / text / placeholder / value / checkState / visible / enabled</code>。双向绑定回写：EditBox <code>text-changed</code> → <code>set(key, text)</code>；CheckBox → 三态字符串；ScrollBar → 数值。watcher 用 weak_ptr 捕获控件，控件销毁自动失效。</p>
+
+<h2>5.3.3 LayoutParser：自定义事件处理器</h2>
+
+<p>JSON 布局的事件名是字符串，需要先 <code>registerHandler</code> 注册具名处理器，解析时按名匹配绑定：</p>
+
+<pre><code>void onSubmitClicked(shared_ptr&lt;Control&gt; c) { /* ... */ }
+
+g_parser.registerHandler("onSubmitClick", onSubmitClicked);
+g_parser.registerHandler("onIncProgress", [](shared_ptr&lt;Control&gt;) {
+    auto ctx = g_uiInstance-&gt;dataContext;                 // 处理器内可访问数据上下文
+    double v = ctx-&gt;get("progressValue").asDouble() + 10.0;
+    if (v &gt; 100) v = 0.0;
+    ctx-&gt;set("progressValue", v);
+});
+auto root = g_parser.parseLayoutFile(g_layoutPath);      // 解析前必须注册完毕
+BENCH-&gt;addControl(root);</code></pre>
+
+<pre><code>{ "type": "button", "rect": { "x": 10, "y": 10, "w": 120, "h": 32 },
+  "events": { "click": "onSubmitClick" } }   // 名字与 registerHandler 一致</code></pre>
+
+<p>机制：<code>parseEvents()</code> 按控件类型匹配事件 key（Button <code>click</code>、EditBox <code>text-changed</code>/<code>enter</code> 等），用 <code>m_handlers.find(name)</code> 查找到后包成控件回调；未注册的 handler 名静默跳过。C ABI 联动：<code>UICornerstone_RegisterAction</code> 注册的 action 会在 <code>LoadLayout</code> 时自动转为 parser handler。</p>
+
+<h2>5.3.4 FocusManager：焦点系统 API</h2>
+
+<p>每实例独立（<code>UIContext::focusManager</code>）。3.6 章节讲了行为，这里给出可编程接口：</p>
+
+<pre><code>focusManager-&gt;registerControl(ctl);    // 可聚焦控件自动注册（setFocusable(true)）
+focusManager-&gt;focusNext(ctl);          // Tab 环下一项
+focusManager-&gt;focusPrev(ctl);          // Shift+Tab 上一项
+focusManager-&gt;registerBoundary(ctl);   // 焦点边界（Bench / WinFrame / ColorPicker）
+focusManager-&gt;getVisibleBoundaryCount();  // 可见 boundary 数（Ctrl+Tab 跨视口路由依据）
+focusManager-&gt;notifyControlFocused(ctl, true);   // byKeyboard=true 显示焦点环
+focusManager-&gt;clearFocus();
+focusManager-&gt;focusNextScope();        // Ctrl+Tab（跨 boundary）
+focusManager-&gt;focusFirstInScope(scope);</code></pre>
+
+<div class="note">鼠标点击聚焦时焦点环不显示（<code>byKeyboard=false</code>）；<code>getVisibleBoundaryCount()</code> 只统计 <code>isVisible()</code> 的边界——这正是 5.2.5 中"全部隐藏才跨视口"的实现依据。</div>
+
+<h2>5.3.5 ResourceProvider：统一资源加载</h2>
+
+<p>文件读取的统一入口（图片 / 字体 / 动画 / 布局文件都经它解析为字节流）：</p>
+
+<pre><code>// 工厂：文件系统实现（以 basePath 为根拼接路径，带内存缓存）
+auto rp = ResourceProvider::createFilesystem(ConstDef::pathPrefix);
+shared_ptr&lt;vector&lt;char&gt;&gt; data = rp-&gt;readFile("layouts/main.json");  // 读取 + 缓存
+bool ok = rp-&gt;exists("assets/img/icon.png");
+
+// C ABI 侧：实例创建时经 resourceRoot 指定根目录，NULL → 默认
+// C++ Binding：Config.WithResourceRoot(path) / ResolveResource(relativePath)</code></pre>
+
+<p>分工：<strong>文件字节读取</strong> = ResourceProvider；<strong>字体</strong> = TextRenderer（loadFont / loadFontFromMemory）；<strong>纹理</strong> = RenderDevice 后端回调（createTextureFromFile）。<code>Label::loadFromResource</code>、<code>Actor::loadFromResource</code>、<code>LuotiAni</code> 资源加载、<code>LoadLayoutFromFile</code> 均走此链。</p>
+
+
+<div class="chapter-nav">
+  <a href="multiwindow.html">← 5.2 多视口与多窗口</a>
+  <a href="cabi.html">下一节：5.4 C ABI 程序化 →</a>
+</div>
+
+</div>
+</body>
+</html>

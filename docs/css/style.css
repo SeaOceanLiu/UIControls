@@ -95,6 +95,13 @@ tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 }
 .card h3 { margin-top: 0; color: var(--text); }
 
+/* 章节总览卡片网格 */
+.card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+.card-grid .card { margin: 0; }
+.card-grid h3 a { color: var(--accent); text-decoration: none; }
+.card-grid h3 a:hover { text-decoration: underline; }
+@media (max-width: 900px) { .card-grid { grid-template-columns: 1fr; } }
+
 /* 控件方法表（内部 API，默认折叠弱化） */
 details.methods { margin: 18px 0; border-top: 1px dashed var(--border); padding-top: 10px; }
 details.methods summary {
