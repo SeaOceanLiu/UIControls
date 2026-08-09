@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>9.6 C++ Binding 速查表 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/binding.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>9.6 C++ Binding 速查表</h1>
+
+<p>头文件：<code>binding/include/UICornerstone.h</code>（含 <code>Control.h</code>、<code>Event.h</code>、<code>UIEventFactory.h</code>）。
+C++ Binding 是 C ABI 的类型安全封装，仅依赖 C ABI 头，跨后端 DLL 动态加载。所有 UI 调用在主线程。</p>
+
+<h2>9.6.1 实例创建</h2>
+
+<pre><code>struct Config {
+    std::string backend            = "sdl3";   // "sdl3" | "sfml" | "raylib"
+    std::string backendSearchPath;             // 后端 DLL 搜索目录（空=exe 同目录/系统搜索）
+    std::string coreLibraryDir;                // 核心 DLL 所在目录（空=exe 同目录/系统搜索）
+    std::string resourceRoot;                  // 资源根路径（空 → 核心默认 exe 目录/assets）
+    std::string windowTitle        = "UICornerstone";
+    int windowWidth  = 1024;
+    int windowHeight = 768;
+    // 链式：WithBackend / WithBackendSearchPath / WithCoreLibraryDir /
+    //        WithResourceRoot / WithWindow(title, w, h)
+};
+
+static std::unique_ptr&lt;UICornerstone&gt; Create(const Config&amp; config);
+static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* callbacks, ...);</code></pre>
+
+<h2>9.6.2 实例管理</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>int Run(FrameCallback, RenderCallback=nullptr)</code></td><td>进入主循环（每帧 update + onRender）</td></tr>
+<tr><td><code>bool ProcessEvents()</code></td><td>非阻塞处理事件（多实例主循环调度用）</td></tr>
+<tr><td><code>void Update(double deltaTime)</code></td><td>推进逻辑（动画/计时）</td></tr>
+<tr><td><code>void Render() / Clear() / Present()</code></td><td>渲染三件套（自绘模式）</td></tr>
+<tr><td><code>bool IsQuitRequested() const</code></td><td>查询退出请求</td></tr>
+<tr><td><code>void Shutdown()</code></td><td>退出并释放实例</td></tr>
+</table>
+
+<h2>9.6.3 布局与资源</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>bool LoadLayout(const std::string&amp; jsonContent)</code></td><td>从字符串加载声明式 JSON 布局</td></tr>
+<tr><td><code>bool LoadLayoutFromFile(const std::string&amp; filePath)</code></td><td>从文件加载布局</td></tr>
+<tr><td><code>Control FindControl(const std::string&amp; id)</code></td><td>按 id 查找控件（未找到返回无效句柄）</td></tr>
+<tr><td><code>void SetResourceRoot(const std::string&amp; path)</code></td><td>运行时切换资源根目录</td></tr>
+<tr><td><code>std::string ResolveResource(const std::string&amp; relativePath) const</code></td><td>将相对路径解析为绝对资源路径</td></tr>
+</table>
+
+<h2>9.6.4 控件工厂（创建参数末尾 xScale/yScale，默认 1.0f）</h2>
+
+<table>
+<tr><th>方法</th><th>返回</th></tr>
+<tr><td><code>CreateButton(text, x, y, w, h, xScale, yScale)</code></td><td>Button</td></tr>
+<tr><td><code>CreateLabel(text, fontSize, x, y, w, h, xScale, yScale)</code></td><td>Label</td></tr>
+<tr><td><code>CreateCheckBox(text, x, y, w, h, xScale, yScale)</code></td><td>CheckBox</td></tr>
+<tr><td><code>CreateEditBox(x, y, w, h, xScale, yScale)</code></td><td>EditBox</td></tr>
+<tr><td><code>CreateTextArea(x, y, w, h, xScale, yScale)</code></td><td>TextArea</td></tr>
+<tr><td><code>CreateProgressBar(x, y, w, h, xScale, yScale)</code></td><td>ProgressBar</td></tr>
+<tr><td><code>CreateSlider(x, y, w, h, min, max, value, xScale, yScale)</code></td><td>Slider</td></tr>
+<tr><td><code>CreateScrollBar(x, y, w, h, orientation, xScale, yScale)</code></td><td>ScrollBar</td></tr>
+<tr><td><code>CreateNumericUpDown(x, y, w, h, xScale, yScale)</code></td><td>NumericUpDown</td></tr>
+<tr><td><code>CreateComboBox(x, y, w, h, xScale, yScale)</code></td><td>ComboBox</td></tr>
+<tr><td><code>CreateColorPicker(x, y, w, h, color, xScale, yScale)</code></td><td>ColorPicker</td></tr>
+<tr><td><code>CreatePanel(x, y, w, h, xScale, yScale)</code></td><td>Panel</td></tr>
+<tr><td><code>CreateWinFrame(title, x, y, w, h, xScale, yScale)</code></td><td>WinFrame</td></tr>
+<tr><td><code>CreateSplitter(x, y, w, h, orientation, xScale, yScale)</code></td><td>Splitter</td></tr>
+<tr><td><code>CreateDialog(confirmText, cancelText, x, y, w, h, xScale, yScale)</code></td><td>Dialog</td></tr>
+<tr><td><code>CreateImage(image, x, y, w, h, xScale, yScale)</code></td><td>Image</td></tr>
+<tr><td><code>CreateImageButton(normal, hover, pressed, x, y, w, h, xScale, yScale)</code></td><td>ImageButton</td></tr>
+<tr><td><code>CreateAnimation(jsoncPath, x, y, w, h, xScale, yScale)</code></td><td>Animation</td></tr>
+<tr><td><code>CreateTreeView(x, y, w, h, xScale, yScale)</code></td><td>TreeView</td></tr>
+<tr><td><code>CreateHandleControl(target, x, y, w, h, xScale, yScale)</code></td><td>HandleControl</td></tr>
+<tr><td><code>CreateMenuBar(x, y, w, h, xScale, yScale)</code></td><td>MenuBar</td></tr>
+<tr><td><code>CreateMenuPanel(xScale, yScale)</code></td><td>MenuPanel</td></tr>
+<tr><td><code>CreateMenuItem(caption, type, xScale, yScale)</code></td><td>MenuItem</td></tr>
+<tr><td><code>MenuBarAddMenu(bar, caption, panel)</code></td><td>组装菜单栏</td></tr>
+<tr><td><code>MenuPanelAddItem(panel, item) / MenuPanelAddSeparator(panel)</code></td><td>组装菜单面板</td></tr>
+<tr><td><code>MenuItemSetSubMenu(item, panel)</code></td><td>挂子菜单</td></tr>
+</table>
+
+<p>缩放说明见<a href="../advanced/scale.html">5.5 控件缩放</a>：系数作用于绘制内容，rect 不变，
+父子累积连乘；C++ Binding 仅创建时生效（运行时属性系统未挂接 xScale/yScale）。</p>
+
+<h2>9.6.5 Control 代理类</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>bool IsValid() const</code></td><td>句柄是否有效（控件销毁后自动失效）</td></tr>
+<tr><td><code>SetColor / SetStateColor / SetBool / SetInt / SetFloat / SetString / SetEnum / SetPtr</code></td><td>属性写入（一一对应 C ABI <code>UICornerstone_Set*</code>）</td></tr>
+<tr><td><code>GetColor / GetStateColor / GetBool / GetInt / GetFloat / GetString / GetEnum / GetPtr</code></td><td>属性读取</td></tr>
+<tr><td><code>void SetCallback(const char* event, EventCallback)</code></td><td>类型安全事件回调（lambda）</td></tr>
+<tr><td><code>void SetRect(float x, float y, float w, float h)</code></td><td>调整布局矩形</td></tr>
+<tr><td><code>UIRect GetRect() const</code></td><td>读取布局矩形</td></tr>
+<tr><td><code>void AddChild(Control child)</code></td><td>挂子控件</td></tr>
+<tr><td><code>void Destroy()</code></td><td>销毁控件</td></tr>
+<tr><td><code>std::string GetId() const</code></td><td>取控件 id</td></tr>
+</table>
+
+<h2>9.6.6 事件访问器（Event 类）</h2>
+
+<table>
+<tr><th>事件</th><th>判定 / 访问器</th></tr>
+<tr><td>click</td><td><code>IsClick()</code>（无负载）</td></tr>
+<tr><td>value-changed</td><td><code>IsValueChanged()</code> → <code>GetValueChanged()</code>（float）/ <code>GetValueChangedDouble()</code>（double）</td></tr>
+<tr><td>text-changed</td><td><code>IsTextChanged()</code> → <code>GetTextChanged()</code>（string）</td></tr>
+<tr><td>selection-changed</td><td><code>IsSelectionChanged()</code> → <code>GetSelectedIndex()</code> / <code>GetSelectedValue()</code></td></tr>
+<tr><td>check-changed</td><td><code>IsCheckChanged()</code> → <code>GetCheckState()</code>（int）</td></tr>
+<tr><td>position-changed / moved</td><td><code>IsPositionChanged()</code> / <code>IsMoved()</code> → <code>GetPositionChanged()</code> / <code>GetMovedPosition()</code>（float）</td></tr>
+<tr><td>confirm / cancel / enter</td><td><code>IsConfirm()</code> / <code>IsCancel()</code> / <code>IsEnter()</code>（无负载）</td></tr>
+<tr><td>close</td><td><code>IsClose()</code> → <code>GetCloseResult()</code>（int = DialogResult）</td></tr>
+<tr><td>select / expand / collapse</td><td><code>IsSelect()</code> / <code>IsExpand()</code> / <code>IsCollapse()</code> → <code>GetNodeId()</code> / <code>GetNodeUserData()</code></td></tr>
+</table>
+
+<p>注意：<code>IsColorChanged()</code> 恒为 false（ColorPicker 用轮询读取）；通用原始访问：
+<code>GetNameRaw()</code> / <code>GetIntVal()</code> / <code>GetFloatVal()</code> / <code>GetDoubleVal()</code> /
+<code>GetStrVal()</code> / <code>GetPtrVal()</code>。</p>
+
+<h2>9.6.7 视口 / 事件注入 / 动作注册</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>CreateViewport(x, y, w, h)</code></td><td>在当前窗口内创建子视口（单窗口多视口，见 5.2）</td></tr>
+<tr><td><code>SetViewport(x, y, w, h) / GetViewport()</code></td><td>切换 / 查询当前视口</td></tr>
+<tr><td><code>PushEvent(const UIEvent&amp;)</code></td><td>注入任意事件（UIEventFactory 构造）</td></tr>
+<tr><td><code>PushMouseButton / PushMouseMove / PushMouseWheel / PushKey / PushTextInput</code></td><td>输入注入（模拟输入/测试）</td></tr>
+<tr><td><code>RegisterAction(name, ActionCallback)</code></td><td>注册 JSON 布局动作处理器</td></tr>
+</table>
+
+<h2>9.6.8 后端配置 / 错误 / Debug</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>SetBackendConfig(key, value) / SetBackendConfigBool(key, bool) / GetBackendConfigBool(key, bool&amp;)</code></td><td>后端差异配置（见 9.5）</td></tr>
+<tr><td><code>const std::string&amp; GetLastError() const</code></td><td>最近一次错误信息</td></tr>
+<tr><td><code>DebugGetAliveCount()</code></td><td>存活实例数（静态）</td></tr>
+<tr><td><code>DebugGetAliveInstance(index) / DebugGetActiveViewport(instance)</code></td><td>实例巡检（静态）</td></tr>
+<tr><td><code>DebugIsControlFocused(instance, handle)</code></td><td>焦点查询（静态）</td></tr>
+</table>
+
+<div class="prev-next">
+  <a href="backend-config.html">← 9.5 后端差异及后端配置</a>
+  <a href="../faq.html">下一章：10 常见问题 →</a>
+</div>
+
+</div>
+</body>
+</html>

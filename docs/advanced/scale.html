@@ -1,0 +1,93 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.5 控件缩放（Scale） - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="advanced/scale.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>5.5 控件缩放（Scale）</h1>
+
+<p>所有控件都支持 <strong>初始缩放系数</strong>（xScale / yScale）：创建时传入，或通过 JSON 声明、运行时属性设置。
+缩放作用于<strong>绘制内容</strong>——文字、线宽、贴图尺寸均按系数放大/缩小，而布局矩形（rect）保持不变。</p>
+
+<h2>5.5.1 缩放模型</h2>
+
+<p>缩放是控件的固有属性，遵循以下规则：</p>
+
+<ul>
+  <li><strong>内容缩放，布局不变</strong>：rect（x/y/w/h）仍决定命中测试与布局，只有绘制内容按系数缩放；</li>
+  <li><strong>父子继承</strong>：控件的实际缩放系数为其 <em>自身系数 × 所有祖先系数</em>（累积连乘），
+      引擎内部以 <code>xxScale / yyScale</code> 表示；</li>
+  <li><strong>默认 1.0f</strong>：不传即原尺寸，所有 API 均以 1.0f 为默认；</li>
+  <li><strong>X/Y 独立</strong>：x、y 两轴可分别设置，实现非等比缩放。</li>
+</ul>
+
+<p>缩放与<i>洛蒂动画</i>（LuotiAni）的 <code>scale</code> 操作、以及<i>Actor</i> 的
+<code>scaleType</code>（STRETCH / FIT_CENTER / CENTER_CROP / NONE）无关：
+前者是动画时间轴上的贴图变换，后者是图片内容的适配模式，均不改变控件自身的缩放系数。</p>
+
+<h2>5.5.2 C++ Binding 用法</h2>
+
+<p>每个 <code>Create*</code> 工厂函数末尾都有可选参数 <code>xScale, yScale</code>（默认 1.0f，可省略）：</p>
+
+<pre><code>auto ui = UICornerstone::Create(...);
+
+// 创建 2 倍内容缩放的按钮（宽高仍按原布局参与命中测试）
+auto btn = ui-&gt;CreateButton("OK", 20, 20, 120, 36, 2.0f, 2.0f);
+
+// 不传即原尺寸
+auto lbl = ui-&gt;CreateLabel("标题", 24, 10, 10, 200, 40);</code></pre>
+
+<div class="tip">注意：C++ Binding 的缩放系数仅在<strong>创建时</strong>生效（运行时属性系统未挂接
+<code>xScale / yScale</code>，<code>SetFloat("xScale", ...)</code> 无效）。运行时要改变缩放，
+请用 JSON 布局的 <code>"scale"</code> 配合重新加载（见 5.5.4），或直接使用核心库原生
+<code>setScaleX / setScaleY</code> 接口。</div>
+
+<h2>5.5.3 C ABI 用法</h2>
+
+<p>C ABI 的创建函数<strong>必须显式传参</strong>（C 接口无默认参数），保持原尺寸请传 <code>1.0f, 1.0f</code>：</p>
+
+<pre><code>UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 1.0f, 1.0f);
+
+// 2 倍缩放
+UIControlHandle big = UICornerstone_CreateLabel(g_inst, "标题", 24, 10, 10, 200, 40, 2.0f, 2.0f);</code></pre>
+
+<h2>5.5.4 JSON 声明式用法</h2>
+
+<p>在控件 JSON 中声明 <code>"scale"</code> 对象（不写则默认 1.0）：</p>
+
+<pre><code>{
+  "type": "button",
+  "id": "btnOk",
+  "x": 20, "y": 20, "w": 120, "h": 36,
+  "scale": { "x": 2.0, "y": 2.0 }
+}</code></pre>
+
+<p>解析时等价于调用 <code>setScaleX / setScaleY</code>；布局加载后仍可用属性系统在运行时调整。</p>
+
+<h2>5.5.5 典型场景</h2>
+
+<ul>
+  <li><strong>高 DPI 界面</strong>：整棵 UI 树用同一系数创建，即全局放大；</li>
+  <li><strong>非等比适配</strong>：x/y 系数不同，模拟 2.5D 斜切观感（配合 luotiani 变换时注意叠加语义）；</li>
+  <li><strong>运行时动画</strong>：核心库原生 <code>setScaleX / setScaleY</code> 可在回调中改变系数；
+      若通过 Binding 使用，用 <code>LoadLayout</code> 重新加载带 <code>"scale"</code> 的 JSON 实现等效效果。</li>
+</ul>
+
+<div class="tip">提示：C ABI 创建函数的尾部两个参数即缩放系数，完整签名见附录 <a href="../appendix/capi.html">9.3 C ABI 速查表</a>；
+C++ Binding 工厂签名见附录 <a href="../appendix/binding.html">9.6 C++ Binding 速查表</a>。</div>
+
+<div class="prev-next">
+  <a href="cabi.html">← 5.4 纯 C ABI 程序化构建</a>
+  <a href="../backends.html">下一章：6 使用其它后端 →</a>
+</div>
+
+</div>
+</body>
+</html>

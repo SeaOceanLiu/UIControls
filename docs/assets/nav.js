@@ -49,7 +49,8 @@
       ["advanced/luotiani.html", "5.1 洛蒂动画引擎"],
       ["advanced/multiwindow.html", "5.2 多视口与多窗口"],
       ["advanced/tools.html", "5.3 非可视化控件"],
-      ["advanced/cabi.html", "5.4 C ABI 程序化构建"]
+      ["advanced/cabi.html", "5.4 C ABI 程序化构建"],
+      ["advanced/scale.html", "5.5 控件缩放（Scale）"]
     ]],
     ["backends.html", "其它后端", [
       ["backends.html", "6 使用其它后端（SFML/raylib）"]
@@ -62,7 +63,8 @@
       ["appendix/properties.html", "9.2 属性速查表"],
       ["appendix/capi.html", "9.3 C ABI 速查表"],
       ["appendix/debugging.html", "9.4 问题定位手段"],
-      ["appendix/backend-config.html", "9.5 后端差异及配置"]
+      ["appendix/backend-config.html", "9.5 后端差异及配置"],
+      ["appendix/binding.html", "9.6 C++ Binding 速查表"]
     ]],
     ["faq.html", "FAQ", [
       ["faq.html", "10 常见问题（FAQ）"]
