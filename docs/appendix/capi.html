@@ -1,0 +1,121 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>9.3 C ABI 速查表 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/capi.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>9.3 C ABI 速查表</h1>
+
+<p>头文件：<code>include/UICornerstoneAPI.h</code>。所有函数线程安全要求：UI 调用在主线程。</p>
+
+<h2>9.3.1 实例管理</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_CreateInstance(label, config)</code></td><td>创建 UI 实例（config 可 NULL）</td></tr>
+<tr><td><code>UICornerstone_CreateInstanceFromPlugin(name, config)</code></td><td>从后端插件名创建（"sdl3"/"sfml"/"raylib"）</td></tr>
+<tr><td><code>UICornerstone_DestroyInstance(inst)</code></td><td>销毁实例</td></tr>
+<tr><td><code>UICornerstone_SetViewport(inst, x, y, w, h)</code></td><td>设置视口</td></tr>
+<tr><td><code>UICornerstone_IsQuitRequested(inst)</code></td><td>窗口关闭请求查询</td></tr>
+<tr><td><code>UICornerstone_ProcessEvents / Update / Clear / Render / Present</code></td><td>主循环五步</td></tr>
+<tr><td><code>UICornerstone_GetBackendCapabilities(inst)</code></td><td>能力位（UICORN_BACKEND_CAP_*）</td></tr>
+</table>
+
+<h2>9.3.2 布局加载</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_LoadLayout(inst, json)</code></td><td>从内存 JSON 字符串加载布局</td></tr>
+<tr><td><code>UICornerstone_LoadLayoutFromFile(inst, path)</code></td><td>从文件加载布局</td></tr>
+<tr><td><code>UICornerstone_RegisterAction(inst, name, cb, user)</code></td><td>注册 JSON 事件处理器</td></tr>
+<tr><td><code>UICornerstone_FindControl(inst, id)</code></td><td>按 id 查找控件句柄</td></tr>
+</table>
+
+<h2>9.3.3 控件工厂</h2>
+
+<table>
+<tr><th>函数</th><th>返回控件</th></tr>
+<tr><td><code>UICornerstone_CreateButton(inst, text, x, y, w, h)</code></td><td>Button</td></tr>
+<tr><td><code>UICornerstone_CreateLabel(inst, text, fontSize, x, y, w, h)</code></td><td>Label</td></tr>
+<tr><td><code>UICornerstone_CreateCheckBox(inst, text, x, y, w, h)</code></td><td>CheckBox</td></tr>
+<tr><td><code>UICornerstone_CreateEditBox(inst, x, y, w, h)</code></td><td>EditBox</td></tr>
+<tr><td><code>UICornerstone_CreateTextArea(inst, x, y, w, h)</code></td><td>TextArea</td></tr>
+<tr><td><code>UICornerstone_CreateProgressBar(inst, x, y, w, h)</code></td><td>ProgressBar</td></tr>
+<tr><td><code>UICornerstone_CreateSlider(inst, x, y, w, h, min, max, value)</code></td><td>Slider</td></tr>
+<tr><td><code>UICornerstone_CreateScrollBar(inst, x, y, w, h, orientation)</code></td><td>ScrollBar</td></tr>
+<tr><td><code>UICornerstone_CreateNumericUpDown(inst, x, y, w, h)</code></td><td>NumericUpDown</td></tr>
+<tr><td><code>UICornerstone_CreateComboBox(inst, x, y, w, h)</code></td><td>ComboBox</td></tr>
+<tr><td><code>UICornerstone_CreateColorPicker(inst, x, y, w, h, color)</code></td><td>ColorPicker</td></tr>
+<tr><td><code>UICornerstone_CreatePanel(inst, x, y, w, h)</code></td><td>Panel</td></tr>
+<tr><td><code>UICornerstone_CreateWinFrame(inst, title, x, y, w, h)</code></td><td>WinFrame</td></tr>
+<tr><td><code>UICornerstone_CreateSplitter(inst, x, y, w, h, orientation)</code></td><td>Splitter</td></tr>
+<tr><td><code>UICornerstone_CreateDialog(inst, confirmText, cancelText, x, y, w, h)</code></td><td>Dialog（创建即打开）</td></tr>
+<tr><td><code>UICornerstone_CreateMenuBar / CreateMenuPanel / CreateMenuItem(inst, caption, type)</code></td><td>Menu 三件套</td></tr>
+<tr><td><code>UICornerstone_MenuBarAddMenu / MenuPanelAddItem / MenuPanelAddSeparator / MenuItemSetSubMenu</code></td><td>菜单组装</td></tr>
+<tr><td><code>UICornerstone_CreateImage(inst, image, x, y, w, h)</code></td><td>Image（Actor）</td></tr>
+<tr><td><code>UICornerstone_CreateAnimation(inst, jsoncPath, x, y, w, h)</code></td><td>LuotiAni</td></tr>
+<tr><td><code>UICornerstone_CreateHandleControl(inst, target, x, y, w, h)</code></td><td>HandleControl</td></tr>
+<tr><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td>挂子控件</td></tr>
+</table>
+
+<h2>9.3.4 属性系统</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_SetColor / GetColor</code></td><td>颜色属性</td></tr>
+<tr><td><code>UICornerstone_SetStateColor / GetStateColor</code></td><td>状态色（normal/hover/pressed/disabled）</td></tr>
+<tr><td><code>UICornerstone_SetBool / GetBool</code></td><td>布尔属性</td></tr>
+<tr><td><code>UICornerstone_SetInt / GetInt</code></td><td>整数属性</td></tr>
+<tr><td><code>UICornerstone_SetFloat / GetFloat</code></td><td>浮点属性</td></tr>
+<tr><td><code>UICornerstone_SetString / GetString(inst, ctl, name, char*, maxLen)</code></td><td>字符串属性（Get 用缓冲区）</td></tr>
+<tr><td><code>UICornerstone_SetEnum / GetEnum</code></td><td>枚举属性（同 GetString 缓冲区）</td></tr>
+<tr><td><code>UICornerstone_SetPtr / GetPtr</code></td><td>指针属性</td></tr>
+<tr><td><code>UICornerstone_SetCallback(inst, ctl, event, cb, user)</code></td><td>回调属性（事件注册）</td></tr>
+</table>
+
+<h2>9.3.5 事件与负载</h2>
+
+<pre><code>UI_EVENT_NONE / MOUSE_MOVE / MOUSE_DOWN / MOUSE_UP / MOUSE_WHEEL /
+KEY_DOWN / KEY_UP / TEXT_INPUT / WINDOW_RESIZE / WINDOW_CLOSE /
+FOCUS_GAINED / FOCUS_LOST
+
+UI_EVENT_MOUSE_X(ev) / UI_EVENT_MOUSE_Y(ev) / UI_EVENT_BUTTON(ev)
+UI_EVENT_KEY_CODE(ev) / UI_EVENT_KEY_MOD(ev) / UI_EVENT_TEXT(ev)
+UI_EVENT_WHEEL_DELTA(ev) / UI_EVENT_RESIZE_W(ev) / UI_EVENT_RESIZE_H(ev)
+
+// 回调负载（UIEventData union）
+floatVal / doubleVal / intVal / strVal / ptrVal / selection{idx,val}
+/ treeNode / color{r,g,b,a}</code></pre>
+
+<h2>9.3.6 实例配置与后端配置</h2>
+
+<pre><code>typedef struct {
+    uint32_t    structSize;     /* sizeof(UIInstanceConfig) */
+    const char* debugLabel;     /* null → "Instance_&lt;id&gt;" */
+    const char* resourceRoot;   /* 资源根目录 */
+    const char* windowTitle;    /* null → "UICornerstone" */
+    int         windowWidth;    /* 0 → 1024 */
+    int         windowHeight;   /* 0 → 768 */
+    uint32_t    windowFlags;    /* 0x00000020 可调大小；0x00002000 高 DPI */
+    uint32_t    reserved[6];
+} UIInstanceConfig;             /* UI_INSTANCE_CONFIG_DEFAULT */
+
+UICornerstone_SetBackendConfig(inst, key, value)      /* inst=NULL 为全局默认 */
+UICornerstone_SetBackendConfigInt / SetBackendConfigBool
+UICornerstone_GetBackendConfig(inst, key, char*, len) /* 只读查询 */</code></pre>
+
+<div class="chapter-nav">
+  <a href="properties.html">← 9.2 属性速查表</a>
+  <a href="debugging.html">下一节：9.4 问题定位手段 →</a>
+</div>
+
+</div>
+</body>
+</html>

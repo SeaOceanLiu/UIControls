@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.2 Bench（测试台/根控件）- UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/bench.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.2 Bench（测试台 / 根控件）</h1>
+
+<p>Bench 是每个 <code>UIContext</code> 实例的<strong>控件树根节点</strong>：它承载整个界面的事件循环入口、焦点作用域切换，并作为所有顶层控件的父容器。继承链：<code>Bench → Panel → ControlImpl → Control</code>，并混入 <code>TopControl</code>（事件泵）。</p>
+
+<h2>4.2.1 控件的创建</h2>
+
+<pre><code>// 唯一构造：由 UIContext 内部创建，用户不直接 new
+explicit Bench(UIContext* ctx);
+// 访问方式
+BENCH->addControl(btn);            // 核心库：宏获取当前 Bench 智能指针
+BENCH->setOnInitial(callback);     // 资源加载完成回调</code></pre>
+
+<div class="note">Bench 无 C ABI 创建函数、无 JSON type——它是布局解析器的挂载目标，不作为可声明控件存在。</div>
+
+<h2>4.2.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>initial()</code></td><td>资源加载完成后的初始化：置标志、触发 <code>onInitial</code> 回调并 fire C ABI 事件 <code>"initial"</code></td></tr>
+<tr><td><code>inputControl(shared_ptr&lt;Event&gt;)</code></td><td>向控件树注入一条事件（<code>triggerEvent</code> 入队）</td></tr>
+<tr><td><code>repeatTrigger()</code></td><td>按住鼠标/触摸时的自动重复触发（DEFAULT_BTN_MS_REPEAT 间隔）</td></tr>
+<tr><td><code>update() / draw() / resized(SRect)</code></td><td>生命周期（未初始化先 initial()；转发 Panel 实现）</td></tr>
+<tr><td><code>handleEvent(Event)</code></td><td>拦截 Tab/Ctrl+Tab 做焦点切换，其余转 Panel 分派</td></tr>
+<tr><td><code>isExiting()</code></td><td>退出标志查询</td></tr>
+<tr><td><code>setOnInitial(OnInitialHandler)</code></td><td>设置初始化回调；已初始化则立即调用</td></tr>
+<tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加控件后解析子百分比尺寸并 reflow</td></tr>
+</table>
+
+<h2>4.2.3 控件的属性</h2>
+
+<p>无专有属性。继承 Panel/ControlImpl 通用属性（<code>background / border / visible / enabled / transparent</code> 等）。构造时透明，资源加载完成后关闭透明。</p>
+
+<h2>4.2.4 控件的回调</h2>
+
+<table>
+<tr><th>回调</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>setOnInitial(handler)</code></td><td>资源加载完成（initial() 内）</td><td><code>void(shared_ptr&lt;Bench&gt;)</code></td></tr>
+<tr><td>C ABI 事件 <code>"initial"</code></td><td>同上</td><td>无负载</td></tr>
+</table>
+
+<h2>4.2.5 JSON 语法</h2>
+
+<p>无（Bench 不是 JSON 控件类型）。所有布局文件的 <code>controls</code> 数组都解析挂载到 Bench 之下。</p>
+
+<h2>4.2.6 主循环与事件泵（C++）</h2>
+
+<pre><code>// 传统 AppCallbacks 集成（核心库直接 API）
+class MyApp : public AppCallbacks {
+public:
+    bool onInit() override { /* BENCH->addControl(...) */ return true; }
+    void onUpdate() override { /* 每帧逻辑 */ }
+    void onRender() override { /* 绘制 */ }
+    void onQuit() override { }
+};
+int main() { MyApp app; MAINWIN->run(&app); return 0; }
+
+// 测试程序模式：手动驱动事件泵
+while (BENCH->isExiting() == 0) {
+    MAINWIN->processEvents(nullptr);   // 后端事件 → EventQueue
+    BENCH->eventLoopEntry();           // 出队分派（Tab 拦截在 handleEvent）
+    BENCH->update();
+    BENCH->draw();
+}</code></pre>
+
+<div class="chapter-nav">
+  <a href="actor.html">← 4.1 Actor</a>
+  <a href="button.html">下一节：4.3 Button →</a>
+</div>
+
+</div>
+</body>
+</html>

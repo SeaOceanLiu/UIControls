@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>9.1 声明式 UI 语法速查表 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/declarative-syntax.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>9.1 声明式 UI 语法速查表</h1>
+
+<h2>9.1.1 顶层结构</h2>
+
+<pre><code>{
+  "version": "1.0",
+  "viewport": { "width": 1920, "height": 1080 },
+  "theme": { "fonts": {...}, "colors": {...} },
+  "controls": [ ... ],       // 控件树根数组（必填）
+  "dialogs":  [ ... ],       // 弹窗数组（可选）
+  "components": { ... },     // 可复用组件模板（可选）
+  "layouts": [ ... ]         // 组件实例化（可选）
+}</code></pre>
+
+<h2>9.1.2 控件通用键</h2>
+
+<table>
+<tr><th>键</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写：<code>label / button / edit-box / check-box / combo-box / numeric-up-down / progress-bar / scroll-bar / color-picker / text-area / panel / menu-bar / win-frame / splitter</code></td></tr>
+<tr><td><code>id</code></td><td>string</td><td>全局唯一，FindControl 用</td></tr>
+<tr><td><code>rect</code></td><td>object</td><td><code>{"x","y","w","h"}</code>；支持百分比字符串 <code>"50%"</code></td></tr>
+<tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code></td></tr>
+<tr><td><code>visible</code> / <code>enabled</code></td><td>bool</td><td>可见 / 启用</td></tr>
+<tr><td><code>margin</code></td><td>object</td><td><code>{"left","top","right","bottom"}</code></td></tr>
+<tr><td><code>colors</code></td><td>object</td><td>状态色：<code>{"background":{"normal","hover","pressed","disabled"}}</code>；键含 background/border/text/textShadow/控件特有（progressColor、titleBar 等）</td></tr>
+<tr><td><code>events</code></td><td>object</td><td><code>{"onClick":"handlerName"}</code></td></tr>
+<tr><td><code>children</code></td><td>array</td><td>子控件（容器类型）</td></tr>
+</table>
+
+<h2>9.1.3 颜色格式</h2>
+
+<pre><code>"#RGB" | "#RRGGBB" | "#RRGGBBAA" | { "r":255, "g":0, "b":0, "a":128 }</code></pre>
+
+<h2>9.1.4 布局引擎</h2>
+
+<h3>h-flow / v-flow</h3>
+<pre><code>"layout": { "type": "h-flow", "gap": 4,
+             "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 } }
+// 子控件：{ ..., "flowWeight": 1 }  弹性分配；0/缺省=固定</code></pre>
+
+<h3>anchor</h3>
+<pre><code>"layout": { "type": "anchor" }
+// 子控件：
+{ ..., "anchor": "TOP_RIGHT",
+  "anchorOffset": { "left": 10, "top": 10, "right": 0, "bottom": 0 } }
+// 锚点值：TOP_LEFT TOP_CENTER TOP_RIGHT MID_LEFT CENTER MID_RIGHT
+//         BOTTOM_LEFT BOTTOM_CENTER BOTTOM_RIGHT TOP_STRETCH
+//         BOTTOM_STRETCH LEFT_STRETCH RIGHT_STRETCH FILL</code></pre>
+
+<h3>grid</h3>
+<pre><code>"layout": { "type": "grid",
+             "columns": ["1fr", "2fr", "100px"],
+             "rows": ["30px", "1fr", "auto"] }
+// 子控件：{ ..., "grid": { "row":0, "col":1, "rowSpan":1, "colSpan":1 } }
+// 尺寸：Fixed "100px" / Flex "1fr" / Auto "auto"</code></pre>
+
+<h2>9.1.5 事件引用与注册</h2>
+
+<pre><code>// C ABI
+UICornerstone_RegisterAction(g_inst, "handleSubmit", cb, NULL);
+
+// C++ Binding
+ui->RegisterAction("handleSubmit", [](Control ctl){ /* ... */ });
+
+// 核心库 LayoutParser
+parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ... */ });</code></pre>
+
+<h2>9.1.6 事件键名 → 控件对照</h2>
+
+<table>
+<tr><th>JSON 事件键</th><th>适用控件</th></tr>
+<tr><td><code>onClick</code></td><td>Button / Label（clickable）/ MenuItem</td></tr>
+<tr><td><code>onTextChanged</code> / <code>onEnter</code></td><td>EditBox / TextArea</td></tr>
+<tr><td><code>onCheckChanged</code></td><td>CheckBox</td></tr>
+<tr><td><code>onValueChanged</code></td><td>ProgressBar / Slider / NumericUpDown</td></tr>
+<tr><td><code>onPositionChanged</code></td><td>ScrollBar</td></tr>
+<tr><td><code>onSelectionChanged</code></td><td>ComboBox</td></tr>
+<tr><td><code>onColorChanged</code></td><td>ColorPicker</td></tr>
+<tr><td><code>onClose</code> / <code>onConfirm</code> / <code>onCancel</code></td><td>WinFrame / Dialog</td></tr>
+<tr><td><code>onSplitterMoved</code></td><td>Splitter</td></tr>
+</table>
+
+<h2>9.1.7 主题</h2>
+
+<pre><code>"theme": {
+  "fonts": { "default": { "name": "HarmonyOS_Sans_SC_Regular", "size": 16 },
+             "button": { "size": 16 } },
+  "colors": {
+    "background": "#282828FF", "text": "#FFFFFFFF", "border": "#808080FF",
+    "button": { "bg": {"normal":"#3C3C3CFF","hover":"#4C4C4CFF","pressed":"#2C2C2CFF"},
+                "border": {...}, "text": {...} },
+    "checkbox": { "check": "#66BB6AFF", "cross": "#FF5722FF", "boxBorder": "#53535AFF" },
+    "progressbar": { "progress": "#66BB6AFF", "track": "#333333FF" }
+  }
+}</code></pre>
+
+<p>类别：<code>button / label / editbox / textarea / checkbox / progressbar / panel / scrollbar / menubar</code>；应用顺序：Theme 默认 → 公共 colors → 控件专用颜色 → 控件专用字体。</p>
+
+<h2>9.1.8 组件与实例化</h2>
+
+<pre><code>"components": {
+  "SearchBar": {
+    "props": { "placeholder": "Search...", "btnText": "Go" },
+    "template": {
+      "type": "panel", "layout": { "type": "h-flow", "gap": 4 },
+      "children": [
+        { "type": "edit-box", "id": "$search", "rect": { "w": 200, "h": 30 },
+          "placeholder": "$props.placeholder" },
+        { "type": "button", "id": "$go", "rect": { "w": 60, "h": 30 },
+          "caption": "$props.btnText", "events": { "onClick": "onSearch" } }
+      ]
+    }
+  }
+},
+"layouts": [
+  { "use": "SearchBar", "id": "topSearch",
+    "props": { "placeholder": "输入关键词", "btnText": "搜索" },
+    "rect": { "x": 20, "y": 20, "w": 300, "h": 40 } }
+]</code></pre>
+
+<h2>9.1.9 热加载</h2>
+
+<pre><code>HotReloader reloader("layouts/main.json", rebuildCallback);
+reloader.poll();                 // 每帧调用（默认 30 帧检查一次）
+reloader.setPollInterval(15);    // 调整间隔
+reloader.reload();               // 手动触发</code></pre>
+
+<div class="chapter-nav">
+  <a href="../integration.html">← 7 嵌入到你的逻辑回路中</a>
+  <a href="properties.html">下一节：9.2 属性速查表 →</a>
+</div>
+
+</div>
+</body>
+</html>

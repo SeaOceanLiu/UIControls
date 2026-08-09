@@ -1,0 +1,122 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.7 洛蒂动画 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="luotiani.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>3.7 洛蒂动画</h1>
+
+<p>LuotiAni 是 UICornerstone 内置的关键帧动画引擎：<strong>JSON 描述动画</strong>（类似 Lottie 的简化版），运行时烘焙为帧贴图，播放只做查表，性能极高。播放速度由真实毫秒驱动，与渲染帧率无关。</p>
+
+<h2>3.7.1 一个最小动画文件</h2>
+
+<pre><code>{
+  "overview": {
+    "version": "1.0", "name": "rotateBtn",
+    "view": { "width": 256, "height": 256 },   // 画布尺寸
+    "frameRate": 60,                            // 帧率（不得为 0）
+    "totalFrames": 30,
+    "loop": true                                 // 必填
+  },
+  "layers": [
+    {
+      "name": "logo", "type": "image",
+      "src": "images/logo.png",                  // 相对资源根路径
+      "keyFrames": [
+        { "frame": 0, "operation": [
+          { "type": "translate", "tx": 0, "ty": 0 },
+          { "type": "scale", "sx": 1.0, "sy": 1.0 },
+          { "type": "opacity", "opacity": 100 } ] },
+        { "frame": 30, "operation": [
+          { "type": "rotate", "angle": 360, "cx": 128, "cy": 128,
+            "easing": "ease-in-out" } ] }
+      ]
+    }
+  ]
+}</code></pre>
+
+<h2>3.7.2 关键帧语法要点</h2>
+
+<table>
+<tr><th>层级</th><th>键</th><th>说明</th></tr>
+<tr><td>overview</td><td><code>view</code></td><td>画布 <code>{width,height}</code>，w/h 传 0 创建时回退到画布尺寸</td></tr>
+<tr><td></td><td><code>frameRate</code> / <code>totalFrames</code> / <code>loop</code></td><td>帧率（≠0）、总帧数、循环开关（必填）</td></tr>
+<tr><td>layer</td><td><code>type</code></td><td><code>image</code>（完整支持）；shape/text 解析支持但烘焙跳过</td></tr>
+<tr><td></td><td><code>src</code> / <code>width</code> / <code>height</code></td><td>图片资源路径；显式宽高可拉伸，缺省用贴图原始尺寸</td></tr>
+<tr><td></td><td><code>opacity</code> / <code>blendMode</code></td><td>图层级透明度；混合模式 <code>normal / additive / multiply / ...</code></td></tr>
+<tr><td>keyFrames</td><td><code>frame</code></td><td>帧号（第 0 帧关键帧必须存在）</td></tr>
+<tr><td>operation</td><td><code>translate</code> / <code>scale</code> / <code>rotate</code> / <code>opacity</code> / <code>visible</code></td><td><code>{tx,ty}</code> 增量累加 / <code>{sx,sy}</code> 累乘 / <code>{angle,cx,cy}</code> / <code>{opacity 0-100}</code> / <code>{visible}</code></td></tr>
+<tr><td>缓动</td><td><code>easing</code></td><td><code>linear</code>（默认）/ <code>ease-in</code> / <code>ease-out</code> / <code>ease-in-out</code> / <code>quad</code> / <code>sine</code> / <code>cubic</code> / <code>cubic-bezier(x1,y1,x2,y2)</code></td></tr>
+<tr><td>轨迹</td><td><code>path</code></td><td>仅 translate：<code>bezier</code>（c1/c2 控制点）/ <code>parabola</code>（vx,vy 初速）/ <code>catmull-rom</code>（points）</td></tr>
+</table>
+
+<h2>3.7.3 加载与播放（C++）</h2>
+
+<pre><code>#include "LuotiAni.h"
+
+auto demo = LuotiAniBuilder(BENCH.get())
+    .loadAniDesc("animations/rotateBtn/rotateBtn.jsonc")
+    .setRect(SRect(20, 20, 256, 256))
+    .prepare()              // 烘焙全部帧贴图（未加载会抛异常）
+    .setAutoStart()         // 构建后自动播放
+    .build();
+demo->create();
+BENCH->addControl(demo);
+
+demo->pause();              // 暂停
+demo->resume();             // 从暂停处继续
+demo->play();               // 复位到第 0 帧重播
+demo->setLoop(false);
+demo->setFrame(15);         // 跳帧（仅已 prepare 且帧号合法）
+printf("frame=%u/%u, playing=%d\n",
+       demo->getCurrentFrame(), demo->getTotalFrames(), demo->isPlaying());</code></pre>
+
+<h2>3.7.4 属性系统 / C ABI</h2>
+
+<pre><code>// C ABI
+UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20, 256, 256);
+UICornerstone_SetBool(g_inst, ani, "playing", 1);   // 置 1 = play()（帧复位重播）；置 0 = pause()
+UICornerstone_SetBool(g_inst, ani, "loop", 1);
+UICornerstone_SetInt (g_inst, ani, "frame", 10);    // 跳帧
+
+// C++ Binding
+Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0);
+ani.SetBool(PropertyNames::kPlaying, true);
+ani.SetBool(PropertyNames::kLoop, true);</code></pre>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>animation</code></td><td>String</td><td>动画描述路径（只写不读）；加载+prepare，播放中则从第 0 帧重播</td></tr>
+<tr><td><code>playing</code></td><td>Bool</td><td>命令式：置 1 = play()，置 0 = pause()；未 prepare 置 1 拒绝</td></tr>
+<tr><td><code>loop</code></td><td>Bool</td><td>循环开关</td></tr>
+<tr><td><code>frame</code></td><td>Int</td><td>跳帧（未 prepare 拒绝）</td></tr>
+</table>
+
+<h2>3.7.5 在 Button 上挂动画（JSON 布局）</h2>
+
+<pre><code>{
+  "type": "button", "id": "animatedBtn",
+  "rect": { "x": 40, "y": 40, "w": 120, "h": 40 },
+  "caption": "Rotate",
+  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"
+}</code></pre>
+
+<div class="tip">多实例共享：同一动画文件的多个播放器共享烘焙帧数据（<code>LuotiInstance</code> 机制），内存仅一份。</div>
+
+<div class="note">动画结束事件：非循环播放到最后一帧后触发 <code>AnimationEnded</code> 自定义事件（C ABI 回调链路暂未适配）。</div>
+
+<div class="chapter-nav">
+  <a href="events-focus.html">← 3.5 事件 · 3.6 焦点系统</a>
+  <a href="controls/index.html">下一章：4 深入控件 →</a>
+</div>
+
+</div>
+</body>
+</html>

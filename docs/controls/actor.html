@@ -1,0 +1,100 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.1 Actor（图片控件）- UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/actor.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.1 Actor（图片控件）</h1>
+
+<p>Actor 是纯显示图片的控件（C ABI 中即 Image 控件）。它不参与事件命中与遮挡检测（<code>isContainsPoint</code> 恒为 false），常作为 Button 的四态外观、背景图或纯装饰。继承链：<code>Actor → Material → ControlImpl → Control</code>。</p>
+
+<h2>4.1.1 控件的创建</h2>
+
+<pre><code>// C++ 构造（4 个重载）
+Actor(Control* parent, float xScale = 1.0f, float yScale = 1.0f);
+Actor(Control* parent, bool matchParentRect, float xScale = 1.0f, float yScale = 1.0f);
+Actor(Control* parent, fs::path filePath, bool matchParentRect = false, float xScale = 1.0f, float yScale = 1.0f);
+Actor(Control* parent, string resourceId, bool matchParentRect = false, float xScale = 1.0f, float yScale = 1.0f);
+
+// Builder
+ActorBuilder(parent).loadFromFile("assets/img/icon.png").setMatchParentRect(true).build();
+
+// C ABI（w/h 传 0 按纹理自然尺寸）
+UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 128, 128);</code></pre>
+
+<div class="note">JSON 布局中 Actor 不作为独立节点，只作为 Button 的 <code>actors</code> 子键（见下）。</div>
+
+<h2>4.1.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>从文件 / 资源 ID 加载图片（挂树前保存路径，create() 后真正加载）</td></tr>
+<tr><td><code>loadTextureFromSurface(Surface*)</code></td><td>从内存 Surface 加载纹理</td></tr>
+<tr><td><code>getTexture() / setTexture(SharedTexture)</code></td><td>纹理访问器</td></tr>
+<tr><td><code>setScaleType(ScaleType)</code> / <code>getScaleType()</code></td><td>缩放方式：STRETCH / FIT_CENTER / CENTER_CROP / NONE</td></tr>
+<tr><td><code>setMatchParentRect(bool)</code></td><td>强制使用目标矩形（忽略自然尺寸）</td></tr>
+<tr><td><code>setAlpha(uint8_t)</code> / <code>getAlpha()</code></td><td>透明度 0-255</td></tr>
+<tr><td><code>setRect(SRect)</code></td><td>设置位置尺寸；w/h&gt;0 时换图不再跟随自然尺寸</td></tr>
+<tr><td><code>draw(posx, posy, alpha)</code> / <code>draw()</code></td><td>绘制（后者用成员 alpha）</td></tr>
+<tr><td><code>setStringProperty / setBoolProperty / setIntProperty / setEnumProperty</code>（+getter）</td><td>属性系统分发</td></tr>
+</table>
+
+<h2>4.1.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>image</code></td><td>String</td><td>—</td><td>图片文件路径（只写不读）</td></tr>
+<tr><td><code>image-resource</code></td><td>String</td><td>—</td><td>资源 ID（只写不读）</td></tr>
+<tr><td><code>match-parent-rect</code></td><td>Bool</td><td>false</td><td>强制使用目标矩形</td></tr>
+<tr><td><code>alpha</code></td><td>Int</td><td>255</td><td>透明度 0-255</td></tr>
+<tr><td><code>scale-type</code></td><td>Enum</td><td><code>stretch</code></td><td><code>stretch</code> / <code>fit-center</code> / <code>center-crop</code> / <code>none</code></td></tr>
+<tr><td><code>anchor</code></td><td>Enum</td><td><code>top-left</code></td><td><code>top-left</code> / <code>mid-left</code> / <code>bottom-left</code> / <code>top-right</code> / <code>mid-right</code> / <code>bottom-right</code> / <code>top-center</code> / <code>center</code> / <code>bottom-center</code></td></tr>
+</table>
+
+<h2>4.1.4 控件的回调</h2>
+
+<p>无（纯显示控件，不产生任何事件）。</p>
+
+<h2>4.1.5 JSON 语法（Button 的 actors）</h2>
+
+<pre><code>{
+  "type": "button", "id": "imageBtn",
+  "rect": { "x": 60, "y": 300, "w": 48, "h": 48 },
+  "actors": {
+    "normal":  "assets/images/cross_up.png",
+    "hover":   "assets/images/cross_over.png",
+    "pressed": "assets/images/cross_down.png"
+  }
+}</code></pre>
+
+<h2>4.1.6 C++ Binding 样例</h2>
+
+<pre><code>// Binding：CreateImage（对应 C ABI CreateImage）
+Control img = ui->CreateImage("assets/hero.png", 20, 80, 128, 128);
+img.SetEnum(PropertyNames::kScaleType, "fit-center");
+img.SetInt(PropertyNames::kAlpha, 128);
+img.SetBool(PropertyNames::kMatchParentRect, false);
+
+// C++ 核心库：作为 Button 三态外观
+auto normal = ActorBuilder(nullptr).loadFromFile("assets/img/icon.png").setMatchParentRect(true).build();
+auto hover  = ActorBuilder(nullptr).loadFromFile("assets/img/icon_hover.png").setMatchParentRect(true).build();
+auto btn = ButtonBuilder(nullptr, SRect(380, 50, 120, 50))
+    .setNormalStateActor(normal).setHoverStateActor(hover)
+    .build();
+BENCH->addControl(btn);</code></pre>
+
+<div class="chapter-nav">
+  <a href="index.html">← 4.0 控件概念与共性</a>
+  <a href="bench.html">下一节：4.2 Bench →</a>
+</div>
+
+</div>
+</body>
+</html>

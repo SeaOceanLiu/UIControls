@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.11 LuotiAni（关键帧动画）- UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/luotiani.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.11 LuotiAni（关键帧动画控件）</h1>
+
+<p>LuotiAni 是播放关键帧动画的控件：JSON 描述动画（见 <a href="../luotiani.html">3.7 洛蒂动画</a>），运行时<strong>烘焙为帧贴图</strong>，播放按毫秒查表。多实例共享烘焙帧数据。继承链：<code>LuotiAni → Material → ControlImpl → Control</code>。</p>
+
+<h2>4.11.1 控件的创建</h2>
+
+<pre><code>// C++（构造不加载）
+LuotiAni(Control* parent, float xScale = 1.0f, float yScale = 1.0f);
+LuotiAniBuilder(BENCH.get())
+    .loadAniDesc("animations/rotateBtn/rotateBtn.jsonc")
+    .setRect(SRect(20, 20, 256, 256))
+    .prepare().setAutoStart().build();
+
+// C ABI（w/h 传 0 时 prepare 回退到 JSON overview.view 画布尺寸；失败返回 NULL）
+UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20, 256, 256);
+
+// C++ Binding
+Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0);</code></pre>
+
+<h2>4.11.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>加载（委托 loadAniDesc）</td></tr>
+<tr><td><code>loadAniDesc(fs::path)</code> / <code>loadAniDesc(string)</code></td><td>加载 JSON 描述（相对路径拼资源根；失败 throw）</td></tr>
+<tr><td><code>parseJsonDesc()</code></td><td>解析 JSON（换动画时重置状态）</td></tr>
+<tr><td><code>update()</code></td><td>按毫秒推进帧（绝对墙钟，与帧率无关）；非循环结束复位到帧 0 并触发 AnimationEnded 事件</td></tr>
+<tr><td><code>draw(x, y, alpha)</code> / <code>draw(frameNo, x, y, alpha)</code></td><td>绘制当前帧 / 指定帧</td></tr>
+<tr><td><code>setRect(SRect)</code></td><td>同步所有帧 Actor 矩形</td></tr>
+<tr><td><code>play()</code></td><td>帧复位到 0 重播（未 prepare 抛异常）</td></tr>
+<tr><td><code>prepare(uint32_t startFrame = 0)</code></td><td>烘焙全部帧贴图（未加载抛异常）</td></tr>
+<tr><td><code>pause()</code> / <code>resume()</code></td><td>暂停 / 从暂停处继续（resume 未 prepare 抛异常）</td></tr>
+<tr><td><code>setFrame(uint32_t)</code></td><td>跳帧（仅已 prepare 且帧号合法生效，同时复位时间戳防跳变）</td></tr>
+<tr><td><code>getFrameActor(uint32_t)</code></td><td>帧 Actor 调试 / 断言访问</td></tr>
+<tr><td><code>isPlaying()</code> / <code>isPrepared()</code> / <code>isLoaded()</code></td><td>状态查询</td></tr>
+<tr><td><code>getFrameDuration()</code> / <code>getTotalFrames()</code> / <code>getCurrentFrame()</code></td><td>帧时长(ms) / 总帧数 / 当前帧</td></tr>
+<tr><td><code>isLoop()</code> / <code>setLoop(bool)</code></td><td>循环开关</td></tr>
+<tr><td><code>getFrameOpData(layer, frame)</code> / <code>getFrameCanvas(frame)</code></td><td>调试：层/帧插值结果 / 烘焙画布</td></tr>
+</table>
+
+<h2>4.11.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>animation</code></td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
+<tr><td><code>playing</code></td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 返回 0 拒绝</td></tr>
+<tr><td><code>loop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
+<tr><td><code>frame</code></td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
+</table>
+
+<h2>4.11.4 控件的回调</h2>
+
+<table>
+<tr><th>事件</th><th>触发时机</th><th>说明</th></tr>
+<tr><td><code>AnimationEnded</code>（Custom 事件）</td><td>非循环播放到最后一帧后</td><td>事件带 m_id（C ABI 回调链路暂未适配）</td></tr>
+</table>
+
+<h2>4.11.5 JSON 动画文件语法</h2>
+
+<p>真实键名是 <code>layer / keyFrames / frame / operation</code>（不存在 track/target/property 这类键）：</p>
+
+<pre><code>{
+  "overview": {
+    "version": "1.0", "name": "breath",
+    "view": { "width": 200, "height": 200 },
+    "frameRate": 60, "totalFrames": 40, "loop": true
+  },
+  "layers": [
+    { "name": "glow", "type": "image", "src": "images/glow.png",
+      "opacity": 80, "blendMode": "additive",
+      "keyFrames": [
+        { "frame": 0,  "operation": [ { "type": "scale", "sx": 0.8, "sy": 0.8 } ] },
+        { "frame": 20, "operation": [ { "type": "scale", "sx": 1.2, "sy": 1.2, "easing": "ease-in-out" } ] },
+        { "frame": 40, "operation": [ { "type": "scale", "sx": 0.8, "sy": 0.8 } ] }
+      ] }
+  ]
+}</code></pre>
+
+<table>
+<tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>layer.type</code></td><td><code>image</code> 完整支持；shape/text 解析支持但烘焙跳过</td></tr>
+<tr><td><code>layer.width/height</code></td><td>显式拉伸，缺省用贴图原始尺寸</td></tr>
+<tr><td><code>layer.blendMode</code></td><td><code>normal / additive / additivePremultiplied / modulate / blend / blendPremultiplied / multiply</code>，未知回退 normal</td></tr>
+<tr><td><code>keyFrames[].frame</code></td><td>帧号，第 0 帧关键帧必须存在</td></tr>
+<tr><td><code>operation.type</code></td><td><code>translate</code>（tx,ty 增量累加）/ <code>scale</code>（sx,sy 累乘）/ <code>rotate</code>（angle 累加, cx,cy 旋转中心）/ <code>opacity</code>（0~100 百分比覆盖）/ <code>visible</code></td></tr>
+<tr><td><code>easing</code></td><td><code>linear</code>（默认）/ <code>ease-in</code> / <code>ease-out</code> / <code>ease-in-out</code> / <code>quad</code> / <code>sine</code> / <code>cubic</code> / <code>cubic-bezier(x1,y1,x2,y2)</code></td></tr>
+<tr><td><code>path</code></td><td>仅 translate 的段内轨迹：<code>bezier</code>{c1x,c1y,c2x,c2y} / <code>parabola</code>{vx,vy} / <code>catmull-rom</code>{points[{x,y}]}</td></tr>
+</table>
+
+<h2>4.11.6 C++ Binding / C ABI 样例</h2>
+
+<pre><code>// C ABI
+UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256);
+UICornerstone_SetBool(g_uiInstance, h, "playing", 1);
+UICornerstone_SetBool(g_uiInstance, h, "loop", 1);
+UICornerstone_SetInt (g_uiInstance, h, "frame", 10);   // 跳帧
+
+// C++ Binding
+Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0);
+ani.SetBool(PropertyNames::kPlaying, true);
+ani.SetBool(PropertyNames::kLoop, true);
+
+// Button 载体（JSON）
+{ "type": "button", "id": "animatedBtn",
+  "rect": { "x": 40, "y": 40, "w": 120, "h": 40 },
+  "caption": "Rotate",
+  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc" }</code></pre>
+
+<div class="chapter-nav">
+  <a href="label.html">← 4.10 Label</a>
+  <a href="menu.html">下一节：4.12 Menu →</a>
+</div>
+
+</div>
+</body>
+</html>

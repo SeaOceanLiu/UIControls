@@ -1,0 +1,149 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.12 Menu - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/menu.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.12 Menu（菜单：MenuBar / MenuPanel / MenuItem）</h1>
+
+<p>菜单系统由三件套组成：<strong>MenuBar</strong>（顶级菜单栏）、<strong>MenuPanel</strong>（下拉面板，支持嵌套子菜单）、<strong>MenuItem</strong>（菜单项，支持 Normal / Separator / SubMenu）。三者均继承 <code>ControlImpl</code>。支持「菜单模式」：点击展开后鼠标移动自动切换顶级菜单。</p>
+
+<h2>4.12.1 控件的创建</h2>
+
+<pre><code>// C++（三件套 + Builder）
+MenuItem(Control* parent, MenuItemType type = MenuItemType::Normal, float xScale = 1.0f, float yScale = 1.0f);
+MenuPanel(Control* parent, float xScale = 1.0f, float yScale = 1.0f);
+MenuBar(Control* parent, float xScale = 1.0f, float yScale = 1.0f);
+
+auto filePanel = MenuPanelBuilder()
+    .addItem(MenuItemBuilder(u8"新建(N)").setShortcut("Ctrl+N").setOnClick(cb).build())
+    .addSeparator()
+    .build();
+auto bar = MenuBarBuilder(BENCH).addMenu(u8"文件(F)", filePanel).build();
+BENCH->addControl(bar);
+
+// C ABI（组装顺序：MenuItem → MenuPanel → MenuBar）
+UIControlHandle item  = UICornerstone_CreateMenuItem(g_inst, "Open", 0);          // 0=Normal 1=Separator 2=SubMenu
+UIControlHandle panel = UICornerstone_CreateMenuPanel(g_inst);
+UICornerstone_MenuPanelAddItem(g_inst, panel, item);
+UIControlHandle bar   = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 32);
+UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
+
+<h2>4.12.2 控件的方法</h2>
+
+<h3>MenuItem</h3>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>菜单项文字</td></tr>
+<tr><td><code>setShortcut(string)</code> / <code>getShortcut()</code></td><td>快捷键文本（如 "Ctrl+N"）</td></tr>
+<tr><td><code>setChecked(bool)</code> / <code>getChecked()</code></td><td>勾选状态</td></tr>
+<tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调</td></tr>
+<tr><td><code>setSubMenu(shared_ptr&lt;MenuPanel&gt;)</code> / <code>getSubMenu()</code> / <code>hasSubMenu()</code></td><td>子菜单</td></tr>
+<tr><td><code>getType()</code></td><td>项类型（Normal / Separator / SubMenu）</td></tr>
+<tr><td><code>setMenuFont(SharedFont, float)</code> / <code>getFont()</code> / <code>getFontSize()</code></td><td>面板注入共享字体</td></tr>
+<tr><td><code>closeMenuChain()</code></td><td>关闭整个菜单链</td></tr>
+</table>
+
+<h3>MenuPanel</h3>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>addItem(shared_ptr&lt;MenuItem&gt;)</code> / <code>addSeparator()</code> / <code>removeItem(...)</code></td><td>菜单项管理</td></tr>
+<tr><td><code>show()</code> / <code>hide()</code> / <code>isVisible()</code> / <code>setPosition(x, y)</code></td><td>显隐与定位</td></tr>
+<tr><td><code>getItemAt(x, y)</code></td><td>命中测试</td></tr>
+<tr><td><code>closeWithChildren()</code> / <code>recalculateSize()</code></td><td>关闭 / 重算尺寸</td></tr>
+<tr><td><code>getOpenSubMenu()</code> / <code>setOpenSubMenu(panel)</code>、<code>getHoveredIndex()</code> / <code>setHoveredIndex(int)</code></td><td>子菜单 / 悬停状态</td></tr>
+<tr><td><code>setFontSize(float)</code> / <code>getFontSize()</code>、<code>setItemHeightRatio(float)</code> / <code>getItemHeightRatio()</code>（1.0~3.0，默认 1.6）、<code>setFontName(FontName)</code></td><td>字体 / 行高比 / 字体名（即时生效）</td></tr>
+</table>
+
+<h3>MenuBar</h3>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>addMenu(caption, panel)</code> / <code>removeMenu(caption)</code></td><td>顶级菜单管理</td></tr>
+<tr><td><code>closeAllMenus()</code></td><td>关闭全部下拉</td></tr>
+<tr><td><code>setBarHeight(float)</code> / <code>getBarHeight()</code></td><td>菜单栏高度</td></tr>
+<tr><td><code>setItemHeightRatio(float)</code> / <code>getItemHeightRatio()</code>、<code>setFontSize(float)</code> / <code>getFontSize()</code></td><td>尺寸 / 字号（默认 20）</td></tr>
+<tr><td><code>isInMenuMode()</code> / <code>enterMenuMode(int index)</code> / <code>exitMenuMode()</code></td><td>菜单模式（点击展开后鼠标移动自动切换）</td></tr>
+</table>
+
+<h2>4.12.3 控件的属性（C ABI 属性系统）</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>caption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
+<tr><td><code>checked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
+<tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
+<tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
+<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
+</table>
+
+<h2>4.12.4 控件的回调</h2>
+
+<table>
+<tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>MenuItem::onClick</code>（C ABI 事件 <code>click</code>，JSON 键 <code>onClick</code>）</td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
+</table>
+
+<h2>4.12.5 JSON 语法</h2>
+
+<pre><code>{
+  "type": "menu-bar",
+  "id": "mainMenu",
+  "font": { "size": 16 },
+  "barHeight": 32,
+  "menus": [
+    {
+      "caption": "文件(F)",
+      "items": [
+        { "caption": "新建", "shortcut": "Ctrl+N", "events": { "onClick": "onMenuNew" } },
+        { "type": "separator" },
+        { "caption": "最近打开",
+          "items": [ { "caption": "file1.txt", "events": { "onClick": "onOpenRecent" } } ] },
+        { "caption": "退出", "checked": false, "events": { "onClick": "onMenuExit" } }
+      ]
+    }
+  ]
+}</code></pre>
+
+<h2>4.12.6 C++ Binding / 核心库样例</h2>
+
+<pre><code>// 核心库（Builder 链式组装）
+g_filePanel = MenuPanelBuilder()
+    .addItem(MenuItemBuilder(u8"新建(N)")
+        .setShortcut("Ctrl+N")
+        .setOnClick([](shared_ptr<MenuItem> item) { cout << "New file clicked" << endl; })
+        .build())
+    .addSeparator()
+    .addItem(MenuItemBuilder(u8"最近打开的文件")
+        .setSubMenu(MenuPanelBuilder()
+            .addItem(MenuItemBuilder(u8"file1.txt")
+                .setOnClick([](shared_ptr<MenuItem> item) { cout << "file1 clicked" << endl; })
+                .build())
+            .build())
+        .build())
+    .build();
+g_menuBar = MenuBarBuilder(BENCH)
+    .addMenu(u8"文件(F)", g_filePanel)
+    .build();
+BENCH->addControl(g_menuBar);
+
+// Binding：MenuItem 的 caption/checked/shortcut/click 走统一属性系统
+Control item = ui->CreateMenuItem("Open", 0);
+item.SetString("caption", "Open");
+item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
+
+<div class="chapter-nav">
+  <a href="luotiani.html">← 4.11 LuotiAni</a>
+  <a href="numericupdown.html">下一节：4.13 NumericUpDown →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.3 属性系统 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="property-system.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>3.3 属性系统</h1>
+
+<p>UICornerstone 的控件不暴露成百上千个 setter/getter，而是统一通过<strong>命名属性</strong>读写。这一设计让三层接口（C++ 直接 API、C ABI、C++ Binding）共用同一套语义，也让 JSON 布局与属性读写天然同构。</p>
+
+<h2>3.3.1 属性分类</h2>
+
+<table>
+<tr><th>类型</th><th>C ABI</th><th>C++ Binding</th><th>取值例子</th></tr>
+<tr><td>颜色</td><td><code>UICornerstone_SetColor / GetColor</code></td><td><code>SetColor / GetColor</code></td><td><code>UIColor{64,128,192,255}</code></td></tr>
+<tr><td>状态色</td><td><code>SetStateColor / GetStateColor</code></td><td><code>SetStateColor</code></td><td>normal/hover/pressed/disabled 四态</td></tr>
+<tr><td>布尔</td><td><code>SetBool / GetBool</code></td><td><code>SetBool / GetBool</code></td><td><code>true / false</code></td></tr>
+<tr><td>整数</td><td><code>SetInt / GetInt</code></td><td><code>SetInt / GetInt</code></td><td><code>12</code></td></tr>
+<tr><td>浮点</td><td><code>SetFloat / GetFloat</code></td><td><code>SetFloat / GetFloat</code></td><td><code>0.5f</code></td></tr>
+<tr><td>字符串</td><td><code>SetString / GetString(char*,len)</code></td><td><code>SetString / GetString</code></td><td><code>"Hello"</code></td></tr>
+<tr><td>枚举</td><td><code>SetEnum / GetEnum</code></td><td><code>SetEnum / GetEnum</code></td><td><code>"center"</code>、<code>"checked"</code></td></tr>
+<tr><td>指针</td><td><code>SetPtr / GetPtr</code></td><td><code>SetPtr / GetPtr</code></td><td>控件句柄（如 Popup 的 content）</td></tr>
+</table>
+
+<h2>3.3.2 属性名与事件名常量</h2>
+
+<p>所有属性名/事件名字符串集中在 <code>include/PropertyNames.h</code>，C++ Binding 直接用这些常量，杜绝手写字符串出错：</p>
+
+<pre><code>label.SetString(PropertyNames::kCaption, "Hello");          // "caption"
+label.SetEnum(PropertyNames::kAlign, "center");             // "align" = "center"
+checkBox.SetEnum(PropertyNames::kCheckState, "checked");    // "check-state" = "checked"
+slider.SetFloat(PropertyNames::kValue, 50.0f);              // "value"
+button.SetCallback(PropertyNames::kEventClick, [](const Event&){});
+editBox.SetCallback(PropertyNames::kEventTextChanged, [](const Event& e){
+    auto text = e.GetTextChanged();
+});</code></pre>
+
+<h2>3.3.3 属性在控件中的实现</h2>
+
+<p>每个控件以 <code>setXxxProperty / getXxxProperty</code> 覆写实现分发；未实现的属性返回 0。颜色属性支持带状态子键的 StateColor：</p>
+
+<pre><code>// C ABI：设置按钮四态背景
+UICornerstone_SetStateColor(g_inst, btn, "background",
+    stateNormal, stateHover, statePressed, stateDisabled);
+
+// C++ Binding
+button.SetStateColor("background",
+    UIColor{64,96,160,255},  // normal
+    UIColor{80,128,192,255}, // hover
+    UIColor{48,80,144,255},  // pressed
+    UIColor{80,80,80,255});  // disabled</code></pre>
+
+<h2>3.3.4 回调属性</h2>
+
+<p>事件回调也走属性通道，统一为 <code>SetCallback(instance, ctl, eventName, cb, userData)</code>：</p>
+
+<pre><code>// C ABI
+UICornerstone_SetCallback(g_inst, btn, "click",
+    [](void* ctl, const void* data, void* user){ printf("clicked\n"); }, NULL);
+
+// C++ Binding（事件名常量 + std::function）
+button.SetCallback(PropertyNames::kEventClick, [&](const Event& e){
+    // 事件负载用具名访问器读取
+});</code></pre>
+
+<p>事件名全集：<code>click</code>、<code>enter</code>、<code>confirm</code>、<code>cancel</code>、<code>close</code>、<code>text-changed</code>、<code>check-changed</code>、<code>value-changed</code>、<code>selection-changed</code>、<code>color-changed</code>、<code>position-changed</code>、<code>moved</code>、<code>select</code>、<code>expand</code>、<code>collapse</code>。</p>
+
+<h2>3.3.5 只读与命令式属性</h2>
+
+<div class="note">部分属性是<strong>只写（set 生效、get 不支持）</strong>或<strong>命令式</strong>的：如 <code>image</code>（图片路径，加载后不复读）、LuotiAni 的 <code>playing</code>（置 1 即 play()）、<code>animation</code>（加载动画描述）。使用时以控件页的属性表标注为准。</div>
+
+<div class="chapter-nav">
+  <a href="basics.html">← 3.2 第一个应用</a>
+  <a href="declarative-ui.html">下一章：3.4 声明式 UI →</a>
+</div>
+
+</div>
+</body>
+</html>

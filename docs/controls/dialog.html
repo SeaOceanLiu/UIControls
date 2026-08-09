@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.7 Dialog / Popup - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/dialog.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.7 Dialog / Popup（弹窗族）</h1>
+
+<p>三层弹窗族：<code>Popup</code>（无按钮）→ <code>ConfirmPopup</code>（+确定按钮，Enter 确认）→ <code>Dialog</code>（+取消按钮，ESC/外部点击走取消）。三者均为<strong>非模态</strong>（事件驱动，不阻塞主循环）。继承链：<code>Dialog → ConfirmPopup → Popup → Panel</code>。</p>
+
+<h2>4.7.1 控件的创建</h2>
+
+<pre><code>// C++
+Dialog(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+DialogBuilder(parent, rect).setCentered().setOnConfirm(cb).setOnCancel(cb2).build();
+
+// C ABI（创建即 open()，并加入 popupPool 保持生命期）
+UIControlHandle dlg = UICornerstone_CreateDialog(g_inst, "OK", "Cancel", 0, 0, 296, 440);
+
+// C++ Binding
+auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);   // 居中弹窗
+dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code></pre>
+
+<h2>4.7.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>open()</code></td><td>打开：计算位置、注册事件 watcher、挂到 BENCH 顶层、注册焦点边界、聚焦首个内容控件</td></tr>
+<tr><td><code>close(DialogResult result = Cancelled)</code></td><td>关闭并触发 <code>onClose</code> 回调</td></tr>
+<tr><td><code>isPopupVisible()</code> / <code>getResult()</code></td><td>可见（且 result==None）/ 查询结果（None/Confirmed/Cancelled）</td></tr>
+<tr><td><code>setContent(shared_ptr&lt;ControlImpl&gt;)</code> / <code>getContent()</code></td><td>设置 / 获取内容控件</td></tr>
+<tr><td><code>setCentered()</code> / <code>setAnchored(anchor, offset)</code> / <code>setAbsolute(SRect)</code></td><td>三种定位方式</td></tr>
+<tr><td><code>setCloseOnClickOutside(bool)</code> / <code>setCloseOnEsc(bool)</code></td><td>行为开关</td></tr>
+<tr><td><code>setOnClose(OnCloseHandler)</code></td><td>关闭回调 <code>void(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
+<tr><td><code>ConfirmPopup::setConfirmButtonVisible(bool)</code> / <code>setConfirmButtonText(string)</code> / <code>setConfirmButtonRect(SRect)</code> / <code>getConfirmButton()</code></td><td>确定按钮配置（默认文字「确定」）</td></tr>
+<tr><td><code>ConfirmPopup::setButtonHeight(float)</code> / <code>setButtonGap(float)</code> / <code>setPadding(float)</code></td><td>布局参数（默认 28 / 8 / 10）</td></tr>
+<tr><td><code>ConfirmPopup::setOnConfirm(OnConfirmHandler)</code></td><td>确定回调 <code>void(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
+<tr><td><code>Dialog::setCancelButtonText(string)</code> / <code>setCancelButtonRect(SRect)</code> / <code>getCancelButton()</code> / <code>recreateButtons()</code> / <code>setOnCancel(OnCancelHandler)</code></td><td>取消按钮配置（默认「取消」）与取消回调</td></tr>
+<tr><td><code>onEscPressed() / onOutsideClicked() / onConfirmAction() / onCancelAction() / layoutContent()</code></td><td>可重写虚方法（子类定制行为）</td></tr>
+</table>
+
+<h2>4.7.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>close-on-click-outside</code></td><td>Bool</td><td>1</td><td>点击外部关闭</td></tr>
+<tr><td><code>close-on-esc</code></td><td>Bool</td><td>1</td><td>ESC 关闭</td></tr>
+<tr><td><code>visible</code></td><td>Bool</td><td>0</td><td>置 1 = open()，置 0 = close()（Popup 专属语义）</td></tr>
+<tr><td><code>content</code></td><td>Ptr</td><td>null</td><td>内容控件句柄（SetPtr）</td></tr>
+<tr><td><code>centered-mode</code></td><td>Enum</td><td>—</td><td><code>"centered"</code> → setCentered()</td></tr>
+<tr><td><code>confirm-visible</code></td><td>Bool</td><td>1</td><td>确定按钮可见性</td></tr>
+<tr><td><code>confirm-text</code> / <code>cancel-text</code></td><td>String</td><td>"确定" / "取消"</td><td>按钮文字</td></tr>
+<tr><td><code>button-height</code> / <code>button-gap</code> / <code>padding</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
+</table>
+
+<h2>4.7.4 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>close</code></td><td>close() 被调用时</td><td><code>(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
+<tr><td><code>confirm</code></td><td>点确定按钮或按 Enter（ConfirmPopup 及以上）</td><td><code>(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
+<tr><td><code>cancel</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
+</table>
+
+<h2>4.7.5 JSON 语法（顶层 dialogs 数组）</h2>
+
+<pre><code>{
+  "type": "dialog", "id": "colorDlg",
+  "centered": true,
+  "rect": { "x": 0, "y": 0, "w": 296, "h": 440 },
+  "colors": { "background": { "normal": "#E0E0E0FF" } },
+  "confirmButton": { "text": "OK" },
+  "cancelButton": { "text": "Cancel" },
+  "events": {
+    "onConfirm": "onColorConfirmed",
+    "onCancel": "onColorCancelled",
+    "onClose": "onColorClose"
+  },
+  "children": [
+    { "type": "edit-box", "id": "hexInput",
+      "rect": { "x": 72, "y": 168, "w": 130, "h": 28 }, "text": "#FF6600FF" }
+  ]
+}</code></pre>
+
+<p>通用子键：<code>buttonHeight</code> / <code>buttonGap</code> / <code>padding</code>；<code>confirmButton</code> / <code>cancelButton</code> 支持 <code>text</code> / <code>rect</code> / <code>visible</code>。默认隐藏；C ABI 侧 <code>SetBool(inst, dlg, "visible", 1)</code> 打开。</p>
+
+<h2>4.7.6 C++ Binding 样例</h2>
+
+<pre><code>auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);   // 居中
+auto label  = vp->CreateLabel("Delete this file?", 14.0f, 20, 30, 240, 60);
+dialog.AddChild(label);
+dialog.SetCallback(PropertyNames::kEventConfirm, [](const Event& e) {
+    printf("confirmed, result=%d\n", e.GetCloseResult());
+});
+dialog.SetCallback(PropertyNames::kEventCancel, [](const Event&) {
+    printf("cancelled\n");
+});
+dialog.SetBool("visible", true);   // 打开弹窗</code></pre>
+
+<div class="note">数据取回：内容控件经 <code>getContent()</code> + <code>dynamic_pointer_cast</code> 读取。一次只弹一个弹窗，嵌套需自行管理。</div>
+
+<div class="chapter-nav">
+  <a href="combobox.html">← 4.6 ComboBox</a>
+  <a href="editbox.html">下一节：4.8 EditBox →</a>
+</div>
+
+</div>
+</body>
+</html>

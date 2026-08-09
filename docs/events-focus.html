@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.5 事件 · 3.6 焦点系统 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="events-focus.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>3.5 事件</h1>
+
+<h2>3.5.1 事件分发链路</h2>
+
+<p>一条事件从后端到控件的完整路径：</p>
+
+<pre><code>InputBackend::pollEvent（后端原生事件 → Event(EventType + union 数据)）
+  → MainWindow::processEvents（WindowClose 退出 / Resize / Moved 处理，其余入队）
+  → Bench::inputControl → EventQueue（事件队列）
+  → Bench::eventLoopEntry 出队
+  → notifyBeforeEventHandlingWatchers（消费则跳过）
+  → 控件树逆向 Z 序分派（返回 true 停止传播）
+  → notifyAfterEventHandlingWatchers
+  → Tab 键由 Bench 拦截转 FocusManager 导航</code></pre>
+
+<h2>3.5.2 事件类型（C ABI）</h2>
+
+<pre><code>UI_EVENT_NONE, UI_EVENT_MOUSE_MOVE, UI_EVENT_MOUSE_DOWN, UI_EVENT_MOUSE_UP,
+UI_EVENT_MOUSE_WHEEL, UI_EVENT_KEY_DOWN, UI_EVENT_KEY_UP, UI_EVENT_TEXT_INPUT,
+UI_EVENT_WINDOW_RESIZE, UI_EVENT_WINDOW_CLOSE, UI_EVENT_FOCUS_GAINED, UI_EVENT_FOCUS_LOST</code></pre>
+
+<p>访问宏：<code>UI_EVENT_MOUSE_X(ev)</code>、<code>UI_EVENT_MOUSE_Y(ev)</code>、<code>UI_EVENT_BUTTON(ev)</code>、<code>UI_EVENT_KEY_CODE(ev)</code>、<code>UI_EVENT_KEY_MOD(ev)</code>、<code>UI_EVENT_TEXT(ev)</code>、<code>UI_EVENT_WHEEL_DELTA(ev)</code>、<code>UI_EVENT_RESIZE_W/H(ev)</code>。</p>
+
+<h2>3.5.3 控件事件与回调</h2>
+
+<p>控件层的事件统一走属性系统回调（见 <a href="property-system.html">3.3 属性系统</a>），事件名常量在 <code>PropertyNames.h</code>：</p>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>Binding 具名访问器</th></tr>
+<tr><td><code>click</code></td><td>按钮/标签点击，焦点态 Enter/Space</td><td>—</td></tr>
+<tr><td><code>enter</code></td><td>输入框回车</td><td>—</td></tr>
+<tr><td><code>text-changed</code></td><td>文本变化</td><td><code>GetTextChanged()</code></td></tr>
+<tr><td><code>check-changed</code></td><td>复选框状态变化</td><td><code>GetCheckState()</code>（0/1/2）</td></tr>
+<tr><td><code>value-changed</code></td><td>滑块/进度条/数值框值变化</td><td><code>GetValueChanged()</code></td></tr>
+<tr><td><code>selection-changed</code></td><td>下拉框选中变化</td><td><code>GetSelectedIndex()</code> / <code>GetSelectedValue()</code></td></tr>
+<tr><td><code>color-changed</code></td><td>取色器提交颜色</td><td>颜色负载</td></tr>
+<tr><td><code>position-changed</code></td><td>滚动条位置变化</td><td><code>GetPositionChanged()</code></td></tr>
+<tr><td><code>moved</code></td><td>分割条拖拽结束</td><td><code>GetMovedPosition()</code></td></tr>
+<tr><td><code>confirm</code> / <code>cancel</code> / <code>close</code></td><td>弹窗确认/取消/关闭</td><td><code>GetCloseResult()</code></td></tr>
+<tr><td><code>select</code> / <code>expand</code> / <code>collapse</code></td><td>树视图选中/展开/折叠</td><td><code>GetNodeId()</code> / <code>GetNodeUserData()</code></td></tr>
+</table>
+
+<h2>3.5.4 Event 类通用访问器</h2>
+
+<pre><code>e.GetIntVal();       // 原始负载：整数
+e.GetFloatVal();     // 原始负载：浮点
+e.GetDoubleVal();    // 原始负载：双精度（NumericUpDown）
+e.GetStrVal();       // 原始负载：字符串
+e.GetPtrVal();       // 原始负载：指针</code></pre>
+
+<h2>3.6 焦点系统</h2>
+
+<h3>3.6.1 三件套：Tab 环 / 焦点边界 / 焦点作用域</h3>
+
+<table>
+<tr><th>机制</th><th>按键</th><th>行为</th></tr>
+<tr><td>Tab 环</td><td><code>Tab</code> / <code>Shift+Tab</code></td><td>在全部可聚焦控件间循环，跳过不可见/不可用控件；<code>setFocusable(true)</code> 或 <code>setTabIndex(n≥0)</code> 自动注册</td></tr>
+<tr><td>焦点边界（FocusBoundary）</td><td>Tab</td><td>边界容器（Bench、WinFrame、ColorPicker）内 Tab 仅在直接后代中循环</td></tr>
+<tr><td>焦点作用域（scope）</td><td><code>Ctrl+Tab</code> / <code>Ctrl+Shift+Tab</code></td><td>在各可见边界（Bench + WinFrames）之间轮转</td></tr>
+</table>
+
+<h3>3.6.2 焦点环绘制</h3>
+
+<p>获得焦点的控件绘制三层叠加焦点环：黑线（inset 0）+ 白线（inset 1）+ 主题色（inset 2，默认 <code>#4285F4</code>），任何背景上都清晰可见。</p>
+
+<ul>
+  <li><code>FocusRingStyle::Solid / Dashed</code> 两种样式；</li>
+  <li><code>m_focusRingAlwaysVisible</code> 默认 true（鼠标悬停也显示环）；设为 false 则仅键盘 Tab 聚焦时显示；</li>
+  <li>默认可聚焦控件：EditBox / TextArea / Slider / Button / CheckBox；</li>
+  <li>Button 聚焦时 Enter/Space 触发 onClick，CheckBox 聚焦时 Space 循环三态；</li>
+  <li>窗口失去系统焦点（<code>FocusLost</code>）自动清除本实例焦点。</li>
+</ul>
+
+<h3>3.6.3 多窗口的焦点隔离</h3>
+
+<p>多实例/多窗口下每个窗口的焦点相互独立；WinFrame 隐藏时其内部控件被过滤并释放焦点；Ctrl+Tab 在 <code>...→WinFrameA→WinFrameB→Bench→...</code> 间轮转。</p>
+
+<div class="chapter-nav">
+  <a href="declarative-ui.html">← 3.4 声明式 UI</a>
+  <a href="luotiani.html">下一章：3.7 洛蒂动画 →</a>
+</div>
+
+</div>
+</body>
+</html>

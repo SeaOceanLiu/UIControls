@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.13 NumericUpDown - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/numericupdown.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.13 NumericUpDown（数值微调框）</h1>
+
+<p>NumericUpDown 是数值输入控件：编辑框 + 上下箭头按钮，支持范围钳位、步长/页步长、小数精度、只读模式与长按自动步进。继承链：<code>NumericUpDown → EditBox → ControlImpl → Control</code>。</p>
+
+<h2>4.13.1 控件的创建</h2>
+
+<pre><code>// C++
+NumericUpDown(Control* parent, const SRect& rect, float xScale = 1.0f, float yScale = 1.0f);
+NumericUpDownBuilder(BENCH.get(), {220, 90, 150, 24})
+    .setValue(0.6).setRange(0.0, 1.0).setStep(0.2).setDecimals(2).build();
+
+// C ABI
+UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32);
+
+// JSON
+{ "id": "nudInteger", "type": "numeric-up-down",
+  "rect": { "x": 20, "y": 78, "w": 180, "h": 32 },
+  "value": 50, "range": { "min": 0, "max": 100 },
+  "step": 1, "pageStep": 10, "decimals": 0,
+  "placeholder": "0", "readOnly": false, "buttonWidth": 28,
+  "events": { "onValueChanged": "onPosXChanged" } }</code></pre>
+
+<h2>4.13.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setValue(double)</code> / <code>getValue()</code></td><td>当前值（自动钳位 + 吸附到步长）</td></tr>
+<tr><td><code>setRange(double min, double max)</code> / <code>getRange()</code></td><td>范围（默认 0~100）</td></tr>
+<tr><td><code>setStep(double)</code> / <code>getStep()</code></td><td>步长（默认 1.0，负值取绝对值）</td></tr>
+<tr><td><code>setPageStep(double)</code> / <code>getPageStep()</code></td><td>PageUp/Down 步长（默认 10.0）</td></tr>
+<tr><td><code>setDecimals(int)</code> / <code>getDecimals()</code></td><td>小数位（0~6，默认 0）</td></tr>
+<tr><td><code>setReadOnly(bool)</code> / <code>isReadOnly()</code></td><td>只读（禁输入，按钮仍可用，默认 false）</td></tr>
+<tr><td><code>setButtonWidth(float)</code> / <code>getButtonWidth()</code></td><td>箭头区宽度（默认 28）</td></tr>
+<tr><td><code>setArrowColor(normal, hover, press)</code> / <code>getArrowColor()</code></td><td>箭头三态颜色</td></tr>
+<tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调 <code>void(shared_ptr&lt;NumericUpDown&gt;, double)</code></td></tr>
+<tr><td><code>stepValue(int dir)</code></td><td>以 step 步进（+1/-1）</td></tr>
+</table>
+
+<h2>4.13.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td><td>当前值（SetFloat/GetFloat）</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
+<tr><td><code>step</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
+<tr><td><code>page-step</code></td><td>Float</td><td>10.0</td><td>页步长</td></tr>
+<tr><td><code>decimals</code></td><td>Int</td><td>0</td><td>小数精度（唯一 int 属性）</td></tr>
+<tr><td><code>read-only</code></td><td>Bool</td><td>false</td><td>只读模式</td></tr>
+<tr><td><code>button-width</code></td><td>Float</td><td>28</td><td>箭头区宽度</td></tr>
+<tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>arrow-pressed</code></td><td>Color</td><td>(180,180,180) / (255,255,255) / (220,220,220)</td><td>箭头三态颜色</td></tr>
+<tr><td><code>background</code> / <code>border</code> / <code>text</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
+</table>
+
+<h2>4.13.4 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>onValueChanged</code>（C ABI 事件 <code>value-changed</code>）</td><td>值变化提交时：点击/长按步进、键盘步进、Enter/FocusLost 提交编辑文本后（<code>min==max</code> 时步进不触发）</td><td><code>(shared_ptr&lt;NumericUpDown&gt;, double newValue)</code> / <code>UIEventData.data.doubleVal</code></td></tr>
+</table>
+
+<h2>4.13.5 JSON 语法</h2>
+
+<pre><code>{
+  "id": "nudInteger",
+  "type": "numeric-up-down",
+  "rect": { "x": 20, "y": 78, "w": 180, "h": 32 },
+  "value": 50,
+  "range": { "min": 0, "max": 100 },
+  "step": 1,
+  "pageStep": 10,
+  "decimals": 0,
+  "placeholder": "0",
+  "readOnly": false,
+  "buttonWidth": 28,
+  "events": { "onValueChanged": "onPosXChanged" }
+}</code></pre>
+
+<h2>4.13.6 C++ Binding 样例</h2>
+
+<pre><code>Control nud = ui->CreateNumericUpDown(20, 78, 180, 32);
+nud.SetFloat(PropertyNames::kValue, 50.0f);
+nud.SetFloat(PropertyNames::kRangeMax, 100.0f);
+nud.SetFloat(PropertyNames::kStep, 1.0f);
+nud.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
+    printf("value = %.2f\n", e.GetValueChangedDouble());   // 双精度负载
+});
+
+// 核心库
+auto nud2b = NumericUpDownBuilder(BENCH.get(), {220, 90, 150, 24})
+    .setValue(0.6).setRange(0.0, 1.0).setStep(0.2).setDecimals(2)
+    .setOnValueChanged([](shared_ptr<NumericUpDown>, double v) {
+        printf("[nud2b] 当前值 = %.2f\n", v);
+    })
+    .build();
+BENCH->addControl(nud2b);</code></pre>
+
+<div class="chapter-nav">
+  <a href="menu.html">← 4.12 Menu</a>
+  <a href="panel.html">下一节：4.14 Panel →</a>
+</div>
+
+</div>
+</body>
+</html>

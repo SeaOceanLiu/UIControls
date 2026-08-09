@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.5 ColorPicker - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/colorpicker.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.5 ColorPicker（颜色选择器）</h1>
+
+<p>ColorPicker 是弹窗式取色器：闭合态显示色块 + Hex 文本，点击展开弹窗（预设色网格 + RGB 滑块 + Hex 输入），确定或按 Enter 提交颜色。继承链：<code>ColorPicker → Panel → ControlImpl → Control</code>。</p>
+
+<div class="img-frame">
+  <img src="../assets/ColorPicker_Popup.svg" alt="ColorPicker 弹窗">
+  <div class="img-caption">ColorPicker 弹窗布局示意</div>
+</div>
+
+<h2>4.5.1 控件的创建</h2>
+
+<pre><code>// C++
+ColorPicker(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+ColorPickerBuilder(parent, SRect(X1, 30, 96, 24))
+    .setColor("#FF0000").setOnColorChanged(cb).build();
+
+// C ABI
+UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "#FF6600");
+
+// JSON
+{ "type": "color-picker", "id": "testColorPicker",
+  "rect": { "x": 240, "y": 498, "w": 96, "h": 24 },
+  "color": "#FF6600",
+  "presets": ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"],
+  "presetLayout": { "cols": 5, "rows": 1 },
+  "events": { "onColorChanged": "onColorChanged" } }</code></pre>
+
+<h2>4.5.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setColor(const SColor&amp;)</code> / <code>setColor(const string&amp; hex)</code></td><td>设置颜色（支持 "#RRGGBB" / "#RRGGBBAA"）</td></tr>
+<tr><td><code>getColor()</code> / <code>getColorHex()</code></td><td>获取当前颜色 / "#RRGGBB" 文本</td></tr>
+<tr><td><code>setPresetColors(const vector&lt;SColor&gt;&amp;)</code></td><td>设置预设色列表</td></tr>
+<tr><td><code>setPresetLayout(int cols, int rows)</code> / <code>getPresetCols() / getPresetRows()</code></td><td>预设色网格列 / 行数</td></tr>
+<tr><td><code>isPopupVisible()</code></td><td>弹窗是否打开</td></tr>
+<tr><td><code>setOnColorChanged(OnColorChangedHandler)</code></td><td>颜色变化回调</td></tr>
+<tr><td><code>setClosedSwatchSize(float)</code> / <code>setClosedFontSize(int)</code> / <code>setClosedTextColor(SColor)</code></td><td>闭合态色块大小（16）/ Hex 字号（12）/ 文本色（#DBDBDB）</td></tr>
+<tr><td><code>setPopupBGColor(SColor)</code></td><td>弹窗背景色（默认 #3C3C41）</td></tr>
+<tr><td><code>setColorProperty / setIntProperty / setFloatProperty / setStringProperty</code>（+getter）</td><td>属性系统分发</td></tr>
+<tr><td><code>setCallbackProperty(event, cb, userData)</code></td><td>回调属性注册</td></tr>
+</table>
+
+<h2>4.5.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>color-hex</code></td><td>String</td><td>—</td><td>读当前颜色（"#RRGGBB"，经 GetString）</td></tr>
+<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td><td>预设网格列 / 行</td></tr>
+<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td><td>闭合态色块大小</td></tr>
+<tr><td><code>closed-font-size</code></td><td>Int</td><td>12</td><td>闭合态 Hex 字号</td></tr>
+<tr><td><code>closed-text-color</code></td><td>String</td><td>#DBDBDB</td><td>闭合态文本色</td></tr>
+<tr><td><code>popup-bg-color</code></td><td>String</td><td>#3C3C41</td><td>弹窗背景色</td></tr>
+<tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
+</table>
+
+<h2>4.5.4 控件的回调</h2>
+
+<table>
+<tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>onColorChanged</code>（C ABI 事件 <code>color-changed</code>）</td><td>点击弹窗「确定」或按 Enter 提交时；取消 / ESC / 外部点击不触发</td><td><code>(shared_ptr&lt;ColorPicker&gt;, const SColor&amp;)</code> / <code>UIEventData.data.color{r,g,b,a}</code></td></tr>
+</table>
+
+<h2>4.5.5 JSON 语法</h2>
+
+<pre><code>{
+  "type": "color-picker",
+  "id": "testColorPicker",
+  "rect": { "x": 240, "y": 498, "w": 96, "h": 24 },
+  "color": "#FF6600",
+  "presets": ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"],
+  "presetLayout": { "cols": 5, "rows": 1 },
+  "swatchSize": 16.0,
+  "closedFontSize": 12,
+  "closedTextColor": "#DBDBDB",
+  "popupBGColor": "#303030",
+  "events": { "onColorChanged": "onColorChanged" }
+}</code></pre>
+
+<h2>4.5.6 C++ Binding 样例</h2>
+
+<pre><code>// Binding 工厂
+Control cp = ui->CreateColorPicker(240, 498, 96, 24, "#FF6600");
+cp.SetString("closed-text-color", "#DDDDDD");
+cp.SetCallback(PropertyNames::kEventColorChanged, [](const Event& e) {
+    // 颜色负载读取
+});
+
+// C++ 核心库（Builder）
+auto cp2 = ColorPickerBuilder(nullptr, SRect(X1, 30, 96, 24))
+    .setColor("#FF0000")
+    .setPresetColors({ "#FF0000", "#00FF00", "#0000FF" })
+    .setOnColorChanged([](shared_ptr<ColorPicker>, const SColor& color) {
+        cout << "Color changed to: " << color.toHex(false) << endl;
+    })
+    .build();
+BENCH->addControl(cp2);</code></pre>
+
+<div class="chapter-nav">
+  <a href="checkbox.html">← 4.4 CheckBox</a>
+  <a href="combobox.html">下一节：4.6 ComboBox →</a>
+</div>
+
+</div>
+</body>
+</html>

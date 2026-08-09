@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current=""></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<div class="hero">
+  <h1>UICornerstone 用户手册</h1>
+  <div class="sub">跨后端 C++ 即时模式 UI 库 —— 一套代码，SDL3 / SFML / raylib 三后端任意切换</div>
+  <div class="badges">
+    <span class="badge">C++17</span>
+    <span class="badge">CMake 3.16+</span>
+    <span class="badge">GPL-3.0</span>
+    <span class="badge">20+ 控件</span>
+    <span class="badge">声明式 JSON 布局</span>
+    <span class="badge">C ABI + C++ Binding</span>
+  </div>
+</div>
+
+<h1>1 介绍</h1>
+
+<p><strong>UICornerstone</strong> 是一个从零构建的跨后端 GUI 库，采用「核心库 + 后端插件」架构：核心实现全部与图形后端无关（渲染经 <code>RenderDevice / Texture / TextRenderer / InputBackend</code> 四层抽象），同一套代码可在 <strong>SDL3</strong>、<strong>SFML</strong>、<strong>raylib</strong> 三种后端上运行。</p>
+
+<div class="card">
+<h3>核心特性</h3>
+<ul>
+  <li><strong>四层后端抽象</strong>：RenderDevice（绘制原语）、Texture（纹理）、TextRenderer（文本）、InputBackend（输入）——换后端零业务代码改动。</li>
+  <li><strong>声明式 UI</strong>：JSON 布局文件描述控件树、布局引擎（流式/锚点/网格）、事件绑定与主题样式，支持热加载。</li>
+  <li><strong>20+ 控件</strong>：Button、CheckBox（三态）、EditBox、TextArea（多行）、ComboBox、NumericUpDown、Slider、ScrollBar、ProgressBar、Menu、ColorPicker、Splitter、WinFrame、Dialog/Popup、HandleControl 等。</li>
+  <li><strong>LuotiAni 动画引擎</strong>：基于 JSON 关键帧描述（translate/scale/rotate/opacity/visible + 缓动与轨迹），支持多实例共享烘焙帧数据。</li>
+  <li><strong>三种集成方式</strong>：C ABI 动态库（纯 C 调用）、C++ Binding（现代 C++ 封装）、核心 + 后端源码混合编译。</li>
+  <li><strong>多实例 / 多视口</strong>：一个进程多个独立 UI 实例、多窗口与子视口渲染（按后端能力位条件化）。</li>
+  <li><strong>焦点系统</strong>：Tab 环、焦点边界（WinFrame 内循环）、Ctrl+Tab 焦点作用域切换、焦点环绘制。</li>
+  <li><strong>高 DPI</strong>：内置 <code>dpiScale</code> 机制，布局与渲染自动适配。</li>
+</ul>
+</div>
+
+<h2>1.1 架构总览</h2>
+
+<table>
+<tr><th>层</th><th>职责</th><th>目录</th></tr>
+<tr><td>核心库</td><td>控件树、事件系统、焦点管理、布局引擎、JSON 解析、动画引擎</td><td><code>include/</code> + <code>src/</code></td></tr>
+<tr><td>后端插件</td><td>SDL3 / SFML / raylib 各自的窗口、输入、渲染适配</td><td><code>src/backend/</code></td></tr>
+<tr><td>C ABI</td><td>纯 C 接口：实例管理、布局加载、控件工厂、属性系统、回调</td><td><code>include/UICornerstoneAPI.h</code></td></tr>
+<tr><td>C++ Binding</td><td>类型安全封装：<code>UICornerstone</code>、<code>Control</code>、<code>Event</code></td><td><code>binding/</code></td></tr>
+<tr><td>样例与测试</td><td>4 种集成模式样例、全量自动化测试</td><td><code>samples/</code>、<code>test/</code></td></tr>
+</table>
+
+<div class="grid2">
+  <div class="img-frame">
+    <img src="assets/screenshot-hosted.png" alt="C++ Hosted 样例">
+    <div class="img-caption">C++ Binding Hosted 样例（sample_cpp_hosted）</div>
+  </div>
+  <div class="img-frame">
+    <img src="assets/screenshot-fromsource.png" alt="混合集成样例">
+    <div class="img-caption">混合集成样例（sample_fromsource，核心 DLL + 后端源码）</div>
+  </div>
+</div>
+
+<h2>1.2 阅读路线</h2>
+<ul>
+  <li><strong>第一次接触</strong>：先读 <a href="quickstart.html">快速起步</a>，把第一个窗口跑起来。</li>
+  <li><strong>想用 C++ Binding 写界面</strong>：<a href="basics.html">从基础入门</a> 全程带你走。</li>
+  <li><strong>想用 JSON 声明界面</strong>：直接跳到 <a href="declarative-ui.html">声明式 UI</a>。</li>
+  <li><strong>需要具体控件</strong>：<a href="controls/index.html">深入控件</a> 每控件一页，含全部方法 / 属性 / 回调 / JSON 语法 / 样例。</li>
+  <li><strong>遇到问题</strong>：查 <a href="appendix/debugging.html">问题定位手段</a> 与 <a href="faq.html">FAQ</a>。</li>
+</ul>
+
+<h2>1.3 目录导览</h2>
+<div class="toc">
+  <div class="toc-sec">
+    <h3>基础</h3>
+    <ul>
+      <li><a href="quickstart.html">2 快速起步</a></li>
+      <li><a href="basics.html">3.1 使用 C++ Binding 搭建</a></li>
+      <li><a href="basics.html">3.2 第一个 UICornerstone 应用</a></li>
+      <li><a href="property-system.html">3.3 属性系统</a></li>
+      <li><a href="declarative-ui.html">3.4 声明式 UI</a></li>
+      <li><a href="events-focus.html">3.5 事件</a></li>
+      <li><a href="events-focus.html">3.6 焦点系统</a></li>
+      <li><a href="luotiani.html">3.7 洛蒂动画</a></li>
+    </ul>
+  </div>
+  <div class="toc-sec">
+    <h3>深入控件</h3>
+    <ul>
+      <li><a href="controls/index.html">4.0 控件概念与共性</a></li>
+      <li><a href="controls/actor.html">4.1 Actor</a></li>
+      <li><a href="controls/bench.html">4.2 Bench</a></li>
+      <li><a href="controls/button.html">4.3 Button</a></li>
+      <li><a href="controls/checkbox.html">4.4 CheckBox</a></li>
+      <li><a href="controls/colorpicker.html">4.5 ColorPicker</a></li>
+      <li><a href="controls/combobox.html">4.6 ComboBox</a></li>
+      <li><a href="controls/dialog.html">4.7 Dialog / Popup</a></li>
+      <li><a href="controls/editbox.html">4.8 EditBox</a></li>
+      <li><a href="controls/handlecontrol.html">4.9 HandleControl</a></li>
+      <li><a href="controls/label.html">4.10 Label</a></li>
+      <li><a href="controls/luotiani.html">4.11 LuotiAni</a></li>
+      <li><a href="controls/menu.html">4.12 Menu</a></li>
+      <li><a href="controls/numericupdown.html">4.13 NumericUpDown</a></li>
+      <li><a href="controls/panel.html">4.14 Panel</a></li>
+      <li><a href="controls/progressbar.html">4.15 ProgressBar</a></li>
+      <li><a href="controls/scrollbar.html">4.16 ScrollBar</a></li>
+      <li><a href="controls/slider.html">4.17 Slider</a></li>
+      <li><a href="controls/splitter.html">4.18 Splitter</a></li>
+      <li><a href="controls/textarea.html">4.19 TextArea</a></li>
+      <li><a href="controls/winframe.html">4.20 WinFrame</a></li>
+    </ul>
+  </div>
+  <div class="toc-sec">
+    <h3>进阶</h3>
+    <ul>
+      <li><a href="advanced.html">5 进阶主题</a></li>
+      <li><a href="backends.html">6 使用其它后端</a></li>
+      <li><a href="integration.html">7 嵌入到你的逻辑回路中</a></li>
+    </ul>
+  </div>
+  <div class="toc-sec">
+    <h3>附录与 FAQ</h3>
+    <ul>
+      <li><a href="appendix/declarative-syntax.html">9.1 声明式 UI 语法速查表</a></li>
+      <li><a href="appendix/properties.html">9.2 属性速查表</a></li>
+      <li><a href="appendix/capi.html">9.3 C ABI 速查表</a></li>
+      <li><a href="appendix/debugging.html">9.4 问题定位手段</a></li>
+      <li><a href="appendix/backend-config.html">9.5 后端差异及后端配置</a></li>
+      <li><a href="faq.html">10 常见问题（FAQ）</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="note">本手册对应仓库 <code>docs/</code> 目录，与 <code>design/</code>（设计文档）互补：手册讲「怎么用」，设计文档讲「为什么这么设计」。</div>
+
+<div class="chapter-nav">
+  <span></span>
+  <a href="quickstart.html">下一章：2 快速起步 →</a>
+</div>
+
+</div>
+</body>
+</html>

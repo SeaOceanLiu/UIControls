@@ -1,0 +1,91 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6 使用其它后端 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="backends.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>6 使用其它后端（SFML / raylib）</h1>
+
+<p>UICornerstone 的界面代码<strong>与后端无关</strong>：同一份业务代码，仅编译开关 / 实例创建参数不同即可切换后端。</p>
+
+<h2>6.1 三后端对比</h2>
+
+<table>
+<tr><th></th><th>SDL3（推荐）</th><th>SFML</th><th>raylib</th></tr>
+<tr><td>风格</td><td>原生 C API</td><td>C++ 风格</td><td>C 风格</td></tr>
+<tr><td>功能</td><td>最全</td><td>较全</td><td>基础</td></tr>
+<tr><td>多窗口</td><td>✓</td><td>✓</td><td><strong>✗</strong>（单窗口）</td></tr>
+<tr><td>部署</td><td>需 3 个 DLL（SDL3/SDL3_ttf/SDL3_image）</td><td>SFML DLL 组</td><td>单 DLL，最简</td></tr>
+<tr><td>中文</td><td>✓</td><td>✓</td><td>需码点扩展</td></tr>
+<tr><td>vsync 配置</td><td><code>vsync</code> + <code>swap-ratio</code></td><td><code>vsync</code></td><td><code>vsync</code>（创建期全局）</td></tr>
+<tr><td>能力位</td><td>四能力全有</td><td>四能力全有</td><td>无 MULTI_WINDOW</td></tr>
+</table>
+
+<h2>6.2 编译时选择后端</h2>
+
+<pre><code>:: Windows
+build_scripts\build.bat sdl3        :: SDL3 后端
+build_scripts\build.bat sfml        :: SFML 后端
+build_scripts\build.bat raylib      :: Raylib 后端
+
+:: Linux（通用 CMake）
+cmake -B build -DUICORNERSTONE_BACKEND=SFML -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -DUICORNERSTONE_BACKEND=RAYLIB -DCMAKE_BUILD_TYPE=Debug</code></pre>
+
+<h2>6.3 运行时选择后端</h2>
+
+<pre><code>// C ABI：从插件名创建实例（同一 DLL 内含全部后端？否——按构建时后端）
+UICornerstone_CreateInstanceFromPlugin("sfml", NULL);
+UICornerstone_CreateInstanceFromPlugin("raylib", NULL);
+
+// C++ Binding
+UICornerstone::UICornerstone::Create(
+    UICornerstone::UICornerstone::Config{}.WithBackend("raylib"));
+
+// 样例命令行
+sample_cpp_hosted.exe backend=sfml</code></pre>
+
+<div class="note">「运行时选择」指插件加载路径的写法统一；实际可用的后端取决于编译时构建的 DLL/库。Binding 的 <code>Config</code> 通过 <code>backendSearchPath</code> / <code>coreLibraryDir</code> 指定动态库搜索位置，样例可内置多后端 DLL 按参数加载。</div>
+
+<h2>6.4 后端能力位与条件化</h2>
+
+<pre><code>uint32_t caps = UICornerstone_GetBackendCapabilities(g_inst);
+bool multiWindow = (caps &amp; UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
+if (multiWindow) { /* 正常创建第二窗口 */ }
+else { /* headless 降级：Window::isHeadless()，跳过渲染 */ }</code></pre>
+
+<p>详见 <a href="advanced.html">5.2 多视口与多窗口</a> 与 <a href="appendix/backend-config.html">9.5 后端差异及后端配置</a>。</p>
+
+<h2>6.5 后端配置键（运行时）</h2>
+
+<pre><code>// C ABI：SetBackendConfig / SetBackendConfigInt / SetBackendConfigBool
+// inst == NULL 时为创建期全局默认（raylib 的 vsync 必须这样设置）
+UICornerstone_SetBackendConfig(NULL, "vsync", "1");
+UICornerstone_SetBackendConfig(g_inst, "swap-ratio", "1");   // SDL3 专用
+
+// 只读探测
+char name[64];
+UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</code></pre>
+
+<table>
+<tr><th>key</th><th>类型</th><th>sdl3</th><th>sfml</th><th>raylib</th><th>说明</th></tr>
+<tr><td><code>vsync</code></td><td>bool/int/string</td><td>✓</td><td>✓</td><td>✓*</td><td>0/1；raylib 创建期 FLAG_VSYNC_HINT</td></tr>
+<tr><td><code>swap-ratio</code></td><td>int</td><td>✓</td><td>✗</td><td>✗</td><td>SDL3 SDL_SetRenderVSync（0/1/-1）</td></tr>
+<tr><td><code>renderer-name</code></td><td>string 只读</td><td>✓</td><td>✗</td><td>✗</td><td>能力探测</td></tr>
+</table>
+
+<div class="chapter-nav">
+  <a href="advanced.html">← 5 进阶主题</a>
+  <a href="integration.html">下一章：7 嵌入到你的逻辑回路中 →</a>
+</div>
+
+</div>
+</body>
+</html>

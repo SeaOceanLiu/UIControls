@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7 嵌入到你的逻辑回路中 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="integration.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>7 嵌入到你的逻辑回路中</h1>
+
+<p>UICornerstone 提供四种集成模式（<code>samples/</code> 各有完整示例），按「谁托管主循环」区分：</p>
+
+<table>
+<tr><th>模式</th><th>目录</th><th>特点</th></tr>
+<tr><td>声明式（hello_uicornerstone）</td><td><code>samples/hello_uicornerstone/</code></td><td>C ABI + JSON 布局，main() 手写四步循环</td></tr>
+<tr><td>命令式（sample_programmatic）</td><td><code>samples/sample_programmatic/</code></td><td>C ABI 工厂函数程序化建 UI，无 JSON</td></tr>
+<tr><td>混合（sample_fromsource）</td><td><code>samples/sample_fromsource/</code></td><td>核心 DLL + 后端源码编译，AppCallbacks 回调式</td></tr>
+<tr><td>显式加载（sample_loadlibrary）</td><td><code>samples/sample_loadlibrary/</code></td><td>LoadLibrary 手动加载核心 DLL，动态解析导出</td></tr>
+</table>
+
+<h2>7.1 嵌入既有主循环（Embedded 模式）</h2>
+
+<p>你的游戏/工具已有 while 循环时，把 UI 步骤插进去：</p>
+
+<pre><code>while (running) {
+    double dt = timer.tick();
+
+    // 1) 输入：把后端事件喂给 UI
+    ui->ProcessEvents();
+    // （可选）查询 UI 是否请求退出：ui->IsQuitRequested()
+
+    // 2) 你的游戏逻辑
+    world.update(dt);
+
+    // 3) 更新 UI（动画/布局推进）
+    ui->Update(dt);
+
+    // 4) 渲染：清屏 → UI → 你的场景（或反之，按遮挡需求）
+    ui->Clear();
+    ui->Render();       // 绘制控件树
+    world.render();     // 你的场景绘制
+    ui->Present();      // 交换缓冲
+}</code></pre>
+
+<div class="tip">UI 渲染可以与你的场景渲染交错：先 <code>Render()</code> 画 UI，再画 3D 场景（UI 在底层）；或先场景后 UI（UI 覆盖顶层）。</div>
+
+<h2>7.2 AppCallbacks（回调式，核心库直连）</h2>
+
+<p>核心库的传统集成方式是 <code>AppCallbacks</code> 接口（<code>include/AppCallbacks.h</code>）+ <code>MainWindow::run()</code>：</p>
+
+<pre><code>#include "AppCallbacks.h"
+#include "MainWindow.h"
+
+class MyApp : public AppCallbacks {
+public:
+    bool onInit() override {
+        // BENCH->addControl(...) 构建界面
+        return true;
+    }
+    void onEvent(const Event& event) override { }   // 可选：全局事件钩子
+    void onUpdate() override { /* 每帧逻辑 */ }
+    void onRender() override { }
+    void onQuit() override { }
+};
+
+int main() { MyApp app; MAINWIN->run(&app); return 0; }</code></pre>
+
+<p><code>MainWindow</code> 还提供分步驱动：<code>init(app)</code> / <code>processEvents(app)</code> / <code>update(app)</code> / <code>render(app)</code> / <code>shutdown(app)</code>。</p>
+
+<h2>7.3 事件泵手工驱动（核心库测试模式）</h2>
+
+<pre><code>while (BENCH->isExiting() == 0) {
+    MAINWIN->processEvents(nullptr);   // 后端事件 → EventQueue
+    BENCH->eventLoopEntry();           // 事件队列出队分派
+    BENCH->update();                   // 动画/重复触发
+    BENCH->draw();                     // 绘制控件树
+}</code></pre>
+
+<h2>7.4 显式 LoadLibrary（插件式加载）</h2>
+
+<pre><code>#include &lt;windows.h&gt;
+typedef UIInstance (*CreateFn)(const UIBackendCallbacks*, const UIInstanceConfig*);
+HMODULE dll = LoadLibraryA("UICornerstone.dll");
+CreateFn create = (CreateFn)GetProcAddress(dll, "UICornerstone_CreateInstance");
+UIInstance inst = create(NULL, NULL);
+// ... 主循环同 5.4，结束时 FreeLibrary(dll)</code></pre>
+
+<p>这就是 C++ Binding 内部采用的动态加载方案（只链 kernel32，不链 DLL import lib），保证 DLL 版本自由替换。</p>
+
+<h2>7.5 与你的对象模型对接</h2>
+
+<ul>
+  <li><strong>数据 → UI</strong>：控件属性 set（SetString/SetFloat/...）或 JSON 热加载；</li>
+  <li><strong>UI → 数据</strong>：事件回调里更新业务对象（Lambda 捕获 this / shared_ptr）；</li>
+  <li><strong>多实例</strong>：工具窗口 / 调试面板可用第二个 <code>UIInstance</code>（见 <a href="advanced.html">5.2</a>）；</li>
+  <li><strong>多线程</strong>：UI 线程模型为单线程事件泵——所有 UI 调用应发生在主线程；跨线程发消息请自行转发（如 std::async + 主线程轮询队列）。</li>
+</ul>
+
+<div class="chapter-nav">
+  <a href="backends.html">← 6 使用其它后端</a>
+  <a href="appendix/declarative-syntax.html">下一章：9 附录 →</a>
+</div>
+
+</div>
+</body>
+</html>

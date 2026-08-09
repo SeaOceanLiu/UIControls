@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.10 Label - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/label.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.10 Label（文本标签）</h1>
+
+<p>Label 是文本显示控件：支持单行 / 多行（\n）、9 种对齐、阴影、自动扩展、行高与行距调节，可设为可点击（clickable）。继承链：<code>Label → ControlImpl → Control</code>。</p>
+
+<h2>4.10.1 控件的创建</h2>
+
+<pre><code>// C++
+Label(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+LabelBuilder(parent, SRect(20, 20, 200, 40)).setCaption("Hello").setAlignmentMode(AM_CENTER).build();
+
+// C ABI
+UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20, 240, 40);
+
+// JSON
+{ "type": "label", "id": "titleLabel",
+  "rect": { "x": 0, "y": 52, "w": 800, "h": 40 },
+  "caption": "Layout Configuration Test",
+  "alignment": "center",
+  "font": { "name": "HarmonyOS_Sans_SC_Regular", "size": 28 },
+  "colors": { "text": { "normal": "#FFFFFFFF" } },
+  "shadow": { "enabled": true, "offset": { "x": 2, "y": 2 } } }</code></pre>
+
+<h2>4.10.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>getHotRect()</code></td><td>文本热区（未缩放）</td></tr>
+<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>文本内容</td></tr>
+<tr><td><code>setFont(FontName)</code> / <code>getFont()</code></td><td>字体</td></tr>
+<tr><td><code>setAlignmentMode(AlignmentMode)</code> / <code>getAlignmentMode()</code></td><td>对齐（默认 AM_MID_LEFT）</td></tr>
+<tr><td><code>setMargin(Margin)</code> / <code>setFontSize(int)</code> / <code>getFontSize()</code></td><td>边距 / 字号（默认 16）</td></tr>
+<tr><td><code>setShadow(bool)</code> / <code>setShadowOffset(SPoint)</code></td><td>阴影与偏移</td></tr>
+<tr><td><code>setOnClick(OnClickHandler)</code> / <code>setOnPropertyChanged(OnPropertyChangedHandler)</code></td><td>点击（需 clickable）/ 属性变化回调</td></tr>
+<tr><td><code>setLineHeight(int)</code> / <code>getLineHeight()</code> / <code>setLineSpacingRatio(float)</code> / <code>getLineSpacingRatio()</code></td><td>行高 / 行距比例</td></tr>
+<tr><td><code>setDebugDraw(bool)</code> / <code>getDebugDraw()</code></td><td>调试热区绘制</td></tr>
+<tr><td><code>setEnableExpand(bool)</code> / <code>getEnableExpand()</code></td><td>自动扩展尺寸</td></tr>
+<tr><td><code>setClickable(bool)</code></td><td>可点击（事件命中）开关</td></tr>
+<tr><td><code>SetFontStyle(int)</code></td><td>字体样式（normal/bold/italic/underline/strikethrough）</td></tr>
+<tr><td><code>setXxxProperty / getXxxProperty</code>、<code>setCallbackProperty</code></td><td>属性分发</td></tr>
+</table>
+
+<h2>4.10.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>shadow</code></td><td>Bool</td><td>false</td><td>阴影开关</td></tr>
+<tr><td><code>expand</code></td><td>Bool</td><td>false</td><td>自动扩展尺寸</td></tr>
+<tr><td><code>clickable</code></td><td>Bool</td><td>false</td><td>可点击命中</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td><td>字号</td></tr>
+<tr><td><code>line-height</code></td><td>Int</td><td>字体默认行高</td><td>行高</td></tr>
+<tr><td><code>line-spacing-ratio</code></td><td>Float</td><td>默认行距比例</td><td>行距比例</td></tr>
+<tr><td><code>caption</code></td><td>String</td><td>空</td><td>文本内容</td></tr>
+<tr><td><code>align</code></td><td>Enum</td><td><code>mid-left</code></td><td>9 值同 EditBox</td></tr>
+<tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td><td>字体名</td></tr>
+</table>
+
+<p>通用：<code>text / text-shadow</code>（StateColor，可带 .hover/.pressed/.disabled）、<code>visible / enabled / transparent / border-visible</code>。</p>
+
+<h2>4.10.4 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>click</code>（<code>kEventClick</code>）</td><td>鼠标左键在文本热区按下 / 抬起（需 <code>setClickable(true)</code>）</td><td>无</td></tr>
+<tr><td><code>property-changed</code>（<code>kEventPropertyChanged</code>）</td><td>recreate() 后（字体 / 文本 / 对齐 / 边距等变化）</td><td>无</td></tr>
+</table>
+
+<h2>4.10.5 JSON 语法</h2>
+
+<pre><code>{
+  "type": "label", "id": "titleLabel",
+  "rect": { "x": 0, "y": 52, "w": 800, "h": 40 },
+  "caption": "Layout Configuration Test",
+  "alignment": "center",
+  "font": { "name": "HarmonyOS_Sans_SC_Regular", "size": 28 },
+  "colors": { "text": { "normal": "#FFFFFFFF" } },
+  "shadow": { "enabled": true, "offset": { "x": 2, "y": 2 } }
+}</code></pre>
+
+<h2>4.10.6 C++ Binding 样例</h2>
+
+<pre><code>auto label = ui->CreateLabel("Hello", 24.0f, 20, 20, 240, 40);
+label.SetString(PropertyNames::kCaption, "Clicked 0");
+label.SetEnum(PropertyNames::kAlign, "center");
+label.SetBool(PropertyNames::kShadow, true);
+
+// C++ 核心库（多行 + 2x 缩放）
+auto l = LabelBuilder(nullptr, SRect(450, 450, 200, 90), 2.0f, 2.0f)
+    .setCaption(u8"L15: Mid中\n第一行\n第二行\n第三行")
+    .setAlignmentMode(AlignmentMode::AM_CENTER)
+    .setEnableExpand(false)
+    .setBorderStateColor(redBorder)
+    .setId(15)
+    .build();
+BENCH->addControl(l);</code></pre>
+
+<div class="chapter-nav">
+  <a href="handlecontrol.html">← 4.9 HandleControl</a>
+  <a href="luotiani.html">下一节：4.11 LuotiAni →</a>
+</div>
+
+</div>
+</body>
+</html>

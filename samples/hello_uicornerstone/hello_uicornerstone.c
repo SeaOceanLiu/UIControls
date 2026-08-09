@@ -55,31 +55,31 @@ static void onBtnClick(UIControlHandle ctl, void* user) {
 // 调用 LoadLayout 一次性解析构建控件树。零初始化代码。
 //
 // 支持的 JSON 字段：
-//   type     — 控件类型：Panel / Button / Label / CheckBox / EditBox
-//               ProgressBar / TextArea / WinFrame / MenuBar
+//   type     — 控件类型：panel / button / label / check-box / edit-box
+//               progress-bar / text-area / win-frame / menu-bar（kebab 小写）
 //   id       — 唯一标识符（可选），用于 FindControl 查找
 //   rect     — {x, y, w, h} 位置和尺寸
 //   caption  — 文本内容（Button / Label / CheckBox 等）
 //   font     — {size, name, style} 字体配置（可选）
 //   colors   — {background: {normal, hover, pressed}} 颜色（可选）
 //   events   — {onClick: "函数名"} 事件绑定（可选）
-//   children — 子控件数组（仅 Panel 支持）
-//   window   — WinFrame 专用 {title, style, resizeable} 等
+//   children — 子控件数组（仅 panel 支持）
+//   window   — win-frame 专用 {title, style, resizeable} 等
 
 static const char* LAYOUT =
 "{"
 "  \"controls\": [{"
-"    \"type\": \"Panel\", \"id\": \"root\","
+"    \"type\": \"panel\", \"id\": \"root\","
 "    \"rect\": {\"x\":0,\"y\":0,\"w\":800,\"h\":480},"
 "    \"children\": ["
-"      {\"type\":\"Label\",\"id\":\"title\","
+"      {\"type\":\"label\",\"id\":\"title\","
 "       \"rect\":{\"x\":20,\"y\":10,\"w\":760,\"h\":30},"
 "       \"font\":{\"size\":18},\"caption\":\"UICornerstone Sample\"},"
-"      {\"type\":\"Button\",\"id\":\"btn\",\"caption\":\"Click Me\","
+"      {\"type\":\"button\",\"id\":\"btn\",\"caption\":\"Click Me\","
 "       \"rect\":{\"x\":20,\"y\":60,\"w\":200,\"h\":80},"
 "       \"colors\":{\"background\":{\"normal\":\"#4A90D9\",\"hover\":\"#5BA0E9\",\"pressed\":\"#3A80C9\"}},"
 "       \"events\":{\"onClick\":\"onBtnClick\"}},"
-"      {\"type\":\"Label\",\"id\":\"status\","
+"      {\"type\":\"label\",\"id\":\"status\","
 "       \"rect\":{\"x\":20,\"y\":160,\"w\":400,\"h\":24},"
 "       \"caption\":\"Click the button above\"}"
 "    ]"

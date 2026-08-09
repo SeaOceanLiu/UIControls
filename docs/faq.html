@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 常见问题（FAQ）- UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="faq.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>10 常见问题（FAQ）</h1>
+
+<h2>Q1: 用哪个后端？</h2>
+<p><strong>SDL3</strong>。功能最全（多窗口、渲染器探测、四能力位）。要求单 DLL 极简部署选 <strong>raylib</strong>（注意单窗口限制）；偏好 C++ 风格 API 选 <strong>SFML</strong>。</p>
+
+<h2>Q2: 声明式 UI 和程序化 UI 怎么选？</h2>
+<p>界面结构固定、想热重载、想分离设计与代码 → <strong>JSON 声明式</strong>。动态拼装、运行时高频增删控件、偏好强类型 → <strong>程序化</strong>（C ABI 工厂或 C++ Builder）。两者可混用：JSON 建框架，代码再按 id 找控件改属性。</p>
+
+<h2>Q3: C++ Binding 创建实例返回 nullptr？</h2>
+<p>核心 DLL 缺失或路径不对。用 <code>Config.WithCoreLibraryDir()</code> 指定目录；确认构建的后端（sdl3/sfml/raylib）与 DLL 匹配；Binding 只链 kernel32，DLL 需随程序分发。</p>
+
+<h2>Q4: 为什么没有「暂停/继续」的动画状态机？</h2>
+<p>LuotiAni 属性 <code>playing</code> 是命令式的：每次置 1 都 <code>play()</code> 复位重播。需要暂停/继续用 C++ API 的 <code>pause()/resume()</code>。</p>
+
+<h2>Q5: 怎么让控件在窗口缩放时自动布局？</h2>
+<p>把控件放进带布局引擎的 Panel（<code>layout: {"type":"h-flow"/"v-flow"/"anchor"/"grid"}</code>），窗口 resize 会自动触发 <code>reflowChildren()</code>。百分比尺寸（<code>"50%"</code>）也随父容器缩放。</p>
+
+<h2>Q6: 热加载后状态丢了？</h2>
+<p>热重载会重建整棵控件树，状态不保留。需要保留的状态请存在业务侧（回调里回写），或加载后按 id 重新设置。</p>
+
+<h2>Q7: raylib 下多窗口/多实例为什么闪？</h2>
+<p>raylib 是单窗口架构，只有首个实例有真实窗口，其余 headless。渲染前必须查 <code>UICORN_BACKEND_CAP_MULTI_WINDOW</code> 条件化（headless 实例跳过渲染）。</p>
+
+<h2>Q8: 中文显示乱码？</h2>
+<p>源码/布局 JSON 文件必须保存为 <strong>UTF-8 with BOM</strong>；raylib 后端中文需码点扩展。字体用项目自带 HarmonyOS Sans SC 或按 <code>font</code> 属性指定。</p>
+
+<h2>Q9: 控件点击没反应？</h2>
+<p>依次检查：<code>enabled</code> 是否为 true；是否真的挂到了可见父容器；回调是否注册（SetCallback 事件名拼写）；上层控件是否覆盖（z 序靠后绘制在顶层）；Label 需要 <code>clickable</code>。</p>
+
+<h2>Q10: 焦点环怎么去掉？</h2>
+<p><code>FocusRingStyle::Solid/Dashed</code> 选样式；设 <code>m_focusRingAlwaysVisible=false</code> 则仅键盘 Tab 聚焦时显示；或调 <code>m_focusRingColor</code> 改颜色。</p>
+
+<h2>Q11: 事件回调里能拿到哪些数据？</h2>
+<p>看事件名对应的负载：<code>text-changed</code> 用 <code>GetTextChanged()</code>，<code>value-changed</code> 用 <code>GetValueChanged()</code>，<code>check-changed</code> 用 <code>GetCheckState()</code>（0/1/2）。通用原始访问器 <code>GetIntVal()/GetFloatVal()/GetDoubleVal()/GetStrVal()/GetPtrVal()</code>。</p>
+
+<h2>Q12: 怎么测试我的改动 / 报告 bug？</h2>
+<p>跑 <code>build_test.bat all sdl3</code> 全量回归；报告问题时附：后端、构建配置、最小复现代码、测试输出（exit 码）。可对照 <code>test/</code> 中同控件用例的写法。</p>
+
+<h2>Q13: 布局文件里的控件找不到？</h2>
+<p>检查 <code>type</code> 是否为 kebab 小写且已支持（label/button/edit-box/check-box/combo-box/numeric-up-down/progress-bar/scroll-bar/color-picker/text-area/panel/menu-bar/win-frame/splitter）；<code>rect</code> 是否提供；加载返回是否 0（失败）。</p>
+
+<h2>Q14: 想用键盘操作界面？</h2>
+<p>EditBox/TextArea/Slider/Button/CheckBox 默认可聚焦：Tab 切换、Enter/Space 激活（Button 触发 click，CheckBox 循环三态）、方向键调节 Slider/NumericUpDown。Ctrl+Tab 在多窗口间切换焦点作用域。</p>
+
+<div class="chapter-nav">
+  <a href="appendix/backend-config.html">← 9.5 后端差异及后端配置</a>
+  <span></span>
+</div>
+
+</div>
+</body>
+</html>

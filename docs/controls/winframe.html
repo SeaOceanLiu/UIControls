@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.20 WinFrame - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/winframe.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.20 WinFrame（可拖拽缩放的窗口容器）</h1>
+
+<p>WinFrame 是应用内「窗口」容器：标题栏拖拽移动、边缘八方向缩放、焦点作用域边界（Ctrl+Tab 切换）、点击置顶、关闭按钮。继承链：<code>WinFrame → Panel → ControlImpl → Control</code>。</p>
+
+<h2>4.20.1 控件的创建</h2>
+
+<pre><code>// C++
+WinFrame(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+WinFrameBuilder(parent, SRect(100, 100, 400, 300))
+    .setTitle("My Window").setTitleFontSize(24).setEdgeMargin(6.0f).setOnClose(cb).build();
+
+// C ABI
+UIControlHandle wf = UICornerstone_CreateWinFrame(g_inst, "Resizable WinFrame", 100, 100, 400, 300);
+
+// C++ Binding
+auto wf = ui->CreateWinFrame("Resizable WinFrame", 100, 100, 400, 300);
+
+// JSON（解析后默认隐藏，需 show；children 自动加入客户区）
+{ "type": "win-frame", "id": "resultWinFrame",
+  "rect": { "x": 200, "y": 100, "w": 400, "h": 300 },
+  "title": "Submitted", "edgeMargin": 4.0,
+  "colors": { "titleBar": { "bg": { "normal": "#2A2A50FF" } },
+              "titleText": { "normal": "#FFFFFFFF" } },
+  "children": [ { "type": "label", "caption": "Form submitted successfully!" } ] }</code></pre>
+
+<h2>4.20.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>create()</code></td><td>创建标题栏 / 标题 Label / 关闭按钮 / 客户区 Panel</td></tr>
+<tr><td><code>handleEvent(Event)</code></td><td>焦点置顶 → 拖拽/缩放 → 边缘检测 → 子控件 → 标题栏拖拽</td></tr>
+<tr><td><code>onFocusScopeActivated()</code></td><td>Ctrl+Tab 激活焦点作用域时置顶</td></tr>
+<tr><td><code>show()</code> / <code>hide()</code></td><td>show 时置顶；hide 释放焦点并注销焦点边界</td></tr>
+<tr><td><code>setRect(SRect)</code></td><td>设置位置尺寸</td></tr>
+<tr><td><code>getTitleBar()</code> / <code>getTitleLabel()</code> / <code>getCloseButton()</code> / <code>getClientPanel()</code></td><td>子控件 Getter（可继续定制）</td></tr>
+<tr><td><code>setWinFrameBGColor(SColor)</code> / <code>setWinFrameBorderColor(SColor)</code> / <code>setTitleBarBGColor(SColor)</code> / <code>setTitleTextColor(SColor)</code></td><td>快捷颜色设置</td></tr>
+<tr><td><code>setEdgeMargin(float)</code> / <code>getEdgeMargin()</code></td><td>边缘缩放热区宽度（默认 4.0）</td></tr>
+<tr><td><code>setTitle(string)</code> / <code>getTitle()</code></td><td>标题文字</td></tr>
+<tr><td><code>addToClient(shared_ptr&lt;Control&gt;)</code></td><td>向客户区添加控件</td></tr>
+<tr><td><code>setResizable(bool)</code> / <code>isResizable()</code></td><td>是否允许用户缩放（默认 true）</td></tr>
+<tr><td><code>setXxxProperty / getXxxProperty</code>（override）</td><td>属性分发</td></tr>
+</table>
+
+<h2>4.20.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>win-frame-bg</code></td><td>Color</td><td>—</td><td>整体背景色</td></tr>
+<tr><td><code>win-frame-border</code></td><td>Color</td><td>—</td><td>边框色</td></tr>
+<tr><td><code>title-bar-bg</code></td><td>Color</td><td>浅蓝(173,216,230)</td><td>标题栏背景</td></tr>
+<tr><td><code>title-text</code></td><td>Color</td><td>—</td><td>标题文字色</td></tr>
+<tr><td><code>closed-text</code></td><td>Color</td><td>—</td><td>关闭文字色（getter）</td></tr>
+<tr><td><code>resizable</code></td><td>Bool</td><td>true</td><td>允许缩放</td></tr>
+<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code> / <code>confirm-visible</code></td><td>Bool</td><td>—</td><td>关闭行为（getter）</td></tr>
+<tr><td><code>edge-margin</code></td><td>Float</td><td>4.0</td><td>边缘热区宽度</td></tr>
+<tr><td><code>closed-font-size</code></td><td>Float</td><td>—</td><td>关闭字号（getter）</td></tr>
+<tr><td><code>title</code></td><td>String</td><td>"WinFrame"</td><td>标题文字</td></tr>
+</table>
+
+<h2>4.20.4 控件的回调</h2>
+
+<table>
+<tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
+<tr><td>Builder <code>setOnClose(OnClickHandler)</code>（JSON 键 <code>onClose</code>；C ABI 事件 <code>close</code>）</td><td>点击关闭按钮（默认行为 <code>hide()</code>）</td><td><code>void(shared_ptr&lt;Control&gt;)</code></td></tr>
+</table>
+
+<h2>4.20.5 JSON 语法</h2>
+
+<pre><code>{
+  "type": "win-frame", "id": "resultWinFrame",
+  "rect": { "x": 200, "y": 100, "w": 400, "h": 300 },
+  "title": "Submitted",
+  "edgeMargin": 4.0,
+  "colors": {
+    "titleBar": { "bg": { "normal": "#2A2A50FF" } },
+    "titleText": { "normal": "#FFFFFFFF" }
+  },
+  "children": [ { "type": "label", "caption": "Form submitted successfully!" } ]
+}</code></pre>
+
+<h2>4.20.6 C++ Binding 样例</h2>
+
+<pre><code>auto wf = ui->CreateWinFrame("Resizable WinFrame", 100, 100, 400, 300);
+wf.SetString(PropertyNames::kTitle, "My Window");
+wf.SetFloat(PropertyNames::kEdgeMargin, 6.0f);
+wf.SetBool(PropertyNames::kResizable, true);
+wf.SetCallback(PropertyNames::kEventClose, [](const Event&) {
+    printf("window closed\n");
+});
+// 向客户区加控件
+auto lbl = ui->CreateLabel("Form content", 14.0f, 20, 30, 240, 60);
+wf.AddChild(lbl);</code></pre>
+
+<div class="note">常量：<code>MIN_WIDTH=100</code>、<code>MIN_HEIGHT=60</code>（缩放钳制）；行为：标题栏拖拽、4px 边缘八方向缩放、边缘双箭头光标、show/点击置顶、焦点作用域边界。</div>
+
+<div class="chapter-nav">
+  <a href="textarea.html">← 4.19 TextArea</a>
+  <a href="../advanced.html">下一章：5 进阶主题 →</a>
+</div>
+
+</div>
+</body>
+</html>

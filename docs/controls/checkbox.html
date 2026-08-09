@@ -1,0 +1,103 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.4 CheckBox - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/checkbox.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.4 CheckBox（复选框）</h1>
+
+<p>CheckBox 支持<strong>三态</strong>（未勾选 / 勾选 / 半选）、三种符号样式与两种文字排布，内部组合一个 Label 作标题。继承链：<code>CheckBox → ControlImpl → Control</code>。</p>
+
+<h2>4.4.1 控件的创建</h2>
+
+<pre><code>// C++
+CheckBox(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+CheckBoxBuilder(parent, SRect(50, 50, 200, 30)).setCaptionText("Accept").setOnCheckChanged(cb).build();
+
+// C ABI
+UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 50, 50, 100, 30);
+
+// JSON
+{ "type": "check-box", "id": "agreeCheck", "rect": { "x": 240, "y": 432, "w": 180, "h": 30 },
+  "caption": "I agree", "checkState": "unchecked", "style": "classic",
+  "events": { "onCheckChanged": "onAgreeChanged" } }</code></pre>
+
+<h2>4.4.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setCheckState(CheckState)</code> / <code>getCheckState()</code></td><td>状态：Unchecked / Checked / Indeterminate</td></tr>
+<tr><td><code>setStyle(CheckBoxStyle)</code> / <code>getStyle()</code></td><td>符号样式：Classic / Cross / Circle</td></tr>
+<tr><td><code>setLayout(CheckBoxLayout)</code> / <code>getLayout()</code></td><td>文字排布：TextRight / TextLeft</td></tr>
+<tr><td><code>setVerticalAlign(CheckBoxVerticalAlign)</code> / <code>getVerticalAlign()</code></td><td>垂直对齐：Center / Top / Bottom</td></tr>
+<tr><td><code>setSizeRatio(float)</code> / <code>getSizeRatio()</code></td><td>复选框尺寸倍率（默认 1.0，按行高缩放）</td></tr>
+<tr><td><code>setTriStateEnabled(bool)</code> / <code>isTriStateEnabled()</code></td><td>三态开关（默认开；关闭后点击仅在 勾选/未勾选 间循环）</td></tr>
+<tr><td><code>setOnCheckChanged(OnCheckChangedHandler)</code></td><td>回调 <code>void(shared_ptr&lt;CheckBox&gt;, CheckState old, CheckState new)</code></td></tr>
+<tr><td><code>setCheckColor / setCrossColor / setIndeterminateColor / setBoxBorderColor(SColor)</code>（+getter）</td><td>勾 / 叉 / 半选横线 / 边框颜色</td></tr>
+<tr><td><code>releaseCaption / createCaption / getCaption()</code></td><td>内部 Label 生命周期与访问（可直接改样式）</td></tr>
+<tr><td><code>setXxxProperty / getXxxProperty</code>（override）</td><td>属性分发</td></tr>
+</table>
+
+<h2>4.4.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>check</code></td><td>Color</td><td>RGB(76,175,80)</td><td>勾选符号颜色</td></tr>
+<tr><td><code>cross</code></td><td>Color</td><td>RGB(244,67,54)</td><td>叉号颜色</td></tr>
+<tr><td><code>indeterminate</code></td><td>Color</td><td>RGB(158,158,158)</td><td>半选横线颜色</td></tr>
+<tr><td><code>box-border</code></td><td>Color</td><td>RGB(83,83,90)</td><td>复选框边框颜色</td></tr>
+<tr><td><code>tri-state</code></td><td>Bool</td><td>true</td><td>三态模式开关</td></tr>
+<tr><td><code>checked</code></td><td>Bool</td><td>false</td><td>true→Checked，false→Unchecked</td></tr>
+<tr><td><code>size-ratio</code></td><td>Float</td><td>1.0</td><td>复选框尺寸倍率</td></tr>
+<tr><td><code>style</code></td><td>Enum</td><td><code>classic</code></td><td><code>classic</code> / <code>cross</code> / <code>circle</code></td></tr>
+<tr><td><code>check-state</code></td><td>Enum</td><td><code>unchecked</code></td><td><code>unchecked</code> / <code>checked</code> / <code>indeterminate</code></td></tr>
+<tr><td><code>layout</code></td><td>Enum</td><td><code>text-right</code></td><td><code>text-right</code> / <code>text-left</code></td></tr>
+<tr><td><code>vertical-align</code></td><td>Enum</td><td><code>center</code></td><td><code>center</code> / <code>top</code> / <code>bottom</code></td></tr>
+</table>
+
+<p>JSON 键：<code>caption</code>、<code>captionSize</code> 由布局解析器直接写入内部 Label。</p>
+
+<h2>4.4.4 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>check-changed</code>（<code>kEventCheckChanged</code>）</td><td>鼠标左键抬起或焦点态按 Space 触发状态循环后</td><td>Int（intVal = 新 CheckState 枚举值 0/1/2）</td></tr>
+</table>
+
+<h2>4.4.5 JSON 语法</h2>
+
+<pre><code>{
+  "type": "check-box", "id": "agreeCheck",
+  "rect": { "x": 240, "y": 432, "w": 180, "h": 30 },
+  "caption": "I agree", "captionSize": 14,
+  "checkState": "unchecked",
+  "style": "classic", "layout": "text-right",
+  "events": { "onCheckChanged": "onAgreeChanged" }
+}</code></pre>
+
+<h2>4.4.6 C++ Binding 样例</h2>
+
+<pre><code>auto cb = ui->CreateCheckBox("Accept Terms", 50, 50, 100, 30);
+cb.SetEnum(PropertyNames::kCheckState, "checked");   // 或 cb.SetBool(PropertyNames::kChecked, true)
+cb.SetEnum(PropertyNames::kCheckBoxStyle, "classic");
+cb.SetBool(PropertyNames::kTriState, false);         // 关闭三态
+cb.SetCallback(PropertyNames::kEventCheckChanged, [](const Event& e) {
+    int st = e.GetCheckState();    // 0=unchecked 1=checked 2=indeterminate
+    printf("state=%d\n", st);
+});</code></pre>
+
+<div class="chapter-nav">
+  <a href="button.html">← 4.3 Button</a>
+  <a href="colorpicker.html">下一节：4.5 ColorPicker →</a>
+</div>
+
+</div>
+</body>
+</html>

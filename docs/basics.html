@@ -1,0 +1,149 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.1-3.2 从基础入门 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="basics.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>3 从基础入门</h1>
+
+<h2>3.1 使用 C++ Binding 搭建</h2>
+
+<p>C++ Binding（<code>binding/</code>）是推荐的上手方式：它把 C ABI 包装成现代 C++ 接口，且<strong>纯动态加载</strong>——只链接 <code>kernel32</code>，运行时用 <code>LoadLibrary</code> 加载核心 DLL，不产生静态链接耦合。</p>
+
+<h3>3.1.1 CMake 集成</h3>
+
+<p>在你的工程中 <code>add_subdirectory(binding)</code> 并链接 <code>UICornerstone_binding</code>：</p>
+
+<pre><code>add_subdirectory(${UICORNERSTONE_ROOT}/binding)
+target_link_libraries(myapp PRIVATE UICornerstone_binding)</code></pre>
+
+<p>运行时将 <code>build/xxx_dll/UICornerstone.dll</code>（或 <code>libUICornerstone.so</code>）放到可执行文件旁，或通过 <code>Config.WithCoreLibraryDir(...)</code> 指定搜索路径。</p>
+
+<h3>3.1.2 核心头文件</h3>
+
+<table>
+<tr><th>头文件</th><th>内容</th></tr>
+<tr><td><code>binding/include/UICornerstone.h</code></td><td>入口类 <code>UICornerstone::UICornerstone</code>：实例创建、窗口、主循环、控件工厂（Create*）</td></tr>
+<tr><td><code>binding/include/Control.h</code></td><td>控件代理类 <code>Control</code>：统一属性读写（Set/Get）与回调注册</td></tr>
+<tr><td><code>binding/include/Event.h</code></td><td>事件类 <code>Event</code>：具名访问器（GetValueChanged / GetTextChanged 等）</td></tr>
+<tr><td><code>binding/include/PropertyNames.h</code></td><td>属性名与事件名字符串常量（kCaption / kEventClick 等）</td></tr>
+</table>
+
+<h3>3.1.3 最小 Hosted 模式应用</h3>
+
+<pre><code>#include "UICornerstone.h"
+#include "Control.h"
+#include "Event.h"
+#include "PropertyNames.h"
+
+int main() {
+    auto ui = UICornerstone::UICornerstone::Create(
+        UICornerstone::UICornerstone::Config{}
+            .WithBackend("sdl3")          // "sdl3" / "sfml" / "raylib"
+            .WithWindow("My App", 800, 600));
+    if (!ui) return 1;                    // DLL 缺失或路径错误 → nullptr
+
+    auto button = ui->CreateButton("Click Me", 20, 20, 140, 36);
+    auto label  = ui->CreateLabel("Hello", 20.0f, 20, 70, 220, 40);
+
+    button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
+        label.SetString(PropertyNames::kCaption, "Clicked!");
+    });
+
+    return ui->Run([](double dt) { (void)dt; });   // Hosted：UI 托管主循环
+}</code></pre>
+
+<div class="note">工厂方法对应 C ABI 创建函数：<code>CreateButton(text,x,y,w,h)</code>、<code>CreateLabel(text,fontSize,x,y,w,h)</code>、<code>CreateCheckBox(text,x,y,w,h)</code>、<code>CreateEditBox(x,y,w,h)</code>、<code>CreateProgressBar(x,y,w,h)</code>、<code>CreateImage(image,x,y,w,h)</code> 等。</div>
+
+<h2>3.2 创建你的第 1 个 UICornerstone 应用</h2>
+
+<p>在 3.1 的骨架基础上，本节用一个完整例子展示：控件工厂、属性读写、回调、主循环两种模式。</p>
+
+<h3>3.2.1 界面</h3>
+
+<ul>
+  <li>一个按钮「Toggle」：点击后切换标签可见性并累计计数；</li>
+  <li>一个进度条：每帧推进，模拟加载；</li>
+  <li>一个输入框：实时把文本镜像到标签。</li>
+</ul>
+
+<h3>3.2.2 代码</h3>
+
+<pre><code>#include "UICornerstone.h"
+#include "Control.h"
+#include "Event.h"
+#include "PropertyNames.h"
+using namespace UICornerstone;
+
+int main() {
+    auto ui = UICornerstone::Create(
+        UICornerstone::Config{}.WithBackend("sdl3").WithWindow("First App", 480, 320));
+    if (!ui) return 1;
+
+    int count = 0;
+
+    // 控件工厂
+    auto label  = ui->CreateLabel("Counter: 0", 18.0f, 20, 20, 240, 36);
+    auto edit   = ui->CreateEditBox(20, 70, 280, 34);
+    auto button = ui->CreateButton("Toggle", 20, 120, 120, 36);
+    auto bar    = ui->CreateProgressBar(20, 180, 280, 24);
+
+    // 事件回调（Event 具名访问器）
+    button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
+        bool vis = label.GetBool(PropertyNames::kVisible);
+        label.SetBool(PropertyNames::kVisible, !vis);
+        label.SetString(PropertyNames::kCaption, "Counter: " + std::to_string(++count));
+    });
+    edit.SetCallback(PropertyNames::kEventTextChanged, [&](const Event& e) {
+        label.SetString(PropertyNames::kCaption, "Edit: " + e.GetTextChanged());
+    });
+
+    // 主循环：Embedded 模式（用户托管）
+    float progress = 0.0f;
+    while (!ui->IsQuitRequested()) {
+        ui->ProcessEvents();
+        progress += 0.003f;
+        if (progress > 1.0f) progress = 0.0f;
+        bar.SetFloat(PropertyNames::kValue, progress * 100.0f);
+        ui->Update(1.0 / 60.0);
+        ui->Clear();
+        ui->Render();
+        ui->Present();
+    }
+    ui->Shutdown();
+    return 0;
+}</code></pre>
+
+<h3>3.2.3 两种主循环模式</h3>
+
+<table>
+<tr><th>模式</th><th>适用场景</th><th>写法</th></tr>
+<tr><td><strong>Hosted</strong></td><td>UI 自行管理窗口与循环，业务在回调中做</td><td><code>ui->Run([](double dt){ ... })</code></td></tr>
+<tr><td><strong>Embedded</strong></td><td>你的游戏/工具已有主循环，UI 嵌入其中</td><td><code>while(!ui->IsQuitRequested()){ ProcessEvents → Update → Clear → Render → Present }</code></td></tr>
+</table>
+
+<p>Embedded 模式可插入任意时刻：游戏帧内先 <code>ProcessEvents()</code> 喂输入，逻辑后 <code>Update(dt)</code>，渲染前 <code>Clear/Render/Present</code>。详见 <a href="integration.html">第 7 章：嵌入到你的逻辑回路中</a>。</p>
+
+<h3>3.2.4 下一步</h3>
+
+<ul>
+  <li>想理解属性系统（Set/Get 的底层模型）→ <a href="property-system.html">3.3 属性系统</a></li>
+  <li>想用 JSON 声明界面（推荐）→ <a href="declarative-ui.html">3.4 声明式 UI</a></li>
+  <li>想逐个控件查 API → <a href="controls/index.html">第 4 章 深入控件</a></li>
+</ul>
+
+<div class="chapter-nav">
+  <a href="quickstart.html">← 2 快速起步</a>
+  <a href="property-system.html">下一章：3.3 属性系统 →</a>
+</div>
+
+</div>
+</body>
+</html>

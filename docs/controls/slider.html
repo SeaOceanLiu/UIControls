@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.17 Slider - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/slider.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.17 Slider（滑块）</h1>
+
+<p>Slider 是拖拽取值控件：水平 / 垂直方向、反向模式、步长吸附（松手 Snap-on-Release）、刻度标记、可选数值标签（内部 Label，支持自定义格式）。继承链：<code>Slider → ControlImpl → Control</code>。</p>
+
+<h2>4.17.1 控件的创建</h2>
+
+<pre><code>// C++
+Slider(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+SliderBuilder(parent, SRect(HX, 40, 250, 20)).setRange(0, 100).setValue(50).setShowValueLabel(true).build();
+
+// C ABI
+UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0, 255, 255);
+
+// JSON
+{ "id": "rSlider", "type": "slider",
+  "rect": { "x": 29, "y": 224, "w": 257, "h": 20 },
+  "range": { "min": 0, "max": 255 }, "value": 255, "step": 1,
+  "style": "Horizontal", "reverse": false,
+  "showValueLabel": true, "labelFormat": "%.0f",
+  "track": { "thickness": 4, "color": { "normal": "#3C3C3CFF" }, "fillColor": { "normal": "#0078FFFF" } },
+  "thumb": { "size": 16, "color": { "normal": "#FFFFFFFF" }, "borderColor": { "normal": "#0078FFFF" } },
+  "tick": { "interval": 10, "length": 8, "color": { "normal": "#646464FF" } },
+  "events": { "onValueChanged": "onColorChange" } }</code></pre>
+
+<h2>4.17.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>范围（默认 0~100）</td></tr>
+<tr><td><code>setStep(float)</code> / <code>getStep()</code></td><td>步长（松手吸附到 step）</td></tr>
+<tr><td><code>setValue(float)</code> / <code>getValue()</code> / <code>getPercent()</code></td><td>值 / 百分比</td></tr>
+<tr><td><code>setStyle(SliderStyle)</code> / <code>getStyle()</code></td><td>Horizontal / Vertical（默认 Horizontal）</td></tr>
+<tr><td><code>setReverse(bool)</code> / <code>getReverse()</code></td><td>反向（min 在右 / 底部）</td></tr>
+<tr><td><code>isFocused()</code></td><td>焦点状态</td></tr>
+<tr><td><code>setTrackThickness(float)</code> / <code>getTrackThickness()</code>（默认 4）、<code>setThumbSize(float)</code> / <code>getThumbSize()</code>（默认 16）</td><td>轨道 / 手柄尺寸</td></tr>
+<tr><td><code>setTrackColor / setTrackFillColor / setThumbColor / setThumbBorderColor / setThumbHoverColor(SColor)</code>（+getter）</td><td>视觉颜色</td></tr>
+<tr><td><code>setTickInterval(float)</code> / <code>getTickInterval()</code>（默认 0=关闭）、<code>setTickLength(float)</code> / <code>getTickLength()</code>（默认 8）、<code>setTickColor(SColor)</code> / <code>getTickColor()</code></td><td>刻度标记</td></tr>
+<tr><td><code>setShowValueLabel(bool)</code> / <code>isShowValueLabel()</code> / <code>getValueLabel()</code></td><td>数值标签开关 / 获取</td></tr>
+<tr><td><code>setLabelFont(FontName)</code>、<code>setLabelFontSize(int)</code>、<code>setLabelColor(SColor)</code>、<code>setLabelFormat(string)</code>、<code>setLabelGap(float)</code>（默认 4）</td><td>标签字体 / 格式 / 间距</td></tr>
+<tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调（仅提交时触发）</td></tr>
+</table>
+
+<h2>4.17.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td><td>当前值</td></tr>
+<tr><td><code>step</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
+<tr><td><code>track-thickness</code></td><td>Float</td><td>4</td><td>轨道厚度</td></tr>
+<tr><td><code>thumb-size</code></td><td>Float</td><td>16</td><td>手柄尺寸</td></tr>
+<tr><td><code>tick-interval</code> / <code>tick-length</code></td><td>Float</td><td>0 / 8</td><td>刻度间隔 / 长度</td></tr>
+<tr><td><code>label-gap</code></td><td>Float</td><td>4</td><td>数值标签间距</td></tr>
+<tr><td><code>label-format</code></td><td>String</td><td>—</td><td>标签格式（如 "%.0f px"）</td></tr>
+<tr><td><code>show-value-label</code></td><td>Bool</td><td>false</td><td>显示数值标签</td></tr>
+<tr><td><code>reverse</code></td><td>Bool</td><td>false</td><td>反向模式</td></tr>
+<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code></td><td><code>horizontal</code> / <code>vertical</code></td></tr>
+<tr><td><code>track</code> / <code>track-fill</code> / <code>thumb</code> / <code>thumb-border</code> / <code>thumb-hover</code> / <code>tick</code> / <code>label</code></td><td>Color</td><td>见右</td><td>track(60,60,60) / track-fill(0,120,255) / thumb 白 / thumb-border(0,120,255) / thumb-hover(200,200,200) / tick(100,100,100) / label 白</td></tr>
+<tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
+</table>
+
+<h2>4.17.4 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td>松手吸附（Snap-on-Release）、点击轨道、外部 setValue、方向键时触发；<strong>拖拽过程中不触发</strong></td><td>Float（floatVal）</td></tr>
+</table>
+
+<h2>4.17.5 JSON 语法</h2>
+
+<pre><code>{
+  "id": "rSlider",
+  "type": "slider",
+  "rect": { "x": 29, "y": 224, "w": 257, "h": 20 },
+  "range": { "min": 0, "max": 255 },
+  "value": 255,
+  "step": 1,
+  "style": "Horizontal",
+  "reverse": false,
+  "showValueLabel": true,
+  "labelFormat": "%.0f",
+  "labelGap": -8,
+  "track": { "thickness": 4, "color": { "normal": "#3C3C3CFF" }, "fillColor": { "normal": "#0078FFFF" } },
+  "thumb": { "size": 16, "color": { "normal": "#FFFFFFFF" }, "borderColor": { "normal": "#0078FFFF" } },
+  "tick": { "interval": 10, "length": 8, "color": { "normal": "#646464FF" } },
+  "events": { "onValueChanged": "onColorChange" }
+}</code></pre>
+
+<h2>4.17.6 C++ Binding 样例</h2>
+
+<pre><code>Control slider = ui->CreateSlider(20, 20, 300, 30, 0, 100, 50);
+slider.SetFloat(PropertyNames::kValue, 50.0f);
+slider.SetBool("show-value-label", true);
+slider.SetString("label-format", "%.0f px");
+slider.SetEnum("style", "horizontal");
+slider.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
+    printf("value = %.1f\n", e.GetValueChanged());
+});
+
+// 核心库
+auto s1 = SliderBuilder(nullptr, SRect(HX, 40, 250, 20))
+    .setRange(0, 100).setValue(50).setShowValueLabel(true)
+    .setOnValueChanged([](shared_ptr<Slider> s, float v) {
+        cout << "Slider1 value changed to: " << v << endl;
+    })
+    .build();
+BENCH->addControl(s1);</code></pre>
+
+<div class="chapter-nav">
+  <a href="scrollbar.html">← 4.16 ScrollBar</a>
+  <a href="splitter.html">下一节：4.18 Splitter →</a>
+</div>
+
+</div>
+</body>
+</html>

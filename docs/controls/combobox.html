@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.6 ComboBox - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/combobox.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.6 ComboBox（下拉选择框）</h1>
+
+<p>ComboBox 是支持<strong>只读 / 可编辑</strong>双模式的下拉选择控件：闭合时显示当前选中项，展开时下拉列表（超出显示滚动条），支持循环切换（↑/↓/滚轮）。继承链：<code>ComboBox → EditBox → ControlImpl → Control</code>。</p>
+
+<h2>4.6.1 控件的创建</h2>
+
+<pre><code>// C++
+ComboBox(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+ComboBoxBuilder(parent, SRect(20, 56, 300, 32))
+    .setItems({ {"Beijing", "beijing"}, {"Shanghai", "shanghai"} })
+    .setSelectedIndex(0).build();
+
+// C ABI
+UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32);
+
+// JSON
+{ "id": "comboMain", "type": "combo-box",
+  "rect": { "x": 20, "y": 56, "w": 300, "h": 32 },
+  "editable": false, "placeholder": "Select a city...",
+  "items": [
+    { "label": "Beijing", "value": "beijing" },
+    { "label": "Wuhan", "value": "wuhan", "disabled": true }
+  ],
+  "selectedIndex": 0, "maxVisibleItems": 6, "cycleEnabled": true,
+  "events": { "onSelectionChanged": "onSelectionChanged" } }</code></pre>
+
+<h2>4.6.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setItems(const vector&lt;ComboBoxItem&gt;&amp;)</code></td><td>整体设置选项（ComboBoxItem = {label, value, disabled}）</td></tr>
+<tr><td><code>addItem(label, value, disabled = false)</code> / <code>clearItems()</code> / <code>removeItem(int)</code></td><td>追加 / 清空 / 删除选项</td></tr>
+<tr><td><code>getItems()</code> / <code>getItemCount()</code></td><td>读取选项</td></tr>
+<tr><td><code>setEditable(bool)</code> / <code>isEditable()</code></td><td>双模式开关（默认 false=只读；true=可编辑 + type-ahead 匹配）</td></tr>
+<tr><td><code>setSelectedIndex(int)</code> / <code>getSelectedIndex()</code></td><td>按索引选中（-1 = 无选中）</td></tr>
+<tr><td><code>setSelectedValue(string)</code> / <code>getSelectedValue()</code></td><td>按 value 选中 / 读取</td></tr>
+<tr><td><code>getSelectedLabel()</code></td><td>读取选中项 label</td></tr>
+<tr><td><code>setPlaceholder(string)</code> / <code>getPlaceholder()</code></td><td>占位文本</td></tr>
+<tr><td><code>setArrowWidth(float)</code> / <code>getArrowWidth()</code></td><td>箭头区宽度</td></tr>
+<tr><td><code>setItemHeight(float)</code> / <code>getItemHeight()</code></td><td>列表单项高度</td></tr>
+<tr><td><code>setMaxVisibleItems(int)</code> / <code>getMaxVisibleItems()</code></td><td>最多可见项数（超出显示滚动条）</td></tr>
+<tr><td><code>setCycleEnabled(bool)</code> / <code>isCycleEnabled()</code></td><td>闭合态 ↑/↓/滚轮循环切换（默认 true）</td></tr>
+<tr><td><code>setArrowColor / setArrowHoverColor / setItemSelectedColor / setItemHoverColor / setItemDisabledColor / setListBgColor / setListBorderColor(SColor)</code></td><td>视觉颜色配置</td></tr>
+<tr><td><code>setOnSelectionChanged(handler)</code></td><td>选中回调</td></tr>
+<tr><td><code>getListPanel() / getListScrollBar() / openPopupForTest()</code></td><td>测试辅助</td></tr>
+</table>
+
+<p>继承 EditBox：<code>setText/getText</code>、<code>setFont/setFontSize</code>、<code>setAlignmentMode</code> 等。</p>
+
+<h2>4.6.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>editable</code></td><td>Bool</td><td>false</td><td>双模式开关</td></tr>
+<tr><td><code>text</code></td><td>String</td><td>空</td><td>编辑框内容</td></tr>
+<tr><td><code>selected-value</code></td><td>String</td><td>—</td><td>选中项 value；未匹配返回输入内容</td></tr>
+<tr><td><code>selected-index</code></td><td>Int</td><td>-1</td><td>选中索引（-1 = 无匹配）</td></tr>
+<tr><td><code>max-visible-items</code></td><td>Int</td><td>6</td><td>最多可见项</td></tr>
+<tr><td><code>item-height</code></td><td>Float</td><td>24</td><td>单项高度</td></tr>
+<tr><td><code>arrow-width</code></td><td>Float</td><td>20</td><td>箭头区宽度</td></tr>
+<tr><td><code>cycle-enabled</code></td><td>Bool</td><td>true</td><td>闭合态循环选择</td></tr>
+<tr><td><code>items</code></td><td>String(JSON)</td><td>—</td><td>以 JSON 数组设置 items</td></tr>
+<tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>item-selected</code> / <code>item-hover</code> / <code>item-disabled</code> / <code>list-bg</code> / <code>list-border</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+</table>
+
+<h2>4.6.4 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>onSelectionChanged</code>（C ABI 事件 <code>selection-changed</code>）</td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
+</table>
+
+<h2>4.6.5 JSON 语法</h2>
+
+<pre><code>{
+  "id": "comboMain",
+  "type": "combo-box",
+  "rect": { "x": 20, "y": 56, "w": 300, "h": 32 },
+  "fontSize": 16,
+  "editable": false,
+  "placeholder": "Select a city...",
+  "items": [
+    { "label": "Beijing", "value": "beijing" },
+    { "label": "Wuhan", "value": "wuhan", "disabled": true }
+  ],
+  "selectedIndex": 0,
+  "maxVisibleItems": 6,
+  "cycleEnabled": true,
+  "events": { "onSelectionChanged": "onSelectionChanged" }
+}</code></pre>
+
+<h2>4.6.6 C++ Binding 样例</h2>
+
+<pre><code>Control combo = ui->CreateComboBox(20, 56, 300, 32);
+// items 用 JSON 数组字符串设置
+combo.SetString("items", R"([{"label":"Beijing","value":"beijing"},
+                             {"label":"Shanghai","value":"shanghai"}])");
+combo.SetBool("editable", false);
+combo.SetCallback(PropertyNames::kEventSelectionChanged, [](const Event& e) {
+    printf("selected index=%d value=%s\n", e.GetSelectedIndex(), e.GetSelectedValue().c_str());
+});
+
+// C++ 核心库
+vector<ComboBoxItem> items = { {"Option A", "val_a"}, {"Option B", "val_b"} };
+auto combo2 = ComboBoxBuilder(nullptr, SRect(CX, 40, CW, HH))
+    .setItems(items).setSelectedIndex(0).setPlaceholder("Select an option...")
+    .setOnSelectionChanged([](shared_ptr<ComboBox>, int idx, const string& value) {
+        cout << "index=" << idx << " value=" << value << endl;
+    })
+    .build();
+BENCH->addControl(combo2);</code></pre>
+
+<div class="chapter-nav">
+  <a href="colorpicker.html">← 4.5 ColorPicker</a>
+  <a href="dialog.html">下一节：4.7 Dialog / Popup →</a>
+</div>
+
+</div>
+</body>
+</html>

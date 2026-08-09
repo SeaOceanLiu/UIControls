@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2 快速起步 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="quickstart.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>2 快速起步</h1>
+
+<p>本节目标：10 分钟内把 UICornerstone 的第一个窗口跑起来。</p>
+
+<h2>2.1 获取代码</h2>
+
+<p>仓库包含全部后端与依赖子模块，克隆时必须带 <code>--recursive</code>：</p>
+
+<pre><code>git clone --recursive https://github.com/SeaOceanLiu/UICornerstone.git
+cd UICornerstone</code></pre>
+
+<p>依赖全部以子模块预置（<code>subModules/libs</code> 下为预编译 SDK 库），无需手动安装第三方库。</p>
+
+<h2>2.2 环境要求</h2>
+
+<table>
+<tr><th>平台</th><th>要求</th></tr>
+<tr><td>Windows</td><td>Visual Studio 2022（「使用 C++ 的桌面开发」工作负载）或 VS2022 Build Tools；CMake 3.16+</td></tr>
+<tr><td>Linux</td><td>GCC 9+ / Clang 10+；CMake 3.16+（GLFW/OpenGL 依赖随后端）</td></tr>
+<tr><td>通用</td><td>C++17 编译器；CMake 3.16+（文档与 CI 使用 3.20+）</td></tr>
+</table>
+
+<h2>2.3 编译</h2>
+
+<h3>Windows</h3>
+
+<p>项目内置构建脚本，按后端选择：</p>
+
+<pre><code>build_scripts\build.bat sdl3      :: SDL3 后端（默认、功能最全）
+build_scripts\build.bat sfml      :: SFML 后端
+build_scripts\build.bat raylib    :: Raylib 后端（单 DLL 部署最简）</code></pre>
+
+<h3>Linux（通用 CMake）</h3>
+
+<pre><code>cmake -B build -DUICORNERSTONE_BACKEND=SDL3 -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug</code></pre>
+
+<p>三后端的 CMake 开关：<code>-DUICORNERSTONE_BACKEND=SDL3</code> / <code>=SFML</code> / <code>=RAYLIB</code>。</p>
+
+<h2>2.4 运行第一个样例</h2>
+
+<pre><code>cmake --build build\sdl3 --config Debug --target hello_uicornerstone
+build\sample\hello_uicornerstone\sdl3\Debug\hello_uicornerstone.exe</code></pre>
+
+<p>你会看到一个窗口：标题 <code>Hello UICornerstone</code>，内含按钮与状态文本——点击按钮，标签实时更新。这是声明式 UI 的最小范例（JSON 布局 + C ABI 调用），代码在 <code>samples/hello_uicornerstone/</code>。</p>
+
+<div class="img-frame">
+  <img src="assets/screenshot-hello.png" alt="hello_uicornerstone 窗口">
+  <div class="img-caption">hello_uicornerstone：声明式 JSON 布局渲染结果（按钮 + 状态标签）</div>
+</div>
+
+<h2>2.5 快速验证其它入口</h2>
+
+<pre><code>:: 运行单个测试（auto=&lt;秒&gt; 自动运行 N 秒后退出，exit=0 表示通过）
+cd build\sdl3\test\Debug
+test_label.exe auto=3
+
+:: C++ Binding 样例（UICORN_AUTO=1 无人值守冒烟：240 帧自动退出）
+set UICORN_AUTO=1
+build\binding\Debug\sample_cpp_hosted.exe
+
+:: 命令行选后端（缺省 sdl3）
+sample_cpp_hosted.exe backend=sfml</code></pre>
+
+<div class="note">视觉类测试会弹出真实窗口；在 CI/无头环境下可用 <code>auto=</code> 自动跑完退出。全部测试支持三后端全量回归（<code>exit=0</code> 全过）。</div>
+
+<h2>2.6 项目结构速览</h2>
+
+<table>
+<tr><th>目录</th><th>内容</th></tr>
+<tr><td><code>include/</code> + <code>src/</code></td><td>核心库：控件、事件、焦点、布局、JSON、动画</td></tr>
+<tr><td><code>binding/</code></td><td>C++ Binding（纯动态加载，不链接 DLL import lib）</td></tr>
+<tr><td><code>samples/</code></td><td>4 种集成模式示例（hello / programmatic / fromsource / loadlibrary）</td></tr>
+<tr><td><code>test/</code></td><td>自动化测试（test_*.cpp，三后端通用）</td></tr>
+<tr><td><code>layouts/</code></td><td>JSON 布局文件</td></tr>
+<tr><td><code>docs/</code></td><td>本用户手册</td></tr>
+<tr><td><code>design/</code></td><td>设计文档 + 用户教程（Tutorial.md 等）</td></tr>
+<tr><td><code>build_scripts/</code></td><td>build.bat / build_test.bat</td></tr>
+<tr><td><code>subModules/</code></td><td>SDL3、SFML、raylib、json、assets、预编译 libs</td></tr>
+</table>
+
+<div class="chapter-nav">
+  <a href="index.html">← 1 介绍</a>
+  <a href="basics.html">下一章：3 从基础入门 →</a>
+</div>
+
+</div>
+</body>
+</html>

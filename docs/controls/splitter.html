@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.18 Splitter - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/splitter.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.18 Splitter（分割条）</h1>
+
+<p>Splitter 是可拖拽的分割条：关联两侧 sibling 控件，拖拽时实时调整两侧尺寸，支持最小尺寸约束与分割比例。继承链：<code>Splitter → ControlImpl → Control</code>。</p>
+
+<h2>4.18.1 控件的创建</h2>
+
+<pre><code>// C++
+Splitter(Control* parent, const SRect& rect, float xScale = 1.0f, float yScale = 1.0f);
+SplitterBuilder(parent, SRect(244, 60, 6, 200))
+    .setOrientation(false)              // false=垂直分割（左右分栏）
+    .setLinkedControls(firstPanel, secondPanel)
+    .setSplitRatio(0.4f).build();
+
+// C ABI
+UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*orientation*/);
+
+// JSON
+{ "id": "mySplitter", "type": "splitter",
+  "rect": { "x": 244, "y": 60, "w": 6, "h": 200 },
+  "orientation": "vertical",
+  "firstPanel": "panelFirst", "secondPanel": "panelSecond",
+  "thickness": 6, "ratio": 0.4, "minFirst": 50, "minSecond": 50,
+  "events": { "onSplitterMoved": "onSplitterMoved" } }</code></pre>
+
+<div class="note">JSON 中 <code>orientation: "vertical"</code> → 垂直分割（左右分栏），其余为水平；rect 可省略，由 first/second 控件边界自动推导。<strong>Splitter 节点必须排在关联面板之后</strong>。</div>
+
+<h2>4.18.2 控件的方法</h2>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>create()</code> / <code>draw()</code> / <code>handleEvent(Event)</code> / <code>setRect(SRect)</code></td><td>生命周期与绘制 / 事件 / 位置</td></tr>
+<tr><td><code>setOrientation(bool horizontal)</code> / <code>isHorizontal()</code></td><td>方向：true=水平分割（纵向分栏），false=垂直分割（横向分行）</td></tr>
+<tr><td><code>setLinkedControls(first, second)</code></td><td>关联两侧 sibling 控件</td></tr>
+<tr><td><code>setFirstControl(...)</code> / <code>setSecondControl(...)</code></td><td>单独设置一侧</td></tr>
+<tr><td><code>getFirstControl()</code> / <code>getSecondControl()</code> / <code>clearLinkedControls()</code></td><td>查询 / 解除关联</td></tr>
+<tr><td><code>setMinSize(firstMin, secondMin)</code> / <code>getMinFirst()</code> / <code>getMinSecond()</code></td><td>两侧最小尺寸（默认 20）</td></tr>
+<tr><td><code>setThickness(float)</code> / <code>getThickness()</code></td><td>分割条厚度（默认 H=4 / V=6）</td></tr>
+<tr><td><code>setSplitRatio(float)</code> / <code>getSplitRatio()</code></td><td>分割比例（0~1，first 占比；set 即触发回调）</td></tr>
+<tr><td><code>setColor(normal, hover, drag)</code> / 三个 getter</td><td>三态颜色（默认 #808080 / #4A90D9 / #3A80C9）</td></tr>
+<tr><td><code>setOnSplitterMoved(OnSplitterMovedHandler)</code></td><td>拖拽结束回调</td></tr>
+<tr><td><code>setColorProperty / setBoolProperty / setFloatProperty / setPtrProperty</code>（+getter）、<code>setCallbackProperty</code></td><td>属性系统分发</td></tr>
+</table>
+
+<h2>4.18.3 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>ratio</code></td><td>Float</td><td>0.5</td><td>分割比例（set→setSplitRatio；get 别名 <code>value</code>）</td></tr>
+<tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td><td>分割条厚度</td></tr>
+<tr><td><code>first-min</code> / <code>second-min</code></td><td>Float</td><td>20</td><td>两侧最小尺寸（get 别名 <code>range-min</code> / <code>range-max</code>）</td></tr>
+<tr><td><code>edge-margin</code></td><td>Float</td><td>—</td><td>同时设置 minFirst 与 minSecond</td></tr>
+<tr><td><code>horizontal</code></td><td>Bool</td><td>—</td><td>true=水平分割</td></tr>
+<tr><td><code>line</code> / <code>line-hover</code> / <code>line-drag</code></td><td>Color</td><td>灰 / 蓝 / 深蓝</td><td>三态颜色</td></tr>
+<tr><td><code>first-linked</code> / <code>second-linked</code></td><td>Ptr</td><td>null</td><td>关联控件句柄（setPtrProperty）</td></tr>
+</table>
+
+<h2>4.18.4 控件的回调</h2>
+
+<table>
+<tr><th>回调 / 事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>setOnSplitterMoved(handler)</code>（C ABI 事件 <code>moved</code>；JSON 键 <code>onSplitterMoved</code>）</td><td>拖拽结束（endDrag）及 setSplitRatio 后</td><td><code>void(shared_ptr&lt;Splitter&gt;, float ratio)</code></td></tr>
+</table>
+
+<h2>4.18.5 JSON 语法</h2>
+
+<pre><code>{
+  "id": "mySplitter",
+  "type": "splitter",
+  "rect": { "x": 244, "y": 60, "w": 6, "h": 200 },
+  "orientation": "vertical",
+  "firstPanel": "panelFirst",
+  "secondPanel": "panelSecond",
+  "thickness": 6,
+  "ratio": 0.4,
+  "minFirst": 50,
+  "minSecond": 50,
+  "events": { "onSplitterMoved": "onSplitterMoved" }
+}</code></pre>
+
+<h2>4.18.6 C++ Binding 样例</h2>
+
+<pre><code>auto splitter = ui->CreateSplitter(244, 60, 6, 200, 1 /*orientation*/);
+splitter.SetFloat(PropertyNames::kRatio, 0.4f);
+splitter.SetFloat(PropertyNames::kThickness, 6.0f);
+splitter.SetCallback(PropertyNames::kEventMoved, [](const Event& e) {
+    printf("ratio = %.3f\n", e.GetMovedPosition());
+});
+// 关联控件经 "first-linked" / "second-linked" 属性或 AddChild 顺序管理</code></pre>
+
+<div class="chapter-nav">
+  <a href="slider.html">← 4.17 Slider</a>
+  <a href="textarea.html">下一节：4.19 TextArea →</a>
+</div>
+
+</div>
+</body>
+</html>

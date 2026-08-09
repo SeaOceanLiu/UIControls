@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>9.4 问题定位手段 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/debugging.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>9.4 问题定位手段</h1>
+
+<h2>9.4.1 自动化测试（首选）</h2>
+
+<p>仓库内置全量自动化测试，几乎每个控件与特性都有对应用例。遇到疑似 bug，先跑相关测试定位是「库的问题」还是「你的用法问题」：</p>
+
+<pre><code>build_scripts\build_test.bat test_button          :: 构建单个测试
+build_scripts\build_test.bat all sdl3             :: 三后端全量
+cd build\sdl3\test\Debug
+test_button.exe auto=3                            :: 自动跑 3 秒，exit=0 通过</code></pre>
+
+<table>
+<tr><th>测试</th><th>覆盖</th></tr>
+<tr><td><code>test_api</code></td><td>C ABI 全功能冒烟（7 控件 + JSON 布局 + 事件绑定）</td></tr>
+<tr><td><code>test_layout</code> / <code>test_layout_advanced</code></td><td>布局引擎（百分比 / 嵌套 / 对齐）</td></tr>
+<tr><td><code>test_property_cabi</code></td><td>统一属性系统（Set/Get 对称 + 边界条件）</td></tr>
+<tr><td><code>test_event</code> / <code>test_focus</code></td><td>事件分发 / 焦点系统</td></tr>
+<tr><td><code>test_animation</code> / <code>test_luotiani_cabi</code></td><td>LuotiAni 动画</td></tr>
+<tr><td><code>test_multi_instance_cabi</code> / <code>test_multiviewport_cabi</code></td><td>多实例 / 多视口（K1-K8）</td></tr>
+<tr><td><code>test_*_visual_cabi</code></td><td>视觉状态断言（hover / 焦点环 / 内容传递）</td></tr>
+<tr><td><code>test_&lt;control&gt;_cabi</code></td><td>各控件行为 + 属性 + 事件</td></tr>
+</table>
+
+<h2>9.4.2 断言与日志</h2>
+
+<ul>
+  <li>测试程序打印 <code>PASS/FAIL</code> 并带函数名；<code>exit=0</code> 表示全过；</li>
+  <li>核心库事件 / 控件关键路径有日志输出（带调试标签的实例可区分多实例）；</li>
+  <li>创建实例时传 <code>debugLabel</code>（UIInstanceConfig），多实例问题可分辨日志来源。</li>
+</ul>
+
+<h2>9.4.3 常见错误模式</h2>
+
+<table>
+<tr><th>现象</th><th>原因</th><th>处置</th></tr>
+<tr><td>Binding Create 返回 nullptr</td><td>核心 DLL 缺失 / 路径错误</td><td><code>Config.WithCoreLibraryDir(...)</code> 指定目录；确认 DLL 与后端匹配</td></tr>
+<tr><td>控件不显示</td><td>未 addControl / visible=false / 被遮挡</td><td>确认挂到 BENCH 或父容器；查 z 序与 transparent</td></tr>
+<tr><td>点击无反应</td><td>控件未启用 / 未设置回调 / 被上层控件挡住</td><td>SetBool("enabled", true)；SetCallback；检查命中控件</td></tr>
+<tr><td>中文乱码</td><td>文件编码或 raylib 码点限制</td><td>源码/布局文件用 UTF-8 with BOM；raylib 需码点扩展</td></tr>
+<tr><td>多实例窗口内容闪动 / 串扰</td><td>raylib 单窗口架构</td><td>查能力位 MULTI_WINDOW，headless 实例跳过渲染（见 <a href="../advanced.html">5.2</a>）</td></tr>
+<tr><td>动画不播放 / 跳帧</td><td>未 prepare / 帧号越界 / frameRate=0</td><td>先 prepare()；确认 overview 必填键齐全</td></tr>
+<tr><td>布局不生效</td><td>rect 缺省 / handler 未注册 / 热加载未 poll</td><td>rect 必填；RegisterAction 名字对齐；每帧 reloader.poll()</td></tr>
+<tr><td>焦点环不显示</td><td>m_focusRingAlwaysVisible=false 且非键盘聚焦</td><td>Tab 键聚焦；或设 alwaysVisible</td></tr>
+</table>
+
+<h2>9.4.4 最小复现模板</h2>
+
+<p>把问题收敛到最小工程（一个 main + 一个控件），对照 <code>test/</code> 中同控件用例的结构。若你的用法与测试一致仍出错，可到 GitHub 提交 issue，附：后端、版本、最小代码、<code>auto=</code> 测试输出。</p>
+
+<div class="chapter-nav">
+  <a href="capi.html">← 9.3 C ABI 速查表</a>
+  <a href="backend-config.html">下一节：9.5 后端差异及后端配置 →</a>
+</div>
+
+</div>
+</body>
+</html>
