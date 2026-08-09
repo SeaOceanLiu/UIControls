@@ -13,54 +13,202 @@
 
 <h1>5 进阶主题</h1>
 
+<p>本章深入引擎的四个高级方向：<strong>洛蒂动画引擎</strong>（描述 → 烘焙 → 播放）、<strong>多视口与多窗口</strong>（一进程多 UI 实例）、<strong>非可视化功能控件</strong>（热重载 / 数据绑定 / 布局解析 / 焦点管理 / 资源加载）、以及<strong>纯 C ABI 程序化构建</strong>。每节都附可直接运行的完整样例。</p>
+
 <h2>5.1 全面掌握洛蒂动画引擎</h2>
 
-<p>LuotiAni 的核心机制：<strong>描述 → 烘焙 → 播放</strong>。加载 JSON 描述后 <code>prepare()</code> 将每帧合成到离屏画布（帧贴图），播放时仅按毫秒查表绘制。</p>
+<p>LuotiAni 是引擎内置的关键帧动画系统：JSON 描述动画 → <code>prepare()</code> 逐帧烘焙为离屏帧贴图 → 播放时按墙钟毫秒查表绘制。<strong>烘焙完成后 JSON 不再参与运行</strong>，运行时零插值零计算——这是它与逐帧实时求值的动画系统的本质区别。</p>
 
-<h3>5.1.1 烘焙与性能</h3>
+<h3>5.1.1 动画描述文件（JSON）</h3>
 
-<ul>
-  <li>同一动画文件的多个播放器共享烘焙帧数据（<code>LuotiInstance</code>），内存仅一份；</li>
-  <li>播放速度由真实墙钟毫秒驱动，<code>update()</code> 调用频率不影响动画速度（帧率无关）；</li>
-  <li>烘焙后可用 <code>getFrameCanvas(frame)</code> 读取合成画布做离屏渲染 / 缩略图。</li>
-</ul>
+<p>官方资源 <code>animations/rotateBtn/rotateBtn.jsonc</code>（256×256 画布、60 帧的旋转按钮）是标准结构范本：</p>
 
-<h3>5.1.2 操作类型语义</h3>
+<pre><code>{
+    "overview": {
+        "version": "0.0.1",
+        "name": "rotate button animation",
+        "view": { "width": 256, "height": 256 },   // 画布尺寸：超出部分裁剪
+        "frameRate": 60,                            // 不得为 0
+        "totalFrames": 60,
+        "loop": true                                // 必填（严格解析，缺失抛异常）
+    },
+    "layers": [
+        {
+            "name": "rotate button",
+            "type": "image",                        // image / shape / text
+            "src": "animations/rotateBtn/rotateBtn.svg",   // 资源包内路径
+            "width": 256, "height": 256,            // 缺省则保持图片原始尺寸
+            "opacity": 100,                         // 图层级默认不透明度（0~100）
+            "blendMode": "blend",                   // normal/additive/modulate/blend/multiply
+            "keyFrames": [
+                { "frame": 0, "operation": [
+                    { "type": "translate", "tx": 0, "ty": 0 },
+                    { "type": "scale", "sx": 1, "sy": 1 },
+                    { "type": "rotate", "angle": 0, "cx": 128, "cy": 128 },
+                    { "type": "opacity", "opacity": 100 },
+                    { "type": "visible", "visible": true }
+                ]},
+                { "frame": 59, "operation": [
+                    { "type": "rotate", "angle": 360, "cx": 128, "cy": 128 }
+                ]}
+            ]
+        }
+    ]
+}</code></pre>
 
 <table>
-<tr><th>类型</th><th>字段</th><th>语义</th></tr>
+<tr><th>操作类型</th><th>字段</th><th>语义</th></tr>
 <tr><td><code>translate</code></td><td>tx, ty</td><td>相对上一关键帧<strong>增量累加</strong></td></tr>
 <tr><td><code>scale</code></td><td>sx, sy</td><td>相对上一关键帧<strong>累乘</strong></td></tr>
-<tr><td><code>rotate</code></td><td>angle, cx, cy</td><td>角度累加，绕 (cx,cy) 旋转中心</td></tr>
-<tr><td><code>opacity</code></td><td>opacity (0~100)</td><td>百分比<strong>覆盖</strong></td></tr>
+<tr><td><code>rotate</code></td><td>angle, cx, cy</td><td>角度累加，绕 (cx, cy) 旋转中心</td></tr>
+<tr><td><code>opacity</code></td><td>opacity（0~100）</td><td>百分比<strong>覆盖</strong>（内部转 0~255）</td></tr>
 <tr><td><code>visible</code></td><td>visible</td><td>可见性覆盖</td></tr>
 </table>
 
-<h3>5.1.3 缓动与轨迹</h3>
+<div class="note">未列出的属性沿用上一关键帧的到达值；最后一个关键帧之后的帧保持到达值（carry-over）。第 0 帧关键帧<strong>必须存在</strong>（缺失直接抛异常）。</div>
+
+<h3>5.1.2 缓动与路径（easing / path）</h3>
+
+<p><code>easing</code> 写在目标关键帧的操作上，对段内<strong>所有属性</strong>的插值统一做时间重映射；<code>path</code> 仅作用于 translate 的段内位置轨迹，控制点相对段起点。引擎级演示动画（test_luotiani 的 tl_demo）完整展示了两种能力：</p>
+
+<pre><code>{
+    "overview": { "name": "demo", "version": "0.0.1",
+                  "view": { "width": 256, "height": 256 },
+                  "frameRate": 30, "totalFrames": 60, "loop": true },
+    "layers": [
+        { "name": "layer1", "type": "image",
+          "src": "animations/rotateBtn/rotateBtn.svg",
+          "opacity": 100, "blendMode": "normal",
+          "keyFrames": [
+            { "frame": 0, "operation": [
+                { "type": "translate", "tx": 0, "ty": 0 },
+                { "type": "rotate", "angle": 0, "cx": 128, "cy": 128 },
+                { "type": "opacity", "opacity": 100 } ] },
+            { "frame": 30, "operation": [
+                { "type": "translate", "tx": 120, "ty": 60,
+                  "easing": "ease-in-out",
+                  "path": { "type": "bezier", "c1x": 80, "c1y": -120, "c2x": 200, "c2y": 150 } },
+                { "type": "rotate", "angle": 180, "cx": 128, "cy": 128 },
+                { "type": "opacity", "opacity": 100 } ] },
+            { "frame": 60, "operation": [
+                { "type": "translate", "tx": -120, "ty": -60, "easing": "ease-in-out" },
+                { "type": "rotate", "angle": 180, "cx": 128, "cy": 128 },
+                { "type": "opacity", "opacity": 100 } ] }
+          ] }
+    ]
+}</code></pre>
+
+<table>
+<tr><th>easing 值</th><th>说明</th></tr>
+<tr><td><code>linear</code>（缺省）</td><td>线性插值</td></tr>
+<tr><td><code>ease-in / ease-out / ease-in-out</code></td><td>三次缓入 / 缓出 / 缓入缓出</td></tr>
+<tr><td><code>quad / sine / cubic</code></td><td>二次 / 正弦 / 三次多项式曲线</td></tr>
+<tr><td><code>cubic-bezier(x1,y1,x2,y2)</code></td><td>自定义贝塞尔（x 须在 [0,1]）；未知值回退 linear</td></tr>
+</table>
+
+<table>
+<tr><th>path 类型</th><th>字段</th><th>说明</th></tr>
+<tr><td><code>bezier</code></td><td>c1x/c1y（二次）、c2x/c2y（三次）</td><td>控制点相对段起点</td></tr>
+<tr><td><code>parabola</code></td><td>vx, vy</td><td>初速物理轨迹，重力由终点反解，t=1 精确到达终点</td></tr>
+<tr><td><code>catmull-rom</code></td><td>points</td><td>多点平滑过点曲线</td></tr>
+</table>
+
+<h3>5.1.3 C++ 完整用法</h3>
+
+<p>独立动画控件（Builder 链式，一步到位）：</p>
+
+<pre><code>auto ani = LuotiAniBuilder(BENCH)
+    .loadAniDesc(string("animations/rotateBtn/rotateBtn.jsonc"))  // 资源根相对路径
+    .setRect(SRect(20, 20, 256, 256))
+    .prepare()                 // 逐帧烘焙（重复调用早退）
+    .setAutoStart()            // 内部调 play()
+    .build();
+ani-&gt;create();
+BENCH-&gt;addControl(ani);</code></pre>
+
+<p>引擎级加载 / 播放 / 调试接口（精细控制）：</p>
+
+<pre><code>auto ani = make_shared&lt;LuotiAni&gt;(BENCH);
+ani-&gt;loadAniDesc(fs::path("animations/rotateBtn/rotateBtn.jsonc")); // 失败 throw（需 try/catch）
+ani-&gt;prepare();               // 烘焙全部帧
+ani-&gt;play();                  // 复位帧到 0 重播
+// 播放控制
+ani-&gt;pause();                 // 停住（保持当前帧）
+ani-&gt;resume();                // 从暂停处继续（区别于 play 的重播语义）
+ani-&gt;setFrame(30);            // 跳帧（未 prepare / 越界忽略）
+ani-&gt;setLoop(false);          // 到尾帧触发 AnimationEnded 事件并停止
+// 调试：读中间帧插值结果与烘焙画布
+LuotiAni::OpData d = ani-&gt;getFrameOpData(0 /*layer*/, 7 /*frame*/);
+float alpha = d.opacity;                        // 0~255 域
+SharedSurface canvas = ani-&gt;getFrameCanvas(7);  // 该帧合成后的离屏画布
+ani-&gt;draw(7, x, y, alpha);                      // 绘制指定帧（不推进播放）</code></pre>
+
+<p>挂载到按钮（按钮自带动画外观）：</p>
+
+<pre><code>auto rotateAni = LuotiAniBuilder(BENCH)
+    .loadAniDesc(string("animations/rotateBtn/rotateBtn.jsonc"))
+    .prepare().setAutoStart().build();
+auto btn = ButtonBuilder(nullptr, SRect(530, 50, 120, 50))
+    .setLuotiAni(rotateAni)
+    .setTransparent(true)
+    .setOnClick([](shared_ptr&lt;Button&gt; b) { /* ... */ })
+    .build();
+btn-&gt;create();
+BENCH-&gt;addControl(btn);</code></pre>
+
+<p>布局 JSON 中挂动画（<code>luotiAni</code> 键，加载即自动播放）：</p>
+
+<pre><code>{ "type": "button", "id": "aniBtn",
+  "rect": { "x": 200, "y": 532, "w": 100, "h": 40 },
+  "caption": "Animated", "captionSize": 14,
+  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc",
+  "events": { "onClick": "onAniBtnClick" } }</code></pre>
+
+<h3>5.1.4 C ABI 调用（CreateAnimation）</h3>
+
+<pre><code>// 创建：w/h 传 0 回退到 JSON overview.view 画布尺寸；失败返回 NULL
+UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA3.jsonc", 60, 60, 256, 256);
+UICornerstone_SetBool(g_inst, ani, "playing", 1);   // 播放（每次置 1 帧复位 0 重播）
+UICornerstone_GetInt(g_inst, ani, "frame", &amp;f);      // 读当前帧
+UICornerstone_SetBool(g_inst, ani, "playing", 0);   // 暂停（帧停住）
+UICornerstone_SetBool(g_inst, ani, "loop", 1);      // 循环
+UICornerstone_SetInt(g_inst, ani, "frame", 8);      // 跳帧
+// 换动画：重新走 加载→prepare→播放（状态重置）
+UICornerstone_SetString(g_inst, ani, "animation", "animations/hero.jsonc");</code></pre>
+
+<h3>5.1.5 机制细节与语义陷阱</h3>
 
 <ul>
-  <li><code>easing</code> 写在目标关键帧的操作上，作用于该关键帧<strong>段内所有属性</strong>的插值：<code>linear / ease-in / ease-out / ease-in-out / quad / sine / cubic / cubic-bezier(x1,y1,x2,y2)</code>；</li>
-  <li><code>path</code> 仅用于 translate 的段内位置轨迹：<code>bezier</code>（二次/三次贝塞尔）、<code>parabola</code>（初速物理轨迹）、<code>catmull-rom</code>（多点平滑曲线）；控制点相对段起点。</li>
-</ul>
-
-<h3>5.1.4 语义陷阱</h3>
-
-<ul>
-  <li><code>play()</code> 总是<strong>复位帧到 0 重播</strong>；属性 <code>playing</code> 每次置 1 都是重播（无暂停/继续状态机）；</li>
-  <li><code>frameRate</code> 不得为 0；第 0 帧关键帧必须存在；</li>
-  <li><code>animation</code> 属性只写不读；未 prepare 时置 <code>playing=1</code> 会被拒绝（返回 0）；</li>
-  <li>层类型 shape/text 解析支持但烘焙跳过（无可见输出）。</li>
+  <li><strong>时间驱动</strong>：<code>update()</code> 用绝对墙钟毫秒推进帧（每帧毫秒 = 1000/frameRate），播放速度只与真实时间有关，<strong>与调用 update 的帧率无关</strong>（帧率低时一次跳多帧）；</li>
+  <li><strong>多实例共享烘焙</strong>：<code>LuotiInstance(parent, shared_ptr&lt;LuotiAni&gt;, userId, ...)</code> 共享同一份帧贴图，各实例独立推进；内存与 帧数×画布尺寸 成正比（60 帧 512×512 ≈ 63MB）；</li>
+  <li><strong>缩放校准</strong>：帧 Actor 非控件树成员，绘制当前帧前会校准缩放跟随父链（嵌套在 2x 缩放容器内动画也正确）；</li>
+  <li><code>play()</code> 总是复位帧到 0 重播；C ABI <code>playing</code> 每次置 1 都是重播（无暂停/继续状态机，暂停/继续用 <code>playing=0/1</code> 近似）；</li>
+  <li><code>setFrame</code> 跳帧后首次 update 不复位计时会连跳；<code>animation</code> 属性只写不读；未 prepare 时置 <code>playing=1</code> 被拒绝；</li>
+  <li>图层类型 <code>shape</code>/<code>text</code> 解析支持但烘焙跳过（无可见输出）；<code>AnimationEnded</code> 事件已触发但尚无 C ABI 回调链路。</li>
 </ul>
 
 <h2>5.2 多视口与多窗口</h2>
 
-<p>UICornerstone 支持单进程多实例 / 多窗口：每个 <code>UIInstance</code> 拥有独立的 <code>UIContext</code>（控件树、事件队列、焦点状态完全隔离）。</p>
+<p>UICornerstone 支持单进程多个 UI 实例：<strong>多实例</strong> = 多个独立窗口（各自控件树 / 事件队列 / 焦点 / 数据上下文完全隔离）；<strong>多视口</strong> = 一个窗口内划分多个子区域（共享后端，各自独立控件树）。</p>
 
-<h3>5.2.1 后端能力位</h3>
+<h3>5.2.1 视图层次与能力位</h3>
 
-<pre><code>// 查询能力位，按需条件化渲染
-uint32_t caps = UICornerstone_GetBackendCapabilities(g_inst);
-if (caps &amp; UICORN_BACKEND_CAP_MULTI_WINDOW) { /* 可开多窗口 */ }
+<pre><code>UIInstance (owner，一个窗口)
+├── ownsBackend = true；持有 Window / RenderDevice / InputBackend / TextRenderer
+├── viewport = 整个窗口区域 (0,0,w,h)
+├── bench（owner 自身控件根）
+├── activeViewport：当前键盘焦点子视口（首个子视口创建时自动赋值；销毁时清 NULL）
+└── children[]：CreateViewport 注册的子视口
+    └── 每个子视口 = 一个 UIContext：
+        ├── owner = 父；ownsBackend = false（共享后端）
+        ├── viewport = 窗口坐标系的区域（渲染时 clip 到该区域）
+        ├── bench / eventQueue / DataContext / FocusManager —— 每实例独立
+        └── 注入队列 queuedEvents —— 每实例独立</code></pre>
+
+<p>后端能力决定多实例渲染策略，必须条件化：</p>
+
+<pre><code>uint32_t caps = UICornerstone_GetBackendCapabilities(g_inst);
+if (caps &amp; UICORN_BACKEND_CAP_MULTI_WINDOW)  { /* 非首个实例可真实开窗 */ }
 if (caps &amp; UICORN_BACKEND_CAP_RENDER_TARGET) { /* 可离屏渲染 */ }</code></pre>
 
 <table>
@@ -71,67 +219,272 @@ if (caps &amp; UICORN_BACKEND_CAP_RENDER_TARGET) { /* 可离屏渲染 */ }</code
 <tr><td><code>READBACK</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
 </table>
 
-<div class="warn">raylib 为单窗口架构：多实例下仅首个实例有真实窗口，其余为 headless（<code>Window::isHeadless()</code>），对其渲染会串扰到主实例窗口。多窗口渲染前必须查能力位条件化。</div>
+<div class="warn">raylib 为单窗口架构：多实例下仅首个实例有真实窗口，其余为 headless，对其渲染会串扰到主实例窗口。多窗口渲染前必须查能力位条件化。</div>
 
-<h3>5.2.2 C ABI 多实例 API</h3>
+<h3>5.2.2 单窗口多视口（C++ Binding）</h3>
 
-<pre><code>// 创建第二个实例（同进程两个独立 UI）
-UIInstance inst2 = UICornerstone_CreateInstance("secondary", NULL);
-// 多视口：同一实例渲染到多个目标（RENDER_TARGET 能力）
-UICornerstone_SetViewport(inst, 0, 0, 400, 300);</code></pre>
+<p>一个 800×600 窗口划分两个子视口：左上 (0,0,400,300) + 右下 (400,300,400,300)，各自独立控件树，按钮点击弹窗显示本视口内容（sample_cpp_multiview 完整模式）：</p>
 
-<h3>5.2.3 C++ Binding 多实例</h3>
+<pre><code>auto ui = UICornerstone::Create(Config{}.WithBackend("sdl3").WithWindow("Multi-View Sample", 800, 600));
 
-<pre><code>// 第二个 UI 实例（子视口）
-auto vp = ui->CreateViewport(400, 300);
-auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);
-// 多窗口独立实例双向通信：A 窗口按钮 → B 窗口标签
-auto winB = UICornerstone::Create(Config{}.WithBackend("sdl3").WithWindow("B", 480, 320));
-buttonA.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
-    labelB.SetString(PropertyNames::kCaption, "Hello from A!");
-});</code></pre>
+// 两个子视口（窗口坐标系下绝对区域）
+auto vpA = ui-&gt;CreateViewport(0, 0, 400, 300);
+auto vpB = ui-&gt;CreateViewport(400, 300, 400, 300);
 
-<p>实测覆盖：<code>test_multi_instance_cabi</code>、<code>test_multiviewport_cabi</code>（K1-K8）、<code>test_multiinstance_visual_cabi</code>（跨窗口视觉状态断言）、<code>sample_cpp_multiinstance</code>（双窗口双向通信）。</p>
+// 每个子视口独立创建控件（句柄属于各自实例）
+auto labelA = vpA-&gt;CreateLabel("Viewport A", 16.0f, 20, 12, 200, 28);
+auto btnA   = vpA-&gt;CreateButton("Show Dialog", 20, 60, 160, 34);
+btnA.SetCallback(PropertyNames::kEventClick, [&amp;](const Event&amp;) {
+    vpA-&gt;CreateDialog("Hello from A", "", 0, 0, 280, 120);   // 弹窗在 vpA 内居中
+});
+
+// ── 主循环：子视口必须显式驱动 ──
+while (!ui-&gt;IsQuitRequested()) {
+    ui-&gt;ProcessEvents();      // 窗口输入轮询（按坐标路由到子视口）+ owner 注入队列
+    vpA-&gt;ProcessEvents();     // 子视口各自消费自己的注入队列
+    vpB-&gt;ProcessEvents();
+    vpA-&gt;Update(dt);  vpB-&gt;Update(dt);
+    ui-&gt;Clear();
+    vpA-&gt;Render();            // 各自 clip 到自身视口区域
+    vpB-&gt;Render();
+    ui-&gt;Present();
+}
+ui-&gt;Shutdown();</code></pre>
+
+<p>事件路由要点：窗口输入按<strong>窗口绝对坐标</strong>路由到命中的子视口；未命中任何子视口 → owner 树；键盘事件先做 Ctrl+Tab 跨视口智能路由，再投递到活动视口。</p>
+
+<h3>5.2.3 多实例双窗口（C++ Binding）</h3>
+
+<p>两个独立窗口实例，跨实例通信通过普通 C++ 回调（控件句柄属于各自实例，不可混用）（sample_cpp_multiinstance 完整模式）：</p>
+
+<pre><code>auto uiA = UICornerstone::Create(
+    Config{}.WithBackend("sdl3").WithWindow("Sample A", 640, 480));
+auto uiB = UICornerstone::Create(
+    Config{}.WithBackend("sdl3").WithWindow("Sample B", 640, 480));
+
+auto labelA = uiA-&gt;CreateLabel("Window A (independent instance)", 18.0f, 20, 12, 420, 30);
+auto editA  = uiA-&gt;CreateEditBox(20, 60, 380, 32);
+auto btnA   = uiA-&gt;CreateButton("Send to B", 20, 110, 140, 36);
+auto msgB   = uiB-&gt;CreateLabel("(no message)", 16.0f, 20, 110, 420, 30);
+
+// A 窗口按钮 → 写 B 窗口的控件（跨实例）
+btnA.SetCallback(PropertyNames::kEventClick, [&amp;](const Event&amp;) {
+    msgB.SetString(PropertyNames::kCaption,
+                   "Message: " + editA.GetString(PropertyNames::kTextContent));
+});
+
+// ── 主循环：全局事件泵 + 渲染条件化 ──
+while (!uiA-&gt;IsQuitRequested() &amp;&amp; !uiB-&gt;IsQuitRequested()) {
+    int processed = 1;                 // 依次驱动每个实例，直到队列空
+    while (processed &gt; 0) {
+        processed = (uiA-&gt;ProcessEvents() ? 1 : 0) + (uiB-&gt;ProcessEvents() ? 1 : 0);
+    }
+    uiA-&gt;Update(dt);  uiB-&gt;Update(dt);
+    uiA-&gt;Clear(); uiA-&gt;Render(); uiA-&gt;Present();
+    if (uiA-&gt;GetBackendCapabilities() &amp; UICORN_BACKEND_CAP_MULTI_WINDOW) {
+        uiB-&gt;Clear(); uiB-&gt;Render(); uiB-&gt;Present();   // raylib 下跳过
+    }
+}
+uiA-&gt;Shutdown();  uiB-&gt;Shutdown();</code></pre>
+
+<h3>5.2.4 C ABI 层</h3>
+
+<p>实例配置结构（可全 NULL/0 走默认）：</p>
+
+<pre><code>UIInstanceConfig cfg = { sizeof(UIInstanceConfig),   // 版本兼容检查必填
+    "Secondary",        // debugLabel
+    NULL,               // resourceRoot → 默认
+    "第二窗口",          // windowTitle
+    640, 480,           // windowWidth / Height
+    0, 0,0,0,0,0,0 };   // windowFlags + reserved
+
+UIInstance inst2 = UICornerstone_CreateInstanceFromPlugin("sdl3", &amp;cfg);
+// 或直接传后端回调表（静态链接路径）：
+UIInstance inst1 = UICornerstone_CreateInstance(GetUIBackendCallbacks(), NULL);
+
+// 子视口：在 owner 的窗口中划区域（仅 owner 可建，rect 为窗口坐标系）
+UIInstance vp = UICornerstone_CreateViewport(inst1,
+    (UIRect){ .x = 0, .y = 0, .w = 400, .h = 300 });
+// 视口控制
+UICornerstone_SetViewport(inst1, 0, 0, 400, 300);
+float x,y,w,h;  UICornerstone_GetViewport(inst1, &amp;x, &amp;y, &amp;w, &amp;h);
+// 销毁：级联销毁子视口；销毁活动视口自动清引用（防悬垂）
+UICornerstone_DestroyInstance(inst1);</code></pre>
+
+<p>调试辅助（_DEBUG 构建）：<code>Debug_GetActiveViewport(inst)</code> 查询活动子视口；<code>Debug_IsControlFocused / Debug_IsControlHovered</code> 断言焦点 / 悬停；<code>Debug_SetMousePosition(inst, x, y)</code> 注入鼠标坐标驱动 hover（无人值守测试用，Release 恒 0）。</p>
+
+<h3>5.2.5 隔离性保证</h3>
+
+<p>多实例 / 多视口的隔离是引擎设计保证（test_multi_instance_cabi 测试 1-5、test_multiviewport_cabi K1-K8 全覆盖）：</p>
+
+<ul>
+  <li><strong>事件隔离</strong>：同位置点击各自实例各自触发，事件不跨实例；</li>
+  <li><strong>Action 隔离</strong>：两实例可注册同名 action，各绑各的控件；</li>
+  <li><strong>焦点隔离</strong>：每实例独立 FocusManager，多窗口可同时各有焦点环；FocusLost 清本实例 + 活动子视口焦点；</li>
+  <li><strong>悬停隔离</strong>：注入鼠标到 A 窗口不影响 B 窗口 hover；</li>
+  <li><strong>销毁安全</strong>：销毁活动视口 / 实例后 Debug 断言无悬垂引用（AliveCount 精确）；</li>
+  <li><strong>Ctrl+Tab 跨视口规则</strong>：视口内存在可见焦点边界（WinFrame/Dialog）时优先视口内切换；全部隐藏才跨视口；<code>Ctrl+Shift+Tab</code> 反向。</li>
+</ul>
 
 <h2>5.3 非可视化控件（功能控件）</h2>
 
-<p>部分控件不直接显示，而是提供功能能力：</p>
+<p>以下组件不直接显示，而是为控件树提供功能能力。它们大多挂在 <code>UIContext</code> 上（每 UI 实例一份）或在应用层手动创建。</p>
 
-<table>
-<tr><th>组件</th><th>用途</th><th>要点</th></tr>
-<tr><td><code>HotReloader</code></td><td>布局文件热重载</td><td>构造监视 → <code>poll()</code> 每帧调用；重建整棵控件树（状态不保留）</td></tr>
-<tr><td><code>FocusManager</code></td><td>焦点导航</td><td>Tab 环 + 焦点边界 + Ctrl+Tab 作用域（见 <a href="events-focus.html">3.6</a>）</td></tr>
-<tr><td><code>LayoutEngine</code>（HFlow/VFlow/Anchor/Grid）</td><td>自动布局</td><td>Panel 挂载后 <code>reflowChildren()</code> 计算子控件位置（见 <a href="declarative-ui.html">3.4.2</a>）</td></tr>
-<tr><td><code>LayoutParser</code></td><td>JSON 布局解析</td><td><code>registerHandler</code> 绑定事件 → <code>parseLayoutFile</code> 构建控件树</td></tr>
-<tr><td><code>ResourceLoader</code></td><td>资源加载</td><td>图片 / 字体 / 动画的统一加载入口</td></tr>
-<tr><td><code>GraphTool</code></td><td>内部绘制原语</td><td>圆角矩形、渐变、虚线等辅助绘制</td></tr>
-</table>
+<h3>5.3.1 HotReloader：布局文件热重载</h3>
+
+<p>开发期利器：监视布局 JSON 文件，保存后约 0.5 秒自动重建控件树。策略为<strong>完全重建</strong>（不保留输入框内容、悬停等控件状态）。</p>
+
+<pre><code>LayoutParser g_parser;
+HotReloader g_reloader;
+fs::path g_layoutPath;
+
+// 重建回调（保存布局文件后自动执行）
+void reloadLayout() {
+    BENCH-&gt;removeAllControls();   // 1. 清除 Bench 所有子控件
+    g_parser.clear();             // 2. 清 ID 映射（已注册 handlers 保留）
+    auto root = g_parser.parseLayoutFile(g_layoutPath);  // 3. 重新解析
+    if (!root) return;
+    BENCH-&gt;addControl(root);      // 4. 重新挂根控件
+    for (auto&amp; bar : g_parser.getMenuBars())            // 5. 重新挂 MenuBar
+        BENCH-&gt;addControl(bar);
+}
+
+// 初始化（实例创建后）
+g_layoutPath = fs::path(Platform::GetBasePath()) / "layouts" / "test_layout_advanced.json";
+g_reloader = HotReloader(g_layoutPath, reloadLayout);
+g_reloader.setPollInterval(15);   // 每 15 帧检查一次（默认 30 ≈ 0.5s@60fps）
+
+// 帧循环
+void onUpdate() { g_reloader.poll(); BENCH-&gt;eventLoopEntry(); BENCH-&gt;update(); }</code></pre>
+
+<div class="note">局限：轮询检测（非 OS 文件事件），延迟约 0.5 秒；只支持单文件监视；重建不保留控件状态。JSON 中 <code>events</code> 引用的 handler 在 <code>clear()</code> 后依然有效，新控件自动重新绑定。</div>
+
+<h3>5.3.2 DataContext：数据绑定</h3>
+
+<p>命名数据源存储 + 变更通知中心（每 UI 实例一份，<code>UIContext::dataContext</code>）。控件经 JSON <code>bind</code> 挂到 key 上，实现 data→UI 单向与 UI→data 双向同步。</p>
+
+<pre><code>class DataContext {
+    void set(const string&amp; key, const DataValue&amp; value);   // 存储并通知所有 watcher
+    DataValue get(const string&amp; key) const;
+    bool has(const string&amp; key) const;
+    void watch(const string&amp; key, function&lt;void(const DataValue&amp;)&gt; watcher);
+    void unwatchAll();            // 布局热加载前自动调用
+    void clear();
+};
+// DataValue 可承载 string / double / bool（isString/asString/asDouble/asBool）</code></pre>
+
+<p>C++ 侧手动读写：</p>
+
+<pre><code>auto ctx = g_uiInstance-&gt;dataContext;
+ctx-&gt;set("sharedText", string("Hello from DataContext!"));
+ctx-&gt;set("progressValue", 42.0);
+double v = ctx-&gt;get("progressValue").asDouble();
+
+// 布局 JSON 中绑定（mode: oneWay 缺省 / twoWay）
+// "bind": { "text": { "source": "userName", "mode": "twoWay" },
+//           "visible": "isEditable" }</code></pre>
+
+<p>可绑定属性：<code>caption / text / placeholder / value / checkState / visible / enabled</code>。双向绑定回写：EditBox <code>text-changed</code> → <code>set(key, text)</code>；CheckBox → 三态字符串；ScrollBar → 数值。watcher 用 weak_ptr 捕获控件，控件销毁自动失效。</p>
+
+<h3>5.3.3 LayoutParser：自定义事件处理器</h3>
+
+<p>JSON 布局的事件名是字符串，需要先 <code>registerHandler</code> 注册具名处理器，解析时按名匹配绑定：</p>
+
+<pre><code>void onSubmitClicked(shared_ptr&lt;Control&gt; c) { /* ... */ }
+
+g_parser.registerHandler("onSubmitClick", onSubmitClicked);
+g_parser.registerHandler("onIncProgress", [](shared_ptr&lt;Control&gt;) {
+    auto ctx = g_uiInstance-&gt;dataContext;                 // 处理器内可访问数据上下文
+    double v = ctx-&gt;get("progressValue").asDouble() + 10.0;
+    if (v &gt; 100) v = 0.0;
+    ctx-&gt;set("progressValue", v);
+});
+auto root = g_parser.parseLayoutFile(g_layoutPath);      // 解析前必须注册完毕
+BENCH-&gt;addControl(root);</code></pre>
+
+<pre><code>{ "type": "button", "rect": { "x": 10, "y": 10, "w": 120, "h": 32 },
+  "events": { "click": "onSubmitClick" } }   // 名字与 registerHandler 一致</code></pre>
+
+<p>机制：<code>parseEvents()</code> 按控件类型匹配事件 key（Button <code>click</code>、EditBox <code>text-changed</code>/<code>enter</code> 等），用 <code>m_handlers.find(name)</code> 查找到后包成控件回调；未注册的 handler 名静默跳过。C ABI 联动：<code>UICornerstone_RegisterAction</code> 注册的 action 会在 <code>LoadLayout</code> 时自动转为 parser handler。</p>
+
+<h3>5.3.4 FocusManager：焦点系统 API</h3>
+
+<p>每实例独立（<code>UIContext::focusManager</code>）。3.6 章节讲了行为，这里给出可编程接口：</p>
+
+<pre><code>focusManager-&gt;registerControl(ctl);    // 可聚焦控件自动注册（setFocusable(true)）
+focusManager-&gt;focusNext(ctl);          // Tab 环下一项
+focusManager-&gt;focusPrev(ctl);          // Shift+Tab 上一项
+focusManager-&gt;registerBoundary(ctl);   // 焦点边界（Bench / WinFrame / ColorPicker）
+focusManager-&gt;getVisibleBoundaryCount();  // 可见 boundary 数（Ctrl+Tab 跨视口路由依据）
+focusManager-&gt;notifyControlFocused(ctl, true);   // byKeyboard=true 显示焦点环
+focusManager-&gt;clearFocus();
+focusManager-&gt;focusNextScope();        // Ctrl+Tab（跨 boundary）
+focusManager-&gt;focusFirstInScope(scope);</code></pre>
+
+<div class="note">鼠标点击聚焦时焦点环不显示（<code>byKeyboard=false</code>）；<code>getVisibleBoundaryCount()</code> 只统计 <code>isVisible()</code> 的边界——这正是 5.2.5 中"全部隐藏才跨视口"的实现依据。</div>
+
+<h3>5.3.5 ResourceProvider：统一资源加载</h3>
+
+<p>文件读取的统一入口（图片 / 字体 / 动画 / 布局文件都经它解析为字节流）：</p>
+
+<pre><code>// 工厂：文件系统实现（以 basePath 为根拼接路径，带内存缓存）
+auto rp = ResourceProvider::createFilesystem(ConstDef::pathPrefix);
+shared_ptr&lt;vector&lt;char&gt;&gt; data = rp-&gt;readFile("layouts/main.json");  // 读取 + 缓存
+bool ok = rp-&gt;exists("assets/img/icon.png");
+
+// C ABI 侧：实例创建时经 resourceRoot 指定根目录，NULL → 默认
+// C++ Binding：Config.WithResourceRoot(path) / ResolveResource(relativePath)</code></pre>
+
+<p>分工：<strong>文件字节读取</strong> = ResourceProvider；<strong>字体</strong> = TextRenderer（loadFont / loadFontFromMemory）；<strong>纹理</strong> = RenderDevice 后端回调（createTextureFromFile）。<code>Label::loadFromResource</code>、<code>Actor::loadFromResource</code>、<code>LuotiAni</code> 资源加载、<code>LoadLayoutFromFile</code> 均走此链。</p>
 
 <h2>5.4 直接使用 C ABI 接口程序化生成 UI</h2>
 
-<p>不用 JSON、不用 C++ 类，纯 C 程序化构建界面（工厂函数 + 属性系统）：</p>
+<p>不用 JSON、不用 C++ 类，纯 C 程序化构建界面（工厂函数 + 属性系统 + 回调），完整工程可运行：</p>
 
 <pre><code>#include "UICornerstoneAPI.h"
 
 static UIInstance g_inst;
-static void onBtnClick(UIControlHandle ctl, void* user) {
+
+static void onBtnClick(UIControlHandle ctl, const UIEventData* ev, void* user) {
     UIControlHandle status = UICornerstone_FindControl(g_inst, "status");
     if (status) UICornerstone_SetString(g_inst, status, "caption", "Clicked!");
+}
+
+static void onCheck(UIControlHandle ctl, const UIEventData* ev, void* user) {
+    // 事件负载：union 按事件类型取对应字段
+    int state = ev-&gt;data.intVal;                    // check-changed → 新状态
+    // selection-changed → ev-&gt;data.selection.idx/.val
+    // color-changed     → ev-&gt;data.color.r/g/b/a
+    // text-changed      → ev-&gt;data.strVal
+    // value-changed     → ev-&gt;data.doubleVal / floatVal
 }
 
 int main(void) {
     g_inst = UICornerstone_CreateInstanceFromPlugin("sdl3", NULL);
     if (!g_inst) return 1;
     UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
-    UICornerstone_RegisterAction(g_inst, "onBtnClick", onBtnClick, NULL);
 
-    // 程序化创建控件（工厂 + 属性）
-    UIControlHandle btn = UICornerstone_CreateButton(g_inst, "Click Me", 280, 200, 120, 36);
-    UIControlHandle lbl = UICornerstone_CreateLabel(g_inst, "Idle", 16.0f, 60, 260, 200, 30);
-    UICornerstone_SetString(g_inst, lbl, "id", "status");
+    // ── 程序化创建控件树：容器 + 子控件 ──
+    UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 360, 220);
+    UIControlHandle btn   = UICornerstone_CreateButton(g_inst, "Click Me", 30, 30, 140, 36);
+    UIControlHandle cb    = UICornerstone_CreateCheckBox(g_inst, "Enable", 30, 80, 24, 24);
+    UIControlHandle lbl   = UICornerstone_CreateLabel(g_inst, "Idle", 16.0f, 30, 130, 200, 28);
+    UICornerstone_AddChildControl(g_inst, panel, btn);   // 挂树
+    UICornerstone_AddChildControl(g_inst, panel, cb);
+
+    UICornerstone_SetString(g_inst, lbl, "id", "status");   // 属性系统 + FindControl 检索
     UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+    UICornerstone_SetCallback(g_inst, cb, "check-changed", onCheck, NULL);
 
-    // 主循环（无 JSON 依赖）
+    // ── 菜单三件套程序化组装 ──
+    UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst);
+    UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0);
+    UICornerstone_MenuPanelAddItem(g_inst, file, open);
+    UICornerstone_MenuPanelAddSeparator(g_inst, file);
+    UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26);
+    UICornerstone_MenuBarAddMenu(g_inst, bar, "File", file);
+
+    // ── 主循环（六步顺序不可颠倒）──
     while (!UICornerstone_IsQuitRequested(g_inst)) {
         UICornerstone_ProcessEvents(g_inst);
         UICornerstone_Update(g_inst, 1.0 / 60.0);
@@ -143,7 +496,9 @@ int main(void) {
     return 0;
 }</code></pre>
 
-<p>C ABI 完整速查见 <a href="appendix/capi.html">9.3 C ABI 速查表</a>。</p>
+<div class="tip">JSON 布局其实走的是同一条属性系统：<code>LoadLayout</code> 内部创建 <code>LayoutParser</code> 并把 <code>RegisterAction</code> 注册的 action 自动转为 parser handler。程序化与声明式可混用——先 <code>LoadLayout</code> 建骨架，再 <code>FindControl</code> 细化操作。</div>
+
+<p>C ABI 完整函数速查见 <a href="appendix/capi.html">9.3 C ABI 速查表</a>；<code>UIEventData</code> 事件负载结构见 <a href="appendix/capi.html">9.3</a> 与各控件回调节。</p>
 
 <div class="chapter-nav">
   <a href="controls/winframe.html">← 4.20 WinFrame</a>
