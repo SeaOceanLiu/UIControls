@@ -97,14 +97,6 @@ auto cp2 = ColorPickerBuilder(nullptr, SRect(X1, 30, 96, 24))
     .build();
 BENCH->addControl(cp2);</code></pre>
 
-<div class="chapter-nav">
-  <a href="checkbox.html">← 4.4 CheckBox</a>
-  <a href="combobox.html">下一节：4.6 ComboBox →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.5.6 C ABI 调用样例</h2>
 
@@ -137,25 +129,6 @@ UICornerstone_SetCallback(g_inst, cp, "color-changed", onColorChanged, NULL);</c
 
 </details>
 
-
-
-
-<pre><code>// Binding 工厂
-Control cp = ui->CreateColorPicker(240, 498, 96, 24, "#FF6600");
-cp.SetString("closed-text-color", "#DDDDDD");
-cp.SetCallback(PropertyNames::kEventColorChanged, [](const Event& e) {
-    // 颜色负载读取
-});
-
-// C++ 核心库（Builder）
-auto cp2 = ColorPickerBuilder(nullptr, SRect(X1, 30, 96, 24))
-    .setColor("#FF0000")
-    .setPresetColors({ "#FF0000", "#00FF00", "#0000FF" })
-    .setOnColorChanged([](shared_ptr<ColorPicker>, const SColor& color) {
-        cout << "Color changed to: " << color.toHex(false) << endl;
-    })
-    .build();
-BENCH->addControl(cp2);</code></pre>
 
 <div class="chapter-nav">
   <a href="checkbox.html">← 4.4 CheckBox</a>

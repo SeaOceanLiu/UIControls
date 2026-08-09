@@ -91,14 +91,6 @@ auto l = LabelBuilder(nullptr, SRect(450, 450, 200, 90), 2.0f, 2.0f)
     .build();
 BENCH->addControl(l);</code></pre>
 
-<div class="chapter-nav">
-  <a href="handlecontrol.html">← 4.9 HandleControl</a>
-  <a href="luotiani.html">下一节：4.11 LuotiAni →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.10.6 C ABI 调用样例</h2>
 
@@ -133,23 +125,6 @@ UICornerstone_SetCallback(g_inst, lbl, "click", onLblClick, NULL);</code></pre>
 
 </details>
 
-
-
-
-<pre><code>auto label = ui->CreateLabel("Hello", 24.0f, 20, 20, 240, 40);
-label.SetString(PropertyNames::kCaption, "Clicked 0");
-label.SetEnum(PropertyNames::kAlign, "center");
-label.SetBool(PropertyNames::kShadow, true);
-
-// C++ 核心库（多行 + 2x 缩放）
-auto l = LabelBuilder(nullptr, SRect(450, 450, 200, 90), 2.0f, 2.0f)
-    .setCaption(u8"L15: Mid中\n第一行\n第二行\n第三行")
-    .setAlignmentMode(AlignmentMode::AM_CENTER)
-    .setEnableExpand(false)
-    .setBorderStateColor(redBorder)
-    .setId(15)
-    .build();
-BENCH->addControl(l);</code></pre>
 
 <div class="chapter-nav">
   <a href="handlecontrol.html">← 4.9 HandleControl</a>

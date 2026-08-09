@@ -80,14 +80,6 @@ button.SetBool(PropertyNames::kEnabled, false);</code></pre>
 
 <div class="tip">给按钮挂动画：JSON <code>"luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"</code> 或 C++ <code>btn->setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code>。</div>
 
-<div class="chapter-nav">
-  <a href="bench.html">← 4.2 Bench</a>
-  <a href="checkbox.html">下一节：4.4 CheckBox →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.3.6 C ABI 调用样例</h2>
 
@@ -126,21 +118,6 @@ UICornerstone_DestroyControl(g_inst, btn);   // 不再需要时销毁</code></pr
 
 </details>
 
-
-
-
-<pre><code>auto button = ui->CreateButton("Toggle", 20, 80, 120, 36);
-int count = 0;
-button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
-    bool vis = label.GetBool(PropertyNames::kVisible);
-    label.SetBool(PropertyNames::kVisible, !vis);
-    label.SetString(PropertyNames::kCaption, "Clicked " + std::to_string(++count));
-});
-// 动态换文案 / 禁用
-button.SetString(PropertyNames::kCaption, "新标题");
-button.SetBool(PropertyNames::kEnabled, false);</code></pre>
-
-<div class="tip">给按钮挂动画：JSON <code>"luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"</code> 或 C++ <code>btn->setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code>。</div>
 
 <div class="chapter-nav">
   <a href="bench.html">← 4.2 Bench</a>

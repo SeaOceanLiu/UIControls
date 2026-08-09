@@ -92,14 +92,6 @@ dialog.SetBool("visible", true);   // 打开弹窗</code></pre>
 
 <div class="note">数据取回：内容控件经 <code>getContent()</code> + <code>dynamic_pointer_cast</code> 读取。一次只弹一个弹窗，嵌套需自行管理。</div>
 
-<div class="chapter-nav">
-  <a href="combobox.html">← 4.6 ComboBox</a>
-  <a href="editbox.html">下一节：4.8 EditBox →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.7.6 C ABI 调用样例</h2>
 
@@ -137,21 +129,6 @@ UICornerstone_SetCallback(g_inst, dlg, "cancel", onCancel, NULL);</code></pre>
 
 </details>
 
-
-
-
-<pre><code>auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);   // 居中
-auto label  = vp->CreateLabel("Delete this file?", 14.0f, 20, 30, 240, 60);
-dialog.AddChild(label);
-dialog.SetCallback(PropertyNames::kEventConfirm, [](const Event& e) {
-    printf("confirmed, result=%d\n", e.GetCloseResult());
-});
-dialog.SetCallback(PropertyNames::kEventCancel, [](const Event&) {
-    printf("cancelled\n");
-});
-dialog.SetBool("visible", true);   // 打开弹窗</code></pre>
-
-<div class="note">数据取回：内容控件经 <code>getContent()</code> + <code>dynamic_pointer_cast</code> 读取。一次只弹一个弹窗，嵌套需自行管理。</div>
 
 <div class="chapter-nav">
   <a href="combobox.html">← 4.6 ComboBox</a>

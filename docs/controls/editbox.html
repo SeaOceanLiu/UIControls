@@ -81,14 +81,6 @@ edit.SetCallback(PropertyNames::kEventEnter, [](const Event&) {
     printf("Enter pressed\n");
 });</code></pre>
 
-<div class="chapter-nav">
-  <a href="dialog.html">← 4.7 Dialog / Popup</a>
-  <a href="handlecontrol.html">下一节：4.9 HandleControl →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.8.6 C ABI 调用样例</h2>
 
@@ -122,18 +114,6 @@ UICornerstone_SetCallback(g_inst, box, "text-changed", onTextChanged, NULL);</co
 
 </details>
 
-
-
-
-<pre><code>auto edit = ui->CreateEditBox(20, 193, 240, 95);
-edit.SetString(PropertyNames::kPlaceholder, "Type here...");
-edit.SetBool(PropertyNames::kPasswordMode, false);
-edit.SetCallback(PropertyNames::kEventTextChanged, [](const Event& e) {
-    printf("text: %s\n", e.GetTextChanged().c_str());
-});
-edit.SetCallback(PropertyNames::kEventEnter, [](const Event&) {
-    printf("Enter pressed\n");
-});</code></pre>
 
 <div class="chapter-nav">
   <a href="dialog.html">← 4.7 Dialog / Popup</a>

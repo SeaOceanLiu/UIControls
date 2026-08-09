@@ -95,14 +95,6 @@ auto p3 = ProgressBarBuilder(nullptr, SRect(50, 190, 300, 30))
     .build();
 BENCH->addControl(p3);</code></pre>
 
-<div class="chapter-nav">
-  <a href="panel.html">← 4.14 Panel</a>
-  <a href="scrollbar.html">下一节：4.16 ScrollBar →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.15.6 C ABI 调用样例</h2>
 
@@ -134,29 +126,6 @@ UICornerstone_SetCallback(g_inst, bar, "value-changed", onProgress, NULL);</code
 
 </details>
 
-
-
-
-<pre><code>auto bar = ui->CreateProgressBar(280, 193, 240, 95);
-bar.SetFloat(PropertyNames::kValue, 65.0f);
-bar.SetFloat(PropertyNames::kRangeMax, 100.0f);
-bar.SetEnum(PropertyNames::kTextMode, "percent");
-bar.SetColor("progress", UIColor{64, 128, 192, 255});   // UIColor = {r,g,b,a}
-bar.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
-    printf("value: %f\n", e.GetValueChanged());
-});
-
-// 核心库
-auto p3 = ProgressBarBuilder(nullptr, SRect(50, 190, 300, 30))
-    .setValue(75.0f)
-    .setTextMode(ProgressBarTextMode::Percent)
-    .setProgressColor({0, 128, 0, 255})
-    .setBackgroundColor({50, 50, 50, 255})
-    .setOnValueChanged([](shared_ptr<ProgressBar>, float, float value) {
-        cout << "value changed to: " << value << endl;
-    })
-    .build();
-BENCH->addControl(p3);</code></pre>
 
 <div class="chapter-nav">
   <a href="panel.html">← 4.14 Panel</a>

@@ -87,14 +87,6 @@ splitter.SetCallback(PropertyNames::kEventMoved, [](const Event& e) {
 });
 // 关联控件经 "first-linked" / "second-linked" 属性或 AddChild 顺序管理</code></pre>
 
-<div class="chapter-nav">
-  <a href="slider.html">← 4.17 Slider</a>
-  <a href="textarea.html">下一节：4.19 TextArea →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.18.6 C ABI 调用样例</h2>
 
@@ -129,16 +121,6 @@ UICornerstone_SetCallback(g_inst, sp, "moved", onMoved, NULL);</code></pre>
 
 </details>
 
-
-
-
-<pre><code>auto splitter = ui->CreateSplitter(244, 60, 6, 200, 1 /*orientation*/);
-splitter.SetFloat(PropertyNames::kRatio, 0.4f);
-splitter.SetFloat(PropertyNames::kThickness, 6.0f);
-splitter.SetCallback(PropertyNames::kEventMoved, [](const Event& e) {
-    printf("ratio = %.3f\n", e.GetMovedPosition());
-});
-// 关联控件经 "first-linked" / "second-linked" 属性或 AddChild 顺序管理</code></pre>
 
 <div class="chapter-nav">
   <a href="slider.html">← 4.17 Slider</a>

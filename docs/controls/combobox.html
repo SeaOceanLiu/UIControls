@@ -104,14 +104,6 @@ auto combo2 = ComboBoxBuilder(nullptr, SRect(CX, 40, CW, HH))
     .build();
 BENCH->addControl(combo2);</code></pre>
 
-<div class="chapter-nav">
-  <a href="colorpicker.html">← 4.5 ColorPicker</a>
-  <a href="dialog.html">下一节：4.7 Dialog / Popup →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.6.6 C ABI 调用样例</h2>
 
@@ -151,27 +143,6 @@ UICornerstone_SetCallback(g_inst, box, "selection-changed", onSelectionChanged, 
 
 </details>
 
-
-
-
-<pre><code>Control combo = ui->CreateComboBox(20, 56, 300, 32);
-// items 用 JSON 数组字符串设置
-combo.SetString("items", R"([{"label":"Beijing","value":"beijing"},
-                             {"label":"Shanghai","value":"shanghai"}])");
-combo.SetBool("editable", false);
-combo.SetCallback(PropertyNames::kEventSelectionChanged, [](const Event& e) {
-    printf("selected index=%d value=%s\n", e.GetSelectedIndex(), e.GetSelectedValue().c_str());
-});
-
-// C++ 核心库
-vector<ComboBoxItem> items = { {"Option A", "val_a"}, {"Option B", "val_b"} };
-auto combo2 = ComboBoxBuilder(nullptr, SRect(CX, 40, CW, HH))
-    .setItems(items).setSelectedIndex(0).setPlaceholder("Select an option...")
-    .setOnSelectionChanged([](shared_ptr<ComboBox>, int idx, const string& value) {
-        cout << "index=" << idx << " value=" << value << endl;
-    })
-    .build();
-BENCH->addControl(combo2);</code></pre>
 
 <div class="chapter-nav">
   <a href="colorpicker.html">← 4.5 ColorPicker</a>

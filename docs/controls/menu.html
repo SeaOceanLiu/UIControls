@@ -107,14 +107,6 @@ Control item = ui->CreateMenuItem("Open", 0);
 item.SetString("caption", "Open");
 item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
 
-<div class="chapter-nav">
-  <a href="luotiani.html">← 4.11 LuotiAni</a>
-  <a href="numericupdown.html">下一节：4.13 NumericUpDown →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.12.6 C ABI 调用样例</h2>
 
@@ -174,33 +166,6 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 
 </details>
 
-
-
-
-<pre><code>// 核心库（Builder 链式组装）
-g_filePanel = MenuPanelBuilder()
-    .addItem(MenuItemBuilder(u8"新建(N)")
-        .setShortcut("Ctrl+N")
-        .setOnClick([](shared_ptr<MenuItem> item) { cout << "New file clicked" << endl; })
-        .build())
-    .addSeparator()
-    .addItem(MenuItemBuilder(u8"最近打开的文件")
-        .setSubMenu(MenuPanelBuilder()
-            .addItem(MenuItemBuilder(u8"file1.txt")
-                .setOnClick([](shared_ptr<MenuItem> item) { cout << "file1 clicked" << endl; })
-                .build())
-            .build())
-        .build())
-    .build();
-g_menuBar = MenuBarBuilder(BENCH)
-    .addMenu(u8"文件(F)", g_filePanel)
-    .build();
-BENCH->addControl(g_menuBar);
-
-// Binding：MenuItem 的 caption/checked/shortcut/click 走统一属性系统
-Control item = ui->CreateMenuItem("Open", 0);
-item.SetString("caption", "Open");
-item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
 
 <div class="chapter-nav">
   <a href="luotiani.html">← 4.11 LuotiAni</a>

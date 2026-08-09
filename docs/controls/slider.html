@@ -105,14 +105,6 @@ auto s1 = SliderBuilder(nullptr, SRect(HX, 40, 250, 20))
     .build();
 BENCH->addControl(s1);</code></pre>
 
-<div class="chapter-nav">
-  <a href="scrollbar.html">← 4.16 ScrollBar</a>
-  <a href="splitter.html">下一节：4.18 Splitter →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.17.6 C ABI 调用样例</h2>
 
@@ -148,26 +140,6 @@ UICornerstone_SetCallback(g_inst, sl, "value-changed", onSlide, NULL);</code></p
 
 </details>
 
-
-
-
-<pre><code>Control slider = ui->CreateSlider(20, 20, 300, 30, 0, 100, 50);
-slider.SetFloat(PropertyNames::kValue, 50.0f);
-slider.SetBool("show-value-label", true);
-slider.SetString("label-format", "%.0f px");
-slider.SetEnum("style", "horizontal");
-slider.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
-    printf("value = %.1f\n", e.GetValueChanged());
-});
-
-// 核心库
-auto s1 = SliderBuilder(nullptr, SRect(HX, 40, 250, 20))
-    .setRange(0, 100).setValue(50).setShowValueLabel(true)
-    .setOnValueChanged([](shared_ptr<Slider> s, float v) {
-        cout << "Slider1 value changed to: " << v << endl;
-    })
-    .build();
-BENCH->addControl(s1);</code></pre>
 
 <div class="chapter-nav">
   <a href="scrollbar.html">← 4.16 ScrollBar</a>

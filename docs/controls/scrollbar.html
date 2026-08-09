@@ -93,14 +93,6 @@ auto vScrollBar = ScrollBarBuilder(nullptr, SRect(380, 100, 20, 200), ScrollBarO
     .build();
 BENCH->addControl(vScrollBar);</code></pre>
 
-<div class="chapter-nav">
-  <a href="progressbar.html">← 4.15 ProgressBar</a>
-  <a href="slider.html">下一节：4.17 Slider →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.16.6 C ABI 调用样例</h2>
 
@@ -113,7 +105,7 @@ UICornerstone_SetFloat(g_inst, sb, "value", 250);
 UICornerstone_SetFloat(g_inst, sb, "page-size", 100);
 
 static void onPosChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) {
-    /* 位置变化（负载含 value / pageSize / maxValue 等 float） */
+    /* ev->data.doubleVal 为滚动位置 */
 }
 UICornerstone_SetCallback(g_inst, sb, "position-changed", onPosChanged, NULL);</code></pre>
 <details class="methods">
@@ -135,24 +127,6 @@ UICornerstone_SetCallback(g_inst, sb, "position-changed", onPosChanged, NULL);</
 
 </details>
 
-
-
-
-<pre><code>Control sb = ui->CreateScrollBar(440, 472, 200, 16, 1 /*horizontal*/);
-sb.SetFloat(PropertyNames::kValue, 30.0f);
-sb.SetFloat("page-size", 20.0f);
-sb.SetCallback(PropertyNames::kEventPositionChanged, [](const Event& e) {
-    printf("pos: %f\n", e.GetPositionChanged());
-});
-
-// 核心库
-auto vScrollBar = ScrollBarBuilder(nullptr, SRect(380, 100, 20, 200), ScrollBarOrientation::Vertical)
-    .setRange(0, 1000).setPageSize(200).setValue(0)
-    .setOnPositionChanged([](shared_ptr<ScrollBar> sb, float value, float pageSize, float maxValue) {
-        cout << "Scroll position: " << value << endl;
-    })
-    .build();
-BENCH->addControl(vScrollBar);</code></pre>
 
 <div class="chapter-nav">
   <a href="progressbar.html">← 4.15 ProgressBar</a>

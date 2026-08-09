@@ -95,14 +95,6 @@ auto nud2b = NumericUpDownBuilder(BENCH.get(), {220, 90, 150, 24})
     .build();
 BENCH->addControl(nud2b);</code></pre>
 
-<div class="chapter-nav">
-  <a href="menu.html">← 4.12 Menu</a>
-  <a href="panel.html">下一节：4.14 Panel →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.13.6 C ABI 调用样例</h2>
 
@@ -136,25 +128,6 @@ UICornerstone_SetCallback(g_inst, nud, "value-changed", onValueChanged, NULL);</
 
 </details>
 
-
-
-
-<pre><code>Control nud = ui->CreateNumericUpDown(20, 78, 180, 32);
-nud.SetFloat(PropertyNames::kValue, 50.0f);
-nud.SetFloat(PropertyNames::kRangeMax, 100.0f);
-nud.SetFloat(PropertyNames::kStep, 1.0f);
-nud.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
-    printf("value = %.2f\n", e.GetValueChangedDouble());   // 双精度负载
-});
-
-// 核心库
-auto nud2b = NumericUpDownBuilder(BENCH.get(), {220, 90, 150, 24})
-    .setValue(0.6).setRange(0.0, 1.0).setStep(0.2).setDecimals(2)
-    .setOnValueChanged([](shared_ptr<NumericUpDown>, double v) {
-        printf("[nud2b] 当前值 = %.2f\n", v);
-    })
-    .build();
-BENCH->addControl(nud2b);</code></pre>
 
 <div class="chapter-nav">
   <a href="menu.html">← 4.12 Menu</a>

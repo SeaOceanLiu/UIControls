@@ -81,14 +81,6 @@ cb.SetCallback(PropertyNames::kEventCheckChanged, [](const Event& e) {
     printf("state=%d\n", st);
 });</code></pre>
 
-<div class="chapter-nav">
-  <a href="button.html">← 4.3 Button</a>
-  <a href="colorpicker.html">下一节：4.5 ColorPicker →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.4.6 C ABI 调用样例</h2>
 
@@ -121,17 +113,6 @@ UICornerstone_SetCallback(g_inst, cb, "check-changed", onCheckChanged, NULL);</c
 
 </details>
 
-
-
-
-<pre><code>auto cb = ui->CreateCheckBox("Accept Terms", 50, 50, 100, 30);
-cb.SetEnum(PropertyNames::kCheckState, "checked");   // 或 cb.SetBool(PropertyNames::kChecked, true)
-cb.SetEnum(PropertyNames::kCheckBoxStyle, "classic");
-cb.SetBool(PropertyNames::kTriState, false);         // 关闭三态
-cb.SetCallback(PropertyNames::kEventCheckChanged, [](const Event& e) {
-    int st = e.GetCheckState();    // 0=unchecked 1=checked 2=indeterminate
-    printf("state=%d\n", st);
-});</code></pre>
 
 <div class="chapter-nav">
   <a href="button.html">← 4.3 Button</a>

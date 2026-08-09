@@ -69,14 +69,6 @@ handle->setTarget(otherButton);    // 或 handle->detach();
 auto target = ui->CreateButton("目标按钮", 80, 60, 200, 80);
 auto handle = ui->CreateHandleControl(target, 80, 60, 200, 80);</code></pre>
 
-<div class="chapter-nav">
-  <a href="editbox.html">← 4.8 EditBox</a>
-  <a href="label.html">下一节：4.10 Label →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.9.6 C ABI 调用样例</h2>
 
@@ -106,20 +98,6 @@ UICornerstone_SetRect(g_inst, hc, 20, 20, 200, 100);</code></pre>
 
 </details>
 
-
-
-
-<pre><code>// C++ 核心库：附着 + 拖拽调整目标
-auto target = make_shared&lt;Button&gt;(BENCH.get(), SRect(80, 60, 200, 80));
-BENCH->addControl(target);
-auto handle = HandleControlBuilder().setTarget(target).setMinSize(40, 40).build();
-
-// 切换目标
-handle->setTarget(otherButton);    // 或 handle->detach();
-
-// C ABI / Binding
-auto target = ui->CreateButton("目标按钮", 80, 60, 200, 80);
-auto handle = ui->CreateHandleControl(target, 80, 60, 200, 80);</code></pre>
 
 <div class="chapter-nav">
   <a href="editbox.html">← 4.8 EditBox</a>

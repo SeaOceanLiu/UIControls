@@ -91,14 +91,6 @@ BENCH->addControl(ta2);</code></pre>
 
 <div class="note">滚动条内置于控件底部 / 右侧，内容超出时自动显示。</div>
 
-<div class="chapter-nav">
-  <a href="splitter.html">← 4.18 Splitter</a>
-  <a href="winframe.html">下一节：4.20 WinFrame →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.19.6 C ABI 调用样例</h2>
 
@@ -131,27 +123,6 @@ UICornerstone_SetCallback(g_inst, ta, "text-changed", onTextChanged, NULL);</cod
 
 </details>
 
-
-
-
-<pre><code>Control ta = ui->CreateTextArea(20, 432, 200, 80);
-ta.SetString("text", "Hello from TextArea!\nEdit me.");
-ta.SetBool("word-wrap", true);
-ta.SetCallback(PropertyNames::kEventTextChanged, [](const Event& e) {
-    printf("text: %s\n", e.GetTextChanged().c_str());
-});
-
-// C++ 核心库
-auto ta2 = TextAreaBuilder(nullptr, SRect(750, 360, 200, 100), 2.0f, 2.0f)
-    .setText("2x scaled TextArea")
-    .setWordWrap(true).setLineHeight(22)
-    .setOnTextChanged([](shared_ptr<Control>, string text) {
-        cout << "TextArea changed" << endl;
-    })
-    .build();
-BENCH->addControl(ta2);</code></pre>
-
-<div class="note">滚动条内置于控件底部 / 右侧，内容超出时自动显示。</div>
 
 <div class="chapter-nav">
   <a href="splitter.html">← 4.18 Splitter</a>

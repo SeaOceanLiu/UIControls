@@ -102,14 +102,6 @@ ani.SetBool(PropertyNames::kLoop, true);
   "caption": "Rotate",
   "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc" }</code></pre>
 
-<div class="chapter-nav">
-  <a href="label.html">← 4.10 Label</a>
-  <a href="menu.html">下一节：4.12 Menu →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <details class="methods">
 <summary>4.11.6 控件的方法（核心引擎内部 API，点击展开）</summary>
@@ -135,25 +127,6 @@ ani.SetBool(PropertyNames::kLoop, true);
 
 </details>
 
-
-
-
-<pre><code>// C ABI
-UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256);
-UICornerstone_SetBool(g_uiInstance, h, "playing", 1);
-UICornerstone_SetBool(g_uiInstance, h, "loop", 1);
-UICornerstone_SetInt (g_uiInstance, h, "frame", 10);   // 跳帧
-
-// C++ Binding
-Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0);
-ani.SetBool(PropertyNames::kPlaying, true);
-ani.SetBool(PropertyNames::kLoop, true);
-
-// Button 载体（JSON）
-{ "type": "button", "id": "animatedBtn",
-  "rect": { "x": 40, "y": 40, "w": 120, "h": 40 },
-  "caption": "Rotate",
-  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc" }</code></pre>
 
 <div class="chapter-nav">
   <a href="label.html">← 4.10 Label</a>

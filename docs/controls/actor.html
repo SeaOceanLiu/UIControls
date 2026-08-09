@@ -79,14 +79,6 @@ auto btn = ButtonBuilder(nullptr, SRect(380, 50, 120, 50))
     .build();
 BENCH->addControl(btn);</code></pre>
 
-<div class="chapter-nav">
-  <a href="index.html">← 4.0 控件概念与共性</a>
-  <a href="bench.html">下一节：4.2 Bench →</a>
-</div>
-
-</div>
-</body>
-</html>
 
 <h2>4.1.6 C ABI 调用样例</h2>
 
@@ -118,22 +110,6 @@ UICornerstone_SetRect(g_inst, img, 60, 20, 128, 128);</code></pre>
 
 </details>
 
-
-
-
-<pre><code>// Binding：CreateImage（对应 C ABI CreateImage）
-Control img = ui->CreateImage("assets/hero.png", 20, 80, 128, 128);
-img.SetEnum(PropertyNames::kScaleType, "fit-center");
-img.SetInt(PropertyNames::kAlpha, 128);
-img.SetBool(PropertyNames::kMatchParentRect, false);
-
-// C++ 核心库：作为 Button 三态外观
-auto normal = ActorBuilder(nullptr).loadFromFile("assets/img/icon.png").setMatchParentRect(true).build();
-auto hover  = ActorBuilder(nullptr).loadFromFile("assets/img/icon_hover.png").setMatchParentRect(true).build();
-auto btn = ButtonBuilder(nullptr, SRect(380, 50, 120, 50))
-    .setNormalStateActor(normal).setHoverStateActor(hover)
-    .build();
-BENCH->addControl(btn);</code></pre>
 
 <div class="chapter-nav">
   <a href="index.html">← 4.0 控件概念与共性</a>
