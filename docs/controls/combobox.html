@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -37,12 +37,99 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32);
   "selectedIndex": 0, "maxVisibleItems": 6, "cycleEnabled": true,
   "events": { "onSelectionChanged": "onSelectionChanged" } }</code></pre>
 
-<h2>4.6.2 控件的方法</h2>
+
+<h2>4.6.2 控件的属性</h2>
 
 <table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>editable</code></td><td>Bool</td><td>false</td><td>双模式开关</td></tr>
+<tr><td><code>text</code></td><td>String</td><td>空</td><td>编辑框内容</td></tr>
+<tr><td><code>selected-value</code></td><td>String</td><td>—</td><td>选中项 value；未匹配返回输入内容</td></tr>
+<tr><td><code>selected-index</code></td><td>Int</td><td>-1</td><td>选中索引（-1 = 无匹配）</td></tr>
+<tr><td><code>max-visible-items</code></td><td>Int</td><td>6</td><td>最多可见项</td></tr>
+<tr><td><code>item-height</code></td><td>Float</td><td>24</td><td>单项高度</td></tr>
+<tr><td><code>arrow-width</code></td><td>Float</td><td>20</td><td>箭头区宽度</td></tr>
+<tr><td><code>cycle-enabled</code></td><td>Bool</td><td>true</td><td>闭合态循环选择</td></tr>
+<tr><td><code>items</code></td><td>String(JSON)</td><td>—</td><td>以 JSON 数组设置 items</td></tr>
+<tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>item-selected</code> / <code>item-hover</code> / <code>item-disabled</code> / <code>list-bg</code> / <code>list-border</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+</table>
 
-<tr><th>方法</th><th>说明</th></tr>
+
+<h2>4.6.3 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>onSelectionChanged</code>（C ABI 事件 <code>selection-changed</code>）</td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
+</table>
+
+
+<h2>4.6.4 JSON 语法</h2>
+
+<pre><code>{
+  "id": "comboMain",
+  "type": "combo-box",
+  "rect": { "x": 20, "y": 56, "w": 300, "h": 32 },
+  "fontSize": 16,
+  "editable": false,
+  "placeholder": "Select a city...",
+  "items": [
+    { "label": "Beijing", "value": "beijing" },
+    { "label": "Wuhan", "value": "wuhan", "disabled": true }
+  ],
+  "selectedIndex": 0,
+  "maxVisibleItems": 6,
+  "cycleEnabled": true,
+  "events": { "onSelectionChanged": "onSelectionChanged" }
+}</code></pre>
+
+
+<h2>4.6.5 C++ Binding 样例</h2>
+
+<pre><code>Control combo = ui->CreateComboBox(20, 56, 300, 32);
+// items 用 JSON 数组字符串设置
+combo.SetString("items", R"([{"label":"Beijing","value":"beijing"},
+                             {"label":"Shanghai","value":"shanghai"}])");
+combo.SetBool("editable", false);
+combo.SetCallback(PropertyNames::kEventSelectionChanged, [](const Event& e) {
+    printf("selected index=%d value=%s\n", e.GetSelectedIndex(), e.GetSelectedValue().c_str());
+});
+
+// C++ 核心库
+vector<ComboBoxItem> items = { {"Option A", "val_a"}, {"Option B", "val_b"} };
+auto combo2 = ComboBoxBuilder(nullptr, SRect(CX, 40, CW, HH))
+    .setItems(items).setSelectedIndex(0).setPlaceholder("Select an option...")
+    .setOnSelectionChanged([](shared_ptr<ComboBox>, int idx, const string& value) {
+        cout << "index=" << idx << " value=" << value << endl;
+    })
+    .build();
+BENCH->addControl(combo2);</code></pre>
+
+<div class="chapter-nav">
+  <a href="colorpicker.html">← 4.5 ColorPicker</a>
+  <a href="dialog.html">下一节：4.7 Dialog / Popup →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.6.6 C ABI 调用样例</h2>
+
+<pre><code>UIControlHandle box = UICornerstone_CreateComboBox(g_inst, 20, 20, 160, 26);
+
+UICornerstone_SetString(g_inst, box, "items", "Red,Green,Blue");  // 逗号分隔
+UICornerstone_SetInt(g_inst, box, "selected-index", 1);
+UICornerstone_SetBool(g_inst, box, "editable", 0);
+
+static void onSelectionChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) {
+    /* ev->data.selection.idx = 选中下标；ev->data.selection.val = 选中项文本 */
+}
+UICornerstone_SetCallback(g_inst, box, "selection-changed", onSelectionChanged, NULL);</code></pre>
+<details class="methods">
+<summary>4.6.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>setItems(const vector&lt;ComboBoxItem&gt;&amp;)</code></td><td>整体设置选项（ComboBoxItem = {label, value, disabled}）</td></tr>
 <tr><td><code>addItem(label, value, disabled = false)</code> / <code>clearItems()</code> / <code>removeItem(int)</code></td><td>追加 / 清空 / 删除选项</td></tr>
 <tr><td><code>getItems()</code> / <code>getItemCount()</code></td><td>读取选项</td></tr>
@@ -62,49 +149,10 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32);
 
 <p>继承 EditBox：<code>setText/getText</code>、<code>setFont/setFontSize</code>、<code>setAlignmentMode</code> 等。</p>
 
-<h2>4.6.3 控件的属性</h2>
+</details>
 
-<table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>editable</code></td><td>Bool</td><td>false</td><td>双模式开关</td></tr>
-<tr><td><code>text</code></td><td>String</td><td>空</td><td>编辑框内容</td></tr>
-<tr><td><code>selected-value</code></td><td>String</td><td>—</td><td>选中项 value；未匹配返回输入内容</td></tr>
-<tr><td><code>selected-index</code></td><td>Int</td><td>-1</td><td>选中索引（-1 = 无匹配）</td></tr>
-<tr><td><code>max-visible-items</code></td><td>Int</td><td>6</td><td>最多可见项</td></tr>
-<tr><td><code>item-height</code></td><td>Float</td><td>24</td><td>单项高度</td></tr>
-<tr><td><code>arrow-width</code></td><td>Float</td><td>20</td><td>箭头区宽度</td></tr>
-<tr><td><code>cycle-enabled</code></td><td>Bool</td><td>true</td><td>闭合态循环选择</td></tr>
-<tr><td><code>items</code></td><td>String(JSON)</td><td>—</td><td>以 JSON 数组设置 items</td></tr>
-<tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>item-selected</code> / <code>item-hover</code> / <code>item-disabled</code> / <code>list-bg</code> / <code>list-border</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
-</table>
 
-<h2>4.6.4 控件的回调</h2>
 
-<table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onSelectionChanged</code>（C ABI 事件 <code>selection-changed</code>）</td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
-</table>
-
-<h2>4.6.5 JSON 语法</h2>
-
-<pre><code>{
-  "id": "comboMain",
-  "type": "combo-box",
-  "rect": { "x": 20, "y": 56, "w": 300, "h": 32 },
-  "fontSize": 16,
-  "editable": false,
-  "placeholder": "Select a city...",
-  "items": [
-    { "label": "Beijing", "value": "beijing" },
-    { "label": "Wuhan", "value": "wuhan", "disabled": true }
-  ],
-  "selectedIndex": 0,
-  "maxVisibleItems": 6,
-  "cycleEnabled": true,
-  "events": { "onSelectionChanged": "onSelectionChanged" }
-}</code></pre>
-
-<h2>4.6.6 C++ Binding 样例</h2>
 
 <pre><code>Control combo = ui->CreateComboBox(20, 56, 300, 32);
 // items 用 JSON 数组字符串设置

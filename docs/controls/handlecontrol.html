@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -28,26 +28,8 @@ UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 
 
 <div class="note">JSON 布局不支持 HandleControl（LayoutParser 未注册该类型）。目标销毁时经 weak_ptr 监控自动隐藏手柄。</div>
 
-<h2>4.9.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setTarget(shared_ptr&lt;Control&gt;)</code> / <code>setTarget(Control*)</code></td><td>附加到目标（shared_ptr 版本监控生命周期并自动加入目标父容器；裸指针版本专为 C ABI，生命周期由调用方保证）</td></tr>
-<tr><td><code>getTarget()</code></td><td>查询目标（原始指针）</td></tr>
-<tr><td><code>detach()</code></td><td>分离：清状态、取消置顶、从父容器移除</td></tr>
-<tr><td><code>setHandleSize(float)</code> / <code>handleSize()</code></td><td>手柄方块大小（默认 8.0）</td></tr>
-<tr><td><code>setMinSize(float w, float h)</code> / <code>minSize()</code></td><td>目标最小尺寸约束（默认 20×20）</td></tr>
-<tr><td><code>setHandleColor(SColor fill, SColor border)</code> / <code>handleFillColor()</code> / <code>handleBorderColor()</code></td><td>手柄填充 + 边框色（默认白填充 / 蓝边框）</td></tr>
-<tr><td><code>setActiveColor(SColor)</code> / <code>activeColor()</code></td><td>拖拽高亮色（默认蓝）</td></tr>
-<tr><td><code>setSelectionColor(SColor)</code> / <code>selectionColor()</code></td><td>虚线选择框颜色（默认蓝）</td></tr>
-<tr><td><code>setCornerHandlesVisible(bool)</code> / <code>setEdgeHandlesVisible(bool)</code> / <code>setMoveHandleVisible(bool)</code> / <code>setSelectionBoxVisible(bool)</code></td><td>四角手柄 / 四边手柄 / 移动手柄 / 选择框显隐（均默认 true）</td></tr>
-<tr><td><code>draw()</code> / <code>handleEvent(Event)</code></td><td>每帧校正自身 rect 跟随目标、重建手柄缓存、命中检测与拖拽</td></tr>
-<tr><td><code>isContainsPoint(x, y)</code></td><td>恒返回 false（事件穿透的关键）</td></tr>
-</table>
-
-<h2>4.9.3 控件的属性</h2>
+<h2>4.9.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -62,15 +44,70 @@ UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 
 
 <div class="note">HandleControl 未实现属性系统 override，以上为成员属性（C++ 直接 API 访问），无字符串属性名。</div>
 
-<h2>4.9.4 控件的回调</h2>
+
+<h2>4.9.3 控件的回调</h2>
 
 <p>无专有回调（拖拽结果直接反映在目标控件的位置/尺寸上）。</p>
 
-<h2>4.9.5 JSON 语法</h2>
+
+<h2>4.9.4 JSON 语法</h2>
 
 <p>不支持（无 <code>"handle-control"</code> 类型分支）。</p>
 
-<h2>4.9.6 C++ Binding / 核心库样例</h2>
+
+<h2>4.9.5 C++ Binding / 核心库样例</h2>
+
+<pre><code>// C++ 核心库：附着 + 拖拽调整目标
+auto target = make_shared&lt;Button&gt;(BENCH.get(), SRect(80, 60, 200, 80));
+BENCH->addControl(target);
+auto handle = HandleControlBuilder().setTarget(target).setMinSize(40, 40).build();
+
+// 切换目标
+handle->setTarget(otherButton);    // 或 handle->detach();
+
+// C ABI / Binding
+auto target = ui->CreateButton("目标按钮", 80, 60, 200, 80);
+auto handle = ui->CreateHandleControl(target, 80, 60, 200, 80);</code></pre>
+
+<div class="chapter-nav">
+  <a href="editbox.html">← 4.8 EditBox</a>
+  <a href="label.html">下一节：4.10 Label →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.9.6 C ABI 调用样例</h2>
+
+<pre><code>// 句柄控件包裹目标控件（拖动/缩放），目标经构造参数传入
+UIControlHandle target = UICornerstone_CreateButton(g_inst, "Drag me", 40, 40, 120, 40);
+UIControlHandle hc = UICornerstone_CreateHandleControl(g_inst, target, 20, 20, 160, 80);
+
+// 无专有属性与事件；跟随通用操作
+UICornerstone_SetRect(g_inst, hc, 20, 20, 200, 100);</code></pre>
+<details class="methods">
+<summary>4.9.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setTarget(shared_ptr&lt;Control&gt;)</code> / <code>setTarget(Control*)</code></td><td>附加到目标（shared_ptr 版本监控生命周期并自动加入目标父容器；裸指针版本专为 C ABI，生命周期由调用方保证）</td></tr>
+<tr><td><code>getTarget()</code></td><td>查询目标（原始指针）</td></tr>
+<tr><td><code>detach()</code></td><td>分离：清状态、取消置顶、从父容器移除</td></tr>
+<tr><td><code>setHandleSize(float)</code> / <code>handleSize()</code></td><td>手柄方块大小（默认 8.0）</td></tr>
+<tr><td><code>setMinSize(float w, float h)</code> / <code>minSize()</code></td><td>目标最小尺寸约束（默认 20×20）</td></tr>
+<tr><td><code>setHandleColor(SColor fill, SColor border)</code> / <code>handleFillColor()</code> / <code>handleBorderColor()</code></td><td>手柄填充 + 边框色（默认白填充 / 蓝边框）</td></tr>
+<tr><td><code>setActiveColor(SColor)</code> / <code>activeColor()</code></td><td>拖拽高亮色（默认蓝）</td></tr>
+<tr><td><code>setSelectionColor(SColor)</code> / <code>selectionColor()</code></td><td>虚线选择框颜色（默认蓝）</td></tr>
+<tr><td><code>setCornerHandlesVisible(bool)</code> / <code>setEdgeHandlesVisible(bool)</code> / <code>setMoveHandleVisible(bool)</code> / <code>setSelectionBoxVisible(bool)</code></td><td>四角手柄 / 四边手柄 / 移动手柄 / 选择框显隐（均默认 true）</td></tr>
+<tr><td><code>draw()</code> / <code>handleEvent(Event)</code></td><td>每帧校正自身 rect 跟随目标、重建手柄缓存、命中检测与拖拽</td></tr>
+<tr><td><code>isContainsPoint(x, y)</code></td><td>恒返回 false（事件穿透的关键）</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>// C++ 核心库：附着 + 拖拽调整目标
 auto target = make_shared&lt;Button&gt;(BENCH.get(), SRect(80, 60, 200, 80));

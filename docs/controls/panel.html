@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -31,26 +31,8 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200);
   "children": [ { "type": "button", "id": "submitBtn", "rect": { "x": 280, "y": 140, "w": 100, "h": 35 },
                   "caption": "Submit", "events": { "onClick": "onSubmitClick" } } ] }</code></pre>
 
-<h2>4.14.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>update()</code> / <code>draw()</code></td><td>更新 / 绘制（背景 + 边框 + 子控件）</td></tr>
-<tr><td><code>handleEvent(Event)</code></td><td>逆向遍历子控件分发事件</td></tr>
-<tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加子控件</td></tr>
-<tr><td><code>removeAllControls()</code></td><td>移除全部子控件</td></tr>
-<tr><td><code>setLayoutEngine(shared_ptr&lt;LayoutEngine&gt;)</code> / <code>getLayoutEngine()</code></td><td>挂载 / 获取布局引擎（HFlow / VFlow / Anchor / Grid）</td></tr>
-<tr><td><code>setChildFlowProps(Control*, FlowItemProps)</code></td><td>子控件流式布局属性（flowWeight 等）</td></tr>
-<tr><td><code>setChildAnchorProps(Control*, AnchorInfo)</code></td><td>子控件锚点布局属性</td></tr>
-<tr><td><code>setChildGridProps(Control*, GridItemProps)</code></td><td>子控件网格布局属性</td></tr>
-<tr><td><code>reflowChildren()</code></td><td>按布局引擎重新计算全部子控件位置 / 尺寸</td></tr>
-<tr><td><code>resolveChildPercentages()</code></td><td>解析子控件百分比尺寸（"50%" 形式）</td></tr>
-<tr><td><code>setRect(SRect)</code> / <code>resized(SRect)</code></td><td>尺寸变更（resized 触发 reflow）</td></tr>
-</table>
-
-<h2>4.14.3 控件的属性</h2>
+<h2>4.14.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
@@ -60,11 +42,13 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200);
 
 <p>JSON 键（<code>design/LayoutSystem_Design.md</code> §4.5）：<code>bgColor</code>（单色）、<code>borderColor</code>（单色）、<code>transparent</code>、<code>borderVisible</code>、<code>layout</code>（引擎配置）、<code>children</code>、<code>scale</code>、<code>margin</code>、<code>colors</code>。</p>
 
-<h2>4.14.4 控件的回调</h2>
+
+<h2>4.14.3 控件的回调</h2>
 
 <p>无专有回调（子控件的事件由其自身处理）。</p>
 
-<h2>4.14.5 JSON 语法（含布局引擎）</h2>
+
+<h2>4.14.4 JSON 语法（含布局引擎）</h2>
 
 <pre><code>// h-flow / v-flow（子控件用 flowWeight 弹性分配）
 { "type": "panel", "id": "formPanel",
@@ -88,7 +72,56 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200);
 "children": [ { "type": "button", "id": "cellBtn",
                 "grid": { "row": 0, "col": 1, "rowSpan": 1, "colSpan": 1 } } ]</code></pre>
 
-<h2>4.14.6 C++ Binding 样例</h2>
+
+<h2>4.14.5 C++ Binding 样例</h2>
+
+<pre><code>auto panel = ui->CreatePanel(50, 112, 400, 200);
+auto btn   = ui->CreateButton("Submit", 280, 140, 100, 35);
+panel.AddChild(btn);                          // Control::AddChild
+btn.SetBool(PropertyNames::kEnabled, false);  // 统一属性系统
+btn.SetCallback(PropertyNames::kEventClick, [](const Event&) { /* ... */ });</code></pre>
+
+<div class="tip">布局引擎（flow/anchor/grid）的完整 JSON 语法见 <a href="../appendix/declarative-syntax.html">9.1 声明式 UI 语法速查表</a>。</div>
+
+<div class="chapter-nav">
+  <a href="numericupdown.html">← 4.13 NumericUpDown</a>
+  <a href="progressbar.html">下一节：4.15 ProgressBar →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.14.6 C ABI 调用样例</h2>
+
+<pre><code>// 容器：创建后经 AddChildControl 挂子控件
+UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 400, 300);
+UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 10, 10, 100, 32);
+
+UICornerstone_AddChildControl(g_inst, panel, btn);   // 挂树（经 Bench 或父容器）
+UICornerstone_SetBool(g_inst, panel, "transparent", 1);</code></pre>
+<details class="methods">
+<summary>4.14.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>update()</code> / <code>draw()</code></td><td>更新 / 绘制（背景 + 边框 + 子控件）</td></tr>
+<tr><td><code>handleEvent(Event)</code></td><td>逆向遍历子控件分发事件</td></tr>
+<tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加子控件</td></tr>
+<tr><td><code>removeAllControls()</code></td><td>移除全部子控件</td></tr>
+<tr><td><code>setLayoutEngine(shared_ptr&lt;LayoutEngine&gt;)</code> / <code>getLayoutEngine()</code></td><td>挂载 / 获取布局引擎（HFlow / VFlow / Anchor / Grid）</td></tr>
+<tr><td><code>setChildFlowProps(Control*, FlowItemProps)</code></td><td>子控件流式布局属性（flowWeight 等）</td></tr>
+<tr><td><code>setChildAnchorProps(Control*, AnchorInfo)</code></td><td>子控件锚点布局属性</td></tr>
+<tr><td><code>setChildGridProps(Control*, GridItemProps)</code></td><td>子控件网格布局属性</td></tr>
+<tr><td><code>reflowChildren()</code></td><td>按布局引擎重新计算全部子控件位置 / 尺寸</td></tr>
+<tr><td><code>resolveChildPercentages()</code></td><td>解析子控件百分比尺寸（"50%" 形式）</td></tr>
+<tr><td><code>setRect(SRect)</code> / <code>resized(SRect)</code></td><td>尺寸变更（resized 触发 reflow）</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>auto panel = ui->CreatePanel(50, 112, 400, 200);
 auto btn   = ui->CreateButton("Submit", 280, 140, 100, 35);

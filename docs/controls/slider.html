@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -35,27 +35,8 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
   "tick": { "interval": 10, "length": 8, "color": { "normal": "#646464FF" } },
   "events": { "onValueChanged": "onColorChange" } }</code></pre>
 
-<h2>4.17.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>范围（默认 0~100）</td></tr>
-<tr><td><code>setStep(float)</code> / <code>getStep()</code></td><td>步长（松手吸附到 step）</td></tr>
-<tr><td><code>setValue(float)</code> / <code>getValue()</code> / <code>getPercent()</code></td><td>值 / 百分比</td></tr>
-<tr><td><code>setStyle(SliderStyle)</code> / <code>getStyle()</code></td><td>Horizontal / Vertical（默认 Horizontal）</td></tr>
-<tr><td><code>setReverse(bool)</code> / <code>getReverse()</code></td><td>反向（min 在右 / 底部）</td></tr>
-<tr><td><code>isFocused()</code></td><td>焦点状态</td></tr>
-<tr><td><code>setTrackThickness(float)</code> / <code>getTrackThickness()</code>（默认 4）、<code>setThumbSize(float)</code> / <code>getThumbSize()</code>（默认 16）</td><td>轨道 / 手柄尺寸</td></tr>
-<tr><td><code>setTrackColor / setTrackFillColor / setThumbColor / setThumbBorderColor / setThumbHoverColor(SColor)</code>（+getter）</td><td>视觉颜色</td></tr>
-<tr><td><code>setTickInterval(float)</code> / <code>getTickInterval()</code>（默认 0=关闭）、<code>setTickLength(float)</code> / <code>getTickLength()</code>（默认 8）、<code>setTickColor(SColor)</code> / <code>getTickColor()</code></td><td>刻度标记</td></tr>
-<tr><td><code>setShowValueLabel(bool)</code> / <code>isShowValueLabel()</code> / <code>getValueLabel()</code></td><td>数值标签开关 / 获取</td></tr>
-<tr><td><code>setLabelFont(FontName)</code>、<code>setLabelFontSize(int)</code>、<code>setLabelColor(SColor)</code>、<code>setLabelFormat(string)</code>、<code>setLabelGap(float)</code>（默认 4）</td><td>标签字体 / 格式 / 间距</td></tr>
-<tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调（仅提交时触发）</td></tr>
-</table>
-
-<h2>4.17.3 控件的属性</h2>
+<h2>4.17.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -74,14 +55,16 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 <tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
 </table>
 
-<h2>4.17.4 控件的回调</h2>
+
+<h2>4.17.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
 <tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td>松手吸附（Snap-on-Release）、点击轨道、外部 setValue、方向键时触发；<strong>拖拽过程中不触发</strong></td><td>Float（floatVal）</td></tr>
 </table>
 
-<h2>4.17.5 JSON 语法</h2>
+
+<h2>4.17.4 JSON 语法</h2>
 
 <pre><code>{
   "id": "rSlider",
@@ -101,7 +84,72 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
   "events": { "onValueChanged": "onColorChange" }
 }</code></pre>
 
-<h2>4.17.6 C++ Binding 样例</h2>
+
+<h2>4.17.5 C++ Binding 样例</h2>
+
+<pre><code>Control slider = ui->CreateSlider(20, 20, 300, 30, 0, 100, 50);
+slider.SetFloat(PropertyNames::kValue, 50.0f);
+slider.SetBool("show-value-label", true);
+slider.SetString("label-format", "%.0f px");
+slider.SetEnum("style", "horizontal");
+slider.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
+    printf("value = %.1f\n", e.GetValueChanged());
+});
+
+// 核心库
+auto s1 = SliderBuilder(nullptr, SRect(HX, 40, 250, 20))
+    .setRange(0, 100).setValue(50).setShowValueLabel(true)
+    .setOnValueChanged([](shared_ptr<Slider> s, float v) {
+        cout << "Slider1 value changed to: " << v << endl;
+    })
+    .build();
+BENCH->addControl(s1);</code></pre>
+
+<div class="chapter-nav">
+  <a href="scrollbar.html">← 4.16 ScrollBar</a>
+  <a href="splitter.html">下一节：4.18 Splitter →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.17.6 C ABI 调用样例</h2>
+
+<pre><code>// 创建即带 min / max / 当前值
+UIControlHandle sl = UICornerstone_CreateSlider(g_inst, 20, 20, 260, 20, 0, 100, 50);
+
+UICornerstone_SetFloat(g_inst, sl, "value", 75);
+UICornerstone_SetFloat(g_inst, sl, "step", 5);
+UICornerstone_SetBool(g_inst, sl, "show-value-label", 1);
+
+static void onSlide(UIControlHandle ctl, const UIEventData* ev, void* ud) {
+    /* ev->data.doubleVal / floatVal 为新值 */
+}
+UICornerstone_SetCallback(g_inst, sl, "value-changed", onSlide, NULL);</code></pre>
+<details class="methods">
+<summary>4.17.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>范围（默认 0~100）</td></tr>
+<tr><td><code>setStep(float)</code> / <code>getStep()</code></td><td>步长（松手吸附到 step）</td></tr>
+<tr><td><code>setValue(float)</code> / <code>getValue()</code> / <code>getPercent()</code></td><td>值 / 百分比</td></tr>
+<tr><td><code>setStyle(SliderStyle)</code> / <code>getStyle()</code></td><td>Horizontal / Vertical（默认 Horizontal）</td></tr>
+<tr><td><code>setReverse(bool)</code> / <code>getReverse()</code></td><td>反向（min 在右 / 底部）</td></tr>
+<tr><td><code>isFocused()</code></td><td>焦点状态</td></tr>
+<tr><td><code>setTrackThickness(float)</code> / <code>getTrackThickness()</code>（默认 4）、<code>setThumbSize(float)</code> / <code>getThumbSize()</code>（默认 16）</td><td>轨道 / 手柄尺寸</td></tr>
+<tr><td><code>setTrackColor / setTrackFillColor / setThumbColor / setThumbBorderColor / setThumbHoverColor(SColor)</code>（+getter）</td><td>视觉颜色</td></tr>
+<tr><td><code>setTickInterval(float)</code> / <code>getTickInterval()</code>（默认 0=关闭）、<code>setTickLength(float)</code> / <code>getTickLength()</code>（默认 8）、<code>setTickColor(SColor)</code> / <code>getTickColor()</code></td><td>刻度标记</td></tr>
+<tr><td><code>setShowValueLabel(bool)</code> / <code>isShowValueLabel()</code> / <code>getValueLabel()</code></td><td>数值标签开关 / 获取</td></tr>
+<tr><td><code>setLabelFont(FontName)</code>、<code>setLabelFontSize(int)</code>、<code>setLabelColor(SColor)</code>、<code>setLabelFormat(string)</code>、<code>setLabelGap(float)</code>（默认 4）</td><td>标签字体 / 格式 / 间距</td></tr>
+<tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调（仅提交时触发）</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>Control slider = ui->CreateSlider(20, 20, 300, 30, 0, 100, 50);
 slider.SetFloat(PropertyNames::kValue, 50.0f);

@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -34,12 +34,87 @@ UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 5, 5, 750, 160);
   "colors": { "background": { "normal": "#353535FF" }, "border": { "normal": "#606060FF" } },
   "events": { "onTextChanged": "onNotesChanged" } }</code></pre>
 
-<h2>4.19.2 控件的方法</h2>
+
+<h2>4.19.2 控件的属性</h2>
 
 <table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>word-wrap</code></td><td>Bool</td><td>—</td><td>自动换行</td></tr>
+<tr><td><code>line-height</code></td><td>Int</td><td>—</td><td>行高</td></tr>
+<tr><td><code>scroll-x</code> / <code>scroll-y</code></td><td>Int</td><td>0</td><td>滚动位置</td></tr>
+<tr><td><code>scrollbar-thickness</code></td><td>Float</td><td>16</td><td>滚动条粗细</td></tr>
+<tr><td>继承 EditBox：<code>text</code> / <code>placeholder</code> / <code>password-mode</code> / <code>read-only</code> / <code>font</code> / <code>font-size</code> / <code>alignment</code> 等</td><td>多类型</td><td>—</td><td>见 <a href="editbox.html">4.8 EditBox</a></td></tr>
+</table>
 
-<tr><th>方法</th><th>说明</th></tr>
+
+<h2>4.19.3 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>text-changed</code>（<code>kEventTextChanged</code>）</td><td>文本任何变化</td><td>String（全文）</td></tr>
+<tr><td><code>enter</code>（<code>kEventEnter</code>）</td><td>按下 Enter（继承 EditBox）</td><td>无</td></tr>
+</table>
+
+
+<h2>4.19.4 JSON 语法</h2>
+
+<pre><code>{
+  "type": "text-area",
+  "id": "notesTextArea",
+  "rect": { "x": 20, "y": 432, "w": 200, "h": 80 },
+  "placeholder": "Multi-line notes...",
+  "wordWrap": true,
+  "font": { "size": 12 },
+  "colors": { "background": { "normal": "#353535FF" }, "border": { "normal": "#606060FF" } },
+  "events": { "onTextChanged": "onNotesChanged" }
+}</code></pre>
+
+
+<h2>4.19.5 C++ Binding 样例</h2>
+
+<pre><code>Control ta = ui->CreateTextArea(20, 432, 200, 80);
+ta.SetString("text", "Hello from TextArea!\nEdit me.");
+ta.SetBool("word-wrap", true);
+ta.SetCallback(PropertyNames::kEventTextChanged, [](const Event& e) {
+    printf("text: %s\n", e.GetTextChanged().c_str());
+});
+
+// C++ 核心库
+auto ta2 = TextAreaBuilder(nullptr, SRect(750, 360, 200, 100), 2.0f, 2.0f)
+    .setText("2x scaled TextArea")
+    .setWordWrap(true).setLineHeight(22)
+    .setOnTextChanged([](shared_ptr<Control>, string text) {
+        cout << "TextArea changed" << endl;
+    })
+    .build();
+BENCH->addControl(ta2);</code></pre>
+
+<div class="note">滚动条内置于控件底部 / 右侧，内容超出时自动显示。</div>
+
+<div class="chapter-nav">
+  <a href="splitter.html">← 4.18 Splitter</a>
+  <a href="winframe.html">下一节：4.20 WinFrame →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.19.6 C ABI 调用样例</h2>
+
+<pre><code>UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 20, 20, 300, 200);
+
+UICornerstone_SetString(g_inst, ta, "text", "第一行\n第二行");
+UICornerstone_SetBool(g_inst, ta, "read-only", 1);
+UICornerstone_SetBool(g_inst, ta, "word-wrap", 1);
+
+static void onTextChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
+UICornerstone_SetCallback(g_inst, ta, "text-changed", onTextChanged, NULL);</code></pre>
+<details class="methods">
+<summary>4.19.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>update()</code> / <code>draw()</code> / <code>handleEvent(Event)</code></td><td>帧更新 / 绘制 / 事件（文本输入、Enter 插入 \n、滚动条委托、鼠标定位光标、Ctrl+C/V/X、光标导航）</td></tr>
 <tr><td><code>setRect(SRect)</code></td><td>重设尺寸并同步滚动条</td></tr>
 <tr><td><code>setText(string)</code></td><td>设置全文（重建行 + 更新滚动条）</td></tr>
@@ -54,39 +129,10 @@ UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 5, 5, 750, 160);
 <tr><td><code>setOnTextChangedHandler(OnTextChangedHandler)</code></td><td>文本变化回调</td></tr>
 </table>
 
-<h2>4.19.3 控件的属性</h2>
+</details>
 
-<table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>word-wrap</code></td><td>Bool</td><td>—</td><td>自动换行</td></tr>
-<tr><td><code>line-height</code></td><td>Int</td><td>—</td><td>行高</td></tr>
-<tr><td><code>scroll-x</code> / <code>scroll-y</code></td><td>Int</td><td>0</td><td>滚动位置</td></tr>
-<tr><td><code>scrollbar-thickness</code></td><td>Float</td><td>16</td><td>滚动条粗细</td></tr>
-<tr><td>继承 EditBox：<code>text</code> / <code>placeholder</code> / <code>password-mode</code> / <code>read-only</code> / <code>font</code> / <code>font-size</code> / <code>alignment</code> 等</td><td>多类型</td><td>—</td><td>见 <a href="editbox.html">4.8 EditBox</a></td></tr>
-</table>
 
-<h2>4.19.4 控件的回调</h2>
 
-<table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>text-changed</code>（<code>kEventTextChanged</code>）</td><td>文本任何变化</td><td>String（全文）</td></tr>
-<tr><td><code>enter</code>（<code>kEventEnter</code>）</td><td>按下 Enter（继承 EditBox）</td><td>无</td></tr>
-</table>
-
-<h2>4.19.5 JSON 语法</h2>
-
-<pre><code>{
-  "type": "text-area",
-  "id": "notesTextArea",
-  "rect": { "x": 20, "y": 432, "w": 200, "h": 80 },
-  "placeholder": "Multi-line notes...",
-  "wordWrap": true,
-  "font": { "size": 12 },
-  "colors": { "background": { "normal": "#353535FF" }, "border": { "normal": "#606060FF" } },
-  "events": { "onTextChanged": "onNotesChanged" }
-}</code></pre>
-
-<h2>4.19.6 C++ Binding 样例</h2>
 
 <pre><code>Control ta = ui->CreateTextArea(20, 432, 200, 80);
 ta.SetString("text", "Hello from TextArea!\nEdit me.");

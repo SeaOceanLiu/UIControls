@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -31,24 +31,8 @@ UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 2
 
 <div class="note">JSON 布局中 Actor 不作为独立节点，只作为 Button 的 <code>actors</code> 子键（见下）。</div>
 
-<h2>4.1.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>从文件 / 资源 ID 加载图片（挂树前保存路径，create() 后真正加载）</td></tr>
-<tr><td><code>loadTextureFromSurface(Surface*)</code></td><td>从内存 Surface 加载纹理</td></tr>
-<tr><td><code>getTexture() / setTexture(SharedTexture)</code></td><td>纹理访问器</td></tr>
-<tr><td><code>setScaleType(ScaleType)</code> / <code>getScaleType()</code></td><td>缩放方式：STRETCH / FIT_CENTER / CENTER_CROP / NONE</td></tr>
-<tr><td><code>setMatchParentRect(bool)</code></td><td>强制使用目标矩形（忽略自然尺寸）</td></tr>
-<tr><td><code>setAlpha(uint8_t)</code> / <code>getAlpha()</code></td><td>透明度 0-255</td></tr>
-<tr><td><code>setRect(SRect)</code></td><td>设置位置尺寸；w/h&gt;0 时换图不再跟随自然尺寸</td></tr>
-<tr><td><code>draw(posx, posy, alpha)</code> / <code>draw()</code></td><td>绘制（后者用成员 alpha）</td></tr>
-<tr><td><code>setStringProperty / setBoolProperty / setIntProperty / setEnumProperty</code>（+getter）</td><td>属性系统分发</td></tr>
-</table>
-
-<h2>4.1.3 控件的属性</h2>
+<h2>4.1.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -60,11 +44,13 @@ UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 2
 <tr><td><code>anchor</code></td><td>Enum</td><td><code>top-left</code></td><td><code>top-left</code> / <code>mid-left</code> / <code>bottom-left</code> / <code>top-right</code> / <code>mid-right</code> / <code>bottom-right</code> / <code>top-center</code> / <code>center</code> / <code>bottom-center</code></td></tr>
 </table>
 
-<h2>4.1.4 控件的回调</h2>
+
+<h2>4.1.3 控件的回调</h2>
 
 <p>无（纯显示控件，不产生任何事件）。</p>
 
-<h2>4.1.5 JSON 语法（Button 的 actors）</h2>
+
+<h2>4.1.4 JSON 语法（Button 的 actors）</h2>
 
 <pre><code>{
   "type": "button", "id": "imageBtn",
@@ -76,7 +62,64 @@ UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 2
   }
 }</code></pre>
 
-<h2>4.1.6 C++ Binding 样例</h2>
+
+<h2>4.1.5 C++ Binding 样例</h2>
+
+<pre><code>// Binding：CreateImage（对应 C ABI CreateImage）
+Control img = ui->CreateImage("assets/hero.png", 20, 80, 128, 128);
+img.SetEnum(PropertyNames::kScaleType, "fit-center");
+img.SetInt(PropertyNames::kAlpha, 128);
+img.SetBool(PropertyNames::kMatchParentRect, false);
+
+// C++ 核心库：作为 Button 三态外观
+auto normal = ActorBuilder(nullptr).loadFromFile("assets/img/icon.png").setMatchParentRect(true).build();
+auto hover  = ActorBuilder(nullptr).loadFromFile("assets/img/icon_hover.png").setMatchParentRect(true).build();
+auto btn = ButtonBuilder(nullptr, SRect(380, 50, 120, 50))
+    .setNormalStateActor(normal).setHoverStateActor(hover)
+    .build();
+BENCH->addControl(btn);</code></pre>
+
+<div class="chapter-nav">
+  <a href="index.html">← 4.0 控件概念与共性</a>
+  <a href="bench.html">下一节：4.2 Bench →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.1.6 C ABI 调用样例</h2>
+
+<pre><code>// C ABI 中 Actor 即 Image 控件（w/h 传 0 按纹理自然尺寸）
+UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 0, 0);
+
+// 属性：键名见「控件的属性」表
+UICornerstone_SetEnum(g_inst, img, "scale-type", "fit-center");
+UICornerstone_SetInt(g_inst, img, "alpha", 128);
+UICornerstone_SetBool(g_inst, img, "match-parent-rect", 0);
+
+// Actor 纯显示、无事件；经 SetRect / DestroyControl 通用操作
+UICornerstone_SetRect(g_inst, img, 60, 20, 128, 128);</code></pre>
+<details class="methods">
+<summary>4.1.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>从文件 / 资源 ID 加载图片（挂树前保存路径，create() 后真正加载）</td></tr>
+<tr><td><code>loadTextureFromSurface(Surface*)</code></td><td>从内存 Surface 加载纹理</td></tr>
+<tr><td><code>getTexture() / setTexture(SharedTexture)</code></td><td>纹理访问器</td></tr>
+<tr><td><code>setScaleType(ScaleType)</code> / <code>getScaleType()</code></td><td>缩放方式：STRETCH / FIT_CENTER / CENTER_CROP / NONE</td></tr>
+<tr><td><code>setMatchParentRect(bool)</code></td><td>强制使用目标矩形（忽略自然尺寸）</td></tr>
+<tr><td><code>setAlpha(uint8_t)</code> / <code>getAlpha()</code></td><td>透明度 0-255</td></tr>
+<tr><td><code>setRect(SRect)</code></td><td>设置位置尺寸；w/h&gt;0 时换图不再跟随自然尺寸</td></tr>
+<tr><td><code>draw(posx, posy, alpha)</code> / <code>draw()</code></td><td>绘制（后者用成员 alpha）</td></tr>
+<tr><td><code>setStringProperty / setBoolProperty / setIntProperty / setEnumProperty</code>（+getter）</td><td>属性系统分发</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>// Binding：CreateImage（对应 C ABI CreateImage）
 Control img = ui->CreateImage("assets/hero.png", 20, 80, 128, 128);

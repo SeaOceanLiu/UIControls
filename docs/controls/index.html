@@ -31,16 +31,17 @@
 
 <h2>4.0.2 每个控件的六个共同维度</h2>
 
-<p>本手册的每个控件页都按固定六节组织：</p>
+<p>本手册的每个控件页都按固定七节组织（页面主体优先展示<strong>可用的三种接口</strong>，方法表折叠在最后）：</p>
 
 <table>
 <tr><th>节</th><th>内容</th></tr>
 <tr><td>控件的创建</td><td>C++ 构造 / Builder / C ABI 创建函数 / JSON type</td></tr>
-<tr><td>控件的方法</td><td>核心引擎 C++ 类的全部公开方法（签名 + 说明）</td></tr>
 <tr><td>控件的属性</td><td>属性系统键名：类型、默认值、说明（C ABI / C++ Binding 的 Set*/Get* 键）</td></tr>
 <tr><td>控件的回调</td><td>事件名、触发时机、负载（C ABI / C++ Binding 的 SetCallback 事件名）</td></tr>
 <tr><td>JSON 语法</td><td>真实布局 JSON 节点示例</td></tr>
 <tr><td>C++ Binding 样例</td><td>可运行的绑定用法代码</td></tr>
+<tr><td>C ABI 调用样例</td><td>工厂 + 属性系统 + 回调的纯 C 用法</td></tr>
+<tr><td>控件的方法 <span class="dim-badge">折叠</span></td><td>核心引擎 C++ 类的公开方法（仅源码级集成），默认折叠、位于章节末尾</td></tr>
 </table>
 
 <h2>4.0.3 所有控件的共性</h2>

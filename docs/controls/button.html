@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -28,24 +28,8 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36);
 { "type": "button", "id": "submitBtn", "rect": { "x": 280, "y": 140, "w": 100, "h": 35 },
   "caption": "Submit", "events": { "onClick": "onSubmitClick" } }</code></pre>
 
-<h2>4.3.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setNormalStateActor / setHoverStateActor / setPressedStateActor / setDisabledStateActor(shared_ptr&lt;Actor&gt;)</code></td><td>四状态图片外观</td></tr>
-<tr><td><code>setTextStateColor / setTextShadowStateColor(StateColor)</code></td><td>文本色 / 阴影色（同步到内部 Label）</td></tr>
-<tr><td><code>setTextShadowEnable(bool)</code></td><td>文字阴影开关</td></tr>
-<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>标题文本（自动创建内部 Label）</td></tr>
-<tr><td><code>setCaptionLabel(shared_ptr&lt;Label&gt;) / getCaptionLabel()</code></td><td>嵌入自定义 Label（布局解析器用）</td></tr>
-<tr><td><code>setCaptionSize(float) / getCaptionSize() / getCaptionRect()</code></td><td>标题字号 / 热区</td></tr>
-<tr><td><code>setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code></td><td>挂载洛蒂动画</td></tr>
-<tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调 <code>void(shared_ptr&lt;Button&gt;)</code></td></tr>
-<tr><td><code>setBoolProperty / setStringProperty</code>（override）</td><td>属性分发</td></tr>
-</table>
-
-<h2>4.3.3 控件的属性</h2>
+<h2>4.3.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -57,14 +41,16 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36);
 <tr><td><code>visible</code> / <code>enabled</code> / <code>transparent</code> / <code>border-visible</code></td><td>Bool</td><td>—</td><td>通用属性</td></tr>
 </table>
 
-<h2>4.3.4 控件的回调</h2>
+
+<h2>4.3.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
 <tr><td><code>click</code>（<code>kEventClick</code>）</td><td>鼠标左键按下后抬起于控件内；或焦点态按 Enter/Space</td><td>无</td></tr>
 </table>
 
-<h2>4.3.5 JSON 语法</h2>
+
+<h2>4.3.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "button", "id": "submitBtn",
@@ -78,7 +64,70 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36);
   "events": { "onClick": "onSubmitClick" }
 }</code></pre>
 
-<h2>4.3.6 C++ Binding 样例</h2>
+
+<h2>4.3.5 C++ Binding 样例</h2>
+
+<pre><code>auto button = ui->CreateButton("Toggle", 20, 80, 120, 36);
+int count = 0;
+button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
+    bool vis = label.GetBool(PropertyNames::kVisible);
+    label.SetBool(PropertyNames::kVisible, !vis);
+    label.SetString(PropertyNames::kCaption, "Clicked " + std::to_string(++count));
+});
+// 动态换文案 / 禁用
+button.SetString(PropertyNames::kCaption, "新标题");
+button.SetBool(PropertyNames::kEnabled, false);</code></pre>
+
+<div class="tip">给按钮挂动画：JSON <code>"luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"</code> 或 C++ <code>btn->setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code>。</div>
+
+<div class="chapter-nav">
+  <a href="bench.html">← 4.2 Bench</a>
+  <a href="checkbox.html">下一节：4.4 CheckBox →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.3.6 C ABI 调用样例</h2>
+
+<pre><code>// 创建（见 4.3.1）：工厂 + 初始参数
+UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36);
+
+// 属性：泛型 Set*，键名见「控件的属性」表
+UICornerstone_SetString(g_inst, btn, "caption", "Submit");
+UICornerstone_SetStateColor(g_inst, btn, "background",
+    (UIStateColor){ {0x4A,0x90,0xD9,0xFF}, {0x5B,0xA0,0xE9,0xFF}, {0x3A,0x80,0xC9,0xFF}, {0x80,0x80,0x80,0xFF} });
+
+// 回调：事件名见「控件的回调」表
+static void onBtnClick(UIControlHandle ctl, const UIEventData* ev, void* ud) {
+    /* 点击处理 */
+}
+UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+
+// 通用操作
+UICornerstone_SetRect(g_inst, btn, 20, 20, 140, 40);
+UICornerstone_DestroyControl(g_inst, btn);   // 不再需要时销毁</code></pre>
+<details class="methods">
+<summary>4.3.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setNormalStateActor / setHoverStateActor / setPressedStateActor / setDisabledStateActor(shared_ptr&lt;Actor&gt;)</code></td><td>四状态图片外观</td></tr>
+<tr><td><code>setTextStateColor / setTextShadowStateColor(StateColor)</code></td><td>文本色 / 阴影色（同步到内部 Label）</td></tr>
+<tr><td><code>setTextShadowEnable(bool)</code></td><td>文字阴影开关</td></tr>
+<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>标题文本（自动创建内部 Label）</td></tr>
+<tr><td><code>setCaptionLabel(shared_ptr&lt;Label&gt;) / getCaptionLabel()</code></td><td>嵌入自定义 Label（布局解析器用）</td></tr>
+<tr><td><code>setCaptionSize(float) / getCaptionSize() / getCaptionRect()</code></td><td>标题字号 / 热区</td></tr>
+<tr><td><code>setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code></td><td>挂载洛蒂动画</td></tr>
+<tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调 <code>void(shared_ptr&lt;Button&gt;)</code></td></tr>
+<tr><td><code>setBoolProperty / setStringProperty</code>（override）</td><td>属性分发</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>auto button = ui->CreateButton("Toggle", 20, 80, 120, 36);
 int count = 0;

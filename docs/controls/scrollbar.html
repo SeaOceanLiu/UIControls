@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -35,25 +35,8 @@ UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1)
   "pageSize": 20, "stepSize": 5, "thickness": 16,
   "events": { "onPositionChanged": "onScrollChanged" } }</code></pre>
 
-<h2>4.16.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setValue(float)</code> / <code>getValue()</code></td><td>当前滚动位置</td></tr>
-<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>滚动范围</td></tr>
-<tr><td><code>setPageSize(float)</code> / <code>getPageSize()</code></td><td>页大小（滑块长度；点击轨道翻一页）</td></tr>
-<tr><td><code>setStepSize(float)</code></td><td>步长（方向键/箭头）</td></tr>
-<tr><td><code>setOrientation(ScrollBarOrientation)</code> / <code>getOrientation()</code></td><td>方向</td></tr>
-<tr><td><code>setOnPositionChanged(OnPositionChangedHandler)</code></td><td>位置变化回调 <code>void(shared_ptr&lt;ScrollBar&gt;, float value, float pageSize, float maxValue, ...)</code></td></tr>
-<tr><td><code>setThickness(float)</code> / <code>getThickness()</code></td><td>滚动条宽度（默认 <code>SCROLLBAR_WIDTH</code>=16）</td></tr>
-<tr><td><code>isDragging()</code></td><td>是否拖拽中</td></tr>
-<tr><td><code>shouldShow()</code></td><td>是否应显示（按内容/视口比例计算）</td></tr>
-<tr><td><code>onMouseEnter / onMouseLeave(x, y)</code></td><td>悬停状态（override）</td></tr>
-</table>
-
-<h2>4.16.3 控件的属性</h2>
+<h2>4.16.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -67,14 +50,16 @@ UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1)
 <tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
 </table>
 
-<h2>4.16.4 控件的回调</h2>
+
+<h2>4.16.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
 <tr><td><code>position-changed</code>（<code>kEventPositionChanged</code>）</td><td>拖拽滑块、点击轨道翻页、setValue 导致位置变化时</td><td>（value, pageSize, maxValue 等 4 个 float）</td></tr>
 </table>
 
-<h2>4.16.5 JSON 语法</h2>
+
+<h2>4.16.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "scroll-bar",
@@ -89,7 +74,69 @@ UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1)
   "events": { "onPositionChanged": "onScrollChanged" }
 }</code></pre>
 
-<h2>4.16.6 C++ Binding 样例</h2>
+
+<h2>4.16.5 C++ Binding 样例</h2>
+
+<pre><code>Control sb = ui->CreateScrollBar(440, 472, 200, 16, 1 /*horizontal*/);
+sb.SetFloat(PropertyNames::kValue, 30.0f);
+sb.SetFloat("page-size", 20.0f);
+sb.SetCallback(PropertyNames::kEventPositionChanged, [](const Event& e) {
+    printf("pos: %f\n", e.GetPositionChanged());
+});
+
+// 核心库
+auto vScrollBar = ScrollBarBuilder(nullptr, SRect(380, 100, 20, 200), ScrollBarOrientation::Vertical)
+    .setRange(0, 1000).setPageSize(200).setValue(0)
+    .setOnPositionChanged([](shared_ptr<ScrollBar> sb, float value, float pageSize, float maxValue) {
+        cout << "Scroll position: " << value << endl;
+    })
+    .build();
+BENCH->addControl(vScrollBar);</code></pre>
+
+<div class="chapter-nav">
+  <a href="progressbar.html">← 4.15 ProgressBar</a>
+  <a href="slider.html">下一节：4.17 Slider →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.16.6 C ABI 调用样例</h2>
+
+<pre><code>// orientation: 0=垂直, 1=水平
+UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 20, 20, 12, 200, 0);
+
+UICornerstone_SetFloat(g_inst, sb, "range-min", 0);
+UICornerstone_SetFloat(g_inst, sb, "range-max", 1000);
+UICornerstone_SetFloat(g_inst, sb, "value", 250);
+UICornerstone_SetFloat(g_inst, sb, "page-size", 100);
+
+static void onPosChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) {
+    /* 位置变化（负载含 value / pageSize / maxValue 等 float） */
+}
+UICornerstone_SetCallback(g_inst, sb, "position-changed", onPosChanged, NULL);</code></pre>
+<details class="methods">
+<summary>4.16.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setValue(float)</code> / <code>getValue()</code></td><td>当前滚动位置</td></tr>
+<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>滚动范围</td></tr>
+<tr><td><code>setPageSize(float)</code> / <code>getPageSize()</code></td><td>页大小（滑块长度；点击轨道翻一页）</td></tr>
+<tr><td><code>setStepSize(float)</code></td><td>步长（方向键/箭头）</td></tr>
+<tr><td><code>setOrientation(ScrollBarOrientation)</code> / <code>getOrientation()</code></td><td>方向</td></tr>
+<tr><td><code>setOnPositionChanged(OnPositionChangedHandler)</code></td><td>位置变化回调 <code>void(shared_ptr&lt;ScrollBar&gt;, float value, float pageSize, float maxValue, ...)</code></td></tr>
+<tr><td><code>setThickness(float)</code> / <code>getThickness()</code></td><td>滚动条宽度（默认 <code>SCROLLBAR_WIDTH</code>=16）</td></tr>
+<tr><td><code>isDragging()</code></td><td>是否拖拽中</td></tr>
+<tr><td><code>shouldShow()</code></td><td>是否应显示（按内容/视口比例计算）</td></tr>
+<tr><td><code>onMouseEnter / onMouseLeave(x, y)</code></td><td>悬停状态（override）</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>Control sb = ui->CreateScrollBar(440, 472, 200, 16, 1 /*horizontal*/);
 sb.SetFloat(PropertyNames::kValue, 30.0f);

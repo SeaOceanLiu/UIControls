@@ -95,6 +95,18 @@ tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 }
 .card h3 { margin-top: 0; color: var(--text); }
 
+/* 控件方法表（内部 API，默认折叠弱化） */
+details.methods { margin: 18px 0; border-top: 1px dashed var(--border); padding-top: 10px; }
+details.methods summary {
+  cursor: pointer; font-size: 15px; font-weight: 600;
+  color: var(--text-dim); letter-spacing: 0.02em; user-select: none;
+}
+details.methods summary:hover { color: var(--text); }
+details.methods summary::before { content: "▸ "; transition: transform 0.15s; }
+details.methods[open] summary::before { content: "▾ "; }
+details.methods .note { font-size: 13px; margin: 10px 0; }
+details.methods table { margin-top: 8px; }
+
 .img-frame { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 14px 0; background: #111; }
 .img-frame img { display: block; width: 100%; }
 .img-caption { text-align: center; color: var(--text-dim); font-size: 13px; padding: 6px 0 10px; }
@@ -104,6 +116,11 @@ tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 
 .chapter-nav { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; }
 .chapter-nav a { font-size: 14px; }
+
+.dim-badge {
+  display: inline-block; font-size: 11px; font-weight: 600; color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; vertical-align: 1px;
+}
 
 /* 首页 hero */
 .hero {

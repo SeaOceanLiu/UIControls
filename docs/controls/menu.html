@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -36,7 +36,105 @@ UICornerstone_MenuPanelAddItem(g_inst, panel, item);
 UIControlHandle bar   = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 32);
 UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 
-<h2>4.12.2 控件的方法</h2>
+
+<h2>4.12.2 控件的属性（C ABI 属性系统）</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>caption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
+<tr><td><code>checked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
+<tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
+<tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
+<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
+</table>
+
+
+<h2>4.12.3 控件的回调</h2>
+
+<table>
+<tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>MenuItem::onClick</code>（C ABI 事件 <code>click</code>，JSON 键 <code>onClick</code>）</td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
+</table>
+
+
+<h2>4.12.4 JSON 语法</h2>
+
+<pre><code>{
+  "type": "menu-bar",
+  "id": "mainMenu",
+  "font": { "size": 16 },
+  "barHeight": 32,
+  "menus": [
+    {
+      "caption": "文件(F)",
+      "items": [
+        { "caption": "新建", "shortcut": "Ctrl+N", "events": { "onClick": "onMenuNew" } },
+        { "type": "separator" },
+        { "caption": "最近打开",
+          "items": [ { "caption": "file1.txt", "events": { "onClick": "onOpenRecent" } } ] },
+        { "caption": "退出", "checked": false, "events": { "onClick": "onMenuExit" } }
+      ]
+    }
+  ]
+}</code></pre>
+
+
+<h2>4.12.5 C++ Binding / 核心库样例</h2>
+
+<pre><code>// 核心库（Builder 链式组装）
+g_filePanel = MenuPanelBuilder()
+    .addItem(MenuItemBuilder(u8"新建(N)")
+        .setShortcut("Ctrl+N")
+        .setOnClick([](shared_ptr<MenuItem> item) { cout << "New file clicked" << endl; })
+        .build())
+    .addSeparator()
+    .addItem(MenuItemBuilder(u8"最近打开的文件")
+        .setSubMenu(MenuPanelBuilder()
+            .addItem(MenuItemBuilder(u8"file1.txt")
+                .setOnClick([](shared_ptr<MenuItem> item) { cout << "file1 clicked" << endl; })
+                .build())
+            .build())
+        .build())
+    .build();
+g_menuBar = MenuBarBuilder(BENCH)
+    .addMenu(u8"文件(F)", g_filePanel)
+    .build();
+BENCH->addControl(g_menuBar);
+
+// Binding：MenuItem 的 caption/checked/shortcut/click 走统一属性系统
+Control item = ui->CreateMenuItem("Open", 0);
+item.SetString("caption", "Open");
+item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
+
+<div class="chapter-nav">
+  <a href="luotiani.html">← 4.11 LuotiAni</a>
+  <a href="numericupdown.html">下一节：4.13 NumericUpDown →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.12.6 C ABI 调用样例</h2>
+
+<pre><code>// Menu 三件套：MenuBar + MenuPanel + MenuItem（type: 0=Normal, 1=Separator, 2=SubMenu）
+UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst);
+UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0);
+UICornerstone_MenuPanelAddItem(g_inst, file, open);
+UICornerstone_MenuPanelAddSeparator(g_inst, file);
+UIControlHandle more = UICornerstone_CreateMenuPanel(g_inst);   // 子菜单面板
+UICornerstone_MenuItemSetSubMenu(g_inst, open, more);
+
+UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26);
+UICornerstone_MenuBarAddMenu(g_inst, bar, "File", file);
+
+// MenuItem 的 caption / checked / shortcut / click 走统一属性系统
+UICornerstone_SetString(g_inst, open, "shortcut", "Ctrl+O");
+static void onOpen(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
+UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
+<details class="methods">
+<summary>4.12.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 
@@ -74,47 +172,10 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <tr><td><code>isInMenuMode()</code> / <code>enterMenuMode(int index)</code> / <code>exitMenuMode()</code></td><td>菜单模式（点击展开后鼠标移动自动切换）</td></tr>
 </table>
 
-<h2>4.12.3 控件的属性（C ABI 属性系统）</h2>
+</details>
 
-<table>
-<tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>caption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
-<tr><td><code>checked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
-<tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
-<tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
-<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
-<tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
-</table>
 
-<h2>4.12.4 控件的回调</h2>
 
-<table>
-<tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>MenuItem::onClick</code>（C ABI 事件 <code>click</code>，JSON 键 <code>onClick</code>）</td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
-</table>
-
-<h2>4.12.5 JSON 语法</h2>
-
-<pre><code>{
-  "type": "menu-bar",
-  "id": "mainMenu",
-  "font": { "size": 16 },
-  "barHeight": 32,
-  "menus": [
-    {
-      "caption": "文件(F)",
-      "items": [
-        { "caption": "新建", "shortcut": "Ctrl+N", "events": { "onClick": "onMenuNew" } },
-        { "type": "separator" },
-        { "caption": "最近打开",
-          "items": [ { "caption": "file1.txt", "events": { "onClick": "onOpenRecent" } } ] },
-        { "caption": "退出", "checked": false, "events": { "onClick": "onMenuExit" } }
-      ]
-    }
-  ]
-}</code></pre>
-
-<h2>4.12.6 C++ Binding / 核心库样例</h2>
 
 <pre><code>// 核心库（Builder 链式组装）
 g_filePanel = MenuPanelBuilder()

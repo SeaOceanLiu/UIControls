@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -31,26 +31,8 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95);
   "font": { "size": 16 },
   "colors": { "background": { "normal": "#404040FF" }, "border": { "normal": "#606060FF" } } }</code></pre>
 
-<h2>4.8.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setText(string)</code> / <code>getText()</code> / <code>getCursorPosition()</code></td><td>文本与光标位置</td></tr>
-<tr><td><code>setPlaceholder(string)</code> / <code>getPlaceholder()</code></td><td>占位符文本</td></tr>
-<tr><td><code>setPasswordMode(bool)</code> / <code>isPasswordMode()</code> / <code>setPasswordChar(char)</code></td><td>密码模式（默认掩码字符 <code>*</code>）</td></tr>
-<tr><td><code>selectAll()</code> / <code>setSelection(int,int)</code> / <code>clearSelection()</code> / <code>getSelectedText()</code> / <code>hasSelection()</code></td><td>选区操作</td></tr>
-<tr><td><code>copy()</code> / <code>cut()</code> / <code>paste()</code> / <code>deleteSelectedText()</code></td><td>剪贴板（Ctrl+C / X / V）</td></tr>
-<tr><td><code>setFont(FontName)</code> / <code>setFontSize(int)</code> / <code>getFont()</code></td><td>字体（默认字号 16）</td></tr>
-<tr><td><code>setAlignmentMode(AlignmentMode)</code> / <code>getAlignmentMode()</code></td><td>对齐（默认 AM_MID_LEFT）</td></tr>
-<tr><td><code>setOnTextChanged(OnTextChangedHandler)</code> / <code>setOnEnter(OnEnterHandler)</code></td><td>文本变化 / 回车回调</td></tr>
-<tr><td><code>setFocused(bool, bool)</code> / <code>onFocusGained(bool)</code> / <code>onFocusLost()</code> / <code>isFocused()</code></td><td>焦点管理</td></tr>
-<tr><td><code>setMargin(Margin)</code> / <code>getMargin()</code></td><td>内边距</td></tr>
-<tr><td><code>setBoolProperty / setIntProperty / setStringProperty / setEnumProperty</code>（+getter）、<code>setCallbackProperty</code></td><td>属性分发</td></tr>
-</table>
-
-<h2>4.8.3 控件的属性</h2>
+<h2>4.8.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -64,7 +46,8 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95);
 
 <p>通用：<code>background / border / text</code>（StateColor）、<code>visible / enabled / transparent / border-visible</code>。</p>
 
-<h2>4.8.4 控件的回调</h2>
+
+<h2>4.8.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -72,7 +55,8 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95);
 <tr><td><code>enter</code>（<code>kEventEnter</code>）</td><td>焦点态按 Enter</td><td>无</td></tr>
 </table>
 
-<h2>4.8.5 JSON 语法</h2>
+
+<h2>4.8.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "edit-box", "id": "nameEdit",
@@ -84,7 +68,62 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95);
   "events": { "onTextChanged": "onNameChanged", "onEnter": "onNameEnter" }
 }</code></pre>
 
-<h2>4.8.6 C++ Binding 样例</h2>
+
+<h2>4.8.5 C++ Binding 样例</h2>
+
+<pre><code>auto edit = ui->CreateEditBox(20, 193, 240, 95);
+edit.SetString(PropertyNames::kPlaceholder, "Type here...");
+edit.SetBool(PropertyNames::kPasswordMode, false);
+edit.SetCallback(PropertyNames::kEventTextChanged, [](const Event& e) {
+    printf("text: %s\n", e.GetTextChanged().c_str());
+});
+edit.SetCallback(PropertyNames::kEventEnter, [](const Event&) {
+    printf("Enter pressed\n");
+});</code></pre>
+
+<div class="chapter-nav">
+  <a href="dialog.html">← 4.7 Dialog / Popup</a>
+  <a href="handlecontrol.html">下一节：4.9 HandleControl →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.8.6 C ABI 调用样例</h2>
+
+<pre><code>UIControlHandle box = UICornerstone_CreateEditBox(g_inst, 20, 20, 200, 30);
+
+UICornerstone_SetString(g_inst, box, "text", "hello");
+UICornerstone_SetString(g_inst, box, "placeholder", "请输入…");
+UICornerstone_SetBool(g_inst, box, "password-mode", 1);
+
+static void onTextChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) {
+    /* ev->data.strVal 为当前文本 */
+}
+UICornerstone_SetCallback(g_inst, box, "text-changed", onTextChanged, NULL);</code></pre>
+<details class="methods">
+<summary>4.8.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setText(string)</code> / <code>getText()</code> / <code>getCursorPosition()</code></td><td>文本与光标位置</td></tr>
+<tr><td><code>setPlaceholder(string)</code> / <code>getPlaceholder()</code></td><td>占位符文本</td></tr>
+<tr><td><code>setPasswordMode(bool)</code> / <code>isPasswordMode()</code> / <code>setPasswordChar(char)</code></td><td>密码模式（默认掩码字符 <code>*</code>）</td></tr>
+<tr><td><code>selectAll()</code> / <code>setSelection(int,int)</code> / <code>clearSelection()</code> / <code>getSelectedText()</code> / <code>hasSelection()</code></td><td>选区操作</td></tr>
+<tr><td><code>copy()</code> / <code>cut()</code> / <code>paste()</code> / <code>deleteSelectedText()</code></td><td>剪贴板（Ctrl+C / X / V）</td></tr>
+<tr><td><code>setFont(FontName)</code> / <code>setFontSize(int)</code> / <code>getFont()</code></td><td>字体（默认字号 16）</td></tr>
+<tr><td><code>setAlignmentMode(AlignmentMode)</code> / <code>getAlignmentMode()</code></td><td>对齐（默认 AM_MID_LEFT）</td></tr>
+<tr><td><code>setOnTextChanged(OnTextChangedHandler)</code> / <code>setOnEnter(OnEnterHandler)</code></td><td>文本变化 / 回车回调</td></tr>
+<tr><td><code>setFocused(bool, bool)</code> / <code>onFocusGained(bool)</code> / <code>onFocusLost()</code> / <code>isFocused()</code></td><td>焦点管理</td></tr>
+<tr><td><code>setMargin(Margin)</code> / <code>getMargin()</code></td><td>内边距</td></tr>
+<tr><td><code>setBoolProperty / setIntProperty / setStringProperty / setEnumProperty</code>（+getter）、<code>setCallbackProperty</code></td><td>属性分发</td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>auto edit = ui->CreateEditBox(20, 193, 240, 95);
 edit.SetString(PropertyNames::kPlaceholder, "Type here...");

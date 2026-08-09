@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -32,26 +32,8 @@ UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95)
   "style": "horizontal", "textMode": "percent",
   "colors": { "progressColor": "#4080C0FF", "backgroundColor": "#303030FF" } }</code></pre>
 
-<h2>4.15.2 控件的方法</h2>
 
-<table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-
-<tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>getTextLabel()</code></td><td>内部文本 Label（可继续定制）</td></tr>
-<tr><td><code>setValue(float)</code> / <code>getValue()</code></td><td>当前值（setValue 触发 value-changed 回调）</td></tr>
-<tr><td><code>getPercent()</code></td><td>百分比 0-100（按动画值计算）</td></tr>
-<tr><td><code>setRange(float min, float max)</code></td><td>范围（默认 0-100）</td></tr>
-<tr><td><code>setStyle(ProgressBarStyle)</code> / <code>getStyle()</code></td><td>方向：Horizontal / Vertical</td></tr>
-<tr><td><code>setTextMode(ProgressBarTextMode)</code> / <code>getTextMode()</code></td><td>文本模式：None / Percent / Custom</td></tr>
-<tr><td><code>setCustomText(string)</code> / <code>getCustomText()</code></td><td>自定义文本</td></tr>
-<tr><td><code>setProgressColor / setBackgroundColor / setTextColor(SColor)</code>（+getter）</td><td>颜色（默认绿 76,175,80 / 灰 200,200,200 / 白 255,255,255）</td></tr>
-<tr><td><code>setAnimationSpeed(float)</code> / <code>getAnimationSpeed()</code></td><td>动画速度（默认 0.1，范围 0.01-1.0）</td></tr>
-<tr><td><code>setFont(FontName)</code> / <code>setFontSize(int)</code> / <code>setAlignmentMode(AlignmentMode)</code></td><td>文本字体 / 字号（默认 14）/ 对齐（默认 AM_CENTER）</td></tr>
-<tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>回调 <code>void(shared_ptr&lt;ProgressBar&gt;, float old, float value)</code></td></tr>
-</table>
-
-<h2>4.15.3 控件的属性</h2>
+<h2>4.15.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -68,14 +50,16 @@ UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95)
 <tr><td><code>font</code> / <code>align</code></td><td>Enum</td><td>HarmonyOS / <code>center</code></td><td>字体名 / 对齐</td></tr>
 </table>
 
-<h2>4.15.4 控件的回调</h2>
+
+<h2>4.15.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
 <tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td>setValue 时</td><td>Float（floatVal = 新值）</td></tr>
 </table>
 
-<h2>4.15.5 JSON 语法</h2>
+
+<h2>4.15.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "progress-bar", "id": "loadProgress",
@@ -87,7 +71,71 @@ UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95)
   "colors": { "progressColor": "#4080C0FF", "backgroundColor": "#303030FF" }
 }</code></pre>
 
-<h2>4.15.6 C++ Binding 样例</h2>
+
+<h2>4.15.5 C++ Binding 样例</h2>
+
+<pre><code>auto bar = ui->CreateProgressBar(280, 193, 240, 95);
+bar.SetFloat(PropertyNames::kValue, 65.0f);
+bar.SetFloat(PropertyNames::kRangeMax, 100.0f);
+bar.SetEnum(PropertyNames::kTextMode, "percent");
+bar.SetColor("progress", UIColor{64, 128, 192, 255});   // UIColor = {r,g,b,a}
+bar.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
+    printf("value: %f\n", e.GetValueChanged());
+});
+
+// 核心库
+auto p3 = ProgressBarBuilder(nullptr, SRect(50, 190, 300, 30))
+    .setValue(75.0f)
+    .setTextMode(ProgressBarTextMode::Percent)
+    .setProgressColor({0, 128, 0, 255})
+    .setBackgroundColor({50, 50, 50, 255})
+    .setOnValueChanged([](shared_ptr<ProgressBar>, float, float value) {
+        cout << "value changed to: " << value << endl;
+    })
+    .build();
+BENCH->addControl(p3);</code></pre>
+
+<div class="chapter-nav">
+  <a href="panel.html">← 4.14 Panel</a>
+  <a href="scrollbar.html">下一节：4.16 ScrollBar →</a>
+</div>
+
+</div>
+</body>
+</html>
+
+<h2>4.15.6 C ABI 调用样例</h2>
+
+<pre><code>UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 20, 20, 300, 20);
+
+UICornerstone_SetFloat(g_inst, bar, "value", 40);
+UICornerstone_SetFloat(g_inst, bar, "range-max", 100);
+UICornerstone_SetEnum(g_inst, bar, "text-mode", "percent");  // custom / percent / none
+
+static void onProgress(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
+UICornerstone_SetCallback(g_inst, bar, "value-changed", onProgress, NULL);</code></pre>
+<details class="methods">
+<summary>4.15.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>getTextLabel()</code></td><td>内部文本 Label（可继续定制）</td></tr>
+<tr><td><code>setValue(float)</code> / <code>getValue()</code></td><td>当前值（setValue 触发 value-changed 回调）</td></tr>
+<tr><td><code>getPercent()</code></td><td>百分比 0-100（按动画值计算）</td></tr>
+<tr><td><code>setRange(float min, float max)</code></td><td>范围（默认 0-100）</td></tr>
+<tr><td><code>setStyle(ProgressBarStyle)</code> / <code>getStyle()</code></td><td>方向：Horizontal / Vertical</td></tr>
+<tr><td><code>setTextMode(ProgressBarTextMode)</code> / <code>getTextMode()</code></td><td>文本模式：None / Percent / Custom</td></tr>
+<tr><td><code>setCustomText(string)</code> / <code>getCustomText()</code></td><td>自定义文本</td></tr>
+<tr><td><code>setProgressColor / setBackgroundColor / setTextColor(SColor)</code>（+getter）</td><td>颜色（默认绿 76,175,80 / 灰 200,200,200 / 白 255,255,255）</td></tr>
+<tr><td><code>setAnimationSpeed(float)</code> / <code>getAnimationSpeed()</code></td><td>动画速度（默认 0.1，范围 0.01-1.0）</td></tr>
+<tr><td><code>setFont(FontName)</code> / <code>setFontSize(int)</code> / <code>setAlignmentMode(AlignmentMode)</code></td><td>文本字体 / 字号（默认 14）/ 对齐（默认 AM_CENTER）</td></tr>
+<tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>回调 <code>void(shared_ptr&lt;ProgressBar&gt;, float old, float value)</code></td></tr>
+</table>
+
+</details>
+
+
+
 
 <pre><code>auto bar = ui->CreateProgressBar(280, 193, 240, 95);
 bar.SetFloat(PropertyNames::kValue, 65.0f);

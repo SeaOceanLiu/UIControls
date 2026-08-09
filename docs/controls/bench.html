@@ -1,4 +1,4 @@
-﻿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -25,12 +25,44 @@ BENCH->setOnInitial(callback);     // 资源加载完成回调</code></pre>
 
 <div class="note">Bench 无 C ABI 创建函数、无 JSON type——它是布局解析器的挂载目标，不作为可声明控件存在。</div>
 
-<h2>4.2.2 控件的方法</h2>
+
+<h2>4.2.2 控件的属性</h2>
+
+<p>无专有属性。继承 Panel/ControlImpl 通用属性（<code>background / border / visible / enabled / transparent</code> 等）。构造时透明，资源加载完成后关闭透明。</p>
+
+
+<h2>4.2.3 控件的回调</h2>
 
 <table>
-<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<tr><th>回调</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>setOnInitial(handler)</code></td><td>资源加载完成（initial() 内）</td><td><code>void(shared_ptr&lt;Bench&gt;)</code></td></tr>
+<tr><td>C ABI 事件 <code>"initial"</code></td><td>同上</td><td>无负载</td></tr>
+</table>
 
-<tr><th>方法</th><th>说明</th></tr>
+
+<h2>4.2.4 JSON 语法</h2>
+
+<p>无（Bench 不是 JSON 控件类型）。所有布局文件的 <code>controls</code> 数组都解析挂载到 Bench 之下。</p>
+
+
+<h2>4.2.5 C ABI 调用样例</h2>
+
+<p>Bench 是 <code>UIContext</code> 内部的控件树根，无 C ABI 工厂、无句柄，因此 C ABI 用户无需（也无法）直接操作它：</p>
+
+<pre><code>// 布局 JSON 的顶层控件自动挂到 Bench（布局解析器的挂载目标）
+static void onBtnClick(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
+if (UICornerstone_LoadLayout(g_inst, layoutJson)) {
+    // 查找带 id 的控件后统一走属性系统
+    UIControlHandle btn = UICornerstone_FindControl(g_inst, "submitBtn");
+    UICornerstone_SetCallback(g_inst, btn, "click", onBtnClick, NULL);
+}</code></pre>
+
+<div class="note">Bench 的 <code>"initial"</code> 事件（资源加载完成）由引擎内部触发，C ABI 层无需绑定。</div>
+<details class="methods">
+<summary>4.2.6 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>initial()</code></td><td>资源加载完成后的初始化：置标志、触发 <code>onInitial</code> 回调并 fire C ABI 事件 <code>"initial"</code></td></tr>
 <tr><td><code>inputControl(shared_ptr&lt;Event&gt;)</code></td><td>向控件树注入一条事件（<code>triggerEvent</code> 入队）</td></tr>
 <tr><td><code>repeatTrigger()</code></td><td>按住鼠标/触摸时的自动重复触发（DEFAULT_BTN_MS_REPEAT 间隔）</td></tr>
@@ -41,23 +73,10 @@ BENCH->setOnInitial(callback);     // 资源加载完成回调</code></pre>
 <tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加控件后解析子百分比尺寸并 reflow</td></tr>
 </table>
 
-<h2>4.2.3 控件的属性</h2>
+</details>
 
-<p>无专有属性。继承 Panel/ControlImpl 通用属性（<code>background / border / visible / enabled / transparent</code> 等）。构造时透明，资源加载完成后关闭透明。</p>
 
-<h2>4.2.4 控件的回调</h2>
 
-<table>
-<tr><th>回调</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>setOnInitial(handler)</code></td><td>资源加载完成（initial() 内）</td><td><code>void(shared_ptr&lt;Bench&gt;)</code></td></tr>
-<tr><td>C ABI 事件 <code>"initial"</code></td><td>同上</td><td>无负载</td></tr>
-</table>
-
-<h2>4.2.5 JSON 语法</h2>
-
-<p>无（Bench 不是 JSON 控件类型）。所有布局文件的 <code>controls</code> 数组都解析挂载到 Bench 之下。</p>
-
-<h2>4.2.6 主循环与事件泵（C++）</h2>
 
 <pre><code>// 传统 AppCallbacks 集成（核心库直接 API）
 class MyApp : public AppCallbacks {
