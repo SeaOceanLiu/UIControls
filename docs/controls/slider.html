@@ -22,7 +22,7 @@ Slider(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 SliderBuilder(parent, SRect(HX, 40, 250, 20)).setRange(0, 100).setValue(50).setShowValueLabel(true).build();
 
 // C ABI
-UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0, 255, 255);
+UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0, 255, 255, 1.0f, 1.0f);
 
 // JSON
 { "id": "rSlider", "type": "slider",
@@ -109,7 +109,7 @@ BENCH->addControl(s1);</code></pre>
 <h2>4.17.6 C ABI 调用样例</h2>
 
 <pre><code>// 创建即带 min / max / 当前值
-UIControlHandle sl = UICornerstone_CreateSlider(g_inst, 20, 20, 260, 20, 0, 100, 50);
+UIControlHandle sl = UICornerstone_CreateSlider(g_inst, 20, 20, 260, 20, 0, 100, 50, 1.0f, 1.0f);
 
 UICornerstone_SetFloat(g_inst, sl, "value", 75);
 UICornerstone_SetFloat(g_inst, sl, "step", 5);

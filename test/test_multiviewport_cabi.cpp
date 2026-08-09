@@ -21,8 +21,8 @@
 // ===== C ABI 函数指针（动态加载） =====
 typedef UIInstance (*UIPluginCreateInstanceFn)(const char*, const UIInstanceConfig*);
 typedef UIInstance (*UICreateViewportFn)(UIInstance, UIRect);
-typedef void*      (*UICreateWinFrameFn)(UIInstance, const char*, float, float, float, float);
-typedef void*      (*UICreateEditBoxFn)(UIInstance, float, float, float, float);
+typedef void*      (*UICreateWinFrameFn)(UIInstance, const char*, float, float, float, float, float, float);
+typedef void*      (*UICreateEditBoxFn)(UIInstance, float, float, float, float, float, float);
 typedef int        (*UISetBoolFn)(UIInstance, void*, const char*, int);
 typedef void       (*UIDestroyInstanceFn)(UIInstance);
 typedef void       (*UIProcessEventsFn)(UIInstance);
@@ -96,8 +96,8 @@ static void testK1() {
     // K1：单视口（无子视口）+ 2 WinFrame，Ctrl+Tab 行为不变
     UIInstance win = newWindow();
     assert(win);
-    UIControlHandle wfA = uiCreateWinFrame(win, "WinA", 10, 10, 300, 200);
-    UIControlHandle wfB = uiCreateWinFrame(win, "WinB", 10, 240, 300, 200);
+    UIControlHandle wfA = uiCreateWinFrame(win, "WinA", 10, 10, 300, 200, 1.0f, 1.0f);
+    UIControlHandle wfB = uiCreateWinFrame(win, "WinB", 10, 240, 300, 200, 1.0f, 1.0f);
     assert(wfA && wfB);
     frame(win, NULL, NULL);
 
@@ -119,9 +119,9 @@ static void testK2() {
     assert(vp1 && vp2 && vp1 != vp2);
     assert(uiDebug_GetActiveViewport(win) == vp1);  // 首子视口自动 active
 
-    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30);
-    UIControlHandle wfA = uiCreateWinFrame(vp1, "WinA", 10, 60, 300, 200);
-    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30);
+    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30, 1.0f, 1.0f);
+    UIControlHandle wfA = uiCreateWinFrame(vp1, "WinA", 10, 60, 300, 200, 1.0f, 1.0f);
+    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30, 1.0f, 1.0f);
     assert(editA && wfA && editB1);
     frame(win, vp1, vp2);
 
@@ -150,10 +150,10 @@ static void testK3K4K5() {
     UIInstance vp2 = uiCreateViewport(win, UIRect{640, 0, 640, 480});
     assert(vp1 && vp2);
 
-    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30);
-    UIControlHandle wfA1 = uiCreateWinFrame(vp1, "WinA1", 10, 60, 300, 180);
-    UIControlHandle wfA2 = uiCreateWinFrame(vp1, "WinA2", 10, 260, 300, 180);
-    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30);
+    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30, 1.0f, 1.0f);
+    UIControlHandle wfA1 = uiCreateWinFrame(vp1, "WinA1", 10, 60, 300, 180, 1.0f, 1.0f);
+    UIControlHandle wfA2 = uiCreateWinFrame(vp1, "WinA2", 10, 260, 300, 180, 1.0f, 1.0f);
+    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30, 1.0f, 1.0f);
     assert(editA && wfA1 && wfA2 && editB1);
     frame(win, vp1, vp2);
 
@@ -187,9 +187,9 @@ static void testK6() {
     UIInstance vp2 = uiCreateViewport(win, UIRect{640, 0, 640, 480});
     assert(vp1 && vp2);
 
-    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30);
-    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30);
-    UIControlHandle editB2 = uiCreateEditBox(vp2, 10, 50, 200, 30);
+    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30, 1.0f, 1.0f);
+    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30, 1.0f, 1.0f);
+    UIControlHandle editB2 = uiCreateEditBox(vp2, 10, 50, 200, 30, 1.0f, 1.0f);
     assert(editA && editB1 && editB2);
     frame(win, vp1, vp2);
 
@@ -217,9 +217,9 @@ static void testK7() {
     UIInstance vp2 = uiCreateViewport(win, UIRect{640, 0, 640, 480});
     assert(vp1 && vp2);
 
-    UIControlHandle editA1 = uiCreateEditBox(vp1, 10, 10, 200, 30);
-    UIControlHandle editA2 = uiCreateEditBox(vp1, 10, 50, 200, 30);
-    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30);
+    UIControlHandle editA1 = uiCreateEditBox(vp1, 10, 10, 200, 30, 1.0f, 1.0f);
+    UIControlHandle editA2 = uiCreateEditBox(vp1, 10, 50, 200, 30, 1.0f, 1.0f);
+    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30, 1.0f, 1.0f);
     assert(editA1 && editA2 && editB1);
     frame(win, vp1, vp2);
 
@@ -256,8 +256,8 @@ static void testK8() {
     UIInstance vp3 = uiCreateViewport(win, UIRect{640, 0, 320, 480});
     assert(vp1 && vp2 && vp3);
 
-    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30);
-    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30);
+    UIControlHandle editA = uiCreateEditBox(vp1, 10, 10, 200, 30, 1.0f, 1.0f);
+    UIControlHandle editB1 = uiCreateEditBox(vp2, 10, 10, 200, 30, 1.0f, 1.0f);
     assert(editA && editB1);
     frame(win, vp1, vp2);
 

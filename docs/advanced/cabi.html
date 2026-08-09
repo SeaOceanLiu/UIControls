@@ -41,10 +41,10 @@ int main(void) {
     UICornerstone_SetViewport(g_inst, 0, 0, 800, 480);
 
     // ── 程序化创建控件树：容器 + 子控件 ──
-    UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 360, 220);
-    UIControlHandle btn   = UICornerstone_CreateButton(g_inst, "Click Me", 30, 30, 140, 36);
-    UIControlHandle cb    = UICornerstone_CreateCheckBox(g_inst, "Enable", 30, 80, 24, 24);
-    UIControlHandle lbl   = UICornerstone_CreateLabel(g_inst, "Idle", 16.0f, 30, 130, 200, 28);
+    UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 360, 220, 1.0f, 1.0f);
+    UIControlHandle btn   = UICornerstone_CreateButton(g_inst, "Click Me", 30, 30, 140, 36, 1.0f, 1.0f);
+    UIControlHandle cb    = UICornerstone_CreateCheckBox(g_inst, "Enable", 30, 80, 24, 24, 1.0f, 1.0f);
+    UIControlHandle lbl   = UICornerstone_CreateLabel(g_inst, "Idle", 16.0f, 30, 130, 200, 28, 1.0f, 1.0f);
     UICornerstone_AddChildControl(g_inst, panel, btn);   // 挂树
     UICornerstone_AddChildControl(g_inst, panel, cb);
 
@@ -53,11 +53,11 @@ int main(void) {
     UICornerstone_SetCallback(g_inst, cb, "check-changed", onCheck, NULL);
 
     // ── 菜单三件套程序化组装 ──
-    UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst);
-    UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0);
+    UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst, 1.0f, 1.0f);
+    UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0, 1.0f, 1.0f);
     UICornerstone_MenuPanelAddItem(g_inst, file, open);
     UICornerstone_MenuPanelAddSeparator(g_inst, file);
-    UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26);
+    UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26, 1.0f, 1.0f);
     UICornerstone_MenuBarAddMenu(g_inst, bar, "File", file);
 
     // ── 主循环（六步顺序不可颠倒）──
@@ -71,6 +71,8 @@ int main(void) {
     UICornerstone_DestroyInstance(g_inst);
     return 0;
 }</code></pre>
+
+<div class="tip">缩放：所有 <code>Create*</code> 尾部参数为 <code>xScale, yScale</code>（初始缩放系数，传 <code>1.0f, 1.0f</code> 保持原尺寸）。例：<code>UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 2.0f, 2.0f)</code> 创建 2 倍内容缩放的按钮。</div>
 
 <h2>5.4.2 程序化与声明式混用</h2>
 

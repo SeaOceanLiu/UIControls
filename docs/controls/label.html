@@ -22,7 +22,7 @@ Label(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 LabelBuilder(parent, SRect(20, 20, 200, 40)).setCaption("Hello").setAlignmentMode(AM_CENTER).build();
 
 // C ABI
-UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20, 240, 40);
+UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20, 240, 40, 1.0f, 1.0f);
 
 // JSON
 { "type": "label", "id": "titleLabel",
@@ -95,7 +95,7 @@ BENCH->addControl(l);</code></pre>
 <h2>4.10.6 C ABI 调用样例</h2>
 
 <pre><code>// fontSize 为创建参数
-UIControlHandle lbl = UICornerstone_CreateLabel(g_inst, "Title", 18, 20, 20, 200, 30);
+UIControlHandle lbl = UICornerstone_CreateLabel(g_inst, "Title", 18, 20, 20, 200, 30, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, lbl, "caption", "新标题");
 UICornerstone_SetInt(g_inst, lbl, "font-size", 22);

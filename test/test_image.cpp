@@ -24,9 +24,9 @@ typedef void       (*UIUpdateFn)(UIInstance, double);
 typedef void       (*UIRenderFn)(UIInstance);
 typedef void       (*UIPushUIEventFn)(UIInstance, const UIEvent*);
 typedef int        (*UIIsQuitRequestedFn)(UIInstance);
-typedef void*      (*UICreateImageFn)(UIInstance, const char*, float, float, float, float);
-typedef void*      (*UICreateButtonFn)(UIInstance, const char*, float, float, float, float);
-typedef void*      (*UICreatePanelFn)(UIInstance, float, float, float, float);
+typedef void*      (*UICreateImageFn)(UIInstance, const char*, float, float, float, float, float, float);
+typedef void*      (*UICreateButtonFn)(UIInstance, const char*, float, float, float, float, float, float);
+typedef void*      (*UICreatePanelFn)(UIInstance, float, float, float, float, float, float);
 typedef void       (*UIAddChildControlFn)(UIInstance, void*, void*);
 typedef void       (*UIDestroyControlFn)(UIInstance, void*);
 typedef void       (*UISetRectFn)(UIInstance, void*, float, float, float, float);
@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
     // ── T1 工厂创建（显式 w/h → rect 保留，Image_Design §6.1） ──
     {
         UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png",
-                                            10.0f, 20.0f, 100.0f, 50.0f);
+                                            10.0f, 20.0f, 100.0f, 50.0f, 1.0f, 1.0f);
         assert(img);
         float x, y, w, h;
         getRectOf(inst, img, &x, &y, &w, &h);
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
     // ── T2 自然尺寸（w/h=0 → 纹理 32x32） ──
     float naturalW = 0, naturalH = 0;
     {
-        UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 0, 0, 0, 0);
+        UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 0, 0, 0, 0, 1.0f, 1.0f);
         assert(img);
         float x, y, w, h;
         getRectOf(inst, img, &x, &y, &w, &h);
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
     // ── T3 属性往返 + 只写不读 ──
     {
         UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png",
-                                            0, 0, 64, 64);
+                                            0, 0, 64, 64, 1.0f, 1.0f);
         assert(img);
         char buf[64];
 
@@ -217,9 +217,9 @@ int main(int argc, char* argv[]) {
 
     // ── T4 matchParentRect：挂 Panel 下开启 → 跟随父矩形 ──
     {
-        UIControlHandle pnl = uiCreatePanel(inst, 0, 0, 200.0f, 100.0f);
+        UIControlHandle pnl = uiCreatePanel(inst, 0, 0, 200.0f, 100.0f, 1.0f, 1.0f);
         assert(pnl);
-        UIControlHandle img = uiCreateImage(inst, NULL, 5, 5, 50, 50);
+        UIControlHandle img = uiCreateImage(inst, NULL, 5, 5, 50, 50, 1.0f, 1.0f);
         assert(img);
         assert(uiSetBool(inst, img, "match-parent-rect", 1) == 1);
         uiAddChildControl(inst, pnl, img);
@@ -234,9 +234,9 @@ int main(int argc, char* argv[]) {
     {
         // A：先 Button 后 Image（Image 在上层，isContainsPoint=false → 不遮挡）
         {
-            UIControlHandle btn = uiCreateButton(inst, "BTN", 50, 50, 100, 40);
+            UIControlHandle btn = uiCreateButton(inst, "BTN", 50, 50, 100, 40, 1.0f, 1.0f);
             UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png",
-                                                50, 50, 100, 40);
+                                                50, 50, 100, 40, 1.0f, 1.0f);
             assert(btn && img);
             int fired = 0;
             assert(uiSetCallback(inst, btn, "click", clickCb, &fired) == 1);
@@ -250,8 +250,8 @@ int main(int argc, char* argv[]) {
         // B：先 Image 后 Button（Button 在上层，直接命中）
         {
             UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png",
-                                                50, 50, 100, 40);
-            UIControlHandle btn = uiCreateButton(inst, "BTN", 50, 50, 100, 40);
+                                                50, 50, 100, 40, 1.0f, 1.0f);
+            UIControlHandle btn = uiCreateButton(inst, "BTN", 50, 50, 100, 40, 1.0f, 1.0f);
             assert(img && btn);
             int fired = 0;
             assert(uiSetCallback(inst, btn, "click", clickCb, &fired) == 1);
@@ -266,7 +266,7 @@ int main(int argc, char* argv[]) {
 
     // ── T6 锚点：各值枚举往返（渲染冒烟部分并入 T7） ──
     {
-        UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 0, 0, 64, 64);
+        UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 0, 0, 64, 64, 1.0f, 1.0f);
         assert(img);
         const char* anchors[] = { "top-left", "mid-left", "bottom-left", "top-right",
                                   "mid-right", "bottom-right", "top-center", "center",
@@ -283,7 +283,7 @@ int main(int argc, char* argv[]) {
 
     // ── T7 渲染冒烟：60 帧循环 ──
     {
-        UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 10, 10, 80, 80);
+        UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 10, 10, 80, 80, 1.0f, 1.0f);
         assert(img);
         assert(uiSetEnum(inst, img, "scale-type", "center-crop") == 1);
         assert(uiSetInt(inst, img, "alpha", 200) == 1);
@@ -300,7 +300,7 @@ int main(int argc, char* argv[]) {
         // a 显式 rect
         {
             UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png",
-                                                5, 5, 64, 64);
+                                                5, 5, 64, 64, 1.0f, 1.0f);
             assert(img);
             runFrame(inst);
             assert(uiSetString(inst, img, "image", "assets/images/down.png") == 1);
@@ -313,7 +313,7 @@ int main(int argc, char* argv[]) {
         }
         // b 自然尺寸跟随新图（cross_up 32x32 → down 48x48）
         {
-            UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 0, 0, 0, 0);
+            UIControlHandle img = uiCreateImage(inst, "assets/images/cross_up.png", 0, 0, 0, 0, 1.0f, 1.0f);
             assert(img);
             runFrame(inst);
             assert(uiSetString(inst, img, "image", "assets/images/down.png") == 1);

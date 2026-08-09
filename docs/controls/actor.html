@@ -27,7 +27,7 @@ Actor(Control* parent, string resourceId, bool matchParentRect = false, float xS
 ActorBuilder(parent).loadFromFile("assets/img/icon.png").setMatchParentRect(true).build();
 
 // C ABI（w/h 传 0 按纹理自然尺寸）
-UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 128, 128);</code></pre>
+UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 128, 128, 1.0f, 1.0f);</code></pre>
 
 <div class="note">JSON 布局中 Actor 不作为独立节点，只作为 Button 的 <code>actors</code> 子键（见下）。</div>
 
@@ -83,7 +83,7 @@ BENCH->addControl(btn);</code></pre>
 <h2>4.1.6 C ABI 调用样例</h2>
 
 <pre><code>// C ABI 中 Actor 即 Image 控件（w/h 传 0 按纹理自然尺寸）
-UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 0, 0);
+UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 0, 0, 1.0f, 1.0f);
 
 // 属性：键名见「控件的属性」表
 UICornerstone_SetEnum(g_inst, img, "scale-type", "fit-center");

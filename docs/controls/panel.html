@@ -22,7 +22,7 @@ Panel(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 PanelBuilder(parent, SRect(50, 112, 400, 200)).setBGColor(...).addControl(child).build();
 
 // C ABI
-UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200);
+UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200, 1.0f, 1.0f);
 
 // JSON
 { "type": "panel", "id": "formPanel",
@@ -87,8 +87,8 @@ btn.SetCallback(PropertyNames::kEventClick, [](const Event&) { /* ... */ });</co
 <h2>4.14.6 C ABI 调用样例</h2>
 
 <pre><code>// 容器：创建后经 AddChildControl 挂子控件
-UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 400, 300);
-UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 10, 10, 100, 32);
+UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 400, 300, 1.0f, 1.0f);
+UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 10, 10, 100, 32, 1.0f, 1.0f);
 
 UICornerstone_AddChildControl(g_inst, panel, btn);   // 挂树（经 Bench 或父容器）
 UICornerstone_SetBool(g_inst, panel, "transparent", 1);</code></pre>

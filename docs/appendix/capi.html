@@ -40,28 +40,30 @@
 
 <h2>9.3.3 控件工厂</h2>
 
+<p>所有创建函数末尾均带 <code>xScale, yScale</code>（初始缩放系数，内容按系数渲染；传 <code>1.0f, 1.0f</code> 保持原尺寸，与 JSON 的 <code>"scale": {"x":..,"y":..}</code> 等价）。</p>
+
 <table>
 <tr><th>函数</th><th>返回控件</th></tr>
-<tr><td><code>UICornerstone_CreateButton(inst, text, x, y, w, h)</code></td><td>Button</td></tr>
-<tr><td><code>UICornerstone_CreateLabel(inst, text, fontSize, x, y, w, h)</code></td><td>Label</td></tr>
-<tr><td><code>UICornerstone_CreateCheckBox(inst, text, x, y, w, h)</code></td><td>CheckBox</td></tr>
-<tr><td><code>UICornerstone_CreateEditBox(inst, x, y, w, h)</code></td><td>EditBox</td></tr>
-<tr><td><code>UICornerstone_CreateTextArea(inst, x, y, w, h)</code></td><td>TextArea</td></tr>
-<tr><td><code>UICornerstone_CreateProgressBar(inst, x, y, w, h)</code></td><td>ProgressBar</td></tr>
-<tr><td><code>UICornerstone_CreateSlider(inst, x, y, w, h, min, max, value)</code></td><td>Slider</td></tr>
-<tr><td><code>UICornerstone_CreateScrollBar(inst, x, y, w, h, orientation)</code></td><td>ScrollBar</td></tr>
-<tr><td><code>UICornerstone_CreateNumericUpDown(inst, x, y, w, h)</code></td><td>NumericUpDown</td></tr>
-<tr><td><code>UICornerstone_CreateComboBox(inst, x, y, w, h)</code></td><td>ComboBox</td></tr>
-<tr><td><code>UICornerstone_CreateColorPicker(inst, x, y, w, h, color)</code></td><td>ColorPicker</td></tr>
-<tr><td><code>UICornerstone_CreatePanel(inst, x, y, w, h)</code></td><td>Panel</td></tr>
-<tr><td><code>UICornerstone_CreateWinFrame(inst, title, x, y, w, h)</code></td><td>WinFrame</td></tr>
-<tr><td><code>UICornerstone_CreateSplitter(inst, x, y, w, h, orientation)</code></td><td>Splitter</td></tr>
-<tr><td><code>UICornerstone_CreateDialog(inst, confirmText, cancelText, x, y, w, h)</code></td><td>Dialog（创建即打开）</td></tr>
+<tr><td><code>UICornerstone_CreateButton(inst, text, x, y, w, h, xScale, yScale)</code></td><td>Button</td></tr>
+<tr><td><code>UICornerstone_CreateLabel(inst, text, fontSize, x, y, w, h, xScale, yScale)</code></td><td>Label</td></tr>
+<tr><td><code>UICornerstone_CreateCheckBox(inst, text, x, y, w, h, xScale, yScale)</code></td><td>CheckBox</td></tr>
+<tr><td><code>UICornerstone_CreateEditBox(inst, x, y, w, h, xScale, yScale)</code></td><td>EditBox</td></tr>
+<tr><td><code>UICornerstone_CreateTextArea(inst, x, y, w, h, xScale, yScale)</code></td><td>TextArea</td></tr>
+<tr><td><code>UICornerstone_CreateProgressBar(inst, x, y, w, h, xScale, yScale)</code></td><td>ProgressBar</td></tr>
+<tr><td><code>UICornerstone_CreateSlider(inst, x, y, w, h, min, max, value, xScale, yScale)</code></td><td>Slider</td></tr>
+<tr><td><code>UICornerstone_CreateScrollBar(inst, x, y, w, h, orientation, xScale, yScale)</code></td><td>ScrollBar</td></tr>
+<tr><td><code>UICornerstone_CreateNumericUpDown(inst, x, y, w, h, xScale, yScale)</code></td><td>NumericUpDown</td></tr>
+<tr><td><code>UICornerstone_CreateComboBox(inst, x, y, w, h, xScale, yScale)</code></td><td>ComboBox</td></tr>
+<tr><td><code>UICornerstone_CreateColorPicker(inst, x, y, w, h, color, xScale, yScale)</code></td><td>ColorPicker</td></tr>
+<tr><td><code>UICornerstone_CreatePanel(inst, x, y, w, h, xScale, yScale)</code></td><td>Panel</td></tr>
+<tr><td><code>UICornerstone_CreateWinFrame(inst, title, x, y, w, h, xScale, yScale)</code></td><td>WinFrame</td></tr>
+<tr><td><code>UICornerstone_CreateSplitter(inst, x, y, w, h, orientation, xScale, yScale)</code></td><td>Splitter</td></tr>
+<tr><td><code>UICornerstone_CreateDialog(inst, confirmText, cancelText, x, y, w, h, xScale, yScale)</code></td><td>Dialog（创建即打开）</td></tr>
 <tr><td><code>UICornerstone_CreateMenuBar / CreateMenuPanel / CreateMenuItem(inst, caption, type)</code></td><td>Menu 三件套</td></tr>
 <tr><td><code>UICornerstone_MenuBarAddMenu / MenuPanelAddItem / MenuPanelAddSeparator / MenuItemSetSubMenu</code></td><td>菜单组装</td></tr>
-<tr><td><code>UICornerstone_CreateImage(inst, image, x, y, w, h)</code></td><td>Image（Actor）</td></tr>
-<tr><td><code>UICornerstone_CreateAnimation(inst, jsoncPath, x, y, w, h)</code></td><td>LuotiAni</td></tr>
-<tr><td><code>UICornerstone_CreateHandleControl(inst, target, x, y, w, h)</code></td><td>HandleControl</td></tr>
+<tr><td><code>UICornerstone_CreateImage(inst, image, x, y, w, h, xScale, yScale)</code></td><td>Image（Actor）</td></tr>
+<tr><td><code>UICornerstone_CreateAnimation(inst, jsoncPath, x, y, w, h, xScale, yScale)</code></td><td>LuotiAni</td></tr>
+<tr><td><code>UICornerstone_CreateHandleControl(inst, target, x, y, w, h, xScale, yScale)</code></td><td>HandleControl</td></tr>
 <tr><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td>挂子控件</td></tr>
 </table>
 

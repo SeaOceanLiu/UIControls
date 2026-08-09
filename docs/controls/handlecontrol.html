@@ -24,7 +24,7 @@ handle.setTarget(shared_ptr&lt;Control&gt;(target));   // 自动加入目标父�
 HandleControlBuilder().setTarget(target).setHandleSize(8.0f).build();
 
 // C ABI（要求先有 target 句柄）
-UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 60, 200, 80);</code></pre>
+UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 60, 200, 80, 1.0f, 1.0f);</code></pre>
 
 <div class="note">JSON 布局不支持 HandleControl（LayoutParser 未注册该类型）。目标销毁时经 weak_ptr 监控自动隐藏手柄。</div>
 
@@ -73,8 +73,8 @@ auto handle = ui->CreateHandleControl(target, 80, 60, 200, 80);</code></pre>
 <h2>4.9.6 C ABI 调用样例</h2>
 
 <pre><code>// 句柄控件包裹目标控件（拖动/缩放），目标经构造参数传入
-UIControlHandle target = UICornerstone_CreateButton(g_inst, "Drag me", 40, 40, 120, 40);
-UIControlHandle hc = UICornerstone_CreateHandleControl(g_inst, target, 20, 20, 160, 80);
+UIControlHandle target = UICornerstone_CreateButton(g_inst, "Drag me", 40, 40, 120, 40, 1.0f, 1.0f);
+UIControlHandle hc = UICornerstone_CreateHandleControl(g_inst, target, 20, 20, 160, 80, 1.0f, 1.0f);
 
 // 无专有属性与事件；跟随通用操作
 UICornerstone_SetRect(g_inst, hc, 20, 20, 200, 100);</code></pre>

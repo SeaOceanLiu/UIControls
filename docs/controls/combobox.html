@@ -24,7 +24,7 @@ ComboBoxBuilder(parent, SRect(20, 56, 300, 32))
     .setSelectedIndex(0).build();
 
 // C ABI
-UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32);
+UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32, 1.0f, 1.0f);
 
 // JSON
 { "id": "comboMain", "type": "combo-box",
@@ -107,7 +107,7 @@ BENCH->addControl(combo2);</code></pre>
 
 <h2>4.6.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle box = UICornerstone_CreateComboBox(g_inst, 20, 20, 160, 26);
+<pre><code>UIControlHandle box = UICornerstone_CreateComboBox(g_inst, 20, 20, 160, 26, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, box, "items", "Red,Green,Blue");  // 逗号分隔
 UICornerstone_SetInt(g_inst, box, "selected-index", 1);

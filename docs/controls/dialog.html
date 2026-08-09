@@ -22,7 +22,7 @@ Dialog(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 DialogBuilder(parent, rect).setCentered().setOnConfirm(cb).setOnCancel(cb2).build();
 
 // C ABI（创建即 open()，并加入 popupPool 保持生命期）
-UIControlHandle dlg = UICornerstone_CreateDialog(g_inst, "OK", "Cancel", 0, 0, 296, 440);
+UIControlHandle dlg = UICornerstone_CreateDialog(g_inst, "OK", "Cancel", 0, 0, 296, 440, 1.0f, 1.0f);
 
 // C++ Binding
 auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);   // 居中弹窗
@@ -95,7 +95,7 @@ dialog.SetBool("visible", true);   // 打开弹窗</code></pre>
 
 <h2>4.7.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle dlg = UICornerstone_CreateDialog(g_inst, "确定", "取消", 200, 150, 320, 180);
+<pre><code>UIControlHandle dlg = UICornerstone_CreateDialog(g_inst, "确定", "取消", 200, 150, 320, 180, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, dlg, "confirm-text", "好的");
 UICornerstone_SetBool(g_inst, dlg, "close-on-esc", 1);

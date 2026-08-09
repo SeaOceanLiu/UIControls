@@ -30,10 +30,10 @@ auto bar = MenuBarBuilder(BENCH).addMenu(u8"文件(F)", filePanel).build();
 BENCH->addControl(bar);
 
 // C ABI（组装顺序：MenuItem → MenuPanel → MenuBar）
-UIControlHandle item  = UICornerstone_CreateMenuItem(g_inst, "Open", 0);          // 0=Normal 1=Separator 2=SubMenu
-UIControlHandle panel = UICornerstone_CreateMenuPanel(g_inst);
+UIControlHandle item  = UICornerstone_CreateMenuItem(g_inst, "Open", 0, 1.0f, 1.0f);          // 0=Normal 1=Separator 2=SubMenu
+UIControlHandle panel = UICornerstone_CreateMenuPanel(g_inst, 1.0f, 1.0f);
 UICornerstone_MenuPanelAddItem(g_inst, panel, item);
-UIControlHandle bar   = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 32);
+UIControlHandle bar   = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 32, 1.0f, 1.0f);
 UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 
 
@@ -111,14 +111,14 @@ item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
 <h2>4.12.6 C ABI 调用样例</h2>
 
 <pre><code>// Menu 三件套：MenuBar + MenuPanel + MenuItem（type: 0=Normal, 1=Separator, 2=SubMenu）
-UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst);
-UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0);
+UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst, 1.0f, 1.0f);
+UIControlHandle open = UICornerstone_CreateMenuItem(g_inst, "Open", 0, 1.0f, 1.0f);
 UICornerstone_MenuPanelAddItem(g_inst, file, open);
 UICornerstone_MenuPanelAddSeparator(g_inst, file);
-UIControlHandle more = UICornerstone_CreateMenuPanel(g_inst);   // 子菜单面板
+UIControlHandle more = UICornerstone_CreateMenuPanel(g_inst, 1.0f, 1.0f);   // 子菜单面板
 UICornerstone_MenuItemSetSubMenu(g_inst, open, more);
 
-UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26);
+UIControlHandle bar = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 26, 1.0f, 1.0f);
 UICornerstone_MenuBarAddMenu(g_inst, bar, "File", file);
 
 // MenuItem 的 caption / checked / shortcut / click 走统一属性系统

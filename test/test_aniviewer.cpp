@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    UIControlHandle ani = UICornerstone_CreateAnimation(inst, jsoncReal.c_str(), 0, 0, 0, 0);
+    UIControlHandle ani = UICornerstone_CreateAnimation(inst, jsoncReal.c_str(), 0, 0, 0, 0, 1.0f, 1.0f);
     if (!ani) {
         printf("FAIL: 动画加载/prepare 失败 ('%s')\n", jsoncReal.c_str());
         UICornerstone_DestroyInstance(inst);
@@ -132,8 +132,8 @@ int main(int argc, char** argv) {
     if (fpsLblW < 120.0f) fpsLblW = 120.0f;
     char setFpsText[64] = {0};
     snprintf(setFpsText, sizeof(setFpsText), "set fps: %d", setFrameRate);
-    UIControlHandle lblSetFps = UICornerstone_CreateLabel(inst, setFpsText, 18.0f, 8.0f, 4.0f, fpsLblW, 26.0f);
-    UIControlHandle lblRealFps = UICornerstone_CreateLabel(inst, "real fps: -", 18.0f, (float)winW - 8.0f - fpsLblW, 4.0f, fpsLblW, 26.0f);
+    UIControlHandle lblSetFps = UICornerstone_CreateLabel(inst, setFpsText, 18.0f, 8.0f, 4.0f, fpsLblW, 26.0f, 1.0f, 1.0f);
+    UIControlHandle lblRealFps = UICornerstone_CreateLabel(inst, "real fps: -", 18.0f, (float)winW - 8.0f - fpsLblW, 4.0f, fpsLblW, 26.0f, 1.0f, 1.0f);
 
     uint64_t t0 = Platform::GetTicks();
     uint64_t fpsT0 = t0;

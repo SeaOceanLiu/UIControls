@@ -23,7 +23,7 @@ ProgressBarBuilder(parent, SRect(50, 190, 300, 30))
     .setValue(75.0f).setTextMode(ProgressBarTextMode::Percent).build();
 
 // C ABI
-UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95);
+UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95, 1.0f, 1.0f);
 
 // JSON
 { "type": "progress-bar", "id": "loadProgress",
@@ -98,7 +98,7 @@ BENCH->addControl(p3);</code></pre>
 
 <h2>4.15.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 20, 20, 300, 20);
+<pre><code>UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 20, 20, 300, 20, 1.0f, 1.0f);
 
 UICornerstone_SetFloat(g_inst, bar, "value", 40);
 UICornerstone_SetFloat(g_inst, bar, "range-max", 100);

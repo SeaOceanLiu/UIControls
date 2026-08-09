@@ -25,7 +25,7 @@ ScrollBarBuilder(parent, SRect(380, 100, 20, 200), ScrollBarOrientation::Vertica
     .setRange(0, 1000).setPageSize(200).build();
 
 // C ABI（orientation: 0=Vertical 1=Horizontal）
-UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1);
+UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1, 1.0f, 1.0f);
 
 // JSON
 { "type": "scroll-bar", "id": "hScroll",
@@ -97,7 +97,7 @@ BENCH->addControl(vScrollBar);</code></pre>
 <h2>4.16.6 C ABI 调用样例</h2>
 
 <pre><code>// orientation: 0=垂直, 1=水平
-UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 20, 20, 12, 200, 0);
+UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 20, 20, 12, 200, 0, 1.0f, 1.0f);
 
 UICornerstone_SetFloat(g_inst, sb, "range-min", 0);
 UICornerstone_SetFloat(g_inst, sb, "range-max", 1000);

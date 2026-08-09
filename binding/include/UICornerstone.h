@@ -82,37 +82,37 @@ public:
     Control FindControl(const std::string& id);
 
     // ── 控件工厂 ──
-    Control CreateButton(const std::string& text, float x, float y, float w, float h);
-    Control CreateLabel(const std::string& text, float fontSize, float x, float y, float w, float h);
-    Control CreateCheckBox(const std::string& text, float x, float y, float w, float h);
-    Control CreateEditBox(float x, float y, float w, float h);
-    Control CreateProgressBar(float x, float y, float w, float h);
-    Control CreateSlider(float x, float y, float w, float h, float min, float max, float value);
-    Control CreatePanel(float x, float y, float w, float h);
-    Control CreateTextArea(float x, float y, float w, float h);
-    Control CreateWinFrame(const std::string& title, float x, float y, float w, float h);
-    Control CreateComboBox(float x, float y, float w, float h);
-    Control CreateColorPicker(float x, float y, float w, float h, const std::string& color);
-    Control CreateNumericUpDown(float x, float y, float w, float h);
-    Control CreateSplitter(float x, float y, float w, float h, int orientation);
+    Control CreateButton(const std::string& text, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateLabel(const std::string& text, float fontSize, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateCheckBox(const std::string& text, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateEditBox(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateProgressBar(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateSlider(float x, float y, float w, float h, float min, float max, float value, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreatePanel(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateTextArea(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateWinFrame(const std::string& title, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateComboBox(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateColorPicker(float x, float y, float w, float h, const std::string& color, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateNumericUpDown(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateSplitter(float x, float y, float w, float h, int orientation, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateImageButton(const std::string& normal, const std::string& hover,
-                              const std::string& pressed, float x, float y, float w, float h);
-    Control CreateImage(const std::string& image, float x, float y, float w, float h);
-    Control CreateAnimation(const std::string& jsoncPath, float x, float y, float w, float h);
+                              const std::string& pressed, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateImage(const std::string& image, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateAnimation(const std::string& jsoncPath, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateDialog(const std::string& confirmText, const std::string& cancelText,
-                         float x, float y, float w, float h);
+                         float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
 
     // ── 菜单族 / 滚动条 / 树 / 句柄 ──
-    Control CreateMenuBar(float x, float y, float w, float h);
-    Control CreateMenuPanel();
-    Control CreateMenuItem(const std::string& caption, int type);
+    Control CreateMenuBar(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateMenuPanel(float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateMenuItem(const std::string& caption, int type, float xScale = 1.0f, float yScale = 1.0f);
     void MenuBarAddMenu(Control& bar, const std::string& caption, Control& panel);
     void MenuPanelAddItem(Control& panel, Control& item);
     void MenuPanelAddSeparator(Control& panel);
     void MenuItemSetSubMenu(Control& item, Control& panel);
-    Control CreateScrollBar(float x, float y, float w, float h, int orientation);
-    Control CreateTreeView(float x, float y, float w, float h);
-    Control CreateHandleControl(Control target, float x, float y, float w, float h);
+    Control CreateScrollBar(float x, float y, float w, float h, int orientation, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateTreeView(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateHandleControl(Control target, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
 
     // ── 视口 ──
     void SetViewport(float x, float y, float w, float h);

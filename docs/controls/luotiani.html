@@ -25,7 +25,7 @@ LuotiAniBuilder(BENCH.get())
     .prepare().setAutoStart().build();
 
 // C ABI（w/h 传 0 时 prepare 回退到 JSON overview.view 画布尺寸；失败返回 NULL）
-UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20, 256, 256);
+UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20, 256, 256, 1.0f, 1.0f);
 
 // C++ Binding
 Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0);</code></pre>
@@ -86,7 +86,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <h2>4.11.5 C++ Binding / C ABI 样例</h2>
 
 <pre><code>// C ABI
-UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256);
+UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256, 1.0f, 1.0f);
 UICornerstone_SetBool(g_uiInstance, h, "playing", 1);
 UICornerstone_SetBool(g_uiInstance, h, "loop", 1);
 UICornerstone_SetInt (g_uiInstance, h, "frame", 10);   // 跳帧

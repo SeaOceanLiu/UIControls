@@ -865,10 +865,11 @@ void UICornerstone_RegisterAction(UIInstance instance, const char* name, UIActio
 // 控件工厂
 // ============================================================
 UIControlHandle UICornerstone_CreateButton(UIInstance instance, const char* text,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     if (text) ctl->setCaption(text);
     instance->bench->addControl(ctl);
     ctl->create();
@@ -877,10 +878,11 @@ UIControlHandle UICornerstone_CreateButton(UIInstance instance, const char* text
 }
 
 UIControlHandle UICornerstone_CreateLabel(UIInstance instance, const char* text, float fontSize,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<Label>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<Label>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     if (text) ctl->setCaption(text);
     ctl->setFont(FontName::HarmonyOS_Sans_SC_Regular);
     if (fontSize > 0) ctl->setFontSize((int)fontSize);
@@ -891,10 +893,11 @@ UIControlHandle UICornerstone_CreateLabel(UIInstance instance, const char* text,
 }
 
 UIControlHandle UICornerstone_CreateCheckBox(UIInstance instance, const char* text,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<CheckBox>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<CheckBox>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     ctl->createCaption();
     if (text) ctl->getCaption()->setCaption(text);
     instance->bench->addControl(ctl);
@@ -904,10 +907,11 @@ UIControlHandle UICornerstone_CreateCheckBox(UIInstance instance, const char* te
 }
 
 UIControlHandle UICornerstone_CreateEditBox(UIInstance instance,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<EditBox>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<EditBox>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
@@ -915,10 +919,11 @@ UIControlHandle UICornerstone_CreateEditBox(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreateProgressBar(UIInstance instance,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<ProgressBar>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<ProgressBar>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
@@ -926,10 +931,11 @@ UIControlHandle UICornerstone_CreateProgressBar(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreateSlider(UIInstance instance,
-    float x, float y, float w, float h, float min, float max, float value)
+    float x, float y, float w, float h, float min, float max, float value,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<Slider>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<Slider>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     ctl->setRange(min, max);
     ctl->setValue(value);
     instance->bench->addControl(ctl);
@@ -939,10 +945,11 @@ UIControlHandle UICornerstone_CreateSlider(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreatePanel(UIInstance instance,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<Panel>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<Panel>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
@@ -950,10 +957,11 @@ UIControlHandle UICornerstone_CreatePanel(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreateTextArea(UIInstance instance,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<TextArea>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<TextArea>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
@@ -961,10 +969,11 @@ UIControlHandle UICornerstone_CreateTextArea(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreateWinFrame(UIInstance instance,
-    const char* title, float x, float y, float w, float h)
+    const char* title, float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<WinFrame>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<WinFrame>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     if (title) ctl->setTitle(title);
     ctl->setTitleTextColor(SColor(0, 0, 0, 255));
     instance->bench->addControl(ctl);
@@ -973,28 +982,31 @@ UIControlHandle UICornerstone_CreateWinFrame(UIInstance instance,
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateMenuBar(UIInstance instance, float x, float y, float w, float h) {
+UIControlHandle UICornerstone_CreateMenuBar(UIInstance instance, float x, float y, float w, float h,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
-    auto bar = make_shared<MenuBar>(instance->bench, 1.0f, 1.0f);
+    auto bar = make_shared<MenuBar>(instance->bench, xScale, yScale);
     bar->setRect(SRect(x, y, w, h));
     instance->bench->addControl(bar);
     bar->create();
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(bar.get()));
 }
 
-UIControlHandle UICornerstone_CreateMenuPanel(UIInstance instance) {
+UIControlHandle UICornerstone_CreateMenuPanel(UIInstance instance,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
-    auto panel = make_shared<MenuPanel>(nullptr, 1.0f, 1.0f);
+    auto panel = make_shared<MenuPanel>(nullptr, xScale, yScale);
     panel->create();
     auto* p = reinterpret_cast<UIControlHandle>(static_cast<Control*>(panel.get()));
     menuPoolKeep(instance, panel);
     return p;
 }
 
-UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* caption, int type) {
+UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* caption, int type,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
     if (type < 0 || type > 2) return nullptr;
-    auto item = make_shared<MenuItem>(nullptr, static_cast<MenuItemType>(type), 1.0f, 1.0f);
+    auto item = make_shared<MenuItem>(nullptr, static_cast<MenuItemType>(type), xScale, yScale);
     if (caption) item->setCaption(caption);
     item->create();
     auto* p = reinterpret_cast<UIControlHandle>(static_cast<Control*>(item.get()));
@@ -1045,20 +1057,20 @@ void UICornerstone_MenuItemSetSubMenu(UIInstance instance, UIControlHandle item,
 
 UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
     const char* normalImage, const char* hoverImage, const char* pressedImage,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h, float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     if (normalImage) {
-        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(normalImage), true);
+        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(normalImage), true, xScale, yScale);
         ctl->setNormalStateActor(actor);
     }
     if (hoverImage) {
-        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(hoverImage), true);
+        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(hoverImage), true, xScale, yScale);
         ctl->setHoverStateActor(actor);
     }
     if (pressedImage) {
-        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(pressedImage), true);
+        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(pressedImage), true, xScale, yScale);
         ctl->setPressedStateActor(actor);
     }
     instance->bench->addControl(ctl);
@@ -1068,12 +1080,12 @@ UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreateImage(UIInstance instance,
-    const char* image, float x, float y, float w, float h)
+    const char* image, float x, float y, float w, float h, float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
     // Actor 构造家族无 SRect 参数（Actor.h 仅 parent/xScale/yScale/filePath/resourceId），
     // 用构造 + setRect（构造时已 setParent(bench)，Actor.cpp:10）
-    auto actor = std::make_shared<Actor>(instance->bench, 1.0f, 1.0f);
+    auto actor = std::make_shared<Actor>(instance->bench, xScale, yScale);
     actor->setRect(SRect(x, y, w, h));                 // 显式 rect 优先（见 Image_Design §6.1）
     if (image) actor->loadFromFile(fs::path(image));   // 两阶段：挂树后 create() 加载
     instance->bench->addControl(actor);                // shared_ptr 生命周期安全
@@ -1083,10 +1095,10 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
 }
 
 UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
-    const char* jsoncPath, float x, float y, float w, float h)
+    const char* jsoncPath, float x, float y, float w, float h, float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ani = std::make_shared<LuotiAni>(instance->bench);   // 构造不加载（同 Button.cpp:345 用法）
+    auto ani = std::make_shared<LuotiAni>(instance->bench, xScale, yScale);   // 构造不加载（同 Button.cpp:345 用法）
     ani->setRect(SRect(x, y, w, h));                          // w/h 传 0 → prepare 回退到画布尺寸
     instance->bench->addControl(ani);                         // setContext 传播
     if (jsoncPath) {
@@ -1174,10 +1186,11 @@ void UICornerstone_DestroyControl(UIInstance instance, UIControlHandle ctl) {
 // ColorPicker
 // ============================================================
 UIControlHandle UICornerstone_CreateColorPicker(UIInstance instance,
-    float x, float y, float w, float h, const char* color)
+    float x, float y, float w, float h, const char* color,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<ColorPicker>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<ColorPicker>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     if (color) ctl->setColor(color);
     instance->bench->addControl(ctl);
     ctl->create();
@@ -1189,10 +1202,11 @@ UIControlHandle UICornerstone_CreateColorPicker(UIInstance instance,
 // ComboBox
 // ============================================================
 UIControlHandle UICornerstone_CreateComboBox(UIInstance instance,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h,
+    float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<ComboBox>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<ComboBox>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(ctl);
     ctl->create();
     ctl->setVisible(true);
@@ -1204,10 +1218,10 @@ UIControlHandle UICornerstone_CreateComboBox(UIInstance instance,
 // ============================================================
 UIControlHandle UICornerstone_CreateDialog(UIInstance instance,
     const char* confirmText, const char* cancelText,
-    float x, float y, float w, float h)
+    float x, float y, float w, float h, float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
-    auto ctl = std::make_shared<Dialog>(instance->bench, SRect(x, y, w, h));
+    auto ctl = std::make_shared<Dialog>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     if (confirmText) ctl->setConfirmButtonText(confirmText);
     if (cancelText) ctl->setCancelButtonText(cancelText);
     ctl->setCentered();
@@ -1222,9 +1236,10 @@ UIControlHandle UICornerstone_CreateDialog(UIInstance instance,
 
 // ── NumericUpDown C ABI ──
 
-UIControlHandle UICornerstone_CreateNumericUpDown(UIInstance instance, float x, float y, float w, float h) {
+UIControlHandle UICornerstone_CreateNumericUpDown(UIInstance instance, float x, float y, float w, float h,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
-    auto nud = make_shared<NumericUpDown>(instance->bench, SRect(x, y, w, h));
+    auto nud = make_shared<NumericUpDown>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(nud);
     nud->create();
     nud->setVisible(true);
@@ -1233,9 +1248,10 @@ UIControlHandle UICornerstone_CreateNumericUpDown(UIInstance instance, float x, 
 
 // ── Splitter C ABI ──
 
-UIControlHandle UICornerstone_CreateSplitter(UIInstance instance, float x, float y, float w, float h, int orientation) {
+UIControlHandle UICornerstone_CreateSplitter(UIInstance instance, float x, float y, float w, float h, int orientation,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
-    auto sp = make_shared<Splitter>(instance->bench, SRect(x, y, w, h));
+    auto sp = make_shared<Splitter>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     sp->setOrientation(orientation != 0);
     instance->bench->addControl(sp);
     sp->create();
@@ -1243,19 +1259,22 @@ UIControlHandle UICornerstone_CreateSplitter(UIInstance instance, float x, float
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sp.get()));
 }
 
-UIControlHandle UICornerstone_CreateScrollBar(UIInstance instance, float x, float y, float w, float h, int orientation) {
+UIControlHandle UICornerstone_CreateScrollBar(UIInstance instance, float x, float y, float w, float h, int orientation,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
     auto sb = make_shared<ScrollBar>(instance->bench, SRect(x, y, w, h),
-        orientation != 0 ? ScrollBarOrientation::Horizontal : ScrollBarOrientation::Vertical);
+        orientation != 0 ? ScrollBarOrientation::Horizontal : ScrollBarOrientation::Vertical,
+        xScale, yScale);
     instance->bench->addControl(sb);
     sb->create();
     sb->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(sb.get()));
 }
 
-UIControlHandle UICornerstone_CreateTreeView(UIInstance instance, float x, float y, float w, float h) {
+UIControlHandle UICornerstone_CreateTreeView(UIInstance instance, float x, float y, float w, float h,
+    float xScale, float yScale) {
     if (!instance || !instance->initialized) return nullptr;
-    auto tv = make_shared<TreeView>(instance->bench, SRect(x, y, w, h));
+    auto tv = make_shared<TreeView>(instance->bench, SRect(x, y, w, h), xScale, yScale);
     instance->bench->addControl(tv);
     tv->create();
     tv->setVisible(true);
@@ -1263,12 +1282,15 @@ UIControlHandle UICornerstone_CreateTreeView(UIInstance instance, float x, float
 }
 
 UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
-    UIControlHandle target, float x, float y, float w, float h) {
+    UIControlHandle target, float x, float y, float w, float h,
+    float xScale, float yScale) {
     if (!instance || !target) return nullptr;
     Control* targetV = validateControl(instance, target);
     if (!targetV) return nullptr;
     auto hc = make_shared<HandleControl>();
     hc->setRect(SRect(x, y, w, h));
+    hc->setScaleX(xScale);
+    hc->setScaleY(yScale);
     hc->create();
     hc->setTarget(targetV);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(hc.get()));

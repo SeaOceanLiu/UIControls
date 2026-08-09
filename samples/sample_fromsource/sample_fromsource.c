@@ -77,22 +77,22 @@ int main(void) {
 
     // ── 创建控件（C ABI 工厂函数，与静态模式完全一样） ──────────
 
-    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480, 1.0f, 1.0f);
 
     UIControlHandle title = UICornerstone_CreateLabel(
         g_inst, "UICornerstone Sample (Hybrid)", 18,
-        20, 10, 760, 30);
+        20, 10, 760, 30, 1.0f, 1.0f);
     UICornerstone_AddChildControl(g_inst, root, title);
 
     UIControlHandle btn = UICornerstone_CreateButton(g_inst, "Click Me",
-        20, 60, 200, 80);
+        20, 60, 200, 80, 1.0f, 1.0f);
     UICornerstone_SetColor(g_inst, btn, kBackground, (UIColor){74, 144, 217, 255});
     UICornerstone_SetCallback(g_inst, btn, kEventClick, onBtnClick, NULL);
     UICornerstone_AddChildControl(g_inst, root, btn);
 
     g_statusLabel = UICornerstone_CreateLabel(
         g_inst, "Click the button above", 14,
-        20, 160, 400, 24);
+        20, 160, 400, 24, 1.0f, 1.0f);
     UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
     // ── 帧循环（与静态模式完全相同） ──────────────────────────

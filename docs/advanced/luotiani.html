@@ -163,7 +163,7 @@ BENCH-&gt;addControl(btn);</code></pre>
 <h2>5.1.4 C ABI 调用（CreateAnimation）</h2>
 
 <pre><code>// 创建：w/h 传 0 回退到 JSON overview.view 画布尺寸；失败返回 NULL
-UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA3.jsonc", 60, 60, 256, 256);
+UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA3.jsonc", 60, 60, 256, 256, 1.0f, 1.0f);
 UICornerstone_SetBool(g_inst, ani, "playing", 1);   // 播放（每次置 1 帧复位 0 重播）
 UICornerstone_GetInt(g_inst, ani, "frame", &amp;f);      // 读当前帧
 UICornerstone_SetBool(g_inst, ani, "playing", 0);   // 暂停（帧停住）

@@ -23,7 +23,7 @@ TextAreaBuilder(parent, SRect(750, 360, 200, 100), 2.0f, 2.0f)
     .setText("2x scaled TextArea").setWordWrap(true).setLineHeight(22).build();
 
 // C ABI
-UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 5, 5, 750, 160);
+UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 5, 5, 750, 160, 1.0f, 1.0f);
 
 // JSON
 { "type": "text-area", "id": "notesTextArea",
@@ -94,7 +94,7 @@ BENCH->addControl(ta2);</code></pre>
 
 <h2>4.19.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 20, 20, 300, 200);
+<pre><code>UIControlHandle ta = UICornerstone_CreateTextArea(g_inst, 20, 20, 300, 200, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, ta, "text", "第一行\n第二行");
 UICornerstone_SetBool(g_inst, ta, "read-only", 1);

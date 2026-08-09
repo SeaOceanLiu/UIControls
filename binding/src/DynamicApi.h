@@ -55,33 +55,33 @@ struct Api {
     void            (*fnRegisterAction)(UIInstance, const char*, UIActionCallback, void*) = nullptr;
 
     // 编程式控件创建
-    UIControlHandle (*fnCreateButton)(UIInstance, const char*, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateLabel)(UIInstance, const char*, float, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateCheckBox)(UIInstance, const char*, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateEditBox)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateProgressBar)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateSlider)(UIInstance, float, float, float, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreatePanel)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateTextArea)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateWinFrame)(UIInstance, const char*, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateMenuBar)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateMenuPanel)(UIInstance) = nullptr;
-    UIControlHandle (*fnCreateMenuItem)(UIInstance, const char*, int) = nullptr;
+    UIControlHandle (*fnCreateButton)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateLabel)(UIInstance, const char*, float, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateCheckBox)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateEditBox)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateProgressBar)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateSlider)(UIInstance, float, float, float, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreatePanel)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateTextArea)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateWinFrame)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateMenuBar)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateMenuPanel)(UIInstance, float, float) = nullptr;
+    UIControlHandle (*fnCreateMenuItem)(UIInstance, const char*, int, float, float) = nullptr;
     void (*fnMenuBarAddMenu)(UIInstance, UIControlHandle, const char*, UIControlHandle) = nullptr;
     void (*fnMenuPanelAddItem)(UIInstance, UIControlHandle, UIControlHandle) = nullptr;
     void (*fnMenuPanelAddSeparator)(UIInstance, UIControlHandle) = nullptr;
     void (*fnMenuItemSetSubMenu)(UIInstance, UIControlHandle, UIControlHandle) = nullptr;
-    UIControlHandle (*fnCreateColorPicker)(UIInstance, float, float, float, float, const char*) = nullptr;
-    UIControlHandle (*fnCreateNumericUpDown)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateComboBox)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateSplitter)(UIInstance, float, float, float, float, int) = nullptr;
-    UIControlHandle (*fnCreateScrollBar)(UIInstance, float, float, float, float, int) = nullptr;
-    UIControlHandle (*fnCreateTreeView)(UIInstance, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateHandleControl)(UIInstance, UIControlHandle, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateImageButton)(UIInstance, const char*, const char*, const char*, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateImage)(UIInstance, const char*, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateAnimation)(UIInstance, const char*, float, float, float, float) = nullptr;
-    UIControlHandle (*fnCreateDialog)(UIInstance, const char*, const char*, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateColorPicker)(UIInstance, float, float, float, float, const char*, float, float) = nullptr;
+    UIControlHandle (*fnCreateNumericUpDown)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateComboBox)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateSplitter)(UIInstance, float, float, float, float, int, float, float) = nullptr;
+    UIControlHandle (*fnCreateScrollBar)(UIInstance, float, float, float, float, int, float, float) = nullptr;
+    UIControlHandle (*fnCreateTreeView)(UIInstance, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateHandleControl)(UIInstance, UIControlHandle, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateImageButton)(UIInstance, const char*, const char*, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateImage)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateAnimation)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateDialog)(UIInstance, const char*, const char*, float, float, float, float, float, float) = nullptr;
 
     // 控件通用操作
     void (*fnSetRect)(UIInstance, UIControlHandle, float, float, float, float) = nullptr;

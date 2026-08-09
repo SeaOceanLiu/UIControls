@@ -110,7 +110,7 @@ static void removeAni(UIControlHandle h) {
 void testA1Create(void) {
     g_caseIndex++;
     writeJson("tA1.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A1 create returns handle");
     reg(h);
     if (h) {
@@ -123,7 +123,7 @@ void testA1Create(void) {
 void testA2NoAutoPlay(void) {
     g_caseIndex++;
     writeJson("tA2.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA2.jsonc", 40, 40, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA2.jsonc", 40, 40, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A2 create returns handle");
     reg(h);
     if (h) {
@@ -136,7 +136,7 @@ void testA2NoAutoPlay(void) {
 void testA3PlayPauseReplay(void) {
     g_caseIndex++;
     writeJson("tA3.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA3.jsonc", 60, 60, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA3.jsonc", 60, 60, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A3 create returns handle");
     reg(h);
     if (!h) return;
@@ -168,7 +168,7 @@ void testA3PlayPauseReplay(void) {
 void testA4Loop(void) {
     g_caseIndex++;
     writeJson("tA4.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA4.jsonc", 80, 80, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA4.jsonc", 80, 80, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A4 create returns handle");
     reg(h);
     if (!h) return;
@@ -182,7 +182,7 @@ void testA4Loop(void) {
 void testA5FrameSeek(void) {
     g_caseIndex++;
     writeJson("tA5.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA5.jsonc", 100, 100, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA5.jsonc", 100, 100, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A5 create returns handle");
     reg(h);
     if (!h) return;
@@ -202,7 +202,7 @@ void testA6SwitchAnimation(void) {
     g_caseIndex++;
     writeJson("tA6a.jsonc", makeAnimationDoc(30));
     writeJson("tA6b.jsonc", makeAnimationDoc(60));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA6a.jsonc", 120, 120, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA6a.jsonc", 120, 120, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A6 create returns handle");
     reg(h);
     if (!h) return;
@@ -239,7 +239,7 @@ void testA7HitTestOcclusion(void) {
         .build();
     btn->create();
     BENCH->addControl(btn);
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA7.jsonc", 280, 285, 160, 80);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA7.jsonc", 280, 285, 160, 80, 1.0f, 1.0f);
     CHECK(h != nullptr, "A7 create returns handle");
     reg(h);
     int clicks = 0;
@@ -261,7 +261,7 @@ void testA7HitTestOcclusion(void) {
 void testA8RenderSmoke(void) {
     g_caseIndex++;
     writeJson("tA8.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA8.jsonc", 160, 160, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA8.jsonc", 160, 160, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A8 create returns handle");
     reg(h);
     if (!h) return;
@@ -277,17 +277,17 @@ void testA8RenderSmoke(void) {
 void testA9ErrorBoundary(void) {
     g_caseIndex++;
     // 无效路径创建 → nullptr 不崩溃（§6.4-1）
-    UIControlHandle hBad = UICornerstone_CreateAnimation(g_uiInstance, "no_such_anim.jsonc", 0, 0, 256, 256);
+    UIControlHandle hBad = UICornerstone_CreateAnimation(g_uiInstance, "no_such_anim.jsonc", 0, 0, 256, 256, 1.0f, 1.0f);
     CHECK(hBad == nullptr, "A9 invalid path create returns nullptr");
     // 副本 jsonc 作无效输入（风险 10）：资源引用缺失 → prepare 抛异常 → nullptr
     json badDoc = makeAnimationDoc(30);
     badDoc["layers"][0]["src"] = "animations/does_not_exist/does_not_exist.svg";
     writeJson("bombBlock - 副本.jsonc", badDoc);
-    UIControlHandle hBad2 = UICornerstone_CreateAnimation(g_uiInstance, "bombBlock - 副本.jsonc", 0, 0, 256, 256);
+    UIControlHandle hBad2 = UICornerstone_CreateAnimation(g_uiInstance, "bombBlock - 副本.jsonc", 0, 0, 256, 256, 1.0f, 1.0f);
     CHECK(hBad2 == nullptr, "A9 copy jsonc create returns nullptr");
     // SetString("animation") 无效路径 → 返回 0、控件保留（§6.4-2）
     writeJson("tA9.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA9.jsonc", 180, 180, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA9.jsonc", 180, 180, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A9 create returns handle");
     reg(h);
     if (h) {
@@ -310,7 +310,7 @@ void testA10CanvasSizeFallback(void) {
     g_caseIndex++;
     writeJson("tA10.jsonc", makeAnimationDoc(30, 256, 256));
     // w/h=0 → prepare 回退到 overview.view 画布尺寸
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA10.jsonc", 0, 0, 0, 0);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA10.jsonc", 0, 0, 0, 0, 1.0f, 1.0f);
     CHECK(h != nullptr, "A10 create returns handle");
     reg(h);
     if (h) {
@@ -345,7 +345,7 @@ void testA11EasingPathEndToEnd(void) {
         {"layers", json::array({layer})}
     };
     writeJson("tA11.jsonc", doc);
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA11.jsonc", 200, 200, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA11.jsonc", 200, 200, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A11 create returns handle");
     reg(h);
     if (!h) return;
@@ -368,7 +368,7 @@ void testA11EasingPathEndToEnd(void) {
 void testA12ScaleFollowCABI(void) {
     g_caseIndex++;
     writeJson("tA12.jsonc", makeAnimationDoc(30));
-    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA12.jsonc", 240, 240, 256, 256);
+    UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA12.jsonc", 240, 240, 256, 256, 1.0f, 1.0f);
     CHECK(h != nullptr, "A12 create returns handle");
     reg(h);
     if (!h) return;

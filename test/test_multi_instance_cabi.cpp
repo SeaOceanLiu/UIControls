@@ -26,7 +26,7 @@ typedef void       (*UIRenderFn)(UIInstance);
 typedef uint32_t   (*UIGetBackendCapabilitiesFn)(UIInstance);
 typedef void       (*UIPushUIEventFn)(UIInstance, const UIEvent*);
 typedef int        (*UIIsQuitRequestedFn)(UIInstance);
-typedef void*      (*UICreateButtonFn)(UIInstance, const char*, float, float, float, float);
+typedef void*      (*UICreateButtonFn)(UIInstance, const char*, float, float, float, float, float, float);
 typedef UIInstance (*UICreateViewportFn)(UIInstance, UIRect);
 typedef int        (*UISetCallbackFn)(UIInstance, void*, const char*, void(*)(void*, const UIEventData*, void*), void*);
 typedef void       (*UIRegisterActionFn)(UIInstance, const char*, void(*)(void*, void*), void*);
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
     uiUpdate(NULL, 0.016);
     uiRender(NULL);
     uiDestroyInstance(NULL);
-    assert(uiCreateButton(NULL, "OK", 0, 0, 100, 30) == NULL);
+    assert(uiCreateButton(NULL, "OK", 0, 0, 100, 30, 1.0f, 1.0f) == NULL);
     assert(uiCreateViewport(NULL, UIRect{0, 0, 100, 100}) == NULL);
     uiSetRect(NULL, NULL, 0, 0, 10, 10); // void，仅验证不崩溃
     UIEvent evt0 = {};
@@ -163,8 +163,8 @@ int main(int argc, char* argv[]) {
     // 实例为 headless，渲染会串扰到主实例窗口）
     bool multiWindow = (uiGetBackendCapabilities(inst1) & UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
 
-    UIControlHandle btn1 = uiCreateButton(inst1, "OK", 0, 0, 100, 30);
-    UIControlHandle btn2 = uiCreateButton(inst2, "OK", 0, 0, 100, 30);
+    UIControlHandle btn1 = uiCreateButton(inst1, "OK", 0, 0, 100, 30, 1.0f, 1.0f);
+    UIControlHandle btn2 = uiCreateButton(inst2, "OK", 0, 0, 100, 30, 1.0f, 1.0f);
     assert(btn1 && btn2);
     assert(btn1 != btn2);
 

@@ -275,24 +275,25 @@ typedef void (*UIActionCallback)(UIControlHandle ctl, void* userData);
 UICORNERSTONE_API void UICornerstone_RegisterAction(UIInstance instance, const char* name, UIActionCallback cb, void* userData);
 
 /* ============ 编程式控件创建 ============ */
+// xScale/yScale 为初始缩放系数（内容按系数缩放渲染，默认 1.0f = 原尺寸）
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateButton(UIInstance instance, const char* text,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateLabel(UIInstance instance, const char* text, float fontSize,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateCheckBox(UIInstance instance, const char* text,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateEditBox(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateProgressBar(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateSlider(UIInstance instance,
-    float x, float y, float w, float h, float min, float max, float value);
+    float x, float y, float w, float h, float min, float max, float value, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreatePanel(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateTextArea(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateWinFrame(UIInstance instance,
-    const char* title, float x, float y, float w, float h);
+    const char* title, float x, float y, float w, float h, float xScale, float yScale);
 /* ============ Menu 三件套（MenuBar / MenuPanel / MenuItem） ============ */
 // Menu 是一组控件：MenuBar 为顶层菜单栏，MenuPanel 为下拉面板，
 // MenuItem 为菜单项。组装顺序：
@@ -303,9 +304,10 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateWinFrame(UIInstance instan
 // MenuItem 的 caption/checked/shortcut/click 走统一属性系统
 // （SetString/SetBool/SetCallback，事件名 "click"）
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuBar(UIInstance instance,
-    float x, float y, float w, float h);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuPanel(UIInstance instance);
-UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* caption, int type);
+    float x, float y, float w, float h, float xScale, float yScale);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuPanel(UIInstance instance, float xScale, float yScale);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateMenuItem(UIInstance instance, const char* caption, int type,
+    float xScale, float yScale);
 UICORNERSTONE_API void UICornerstone_MenuBarAddMenu(UIInstance instance,
     UIControlHandle bar, const char* caption, UIControlHandle panel);
 UICORNERSTONE_API void UICornerstone_MenuPanelAddItem(UIInstance instance,
@@ -314,24 +316,24 @@ UICORNERSTONE_API void UICornerstone_MenuPanelAddSeparator(UIInstance instance, 
 UICORNERSTONE_API void UICornerstone_MenuItemSetSubMenu(UIInstance instance,
     UIControlHandle item, UIControlHandle panel);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateColorPicker(UIInstance instance,
-    float x, float y, float w, float h, const char* color);
+    float x, float y, float w, float h, const char* color, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateNumericUpDown(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateComboBox(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateSplitter(UIInstance instance,
-    float x, float y, float w, float h, int orientation);
+    float x, float y, float w, float h, int orientation, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateScrollBar(UIInstance instance,
-    float x, float y, float w, float h, int orientation);
+    float x, float y, float w, float h, int orientation, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateTreeView(UIInstance instance,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
-    UIControlHandle target, float x, float y, float w, float h);
+    UIControlHandle target, float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
     const char* normalImage,
     const char* hoverImage,
     const char* pressedImage,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 
 /* ============ Image 图片控件 ============ */
 // image 为文件路径（可为 NULL，之后经 UICornerstone_SetString(inst, ctl, "image", path) 设置；
@@ -339,17 +341,18 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(UIInstance ins
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateImage(
     UIInstance instance,
     const char* image,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 
 /* ============ LuotiAni 动画控件 ============ */
 // jsoncPath 为动画描述文件路径（相对路径经基路径拼接），可为 NULL（之后经
 // UICornerstone_SetString(inst, ctl, "animation", path) 设置）；
 // 创建后不自动播放（显式经 UICornerstone_SetBool(inst, ctl, "playing", 1) 控制）；
 // w/h 传 0 → prepare 回退到 JSON overview.view 画布尺寸；加载失败返回 NULL。
+// xScale/yScale 为初始缩放系数（默认 1.0f）。
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateAnimation(
     UIInstance instance,
     const char* jsoncPath,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 
 /* ============ 控件通用操作 ============ */
 UICORNERSTONE_API void UICornerstone_SetRect(UIInstance instance, UIControlHandle ctl, float x, float y, float w, float h);
@@ -361,7 +364,7 @@ UICORNERSTONE_API const char* UICornerstone_GetControlId(UIInstance instance, UI
 /* ============ Dialog/Popup ============ */
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(UIInstance instance,
     const char* confirmText, const char* cancelText,
-    float x, float y, float w, float h);
+    float x, float y, float w, float h, float xScale, float yScale);
 
 /* ============ 属性系统 (统一字符串名 + 多类型入口) ============ */
 

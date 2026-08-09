@@ -28,7 +28,7 @@ ColorPickerBuilder(parent, SRect(X1, 30, 96, 24))
     .setColor("#FF0000").setOnColorChanged(cb).build();
 
 // C ABI
-UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "#FF6600");
+UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "#FF6600", 1.0f, 1.0f);
 
 // JSON
 { "type": "color-picker", "id": "testColorPicker",
@@ -101,7 +101,7 @@ BENCH->addControl(cp2);</code></pre>
 <h2>4.5.6 C ABI 调用样例</h2>
 
 <pre><code>// 初始颜色以 "#RRGGBB" 字符串传入
-UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 20, 20, 120, 28, "#4A90D9");
+UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 20, 20, 120, 28, "#4A90D9", 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, cp, "color-hex", "#3A80C9");
 UICornerstone_SetInt(g_inst, cp, "preset-rows", 4);

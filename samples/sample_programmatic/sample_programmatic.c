@@ -74,17 +74,17 @@ int main(void) {
     //   父控件裁剪子控件的绘制区域。
 
     // 1) 创建根 Panel（覆盖整个视口）
-    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480);
+    UIControlHandle root = UICornerstone_CreatePanel(g_inst, 0, 0, 800, 480, 1.0f, 1.0f);
 
     // 2) 创建标题标签并挂到根
     UIControlHandle title = UICornerstone_CreateLabel(
         g_inst, "UICornerstone Sample (Programmatic)", 18,
-        20, 10, 760, 30);
+        20, 10, 760, 30, 1.0f, 1.0f);
     UICornerstone_AddChildControl(g_inst, root, title);
 
     // 3) 创建按钮
     UIControlHandle btn = UICornerstone_CreateButton(g_inst, "Click Me",
-        20, 60, 200, 80);
+        20, 60, 200, 80, 1.0f, 1.0f);
 
     // SetColor: 通过属性系统设置 background 色，自动生成 hover（变亮 ~30%）和
     // pressed（变暗 ~30%）。参数为 UIColor 结构体（RGBA 分量 0-255）。
@@ -98,7 +98,7 @@ int main(void) {
     // 4) 创建状态标签（用于显示点击次数）
     g_statusLabel = UICornerstone_CreateLabel(
         g_inst, "Click the button above", 14,
-        20, 160, 400, 24);
+        20, 160, 400, 24, 1.0f, 1.0f);
     UICornerstone_AddChildControl(g_inst, root, g_statusLabel);
 
     // ── 帧循环（与 JSON 示例完全相同） ──────────────────────────

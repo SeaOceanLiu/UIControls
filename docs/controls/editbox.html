@@ -22,7 +22,7 @@ EditBox(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 EditBoxBuilder(parent, SRect(50, 50, 300, 40)).setPlaceholder("Type here...").build();
 
 // C ABI
-UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95);
+UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0f, 1.0f);
 
 // JSON
 { "type": "edit-box", "id": "nameEdit",
@@ -84,7 +84,7 @@ edit.SetCallback(PropertyNames::kEventEnter, [](const Event&) {
 
 <h2>4.8.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle box = UICornerstone_CreateEditBox(g_inst, 20, 20, 200, 30);
+<pre><code>UIControlHandle box = UICornerstone_CreateEditBox(g_inst, 20, 20, 200, 30, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, box, "text", "hello");
 UICornerstone_SetString(g_inst, box, "placeholder", "请输入…");

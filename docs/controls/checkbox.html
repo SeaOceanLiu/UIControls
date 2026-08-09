@@ -22,7 +22,7 @@ CheckBox(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 CheckBoxBuilder(parent, SRect(50, 50, 200, 30)).setCaptionText("Accept").setOnCheckChanged(cb).build();
 
 // C ABI
-UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 50, 50, 100, 30);
+UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 50, 50, 100, 30, 1.0f, 1.0f);
 
 // JSON
 { "type": "check-box", "id": "agreeCheck", "rect": { "x": 240, "y": 432, "w": 180, "h": 30 },
@@ -84,7 +84,7 @@ cb.SetCallback(PropertyNames::kEventCheckChanged, [](const Event& e) {
 
 <h2>4.4.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 20, 20, 24, 24);
+<pre><code>UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 20, 20, 24, 24, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, cb, "caption", "同意协议");
 UICornerstone_SetBool(g_inst, cb, "tri-state", 1);      // 三态

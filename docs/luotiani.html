@@ -81,7 +81,7 @@ printf("frame=%u/%u, playing=%d\n",
 <h2>3.7.4 属性系统 / C ABI</h2>
 
 <pre><code>// C ABI
-UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20, 256, 256);
+UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20, 256, 256, 1.0f, 1.0f);
 UICornerstone_SetBool(g_inst, ani, "playing", 1);   // 置 1 = play()（帧复位重播）；置 0 = pause()
 UICornerstone_SetBool(g_inst, ani, "loop", 1);
 UICornerstone_SetInt (g_inst, ani, "frame", 10);    // 跳帧

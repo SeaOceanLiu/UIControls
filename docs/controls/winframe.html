@@ -23,7 +23,7 @@ WinFrameBuilder(parent, SRect(100, 100, 400, 300))
     .setTitle("My Window").setTitleFontSize(24).setEdgeMargin(6.0f).setOnClose(cb).build();
 
 // C ABI
-UIControlHandle wf = UICornerstone_CreateWinFrame(g_inst, "Resizable WinFrame", 100, 100, 400, 300);
+UIControlHandle wf = UICornerstone_CreateWinFrame(g_inst, "Resizable WinFrame", 100, 100, 400, 300, 1.0f, 1.0f);
 
 // C++ Binding
 auto wf = ui->CreateWinFrame("Resizable WinFrame", 100, 100, 400, 300);
@@ -96,7 +96,7 @@ wf.AddChild(lbl);</code></pre>
 <h2>4.20.6 C ABI 调用样例</h2>
 
 <pre><code>// 窗口框架：可容纳子控件（如仪表盘弹窗）
-UIControlHandle wf = UICornerstone_CreateWinFrame(g_inst, "Settings", 100, 100, 360, 240);
+UIControlHandle wf = UICornerstone_CreateWinFrame(g_inst, "Settings", 100, 100, 360, 240, 1.0f, 1.0f);
 
 UICornerstone_SetString(g_inst, wf, "title", "设置");
 UICornerstone_SetBool(g_inst, wf, "resizable", 1);

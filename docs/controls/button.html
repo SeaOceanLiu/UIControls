@@ -22,7 +22,7 @@ Button(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
 ButtonBuilder(parent, SRect(20, 20, 120, 36)).setCaption("OK").setOnClick(cb).build();
 
 // C ABI
-UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36);
+UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 1.0f, 1.0f);
 
 // JSON
 { "type": "button", "id": "submitBtn", "rect": { "x": 280, "y": 140, "w": 100, "h": 35 },
@@ -84,7 +84,7 @@ button.SetBool(PropertyNames::kEnabled, false);</code></pre>
 <h2>4.3.6 C ABI 调用样例</h2>
 
 <pre><code>// 创建（见 4.3.1）：工厂 + 初始参数
-UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36);
+UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 1.0f, 1.0f);
 
 // 属性：泛型 Set*，键名见「控件的属性」表
 UICornerstone_SetString(g_inst, btn, "caption", "Submit");

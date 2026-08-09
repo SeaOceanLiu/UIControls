@@ -38,8 +38,8 @@ typedef UIInstance (*UICreateViewportFn)(UIInstance, UIRect);
 typedef void*      (*UIFindControlFn)(UIInstance, const char*);
 typedef int        (*UILoadLayoutFn)(UIInstance, const char*);
 typedef void       (*UIRegisterActionFn)(UIInstance, const char*, void(*)(void*, void*), void*);
-typedef void*      (*UICreateDialogFn)(UIInstance, const char*, const char*, float, float, float, float);
-typedef void*      (*UICreateLabelFn)(UIInstance, const char*, float, float, float, float, float);
+typedef void*      (*UICreateDialogFn)(UIInstance, const char*, const char*, float, float, float, float, float, float);
+typedef void*      (*UICreateLabelFn)(UIInstance, const char*, float, float, float, float, float, float, float);
 typedef void       (*UIAddChildControlFn)(UIInstance, void*, void*);
 typedef int        (*UIGetStringFn)(UIInstance, void*, const char*, char*, int);
 typedef void       (*UIGetRectFn)(UIInstance, void*, float*, float*, float*, float*);
@@ -126,9 +126,9 @@ static void onShow(UIControlHandle ctl, void* userData) {
         printf("[show] FAIL: cannot read edit text\n");
         return;
     }
-    ctx->lastDialog = uiCreateDialog(ctx->vp, "OK", "", 0, 0, 280, 120);   // 视口内居中弹窗
+    ctx->lastDialog = uiCreateDialog(ctx->vp, "OK", "", 0, 0, 280, 120, 1.0f, 1.0f);   // 视口内居中弹窗
     // 内容文本：Label 坐标相对 Dialog（弹窗 280x120，内容区居中）
-    ctx->lastContentLabel = uiCreateLabel(ctx->vp, buf, 14.0f, 20, 30, 240, 60);
+    ctx->lastContentLabel = uiCreateLabel(ctx->vp, buf, 14.0f, 20, 30, 240, 60, 1.0f, 1.0f);
     uiAddChildControl(ctx->vp, ctx->lastDialog, ctx->lastContentLabel);
     printf("[show] popup displays: \"%s\"\n", buf);
 }

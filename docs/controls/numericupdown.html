@@ -23,7 +23,7 @@ NumericUpDownBuilder(BENCH.get(), {220, 90, 150, 24})
     .setValue(0.6).setRange(0.0, 1.0).setStep(0.2).setDecimals(2).build();
 
 // C ABI
-UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32);
+UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32, 1.0f, 1.0f);
 
 // JSON
 { "id": "nudInteger", "type": "numeric-up-down",
@@ -98,7 +98,7 @@ BENCH->addControl(nud2b);</code></pre>
 
 <h2>4.13.6 C ABI 调用样例</h2>
 
-<pre><code>UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 20, 120, 26);
+<pre><code>UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 20, 120, 26, 1.0f, 1.0f);
 
 UICornerstone_SetFloat(g_inst, nud, "value", 50);
 UICornerstone_SetFloat(g_inst, nud, "range-min", 0);

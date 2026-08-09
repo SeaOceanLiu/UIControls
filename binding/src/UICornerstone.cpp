@@ -222,79 +222,82 @@ Control UICornerstone::MakeControl(UIControlHandle h) {
     }
 
 UI_FACTORY(CreateButton,
-    (const std::string& text, float x, float y, float w, float h),
-    text.c_str(), x, y, w, h)
+    (const std::string& text, float x, float y, float w, float h, float xScale, float yScale),
+    text.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateLabel,
-    (const std::string& text, float fontSize, float x, float y, float w, float h),
-    text.c_str(), fontSize, x, y, w, h)
+    (const std::string& text, float fontSize, float x, float y, float w, float h, float xScale, float yScale),
+    text.c_str(), fontSize, x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateCheckBox,
-    (const std::string& text, float x, float y, float w, float h),
-    text.c_str(), x, y, w, h)
+    (const std::string& text, float x, float y, float w, float h, float xScale, float yScale),
+    text.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateEditBox,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateProgressBar,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateSlider,
-    (float x, float y, float w, float h, float min, float max, float value),
-    x, y, w, h, min, max, value)
+    (float x, float y, float w, float h, float min, float max, float value, float xScale, float yScale),
+    x, y, w, h, min, max, value, xScale, yScale)
 UI_FACTORY(CreatePanel,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateTextArea,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateWinFrame,
-    (const std::string& title, float x, float y, float w, float h),
-    title.c_str(), x, y, w, h)
+    (const std::string& title, float x, float y, float w, float h, float xScale, float yScale),
+    title.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateComboBox,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateColorPicker,
-    (float x, float y, float w, float h, const std::string& color),
-    x, y, w, h, color.c_str())
+    (float x, float y, float w, float h, const std::string& color, float xScale, float yScale),
+    x, y, w, h, color.c_str(), xScale, yScale)
 UI_FACTORY(CreateNumericUpDown,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateSplitter,
-    (float x, float y, float w, float h, int orientation),
-    x, y, w, h, orientation)
+    (float x, float y, float w, float h, int orientation, float xScale, float yScale),
+    x, y, w, h, orientation, xScale, yScale)
 UI_FACTORY(CreateImageButton,
     (const std::string& normal, const std::string& hover, const std::string& pressed,
-     float x, float y, float w, float h),
-    normal.c_str(), hover.c_str(), pressed.c_str(), x, y, w, h)
+     float x, float y, float w, float h, float xScale, float yScale),
+    normal.c_str(), hover.c_str(), pressed.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateImage,
-    (const std::string& image, float x, float y, float w, float h),
-    image.c_str(), x, y, w, h)
+    (const std::string& image, float x, float y, float w, float h, float xScale, float yScale),
+    image.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateAnimation,
-    (const std::string& jsoncPath, float x, float y, float w, float h),
-    jsoncPath.c_str(), x, y, w, h)
+    (const std::string& jsoncPath, float x, float y, float w, float h, float xScale, float yScale),
+    jsoncPath.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateDialog,
-    (const std::string& confirmText, const std::string& cancelText, float x, float y, float w, float h),
-    confirmText.c_str(), cancelText.c_str(), x, y, w, h)
+    (const std::string& confirmText, const std::string& cancelText, float x, float y, float w, float h,
+     float xScale, float yScale),
+    confirmText.c_str(), cancelText.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateMenuBar,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateScrollBar,
-    (float x, float y, float w, float h, int orientation),
-    x, y, w, h, orientation)
+    (float x, float y, float w, float h, int orientation, float xScale, float yScale),
+    x, y, w, h, orientation, xScale, yScale)
 UI_FACTORY(CreateTreeView,
-    (float x, float y, float w, float h),
-    x, y, w, h)
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
 
-Control UICornerstone::CreateMenuPanel() {
+Control UICornerstone::CreateMenuPanel(float xScale, float yScale) {
     if (!m_impl->instance) return Control();
-    return MakeControl(Dyn::API().fnCreateMenuPanel(m_impl->instance));
+    return MakeControl(Dyn::API().fnCreateMenuPanel(m_impl->instance, xScale, yScale));
 }
-Control UICornerstone::CreateMenuItem(const std::string& caption, int type) {
+Control UICornerstone::CreateMenuItem(const std::string& caption, int type,
+    float xScale, float yScale) {
     if (!m_impl->instance) return Control();
-    return MakeControl(Dyn::API().fnCreateMenuItem(m_impl->instance, caption.c_str(), type));
+    return MakeControl(Dyn::API().fnCreateMenuItem(m_impl->instance, caption.c_str(), type, xScale, yScale));
 }
-Control UICornerstone::CreateHandleControl(Control target, float x, float y, float w, float h) {
+Control UICornerstone::CreateHandleControl(Control target, float x, float y, float w, float h,
+    float xScale, float yScale) {
     if (!m_impl->instance) return Control();
     return MakeControl(Dyn::API().fnCreateHandleControl(m_impl->instance,
-        target.Handle(), x, y, w, h));
+        target.Handle(), x, y, w, h, xScale, yScale));
 }
 
 void UICornerstone::MenuBarAddMenu(Control& bar, const std::string& caption, Control& panel) {

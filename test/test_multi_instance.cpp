@@ -54,7 +54,7 @@ int main() {
     UICornerstone_Update(NULL, 0.016);
     UICornerstone_Render(NULL);
     UICornerstone_DestroyInstance(NULL);
-    assert(UICornerstone_CreateButton(NULL, "OK", 0, 0, 100, 30) == NULL);
+    assert(UICornerstone_CreateButton(NULL, "OK", 0, 0, 100, 30, 1.0f, 1.0f) == NULL);
     assert(UICornerstone_CreateViewport(NULL, UIRect{0, 0, 100, 100}) == NULL);
     UICornerstone_SetRect(NULL, NULL, 0, 0, 10, 10); // void，仅验证不崩溃
     UIEvent evt0 = {};
@@ -80,8 +80,8 @@ int main() {
     assert(inst1 && inst2);
     assert(inst1 != inst2);
 
-    UIControlHandle btn1 = UICornerstone_CreateButton(inst1, "OK", 0, 0, 100, 30);
-    UIControlHandle btn2 = UICornerstone_CreateButton(inst2, "OK", 0, 0, 100, 30);
+    UIControlHandle btn1 = UICornerstone_CreateButton(inst1, "OK", 0, 0, 100, 30, 1.0f, 1.0f);
+    UIControlHandle btn2 = UICornerstone_CreateButton(inst2, "OK", 0, 0, 100, 30, 1.0f, 1.0f);
     assert(btn1 && btn2);
     assert(btn1 != btn2);
 

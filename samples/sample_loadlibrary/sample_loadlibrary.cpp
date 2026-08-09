@@ -113,9 +113,9 @@ typedef void  (*UIClearFn)(void*);
 typedef void  (*UIRenderFn)(void*);
 typedef void  (*UIPresentFn)(void*);
 typedef int   (*UIIsQuitFn)(void*);
-typedef void* (*UICreateButtonFn)(void*,const char*,float,float,float,float);
-typedef void* (*UICreateLabelFn)(void*,const char*,float,float,float,float,float);
-typedef void* (*UICreatePanelFn)(void*,float,float,float,float);
+typedef void* (*UICreateButtonFn)(void*,const char*,float,float,float,float,float,float);
+typedef void* (*UICreateLabelFn)(void*,const char*,float,float,float,float,float,float,float);
+typedef void* (*UICreatePanelFn)(void*,float,float,float,float,float,float);
 typedef int   (*UISetColorFn)(void*,void*,const char*,UIColor);
 typedef int   (*UISetStringFn)(void*,void*,const char*,const char*);
 typedef int   (*UISetCallbackFn)(void*,void*,const char*,void(*)(void*,const void*,void*),void*);
@@ -241,20 +241,20 @@ int main(void) {
     // 注意：此处不能直接调用 UICornerstone_CreatePanel（那是 ILT 链接），
     // 必须通过 uiCreatePanel 函数指针。
 
-    void* root = uiCreatePanel(g_inst, 0, 0, 800, 480);
+    void* root = uiCreatePanel(g_inst, 0, 0, 800, 480, 1.0f, 1.0f);
 
     void* title = uiCreateLabel(g_inst, "LoadLibrary + #include Backend Demo", 18,
-                                20, 10, 760, 30);
+                                20, 10, 760, 30, 1.0f, 1.0f);
     uiAddChild(g_inst, root, title);
 
-    void* btn = uiCreateButton(g_inst, "Click Me", 20, 60, 200, 80);
+    void* btn = uiCreateButton(g_inst, "Click Me", 20, 60, 200, 80, 1.0f, 1.0f);
     UIColor btnColor = {74, 144, 217, 255};
     uiSetColor(g_inst, btn, "background", btnColor);
     uiSetCallback(g_inst, btn, "click", onBtnClick, nullptr);
     uiAddChild(g_inst, root, btn);
 
     g_status = uiCreateLabel(g_inst, "Click the button above", 14,
-                             20, 160, 400, 24);
+                             20, 160, 400, 24, 1.0f, 1.0f);
     uiAddChild(g_inst, root, g_status);
 
     printf("entering loop\n"); fflush(stdout);
