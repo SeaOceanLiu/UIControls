@@ -53,12 +53,8 @@
       ["advanced/tools.html", "5.3 非可视化控件"],
       ["advanced/cabi.html", "5.4 C ABI 程序化构建"],
       ["advanced/scale.html", "5.5 控件缩放（Scale）"],
-      ["advanced/canvas-scale.html", "5.6 视口画布缩放"]
-    ]],
-    ["backends.html", "其它后端", [
-      ["backends.html", "5.7 使用其它后端（SFML/raylib）"]
-    ]],
-    ["integration.html", "嵌入逻辑回路", [
+      ["advanced/canvas-scale.html", "5.6 视口画布缩放"],
+      ["backends.html", "5.7 使用其它后端（SFML/raylib）"],
       ["integration.html", "5.8 嵌入到你的逻辑回路中"]
     ]],
     ["appendix/declarative-syntax.html", "附录", [
