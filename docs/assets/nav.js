@@ -44,7 +44,7 @@
       ["luotiani.html", "3.7 洛蒂动画"]
     ]],
     ["controls/index.html", "深入控件", [
-      ["controls/index.html", "4.0 控件概念与共性"]
+      ["controls/index.html", "4 控件概念与共性"]
     ]],
     ["advanced.html", "进阶主题", [
       ["advanced.html", "5 进阶主题"],
