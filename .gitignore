@@ -431,3 +431,6 @@ test*.txt
 
 # SDL wiki HTML scraped pages (auto-generated, not source code)
 subModules/sdlwiki/
+
+# 测试与临时文件（一律放 Temp/，不得直接创建在项目目录下）
+Temp/

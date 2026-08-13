@@ -11,6 +11,9 @@
 ### [文件编码](design/guidelines/coding.md)
 所有源代码文件（.h/.cpp）必须保存为 **UTF-8 with BOM** 编码格式。不要使用 UTF-8 without BOM 或其他编码。
 
+### [临时文件](design/guidelines/coding.md)
+测试临时文件与中间产物必须放入 **`Temp/`** 目录（`.gitignore` 已忽略，不会入库）。**禁止直接在项目根目录或源码目录下创建临时文件。**
+
 ### [设计规则 →](design/guidelines/design-rules.md)
 位置数据存储规则、魔鬼数字规范。
 
