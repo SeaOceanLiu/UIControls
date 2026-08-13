@@ -35,6 +35,8 @@ using namespace std;
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
+class UIContext;
+
 class LayoutParser {
 public:
     explicit LayoutParser(DataContext* dataContext = nullptr);
@@ -42,6 +44,8 @@ public:
 
     // 延迟绑定数据上下文（实例创建后才可调用）
     void setDataContext(DataContext* dataContext) { m_dataContext = dataContext; }
+    // 视口缩放目标实例（顶层 viewport 键的应用落点；nullptr = 忽略该键）
+    void setViewportTarget(UIContext* ctx) { m_viewportTarget = ctx; }
 
     shared_ptr<Control> parseLayout(const string& jsonContent);
     shared_ptr<Control> parseLayoutFile(const fs::path& jsonPath);
@@ -71,6 +75,8 @@ private:
     Theme m_theme;
     // 数据绑定上下文（多实例：每个实例传入自己的 DataContext）
     DataContext* m_dataContext;
+    // 视口缩放目标实例（顶层 viewport 键的应用落点）
+    UIContext* m_viewportTarget = nullptr;
 
     unordered_map<string, shared_ptr<Control>> m_controlsById;
     unordered_map<string, function<void(shared_ptr<Control>)>> m_handlers;
@@ -96,6 +102,7 @@ private:
 
     shared_ptr<Label>       parseLabel(const json& j, Control* parent);
     shared_ptr<Button>      parseButton(const json& j, Control* parent);
+    shared_ptr<Control>     parseAnimation(const json& j, Control* parent);
     shared_ptr<EditBox>     parseEditBox(const json& j, Control* parent);
     shared_ptr<ComboBox>    parseComboBox(const json& j, Control* parent);
     shared_ptr<TextArea>    parseTextArea(const json& j, Control* parent);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3.5 事件 · 3.6 焦点系统 - UICornerstone 用户手册</title>
+<title>3.5 事件 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="css/style.css">
 <script id="nav-data" src="assets/nav.js" data-prefix="" data-current="events-focus.html"></script>
 </head>
@@ -61,6 +61,34 @@ e.GetDoubleVal();    // 原始负载：双精度（NumericUpDown）
 e.GetStrVal();       // 原始负载：字符串
 e.GetPtrVal();       // 原始负载：指针</code></pre>
 
+<h2>3.5.5 应用 / 游戏的事件适配（PushUIEvent）</h2>
+
+<p>除后端原生输入外，应用/游戏可自行构造事件注入，与原生事件汇合后走同一分派链路（3.5.1 中 <code>EventQueue</code> 之前）：</p>
+
+<pre><code>UICornerstone_PushUIEvent(instance, &amp;ev)   // 跨线程安全：任意线程构造，帧循环消费
+  → 注入队列（锁保护，含 auto-quit 定时器线程的场景）
+  → MainWindow::processEvents → Bench::inputControl
+  → 与后端原生事件同一队列 → 同一分派链路</code></pre>
+
+<p>适用场景：</p>
+<ul>
+  <li><strong>游戏循环</strong>：手柄 / 触摸屏 / 手势层识别出的"虚拟鼠标"事件，转成 <code>UI_EVENT_MOUSE_MOVE / MOUSE_DOWN / MOUSE_UP</code> 注入；</li>
+  <li><strong>无窗口 / 离屏后端</strong>：窗口事件（Resize / Close）与键盘、焦点事件完全由宿主注入；</li>
+  <li><strong>自定义输入拦截</strong>：应用先于后端消费原始输入（视频流、体感），只把需要 UI 处理的部分转发；</li>
+  <li><strong>自动化 / 录制回放</strong>：测试用例回放鼠标序列（与 <code>test_scale_json</code> 等自动化样例同思路）。</li>
+</ul>
+
+<p>事件类型与负载布局见 3.5.2；构造示例（C）：</p>
+
+<pre><code>UIEvent ev;
+ev.type = UI_EVENT_MOUSE_DOWN;
+UI_EVENT_MOUSE_X(&amp;ev)   = 400.0f;   // data[0..3]
+UI_EVENT_MOUSE_Y(&amp;ev)   = 300.0f;   // data[4..7]
+UI_EVENT_BUTTON(&amp;ev)    = 0;        // 0=左键
+UICornerstone_PushUIEvent(inst, &amp;ev);</code></pre>
+
+<p>注意：<code>UI_EVENT_*</code> 便捷宏同时可读写，负载字段固定偏移即可用 <code>UI_EVENT_BUF_SIZE</code>（128 B）内的任意布局；跨线程注入的事件在帧循环出队时按一次一个分派，不抢占正在处理的回调。</p>
+
 <h2>3.6 焦点系统</h2>
 
 <h3>3.6.1 三件套：Tab 环 / 焦点边界 / 焦点作用域</h3>
@@ -90,7 +118,7 @@ e.GetPtrVal();       // 原始负载：指针</code></pre>
 
 <div class="chapter-nav">
   <a href="declarative-ui.html">← 3.4 声明式 UI</a>
-  <a href="luotiani.html">下一章：3.7 洛蒂动画 →</a>
+  <a href="focus.html">下一节：3.6 焦点系统 →</a>
 </div>
 
 </div>

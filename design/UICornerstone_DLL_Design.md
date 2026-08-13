@@ -434,6 +434,20 @@ UIControlHandle UICornerstone_CreateImageButton(
 UIControlHandle UICornerstone_CreateImage(
     const char* image, float x, float y, float w, float h);  // image 可 NULL；w/h=0 → 纹理自然尺寸
 
+/* ============ 动画三件套（LuotiAni） ============ */
+/* CreateActor: 单帧 Actor 控件（静态纹理，可缩放）；
+   CreateAnimation: 洛蒂动画控件（JSON 描述加载 + prepare，构造后不播放，SetBool("playing")=1 启动；
+     w/h=0 → prepare 回退到 JSON overview.view 画布尺寸）；
+   CreateAnimatedButton: 带动画的按钮——jsoncPath 可 NULL（纯按钮）；动画为内嵌资源（不挂树、不响应鼠标、
+     getRect=按钮局部），LuotiAni 构造 scale 恒 1.0（按钮自身 scale 经复合缩放传导，传按钮 scale 会双重缩放）；
+     load/prepare 失败 → 返回 nullptr（异常边界，安全回滚）。 */
+UIControlHandle UICornerstone_CreateActor(UIInstance instance,
+    const char* image, float x, float y, float w, float h, float xScale, float yScale);
+UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
+    const char* jsoncPath, float x, float y, float w, float h, float xScale, float yScale);
+UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
+    const char* jsoncPath, float x, float y, float w, float h, float xScale, float yScale);
+
 /* ============ Menu 三件套 ============ */
 /* 生命周期：Create 函数创建的 MenuPanel/MenuItem 暂存于内部保活池；
    通过 MenuBarAddMenu / MenuPanelAddItem / MenuItemSetSubMenu 挂载后所有权转交 MenuBar 链。

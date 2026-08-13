@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9.4 问题定位手段 - UICornerstone 用户手册</title>
+<title>9 问题定位手段 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/debugging.html"></script>
 </head>
@@ -11,9 +11,9 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>9.4 问题定位手段</h1>
+<h1>9 问题定位手段</h1>
 
-<h2>9.4.1 自动化测试（首选）</h2>
+<h2>9.1 自动化测试（首选）</h2>
 
 <p>仓库内置全量自动化测试，几乎每个控件与特性都有对应用例。遇到疑似 bug，先跑相关测试定位是「库的问题」还是「你的用法问题」：</p>
 
@@ -34,7 +34,7 @@ test_button.exe auto=3                            :: 自动跑 3 秒，exit=0 �
 <tr><td><code>test_&lt;control&gt;_cabi</code></td><td>各控件行为 + 属性 + 事件</td></tr>
 </table>
 
-<h2>9.4.2 断言与日志</h2>
+<h2>9.2 断言与日志</h2>
 
 <ul>
   <li>测试程序打印 <code>PASS/FAIL</code> 并带函数名；<code>exit=0</code> 表示全过；</li>
@@ -42,7 +42,7 @@ test_button.exe auto=3                            :: 自动跑 3 秒，exit=0 �
   <li>创建实例时传 <code>debugLabel</code>（UIInstanceConfig），多实例问题可分辨日志来源。</li>
 </ul>
 
-<h2>9.4.3 常见错误模式</h2>
+<h2>9.3 常见错误模式</h2>
 
 <table>
 <tr><th>现象</th><th>原因</th><th>处置</th></tr>
@@ -56,13 +56,13 @@ test_button.exe auto=3                            :: 自动跑 3 秒，exit=0 �
 <tr><td>焦点环不显示</td><td>m_focusRingAlwaysVisible=false 且非键盘聚焦</td><td>Tab 键聚焦；或设 alwaysVisible</td></tr>
 </table>
 
-<h2>9.4.4 最小复现模板</h2>
+<h2>9.4 最小复现模板</h2>
 
 <p>把问题收敛到最小工程（一个 main + 一个控件），对照 <code>test/</code> 中同控件用例的结构。若你的用法与测试一致仍出错，可到 GitHub 提交 issue，附：后端、版本、最小代码、<code>auto=</code> 测试输出。</p>
 
 <div class="chapter-nav">
-  <a href="capi.html">← 9.3 C ABI 速查表</a>
-  <a href="backend-config.html">下一节：9.5 后端差异及后端配置 →</a>
+  <a href="capi.html">← 8 C ABI 速查表</a>
+  <a href="backend-config.html">下一节：10 后端差异及后端配置 →</a>
 </div>
 
 </div>

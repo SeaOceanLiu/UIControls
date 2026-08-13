@@ -80,12 +80,31 @@ UIControlHandle big = UICornerstone_CreateLabel(g_inst, "标题", 24, 10, 10, 20
       若通过 Binding 使用，用 <code>LoadLayout</code> 重新加载带 <code>"scale"</code> 的 JSON 实现等效效果。</li>
 </ul>
 
-<div class="tip">提示：C ABI 创建函数的尾部两个参数即缩放系数，完整签名见附录 <a href="../appendix/capi.html">9.3 C ABI 速查表</a>；
-C++ Binding 工厂签名见附录 <a href="../appendix/binding.html">9.6 C++ Binding 速查表</a>。</div>
+<div class="tip">重要：<strong>内嵌动画的双重缩放陷阱</strong>——LuotiAni 经 <code>setParent</code> 继承按钮的复合缩放
+（<code>xxScale = 自身系数 × 父链连乘</code>）。因此创建动画按钮时，
+内嵌 LuotiAni 的构造 scale 必须传 <code>1.0f, 1.0f</code>，缩放只设置在按钮上
+（C ABI <code>UICornerstone_CreateAnimatedButton</code> 与 JSON 布局 <code>{"type":"button","luotiAni":...}</code> 均按此约定）。
+若动画再乘按钮系数，2x 按钮会把动画画成 4x。</div>
 
-<div class="prev-next">
+<div class="tip">提示：C ABI 创建函数的尾部两个参数即缩放系数，完整签名见附录 <a href="../appendix/capi.html">8 C ABI 速查表</a>；
+C++ Binding 工厂签名见附录 <a href="../appendix/binding.html">11 C++ Binding 速查表</a>。</div>
+
+<h2>5.5.6 缩放对照测试</h2>
+
+<p>缩放语义由三件套测试守护（同一三列布局：btn x=60 / img x=580 / ani x=1100，1x 行 y=80、2x 行 y=560，
+仅 <code>"scale"</code> 不同，布局 rect 完全一致）：</p>
+<ul>
+  <li><code>test_scale_json</code> — JSON 布局路径（<code>"type":"button"</code> + <code>"luotiAni"</code> 内嵌动画）；</li>
+  <li><code>test_scale_cabi</code> — C ABI 编程式路径（<code>CreateButton</code> / <code>CreateImageButton</code> 3 态 /
+      <code>CreateAnimatedButton</code>）；</li>
+  <li><code>sample_scale</code>（Binding 样例）— 同一布局的 C++ 工厂断言 7 项。</li>
+</ul>
+<p>三者均断言 <code>rect 与缩放系数无关</code>（布局矩形不随 scale 变化），并在自动模式下（<code>auto=&lt;秒&gt;</code>）
+注入点击验证内嵌动画按钮的 <code>click</code> 事件；2x 组目测验证内容为 1x 的 2 倍、动画不双重缩放。</p>
+
+<div class="chapter-nav">
   <a href="cabi.html">← 5.4 纯 C ABI 程序化构建</a>
-  <a href="../backends.html">下一章：6 使用其它后端 →</a>
+  <a href="canvas-scale.html">下一节：5.6 视口画布缩放 →</a>
 </div>
 
 </div>

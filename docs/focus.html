@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.6 焦点系统 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="focus.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>3.6 焦点系统</h1>
+
+<h2>3.6.1 三件套：Tab 环 / 焦点边界 / 焦点作用域</h2>
+
+<table>
+<tr><th>机制</th><th>按键</th><th>行为</th></tr>
+<tr><td>Tab 环</td><td><code>Tab</code> / <code>Shift+Tab</code></td><td>在全部可聚焦控件间循环，跳过不可见/不可用控件；<code>setFocusable(true)</code> 或 <code>setTabIndex(n≥0)</code> 自动注册</td></tr>
+<tr><td>焦点边界（FocusBoundary）</td><td>Tab</td><td>边界容器（Bench、WinFrame、ColorPicker）内 Tab 仅在直接后代中循环</td></tr>
+<tr><td>焦点作用域（scope）</td><td><code>Ctrl+Tab</code> / <code>Ctrl+Shift+Tab</code></td><td>在各可见边界（Bench + WinFrames）之间轮转</td></tr>
+</table>
+
+<h2>3.6.2 焦点环绘制</h2>
+
+<p>获得焦点的控件绘制三层叠加焦点环：黑线（inset 0）+ 白线（inset 1）+ 主题色（inset 2，默认 <code>#4285F4</code>），任何背景上都清晰可见。</p>
+
+<ul>
+  <li><code>FocusRingStyle::Solid / Dashed</code> 两种样式；</li>
+  <li><code>m_focusRingAlwaysVisible</code> 默认 true（鼠标悬停也显示环）；设为 false 则仅键盘 Tab 聚焦时显示；</li>
+  <li>默认可聚焦控件：EditBox / TextArea / Slider / Button / CheckBox；</li>
+  <li>Button 聚焦时 Enter/Space 触发 onClick，CheckBox 聚焦时 Space 循环三态；</li>
+  <li>窗口失去系统焦点（<code>FocusLost</code>）自动清除本实例焦点。</li>
+</ul>
+
+<h2>3.6.3 多窗口的焦点隔离</h2>
+
+<p>多实例/多窗口下每个窗口的焦点相互独立；WinFrame 隐藏时其内部控件被过滤并释放焦点；Ctrl+Tab 在 <code>...→WinFrameA→WinFrameB→Bench→...</code> 间轮转。</p>
+
+<div class="chapter-nav">
+  <a href="events-focus.html">← 3.5 事件</a>
+  <a href="luotiani.html">下一章：3.7 洛蒂动画 →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>6 使用其它后端 - UICornerstone 用户手册</title>
+<title>5.7 使用其它后端 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="css/style.css">
 <script id="nav-data" src="assets/nav.js" data-prefix="" data-current="backends.html"></script>
 </head>
@@ -11,7 +11,7 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>6 使用其它后端（SFML / raylib）</h1>
+<h1>5.7 使用其它后端（SFML / raylib）</h1>
 
 <p>UICornerstone 的界面代码<strong>与后端无关</strong>：同一份业务代码，仅编译开关 / 实例创建参数不同即可切换后端。</p>
 
@@ -49,8 +49,8 @@ UICornerstone_CreateInstanceFromPlugin("raylib", NULL);
 UICornerstone::UICornerstone::Create(
     UICornerstone::UICornerstone::Config{}.WithBackend("raylib"));
 
-// 样例命令行
-sample_cpp_hosted.exe backend=sfml</code></pre>
+// 样例命令行（backend= 与 auto= 任意顺序混用；auto= 无人值守冒烟）
+sample_cpp_hosted.exe backend=sfml auto=4</code></pre>
 
 <div class="note">「运行时选择」指插件加载路径的写法统一；实际可用的后端取决于编译时构建的 DLL/库。Binding 的 <code>Config</code> 通过 <code>backendSearchPath</code> / <code>coreLibraryDir</code> 指定动态库搜索位置，样例可内置多后端 DLL 按参数加载。</div>
 
@@ -61,7 +61,7 @@ bool multiWindow = (caps &amp; UICORN_BACKEND_CAP_MULTI_WINDOW) != 0;
 if (multiWindow) { /* 正常创建第二窗口 */ }
 else { /* headless 降级：Window::isHeadless()，跳过渲染 */ }</code></pre>
 
-<p>详见 <a href="advanced.html">5.2 多视口与多窗口</a> 与 <a href="appendix/backend-config.html">9.5 后端差异及后端配置</a>。</p>
+<p>详见 <a href="advanced.html">5.2 多视口与多窗口</a> 与 <a href="appendix/backend-config.html">10 后端差异及后端配置</a>。</p>
 
 <h2>6.5 后端配置键（运行时）</h2>
 
@@ -83,7 +83,7 @@ UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</co
 
 <div class="chapter-nav">
   <a href="advanced.html">← 5 进阶主题</a>
-  <a href="integration.html">下一章：7 嵌入到你的逻辑回路中 →</a>
+  <a href="integration.html">下一节：5.8 嵌入到你的逻辑回路中 →</a>
 </div>
 
 </div>

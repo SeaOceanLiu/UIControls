@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9.1 声明式 UI 语法速查表 - UICornerstone 用户手册</title>
+<title>6 声明式 UI 语法速查表 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/declarative-syntax.html"></script>
 </head>
@@ -11,13 +11,13 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>9.1 声明式 UI 语法速查表</h1>
+<h1>6 声明式 UI 语法速查表</h1>
 
-<h2>9.1.1 顶层结构</h2>
+<h2>6.1.1 顶层结构</h2>
 
 <pre><code>{
   "version": "1.0",
-  "viewport": { "width": 1920, "height": 1080 },
+  "viewport": { "width": 1920, "height": 1080, "scale-mode": "fit" },
   "theme": { "fonts": {...}, "colors": {...} },
   "controls": [ ... ],       // 控件树根数组（必填）
   "dialogs":  [ ... ],       // 弹窗数组（可选）
@@ -25,26 +25,183 @@
   "layouts": [ ... ]         // 组件实例化（可选）
 }</code></pre>
 
-<h2>9.1.2 控件通用键</h2>
+<p><code>viewport</code> 键（可选）：声明显式基准画布与初始缩放模式，加载布局时生效
+（先于控件树解析，应用于当前实例的视口缩放状态）。</p>
+<table>
+<tr><th>键</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>width</code> / <code>height</code></td><td>number</td><td>基准画布尺寸（px）。缺省 = 跟随窗口（viewport）；仅记录于 off 模式，作为 fit/stretch 的适配基准</td></tr>
+<tr><td><code>scale-mode</code></td><td>string</td><td><code>off</code>（缺省，画布跟随窗口）/ <code>fit</code>（等比居中）/ <code>stretch</code>（拉伸铺满）</td></tr>
+</table>
+
+<h2>6.1.2 控件通用键</h2>
 
 <table>
 <tr><th>键</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写：<code>label / button / edit-box / check-box / combo-box / numeric-up-down / progress-bar / scroll-bar / color-picker / text-area / panel / menu-bar / win-frame / splitter</code></td></tr>
+<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 21 种：<code>label / button / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view</code></td></tr>
 <tr><td><code>id</code></td><td>string</td><td>全局唯一，FindControl 用</td></tr>
 <tr><td><code>rect</code></td><td>object</td><td><code>{"x","y","w","h"}</code>；支持百分比字符串 <code>"50%"</code></td></tr>
-<tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code></td></tr>
+<tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code>；内容按系数缩放，布局矩形不变</td></tr>
 <tr><td><code>visible</code> / <code>enabled</code></td><td>bool</td><td>可见 / 启用</td></tr>
 <tr><td><code>margin</code></td><td>object</td><td><code>{"left","top","right","bottom"}</code></td></tr>
 <tr><td><code>colors</code></td><td>object</td><td>状态色：<code>{"background":{"normal","hover","pressed","disabled"}}</code>；键含 background/border/text/textShadow/控件特有（progressColor、titleBar 等）</td></tr>
-<tr><td><code>events</code></td><td>object</td><td><code>{"onClick":"handlerName"}</code></td></tr>
+<tr><td><code>events</code></td><td>object</td><td><code>{"onClick":"handlerName"}</code>，见 6.1.7</td></tr>
 <tr><td><code>children</code></td><td>array</td><td>子控件（容器类型）</td></tr>
 </table>
 
-<h2>9.1.3 颜色格式</h2>
+<h2>6.1.3 各控件专用键（全部 21 种）</h2>
+
+<h3>label</h3>
+<pre><code>{ "type":"label", "id":"title", "rect":{"x":0,"y":52,"w":800,"h":40},
+  "caption":"标题", "alignment":"center",                   // left/center/right?（对齐）
+  "font":{"name":"HarmonyOS_Sans_SC_Regular","size":28},
+  "colors":{"text":{"normal":"#FFFFFFFF"}},
+  "shadow":{"enabled":true,"offset":{"x":2,"y":2}},
+  "clickable":false,                                        // 可点击（onClick）
+  "lineHeight":28, "lineSpacingRatio":1.2 }</code></pre>
+
+<h3>button / image-button</h3>
+<pre><code>{ "type":"button", "id":"submit",
+  "rect":{"x":280,"y":140,"w":100,"h":35}, "caption":"Submit", "captionSize":16,
+  "enableTextShadow":false,
+  "colors":{"background":{"normal":"#4060A0FF","hover":"#5080C0FF","pressed":"#305090FF"},
+            "border":{"normal":"#6080C0FF"},"text":{"normal":"#FFFFFFFF"}},
+  "actors":{                                               // 状态图（image-button 必填）
+    "matchParentRect":true,
+    "normal":"assets/images/normal.png",                   // 或 {"file":..., "scaleType":"fit-center"}
+    "hover":"assets/images/hover.png", "pressed":"assets/images/pressed.png" },
+  "luotiAni":"assets/animations/rotateBtn/rotateBtn.jsonc", // 内嵌动画：延迟 prepare，SetBool("playing") 启动
+  "events":{"onClick":"onSubmit"} }</code></pre>
+
+<h3>animation（LuotiAni 动画控件）</h3>
+<pre><code>{ "type":"animation", "id":"ani1x", "rect":{"x":1100,"y":80,"w":256,"h":256},
+  "path":"assets/animations/rotateBtn/rotateBtn.jsonc",     // 相对 exe 目录；w/h=0 → 画布尺寸
+  "scale":{"x":1,"y":1} }                                  // 挂树后延迟 prepare，SetBool("playing") 启动</code></pre>
+
+<h3>edit-box</h3>
+<pre><code>{ "type":"edit-box", "id":"nameEdit",
+  "rect":{"x":110,"y":20,"w":250,"h":30},
+  "placeholder":"Please input your name", "text":"", "editable":true,
+  "passwordMode":false, "passwordChar":"●",
+  "font":{"size":16},
+  "events":{"onTextChanged":"onNameChanged","onEnter":"onNameEnter"} }</code></pre>
+
+<h3>combo-box</h3>
+<pre><code>{ "type":"combo-box", "id":"comboMain",
+  "rect":{"x":20,"y":56,"w":300,"h":32}, "fontSize":16, "editable":false,
+  "placeholder":"Select a city...", "selectedIndex":0,
+  "arrowWidth":20, "itemHeight":24, "maxVisibleItems":6, "cycleEnabled":true,
+  "items":[ { "label":"Beijing","value":"beijing" },
+            { "label":"Wuhan","value":"wuhan","disabled":true } ] }</code></pre>
+
+<h3>text-area</h3>
+<pre><code>{ "type":"text-area", "id":"notes",
+  "rect":{"x":20,"y":432,"w":200,"h":80},
+  "placeholder":"Multi-line...", "text":"", "wordWrap":true,
+  "font":{"size":12},
+  "events":{"onTextChanged":"onNotesChanged"} }</code></pre>
+
+<h3>check-box</h3>
+<pre><code>{ "type":"check-box", "id":"agree",
+  "rect":{"x":240,"y":432,"w":180,"h":30}, "caption":"I agree", "captionSize":14,
+  "checkState":"unchecked",                                 // unchecked/checked/indeterminate
+  "style":"classic",                                        // classic/cross/circle
+  "layout":"text-right",                                    // text-right/text-left
+  "triState":true, "sizeRatio":1.0,
+  "colors":{"check":{"normal":"#66BB6AFF"},"cross":{"normal":"#FF5722FF"},"boxBorder":{"normal":"#53535AFF"}},
+  "events":{"onCheckChanged":"onAgreeChanged"} }</code></pre>
+
+<h3>progress-bar</h3>
+<pre><code>{ "type":"progress-bar", "id":"load",
+  "rect":{"x":440,"y":432,"w":200,"h":25},
+  "value":65, "range":{"min":0,"max":100},
+  "style":"horizontal",                                    // horizontal/vertical
+  "textMode":"percent",                                    // none/percent/custom
+  "animationSpeed":0.1,
+  "colors":{"progressColor":{"normal":"#4080C0FF"},"backgroundColor":{"normal":"#303030FF"}} }</code></pre>
+
+<h3>slider</h3>
+<pre><code>{ "type":"slider", "id":"rSlider",
+  "rect":{"x":29,"y":224,"w":257,"h":20},
+  "range":{"min":0,"max":255}, "value":255, "step":1,
+  "style":"Horizontal",                                    // Horizontal/Vertical
+  "reverse":false, "showValueLabel":true,
+  "colors":{"track":{"normal":"#3C3C3CFF"},"thumb":{"normal":"#888888FF"}} }</code></pre>
+
+<h3>scroll-bar</h3>
+<pre><code>{ "type":"scroll-bar", "id":"hScroll",
+  "rect":{"x":440,"y":472,"w":200,"h":16},
+  "orientation":"horizontal",                              // horizontal/vertical
+  "value":30, "range":{"min":0,"max":100},
+  "pageSize":20, "stepSize":5, "thickness":16 }</code></pre>
+
+<h3>panel（容器 + 布局引擎）</h3>
+<pre><code>{ "type":"panel", "id":"formPanel",
+  "rect":{"x":50,"y":112,"w":400,"h":200},
+  "layout":{"type":"h-flow","gap":4,"padding":{"left":4,"top":4,"right":4,"bottom":4}},  // h-flow/v-flow/anchor/grid，见 6.1.5
+  "colors":{"border":{"normal":"#808080FF"}},
+  "children":[ { "type":"edit-box","id":"nameEdit","flowWeight":1,"rect":{"w":0,"h":30} },
+               { "type":"button","id":"submitBtn","caption":"OK","rect":{"w":100,"h":35} } ] }</code></pre>
+
+<h3>win-frame</h3>
+<pre><code>{ "type":"win-frame", "id":"win",
+  "rect":{"x":200,"y":100,"w":400,"h":300}, "title":"Submitted",
+  "edgeMargin":4.0, "resizable":true,
+  "colors":{"titleBar":{"bg":{"normal":"#2A2A50FF"}},"titleText":{"normal":"#FFFFFFFF"}},
+  "children":[ { "type":"label","caption":"Form submitted!" } ] }</code></pre>
+
+<h3>color-picker</h3>
+<pre><code>{ "type":"color-picker", "id":"cp",
+  "rect":{"x":240,"y":498,"w":96,"h":24}, "color":"#FF6600",
+  "presets":["#FF0000","#00FF00","#0000FF","#FFFF00","#FF00FF"],
+  "presetLayout":{"cols":5,"rows":1}, "swatchSize":16.0,
+  "closedFontSize":12, "closedTextColor":"#DBDBDB",
+  "popupBGColor":"#3C3C41",
+  "events":{"onColorChanged":"onColor"} }</code></pre>
+
+<h3>popup / confirm-popup / dialog（弹窗族）</h3>
+<pre><code>{ "type":"dialog", "id":"colorDlg",
+  "centered":true,                                        // 居中；rect 相对窗口/父容器
+  "rect":{"x":0,"y":0,"w":296,"h":440},
+  "confirmButton":{"text":"OK"},                          // 确认按钮文字
+  "cancelButton":{"text":"Cancel"},                       // 取消按钮文字（confirm-popup/dialog）
+  "events":{"onConfirm":"onDlgConfirm","onCancel":"onDlgCancel","onClose":"onDlgClose"} }</code></pre>
+
+<h3>menu-bar（不挂控件树，顶层独立）</h3>
+<pre><code>{ "type":"menu-bar", "id":"mainMenu",
+  "font":{"size":16}, "barHeight":32,
+  "menus":[ { "caption":"文件(F)",
+      "items":[ { "caption":"新建","shortcut":"Ctrl+N","events":{"onClick":"onMenuNew"} },
+                { "caption":"另存为","checked":false },
+                { "caption":"-", "type":"separator" },
+                { "caption":"子菜单", "items":[ { "caption":"子项","events":{"onClick":"onSub"} } ] } ] } ] }</code></pre>
+
+<h3>numeric-up-down</h3>
+<pre><code>{ "type":"numeric-up-down", "id":"nud",
+  "rect":{"x":20,"y":78,"w":180,"h":32},
+  "value":50, "range":{"min":0,"max":100}, "step":1, "pageStep":10, "decimals":0,
+  "placeholder":"0", "readOnly":false }</code></pre>
+
+<h3>splitter</h3>
+<pre><code>{ "type":"splitter", "id":"spl",
+  "rect":{"x":244,"y":60,"w":6,"h":200},
+  "orientation":"vertical",                                // horizontal/vertical
+  "firstPanel":"panelFirst", "secondPanel":"panelSecond",  // 两侧面板 id
+  "thickness":6, "ratio":0.4, "minFirst":50, "minSecond":50,
+  "colors":{"line":{"normal":"#808080FF"}} }</code></pre>
+
+<h3>tree-view</h3>
+<pre><code>{ "type":"tree-view", "id":"tree",
+  "rect":{"x":20,"y":20,"w":240,"h":300},
+  "indentWidth":16, "rowHeight":22, "cycleNavigation":false, "defaultExpand":true,
+  "items":[ { "id":"root","label":"Root","expanded":true,"userData":"extra",
+              "children":[ { "id":"child1","label":"Child 1" } ] } ],
+  "events":{"onSelect":"onTreeSelect","onExpand":"onTreeExpand","onCollapse":"onTreeCollapse"} }</code></pre>
+
+<h2>6.1.4 颜色格式</h2>
 
 <pre><code>"#RGB" | "#RRGGBB" | "#RRGGBBAA" | { "r":255, "g":0, "b":0, "a":128 }</code></pre>
 
-<h2>9.1.4 布局引擎</h2>
+<h2>6.1.5 布局引擎</h2>
 
 <h3>h-flow / v-flow</h3>
 <pre><code>"layout": { "type": "h-flow", "gap": 4,
@@ -67,7 +224,7 @@
 // 子控件：{ ..., "grid": { "row":0, "col":1, "rowSpan":1, "colSpan":1 } }
 // 尺寸：Fixed "100px" / Flex "1fr" / Auto "auto"</code></pre>
 
-<h2>9.1.5 事件引用与注册</h2>
+<h2>6.1.6 事件引用与注册</h2>
 
 <pre><code>// C ABI
 UICornerstone_RegisterAction(g_inst, "handleSubmit", cb, NULL);
@@ -78,7 +235,7 @@ ui->RegisterAction("handleSubmit", [](Control ctl){ /* ... */ });
 // 核心库 LayoutParser
 parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ... */ });</code></pre>
 
-<h2>9.1.6 事件键名 → 控件对照</h2>
+<h2>6.1.7 事件键名 → 控件对照</h2>
 
 <table>
 <tr><th>JSON 事件键</th><th>适用控件</th></tr>
@@ -93,7 +250,7 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
 <tr><td><code>onSplitterMoved</code></td><td>Splitter</td></tr>
 </table>
 
-<h2>9.1.7 主题</h2>
+<h2>6.1.8 主题</h2>
 
 <pre><code>"theme": {
   "fonts": { "default": { "name": "HarmonyOS_Sans_SC_Regular", "size": 16 },
@@ -109,7 +266,7 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
 
 <p>类别：<code>button / label / editbox / textarea / checkbox / progressbar / panel / scrollbar / menubar</code>；应用顺序：Theme 默认 → 公共 colors → 控件专用颜色 → 控件专用字体。</p>
 
-<h2>9.1.8 组件与实例化</h2>
+<h2>6.1.9 组件与实例化</h2>
 
 <pre><code>"components": {
   "SearchBar": {
@@ -131,7 +288,7 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
     "rect": { "x": 20, "y": 20, "w": 300, "h": 40 } }
 ]</code></pre>
 
-<h2>9.1.9 热加载</h2>
+<h2>6.1.10 热加载</h2>
 
 <pre><code>HotReloader reloader("layouts/main.json", rebuildCallback);
 reloader.poll();                 // 每帧调用（默认 30 帧检查一次）
@@ -139,8 +296,8 @@ reloader.setPollInterval(15);    // 调整间隔
 reloader.reload();               // 手动触发</code></pre>
 
 <div class="chapter-nav">
-  <a href="../integration.html">← 7 嵌入到你的逻辑回路中</a>
-  <a href="properties.html">下一节：9.2 属性速查表 →</a>
+  <a href="../integration.html">← 5.8 嵌入到你的逻辑回路中</a>
+  <a href="properties.html">下一节：7 属性速查表 →</a>
 </div>
 
 </div>

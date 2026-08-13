@@ -1,9 +1,11 @@
 ﻿// 由AI(DeepSeek V4 Flash)生成，可能不完整或有错误，请自行检查和修改
 #include "LayoutParser.h"
+#include "Bench.h"
 #include "WinFrame.h"
 #include "Dialog.h"
 #include "ComboBox.h"
 #include "NumericUpDown.h"
+#include "LuotiAni.h"
 #include "LayoutEngine.h"
 #include "PropertyNames.h"
 #include <fstream>
@@ -36,6 +38,37 @@ shared_ptr<Control> LayoutParser::parseLayout(const string& jsonContent) {
 
     if (j.contains(PropertyNames::kJsonTheme) && j[PropertyNames::kJsonTheme].is_object()) {
         m_theme.parse(j[PropertyNames::kJsonTheme]);
+    }
+
+    // 顶层 viewport 键：显式基准画布 + 初始缩放模式（先 canvas 后 mode，
+    // mode 应用时按 canvas 重算根变换）；无实例目标（m_viewportTarget）时忽略
+    if (m_viewportTarget != nullptr &&
+        j.contains(PropertyNames::kJsonViewport) && j[PropertyNames::kJsonViewport].is_object()) {
+        const json& vp = j[PropertyNames::kJsonViewport];
+        if (vp.contains(PropertyNames::kJsonWidth) && vp.contains(PropertyNames::kJsonHeight)) {
+            float w = vp[PropertyNames::kJsonWidth].get<float>();
+            float h = vp[PropertyNames::kJsonHeight].get<float>();
+            if (w > 0.0f && h > 0.0f) {
+                m_viewportTarget->canvasWidth = w;
+                m_viewportTarget->canvasHeight = h;
+                // 三层模型：画布基准写入 bench rect（布局空间）；
+                // off 下画布恒跟随视口，仅记录声明不生效
+                if (m_viewportTarget->bench &&
+                    m_viewportTarget->bench->getViewportScaleMode() != Bench::ViewportScaleMode::Off) {
+                    m_viewportTarget->bench->setRect(SRect(0, 0, w, h));
+                }
+            }
+        }
+        if (m_viewportTarget->bench &&
+            vp.contains(PropertyNames::kJsonViewportScaleMode) &&
+            vp[PropertyNames::kJsonViewportScaleMode].is_string()) {
+            std::string sm = vp[PropertyNames::kJsonViewportScaleMode].get<std::string>();
+            int mode = 0;
+            if (sm == "fit") mode = 1;
+            else if (sm == "stretch") mode = 2;
+            m_viewportTarget->bench->setViewportScaleMode(
+                static_cast<Bench::ViewportScaleMode>(mode));
+        }
     }
 
     // Component system: parse components before layouts
@@ -222,6 +255,12 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = parseLabel(j, parent);
     } else if (type == PropertyNames::kControlTypeButton) {
         result = parseButton(j, parent);
+    } else if (type == PropertyNames::kControlTypeImageButton) {
+        // image-button：与 button 同语法（caption/actors/styles/scale/events），
+        // 图片经 "actors" 或状态图属性设置；别名避免与普通按钮语义混淆
+        result = parseButton(j, parent);
+    } else if (type == PropertyNames::kControlTypeAnimation) {
+        result = parseAnimation(j, parent);
     } else if (type == PropertyNames::kControlTypeEditBox) {
         result = parseEditBox(j, parent);
     } else if (type == PropertyNames::kControlTypeComboBox) {
@@ -366,6 +405,46 @@ shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
     label->create();
 
     return label;
+}
+
+// ==================== Animation (LuotiAni) ====================
+
+shared_ptr<Control> LayoutParser::parseAnimation(const json& j, Control* parent) {
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
+    popJsonPath();
+
+    float xScale = 1.0f, yScale = 1.0f;
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
+    }
+
+    auto ani = make_shared<LuotiAni>(parent, xScale, yScale);
+    ani->setRect(rect);
+    m_theme.applyCommonColors(ani, PropertyNames::kThemeCatPanel);
+    parseCommonProperties(ani, j);
+
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = ani;
+    }
+
+    // 动画描述文件路径（"path"）；w/h 传 0 → prepare 回退到画布尺寸。
+    // parse 阶段尚无渲染设备：只解析描述（loadFromFile），挂树后由
+    // LuotiAni::setRenderDevice 补 prepare（与 C ABI CreateAnimation 一致：
+    // 创建后不自动播放，SetBool "playing" 控制）
+    if (j.contains(PropertyNames::kJsonPath) && j[PropertyNames::kJsonPath].is_string()) {
+        string p = j[PropertyNames::kJsonPath].get<string>();
+        fs::path fp(p);
+        if (fp.is_relative()) fp = fs::path(Platform::GetBasePath()) / fp;
+        try {
+            ani->loadFromFile(fp);
+        } catch (...) {
+            logWarn("animation load failed: " + p);
+            return nullptr;
+        }
+    }
+    return ani;
 }
 
 // ==================== Button ====================
@@ -544,18 +623,26 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
         }
         if (!filePath.empty()) {
             try {
+                // 构造 scale 恒为 1.0：按钮 scale 经 setParent 复合缩放作用于
+                // 内嵌动画（setParent 中 m_xxScale = m_xScale * parent scale），
+                // 传按钮 scale 会造成双重缩放
                 auto luotiAni = make_shared<LuotiAni>(btn.get(), 1.0f, 1.0f);
-                luotiAni->loadAniDesc(fs::path(filePath));
+                fs::path rp(filePath);
+                if (rp.is_relative()) rp = fs::path(Platform::GetBasePath()) / rp;
+                luotiAni->loadAniDesc(rp);
                 luotiAni->setRect(SRect(0, 0, rect.width, rect.height));
-                luotiAni->prepare(0);
-                luotiAni->play();
+                // parse 阶段尚无渲染设备：不 prepare/play，挂树后由
+                // LuotiAni::setRenderDevice 补 prepare（同 CreateAnimation 模式），
+                // 播放由 SetBool "playing" 控制
                 btn->setLuotiAni(luotiAni);
+            } catch (const char* e) {
+                logWarn("failed to load luotiAni from file: " + filePath + " (" + e + ")");
             } catch (...) {
                 logWarn("failed to load luotiAni from file: " + filePath);
             }
         } else if (!resourceId.empty()) {
             try {
-                auto luotiAni = make_shared<LuotiAni>(btn.get(), 1.0f, 1.0f);
+                auto luotiAni = make_shared<LuotiAni>(btn.get(), btn->getScaleXX(), btn->getScaleYY());
                 luotiAni->loadAniDesc(resourceId);
                 luotiAni->setRect(SRect(0, 0, rect.width, rect.height));
                 luotiAni->prepare(0);

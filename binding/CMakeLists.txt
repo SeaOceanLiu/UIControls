@@ -46,16 +46,25 @@ if(WIN32)
 endif()
 
 # ============================================================
-# Samples（仅当位于主工程构建树内且存在核心库 target 时构建）
+# Samples
+# 构建条件：
+#   - 主工程构建树内（存在核心库 target），或
+#   - 独立配置时指定 UICORNERSTONE_CORE_OUTPUT（核心产物目录，
+#     样例运行依赖 DLL 从此目录拷贝）。
 # 纯动态加载：仅链接 UICornerstoneBinding（静态包装），不链接核心库。
 # 运行依赖：UICornerstone.dll + UIBackend_<backend>.dll（POST_BUILD 拷贝）。
 # ============================================================
-if(TARGET UICornerstone)
+set(UICORNERSTONE_CORE_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/../build/sdl3/Debug" CACHE PATH
+    "核心库构建输出目录（独立配置 binding 时，样例依赖 DLL 的拷贝来源）")
+
+if(TARGET UICornerstone OR UICORNERSTONE_CORE_OUTPUT)
     set(BINDING_SAMPLES
         sample_cpp_hosted
         sample_cpp_embed
         sample_cpp_multiview
         sample_cpp_multiinstance
+        sample_scale
+        sample_viewport_scale
     )
     foreach(sample IN LISTS BINDING_SAMPLES)
         add_executable(${sample} samples/${sample}.cpp)
@@ -63,13 +72,27 @@ if(TARGET UICornerstone)
     endforeach()
 
     # 核心 DLL（UICornerstone.dll）拷贝到各样例输出目录
-    if(WIN32 AND TARGET UICornerstone_dll)
-        foreach(sample IN LISTS BINDING_SAMPLES)
-            add_custom_command(TARGET ${sample} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "$<TARGET_FILE:UICornerstone_dll>"
-                    $<TARGET_FILE_DIR:${sample}>)
-        endforeach()
+    # 主树模式：直接引用 UICornerstone_dll target；独立模式：从
+    # UICORNERSTONE_CORE_OUTPUT 目录拷贝全部 DLL。
+    if(WIN32)
+        if(TARGET UICornerstone_dll)
+            foreach(sample IN LISTS BINDING_SAMPLES)
+                add_custom_command(TARGET ${sample} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "$<TARGET_FILE:UICornerstone_dll>"
+                        $<TARGET_FILE_DIR:${sample}>)
+            endforeach()
+        elseif(EXISTS "${UICORNERSTONE_CORE_OUTPUT}")
+            file(GLOB BINDING_CORE_DLLS "${UICORNERSTONE_CORE_OUTPUT}/*.dll")
+            foreach(sample IN LISTS BINDING_SAMPLES)
+                foreach(dll IN LISTS BINDING_CORE_DLLS)
+                    add_custom_command(TARGET ${sample} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            "${dll}"
+                            $<TARGET_FILE_DIR:${sample}>)
+                endforeach()
+            endforeach()
+        endif()
     endif()
 
     # 后端插件 DLL（UIBackend_<backend>.dll）拷贝到各样例输出目录
@@ -95,13 +118,15 @@ if(TARGET UICornerstone)
     endif()
 
     # 资源目录拷贝（字体/图片/动画，与 test 目标一致）
-    get_filename_component(ASSETS_DIR "${CMAKE_SOURCE_DIR}/subModules/assets" ABSOLUTE)
-    foreach(sample IN LISTS BINDING_SAMPLES)
-        add_custom_command(TARGET ${sample} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${ASSETS_DIR}"
-                $<TARGET_FILE_DIR:${sample}>/assets)
-    endforeach()
+    get_filename_component(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../subModules/assets" ABSOLUTE)
+    if(EXISTS "${ASSETS_DIR}")
+        foreach(sample IN LISTS BINDING_SAMPLES)
+            add_custom_command(TARGET ${sample} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    "${ASSETS_DIR}"
+                    $<TARGET_FILE_DIR:${sample}>/assets)
+        endforeach()
+    endif()
 endif()
 
 message(STATUS "UICornerstoneBinding: sources registered")

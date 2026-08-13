@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.1 使用 C++ Binding 搭建 - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="css/style.css">
+<script id="nav-data" src="assets/nav.js" data-prefix="" data-current="cpp-binding.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>3.1 使用 C++ Binding 搭建</h1>
+
+<p>C++ Binding（<code>binding/</code>）是推荐的上手方式：它把 C ABI 包装成现代 C++ 接口，且<strong>纯动态加载</strong>——只链接 <code>kernel32</code>，运行时用 <code>LoadLibrary</code> 加载核心 DLL，不产生静态链接耦合。</p>
+
+<h2>3.1.1 CMake 集成</h2>
+
+<p>在你的工程中 <code>add_subdirectory(binding)</code> 并链接 <code>UICornerstone_binding</code>：</p>
+
+<pre><code>add_subdirectory(${UICORNERSTONE_ROOT}/binding)
+target_link_libraries(myapp PRIVATE UICornerstone_binding)</code></pre>
+
+<p>运行时将 <code>build/xxx_dll/UICornerstone.dll</code>（或 <code>libUICornerstone.so</code>）放到可执行文件旁，或通过 <code>Config.WithCoreLibraryDir(...)</code> 指定搜索路径。</p>
+
+<h2>3.1.2 核心头文件</h2>
+
+<table>
+<tr><th>头文件</th><th>内容</th></tr>
+<tr><td><code>binding/include/UICornerstone.h</code></td><td>入口类 <code>UICornerstone::UICornerstone</code>：实例创建、窗口、主循环、控件工厂（Create*）</td></tr>
+<tr><td><code>binding/include/Control.h</code></td><td>控件代理类 <code>Control</code>：统一属性读写（Set/Get）与回调注册</td></tr>
+<tr><td><code>binding/include/Event.h</code></td><td>事件类 <code>Event</code>：具名访问器（GetValueChanged / GetTextChanged 等）</td></tr>
+<tr><td><code>binding/include/PropertyNames.h</code></td><td>属性名与事件名字符串常量（kCaption / kEventClick 等）</td></tr>
+</table>
+
+<h2>3.1.3 最小 Hosted 模式应用</h2>
+
+<pre><code>#include "UICornerstone.h"
+#include "Control.h"
+#include "Event.h"
+#include "PropertyNames.h"
+
+int main() {
+    auto ui = UICornerstone::UICornerstone::Create(
+        UICornerstone::UICornerstone::Config{}
+            .WithBackend("sdl3")          // "sdl3" / "sfml" / "raylib"
+            .WithWindow("My App", 800, 600));
+    if (!ui) return 1;                    // DLL 缺失或路径错误 → nullptr
+
+    auto button = ui->CreateButton("Click Me", 20, 20, 140, 36);
+    auto label  = ui->CreateLabel("Hello", 20.0f, 20, 70, 220, 40);
+
+    button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
+        label.SetString(PropertyNames::kCaption, "Clicked!");
+    });
+
+    return ui->Run([](double dt) { (void)dt; });   // Hosted：UI 托管主循环
+}</code></pre>
+
+<div class="note">工厂方法对应 C ABI 创建函数：<code>CreateButton(text,x,y,w,h)</code>、<code>CreateLabel(text,fontSize,x,y,w,h)</code>、<code>CreateCheckBox(text,x,y,w,h)</code>、<code>CreateEditBox(x,y,w,h)</code>、<code>CreateProgressBar(x,y,w,h)</code>、<code>CreateImage(image,x,y,w,h)</code> 等。</div>
+
+<div class="chapter-nav">
+  <a href="basics.html">← 3 从基础入门</a>
+  <a href="first-app.html">下一节：3.2 创建你的第 1 个 UICornerstone 应用 →</a>
+</div>
+
+</div>
+</body>
+</html>

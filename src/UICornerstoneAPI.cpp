@@ -340,6 +340,18 @@ UIInstance UICornerstone_CreateInstance(
     registerInstance(ctx);
     // 应用全局后端默认配置（inst == NULL 的 SetBackendConfig* 落点）
     applyBackendDefaults(ctx);
+    // 视口缩放初始配置（canvas + mode）：viewport 已就绪，模式应用即重算根变换
+    if (config) {
+        if (config->structSize >= offsetof(UIInstanceConfig, viewportScaleMode) + sizeof(config->viewportScaleMode)) {
+            if (config->canvasWidth > 0.0f && config->canvasHeight > 0.0f) {
+                UICornerstone_SetCanvasSize(ctx, config->canvasWidth, config->canvasHeight);
+            }
+            if (config->viewportScaleMode > 0) {
+                ctx->bench->setViewportScaleMode(
+                    static_cast<Bench::ViewportScaleMode>(config->viewportScaleMode));
+            }
+        }
+    }
     UI_LOGI(ctx, "created");
     return ctx;
 }
@@ -361,9 +373,9 @@ UIInstance UICornerstone_CreateViewport(UIInstance parent, UIRect rect) {
     // initialize() 内兜底 `viewport = owner->viewport` 会覆盖上文写入的区域，
     // 此处须在 initialize 之后重写视口区域（§5.13.4）
     vp->viewport = SRect(rect.x, rect.y, rect.w, rect.h);
-    // resized 只更新宽高（ControlImpl::resized），子视口位于非零偏移时须用
-    // setRect 一并写入 left/top，否则 bench 内容画在 (0,0) 被视口裁剪
-    vp->bench->setRect(vp->viewport);
+    // 三层模型：视口区（含 left/top 偏移的屏幕可见区域）写入 viewport 数据层，
+    // bench 恒为画布——off 默认模式下 resized 会将画布置为视口（含偏移）
+    vp->bench->resized(vp->viewport);
 
     parent->children.push_back(vp);
     // 首个子视口自动设为活动视口（键盘事件投递目标）
@@ -518,9 +530,13 @@ int UICornerstone_GetBackendConfigBool(UIInstance inst, const char* key, int* va
 // ============================================================
 void UICornerstone_SetViewport(UIInstance instance, float x, float y, float w, float h) {
     if (!instance || instance->destroying) return;
+    // 三层模型：viewport 恒为屏幕可见区域（数据层），bench 恒为画布顶层
+    // （布局空间）——统一经 bench->resized 派发：off 画布=视口（含偏移），
+    // fit/stretch 画布尺寸不变，仅重算根变换（anchor 携带视口偏移）
     instance->viewport = SRect(x, y, w, h);
-    // resized 只更新宽高（ControlImpl::resized），须用 setRect 一并写入偏移
-    if (instance->bench) instance->bench->setRect(instance->viewport);
+    if (instance->bench) {
+        instance->bench->resized(instance->viewport);
+    }
 }
 
 void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w, float* h) {
@@ -529,6 +545,61 @@ void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w
     if (y) *y = instance->viewport.top;
     if (w) *w = instance->viewport.width;
     if (h) *h = instance->viewport.height;
+}
+
+int UICornerstone_SetViewportBackgroundColor(UIInstance instance, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    if (!instance || instance->destroying) return 0;
+    instance->viewportBackground = SColor(r, g, b, a);
+    return 1;
+}
+
+// ============================================================
+// 视口缩放（ViewportScale）
+// ============================================================
+int UICornerstone_SetViewportScaleMode(UIInstance instance, int mode) {
+    if (!instance || instance->destroying) return 0;
+    if (mode < 0 || mode > 2) return 0;
+    if (!instance->bench) return 0;
+    instance->bench->setViewportScaleMode(static_cast<Bench::ViewportScaleMode>(mode));
+    return 1;
+}
+
+int UICornerstone_GetViewportScaleMode(UIInstance instance, int* mode) {
+    if (!instance || !mode || !instance->bench) return 0;
+    *mode = static_cast<int>(instance->bench->getViewportScaleMode());
+    return 1;
+}
+
+int UICornerstone_SetCanvasSize(UIInstance instance, float w, float h) {
+    if (!instance || instance->destroying || !instance->bench) return 0;
+    if (w <= 0.0f || h <= 0.0f) return 0;
+    instance->canvasWidth = w;
+    instance->canvasHeight = h;
+    // off 下画布恒跟随窗口（原语义），仅记录显式画布声明；
+    // fit/stretch 下画布 = 显式声明，置 rect 并重算根变换。
+    // 注意：布局空间（bench rect）= 画布原点 (0,0)——left/top 归零是
+    // 有意的分层设计：视口偏移（子视口嵌入、窗口 resize）由
+    // recomputeViewportTransform 的 anchorX/Y 携带（含 vp.left/top），
+    // getDrawRect 以 {m_rect.left + m_anchorX} 计算不双算。若此处保留
+    // bench 原 left/top 会与 anchor 叠加造成嵌入场景双重偏移。
+    if (instance->bench->getViewportScaleMode() != Bench::ViewportScaleMode::Off) {
+        instance->bench->setRect(SRect(0, 0, w, h));
+        instance->bench->recomputeViewportTransform();
+    }
+    return 1;
+}
+
+int UICornerstone_GetViewportScale(UIInstance instance, float* sx, float* sy) {
+    if (!instance || !instance->bench) return 0;
+    if (sx) *sx = instance->bench->getScaleXX();
+    if (sy) *sy = instance->bench->getScaleYY();
+    return 1;
+}
+
+int UICornerstone_SetViewportAnchor(UIInstance instance, float ax, float ay) {
+    if (!instance || instance->destroying || !instance->bench) return 0;
+    instance->bench->setViewportAnchor(ax, ay);
+    return 1;
 }
 
 uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance) {
@@ -624,8 +695,9 @@ static bool pumpInstanceEvents(UIInstance instance) {
             if (evt.m_type == EventType::WindowClose) {
                 instance->quit = true;
             } else if (evt.m_type == EventType::WindowResize) {
-                instance->bench->resized(SRect(0, 0,
-                    (float)evt.resizeEvent.width, (float)evt.resizeEvent.height));
+                instance->viewport = SRect(0, 0,
+                    (float)evt.resizeEvent.width, (float)evt.resizeEvent.height);
+                instance->bench->resized(instance->viewport);
             }
             break;
         }
@@ -665,8 +737,9 @@ int UICornerstone_ProcessEvents(UIInstance instance) {
         if (event.m_type == EventType::WindowClose) {
             instance->quit = true;
         } else if (event.m_type == EventType::WindowResize) {
-            instance->bench->resized(SRect(0, 0,
-                (float)event.resizeEvent.width, (float)event.resizeEvent.height));
+            instance->viewport = SRect(0, 0,
+                (float)event.resizeEvent.width, (float)event.resizeEvent.height);
+            instance->bench->resized(instance->viewport);
         } else if (event.m_type == EventType::FocusLost) {
             // 与轮询通路（pumpInstanceEvents）语义一致：窗口失去系统焦点
             // → 清除本实例焦点（含活动子视口），避免跨实例焦点环并存
@@ -697,6 +770,12 @@ void UICornerstone_Render(UIInstance instance) {
     if (!instance || !instance->initialized || instance->destroying) return;
     if (!instance->renderDevice || !instance->bench) return;
     instance->renderDevice->pushClipRect(instance->viewport);
+    // 视口背景色：填充整个视口区域（fit/stretch 画布留白处也生效），
+    // 默认透明（alpha=0）时跳过，行为与原"仅 clear 透出"一致
+    if (instance->viewportBackground.alpha() > 0.0f) {
+        instance->renderDevice->setDrawColor(instance->viewportBackground);
+        instance->renderDevice->fillRect(instance->viewport);
+    }
     instance->bench->draw();
     instance->renderDevice->popClipRect();
 }
@@ -794,6 +873,7 @@ int UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent) {
     if (!instance || !instance->initialized || instance->destroying || !jsonContent) return 0;
 
     LayoutParser parser(instance->dataContext);
+    parser.setViewportTarget(instance);
 
     // 注册所有 actions 到 LayoutParser
     for (auto& [name, pair] : instance->actions) {
@@ -832,6 +912,26 @@ int UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent) {
         auto ctl = parser.findControlById(id);
         if (ctl) instance->controlsById[id] = reinterpret_cast<UIControlHandle>(ctl.get());
     }
+
+    // 布局动画补 prepare：解析阶段无渲染设备，LuotiAni 挂树后设备就绪；
+    // 此处统一补 prepare（语义同 CreateAnimation：创建不自动播放，SetBool "playing" 控制）
+    std::function<void(Control*)> prepareLayoutAnis = [&](Control* node) {
+        if (auto* ani = dynamic_cast<LuotiAni*>(node)) {
+            if (!ani->isPrepared()) {
+                try {
+                    ani->prepare();
+                } catch (...) {
+                    UI_LOGE(instance, "layout animation prepare failed");
+                }
+            }
+        }
+        if (auto* impl = dynamic_cast<ControlImpl*>(node)) {
+            for (auto& child : impl->getChildren()) {
+                prepareLayoutAnis(child.get());
+            }
+        }
+    };
+    prepareLayoutAnis(instance->bench);
 
     UI_LOGI(instance, "LoadLayout OK (%zu control ids, %zu menu bars, %zu dialogs)",
         parser.getAllControlIds().size(),
@@ -1061,16 +1161,18 @@ UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
 {
     if (!instance || !instance->initialized) return nullptr;
     auto ctl = std::make_shared<Button>(instance->bench, SRect(x, y, w, h), xScale, yScale);
+    // Actor 依附于按钮（parent=ctl），累进缩放 = xScale * parent 的累计缩放；
+    // 这里必须传 1.0f，否则按钮 2x 时 Actor 再乘 2 变成 4x（图片溢出按钮区域）。
     if (normalImage) {
-        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(normalImage), true, xScale, yScale);
+        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(normalImage), true, 1.0f, 1.0f);
         ctl->setNormalStateActor(actor);
     }
     if (hoverImage) {
-        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(hoverImage), true, xScale, yScale);
+        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(hoverImage), true, 1.0f, 1.0f);
         ctl->setHoverStateActor(actor);
     }
     if (pressedImage) {
-        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(pressedImage), true, xScale, yScale);
+        auto actor = std::make_shared<Actor>(ctl.get(), fs::path(pressedImage), true, 1.0f, 1.0f);
         ctl->setPressedStateActor(actor);
     }
     instance->bench->addControl(ctl);
@@ -1079,7 +1181,7 @@ UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ctl.get()));
 }
 
-UIControlHandle UICornerstone_CreateImage(UIInstance instance,
+UIControlHandle UICornerstone_CreateActor(UIInstance instance,
     const char* image, float x, float y, float w, float h, float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
@@ -1092,6 +1194,12 @@ UIControlHandle UICornerstone_CreateImage(UIInstance instance,
     actor->create();
     actor->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(actor.get()));
+}
+
+UIControlHandle UICornerstone_CreateImage(UIInstance instance,
+    const char* image, float x, float y, float w, float h, float xScale, float yScale)
+{
+    return UICornerstone_CreateActor(instance, image, x, y, w, h, xScale, yScale);
 }
 
 UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
@@ -1107,6 +1215,7 @@ UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
             if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
             ani->loadFromFile(p);
             ani->prepare();
+            // 设计语义（test_animation A2）：创建后不自动播放，由调用方 SetBool "playing" 启动
         } catch (...) {
             printf("UICornerstone_CreateAnimation: load/prepare failed for '%s'\n", jsoncPath);
             instance->bench->removeControl(ani);
@@ -1115,6 +1224,32 @@ UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
     }
     ani->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ani.get()));
+}
+
+UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
+    const char* jsoncPath, float x, float y, float w, float h, float xScale, float yScale)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto btn = std::make_shared<Button>(instance->bench, SRect(x, y, w, h), xScale, yScale);
+    // 内嵌资源：不挂树，不响应鼠标；构造 scale 恒为 1.0，按钮 scale 经
+    // setParent 复合缩放作用于动画（传 xScale/yScale 会造成双重缩放）
+    auto ani = std::make_shared<LuotiAni>(btn.get(), 1.0f, 1.0f);   // 内嵌资源：不挂树，不响应鼠标
+    ani->setRect(SRect(0, 0, w, h));
+    if (jsoncPath) {
+        try {
+            fs::path p(jsoncPath);
+            if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+            ani->loadFromFile(p);
+            ani->prepare();
+        } catch (...) {
+            printf("UICornerstone_CreateAnimatedButton: load/prepare failed for '%s'\n", jsoncPath);
+            return nullptr;
+        }
+    }
+    btn->setLuotiAni(ani);
+    instance->bench->addControl(btn);
+    btn->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(btn.get()));
 }
 
 // ============================================================

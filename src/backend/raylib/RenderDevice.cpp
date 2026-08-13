@@ -598,6 +598,16 @@ public:
         if (blendSet) EndBlendMode();
     }
 
+    void setTextureFilter(Texture* texture, bool bilinear) override {
+        if (!texture) return;
+        RaylibTexture* rlTex = static_cast<RaylibTexture*>(texture);
+        Texture2D nativeTex = rlTex->native();
+        if (nativeTex.id != 0) {
+            SetTextureFilter(nativeTex,
+                bilinear ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT);
+        }
+    }
+
     void drawTextureRotated(Texture* texture, const SRect* srcRect, const SRect* dstRect, float angle) override {
         if (!texture || !dstRect) return;
         RaylibTexture* rlTex = static_cast<RaylibTexture*>(texture);

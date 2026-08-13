@@ -270,6 +270,7 @@ SharedSurface canvas = ani->getFrameCanvas(7);  // 该帧合成后的画布
 | `test_luotiani` | 引擎语义 L1-L11：关键帧/多段/缓动/路径/向后兼容/全量资源回归 L10/帧 Actor 缩放校准 | `build_test.bat test_luotiani` |
 | `test_animation` | C ABI 集成 A1-A12：工厂、playing/loop/frame 属性、尺寸回退、异常边界、easing+path 端到端 | `build_test.bat test_animation` |
 | `test_button` | 真实资源动画按钮（g_button6 2x 缩放动画）人工观察 | `build_test.bat test_button` |
+| `test_scale_json` / `test_scale_cabi` | 缩放对照组（JSON 布局 / C ABI 编程式）：1x/2x 按钮/图片按钮/动画按钮 rect 断言 + 自动点击注入（frame==12 向 ani1x 中心 (1210,190) 注入 MouseDown+MouseUp，验证内嵌动画按钮 CLICK） | `build_test.bat test_scale_json` / `test_scale_cabi` |
 
 调试接口：`getFrameOpData(layer, frame)` 读任意帧的解析后属性；`getFrameCanvas(frame)` 读烘焙后画布；`getFrameActor(frame)` 读帧 Actor（断言缩放/矩形）。
 

@@ -277,6 +277,7 @@ private:
 
     vector<shared_ptr<Actor>>m_frames;
     vector<SharedSurface> m_frameSurfaces;
+    bool m_frameBilinearFilter;
 
     struct Matrix2D{
         float m[2][2];
@@ -311,6 +312,7 @@ public:
         m_isLoaded(false),
         m_isPrepared(false),
         m_isPlaying(false),
+        m_frameBilinearFilter(false),
         m_id(-1)
     {
     }
@@ -343,6 +345,10 @@ public:
     uint32_t getCurrentFrame(void) { return m_frameToDraw; };
     bool isLoop(void) { return m_loop; };
     void setLoop(bool loop) { m_loop = loop; };
+
+    // 帧位图纹理采样过滤开关（true=双线性，false=最近邻）；在 prepare/纹理创建时生效
+    void setFrameFilter(bool bilinear) { m_frameBilinearFilter = bilinear; }
+    bool getFrameFilter() const { return m_frameBilinearFilter; }
 
     // ── 属性系统重写（控件化 §6.3，分发惯例同 Button.cpp:335-353）──
     int setStringProperty(const char* prop, const char* value) override;  // "animation"

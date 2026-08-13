@@ -68,12 +68,11 @@ build\sample\hello_uicornerstone\sdl3\Debug\hello_uicornerstone.exe</code></pre>
 cd build\sdl3\test\Debug
 test_label.exe auto=3
 
-:: C++ Binding 样例（UICORN_AUTO=1 无人值守冒烟：240 帧自动退出）
-set UICORN_AUTO=1
-build\binding\Debug\sample_cpp_hosted.exe
+:: C++ Binding 样例（auto=&lt;秒&gt; 无人值守冒烟：满时长自动退出；计时起点为窗口创建后首帧）
+build\binding\Debug\sample_cpp_hosted.exe auto=4
 
-:: 命令行选后端（缺省 sdl3）
-sample_cpp_hosted.exe backend=sfml</code></pre>
+:: 命令行选后端（缺省 sdl3，可与其他参数任意顺序混用）
+sample_cpp_hosted.exe backend=sfml auto=4</code></pre>
 
 <div class="note">视觉类测试会弹出真实窗口；在 CI/无头环境下可用 <code>auto=</code> 自动跑完退出。全部测试支持三后端全量回归（<code>exit=0</code> 全过）。</div>
 

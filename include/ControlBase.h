@@ -198,6 +198,9 @@ public:
     virtual float getScaleYY(void) = 0;
     virtual void setScaleX(float xScale=1.0f) = 0;
     virtual void setScaleY(float yScale=1.0f) = 0;
+    // 父链缩放变更后整棵子树复合缩放刷新（child 视角，虚分派到被刷新的节点，
+    // 非树成员子控件经覆写收口）。parentXX/YY = 父当前复合值。
+    virtual void refreshScaleWith(float parentXX, float parentYY) {}
     virtual void show(void) = 0;
     virtual void hide(void) = 0;
     virtual void setVisible(bool visible) = 0;
@@ -216,6 +219,7 @@ public:
     virtual SRect getDrawRect(void) = 0;
     virtual SRect mapToDrawRect(SRect rect) = 0;
     virtual SPoint mapToDrawPoint(SPoint point) = 0;
+    virtual SPoint mapViewportToCanvas(SPoint point) = 0;
     virtual bool isContainsPoint(float x, float y) = 0; //判断点是否在控件内
 
     // 鼠标进入/退出回调函数
@@ -396,6 +400,7 @@ public:
     float getScaleYY(void) override;
     void setScaleX(float xScale=1.0f) override;
     void setScaleY(float yScale=1.0f) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
     void setRect(SRect rect) override;
     vector<shared_ptr<Control>>& getChildren() { return m_children; }
     void setLeft(float left){
@@ -438,6 +443,7 @@ public:
     SRect getDrawRect(void) override;
     SRect mapToDrawRect(SRect rect) override;
     SPoint mapToDrawPoint(SPoint point) override;
+    SPoint mapViewportToCanvas(SPoint point) override;
     bool isContainsPoint(float x, float y) override;
     void onMouseEnter(float x, float y) override;
     void onMouseLeave(float x, float y) override;

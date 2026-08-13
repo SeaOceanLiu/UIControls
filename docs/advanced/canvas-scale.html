@@ -1,0 +1,134 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.6 视口画布缩放（Canvas Scale） - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="advanced/canvas-scale.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>5.6 视口画布缩放（Canvas Scale）</h1>
+
+<p>视口画布缩放解决「设计分辨率 ≠ 窗口分辨率」的适配问题：声明一块<strong>基准画布</strong>（如 1920×1080），
+引擎按缩放模式把整棵控件树（含字号、贴图、弹层）等比或拉伸地适配到实际窗口/视口，命中测试与坐标换算同步收口。</p>
+
+<div class="tip">与 5.5 的区别：5.5 的 <code>scale</code> 是<strong>单个控件的初始系数</strong>（静态、布局不变）；
+本节是<strong>整个视口的缩放模式</strong>（off / fit / stretch），作用于全部控件，且可运行时切换。</div>
+
+<h2>5.6.1 三层坐标关系</h2>
+
+<p>视口缩放的坐标模型分三层，从外到内：</p>
+
+<pre><code>视口 Viewport（渲染区域，窗口像素坐标）
+ └─ 画布 Canvas（基准画布，设计分辨率——控件布局的坐标系）
+     └─ 控件 Control（本地坐标，布局矩形与命中测试所在）</code></pre>
+
+<ul>
+  <li><strong>视口</strong>：实际渲染区域（窗口或子视口），坐标为窗口像素；渲染时 clip 到视口，绘制内容由下层映射上来；</li>
+  <li><strong>画布</strong>：基准画布（设计分辨率，<code>SetCanvasSize</code> / JSON <code>viewport</code> 键声明；缺省 = 跟随视口），是控件布局的坐标系；off 模式下画布 == 视口；</li>
+  <li><strong>控件</strong>：在画布坐标系内布局（rect 为画布坐标），绘制与命中经两层变换——本地 → 画布（自身 × 祖先系数连乘）、画布 → 视口（根变换：off 原样 / fit 等比 min + 居中 / stretch 双轴独立）。</li>
+</ul>
+
+<p>反查路径：视口坐标 → 画布坐标 = <code>mapViewportToCanvas</code>（根变换逆变换，见 5.6.7）；画布坐标 → 控件本地坐标 = <code>mapToDrawPoint</code>。
+字号、贴图等绘制内容按「复合系数 = 自身系数 × 祖先系数 × 视口根系数」重建（见 5.6.6）。</p>
+
+<h2>5.6.2 三种模式</h2>
+
+<table>
+<tr><th>模式</th><th>取值</th><th>语义</th></tr>
+<tr><td>off</td><td><code>0</code> / <code>"off"</code></td><td>画布跟随窗口（缺省）。基准画布仅记录，控件按窗口原尺寸布局，行为与未启用缩放完全一致</td></tr>
+<tr><td>fit</td><td><code>1</code> / <code>"fit"</code></td><td>等比居中：按基准画布与窗口的宽高比取 <strong>min</strong>，两轴同一系数，多出的空间形成上下/左右黑边（可配背景色）</td></tr>
+<tr><td>stretch</td><td><code>2</code> / <code>"stretch"</code></td><td>拉伸铺满：x/y 两轴独立系数（sx ≠ sy），铺满窗口，可能产生非等比变形</td></tr>
+</table>
+
+<p>当前复合系数可用 <code>GetViewportScale(&amp;sx, &amp;sy)</code> 查询（off 模式恒 1.0）。</p>
+
+<h2>5.6.3 声明基准画布</h2>
+
+<p>三种声明方式等价（JSON 布局加载即生效，见 <a href="../appendix/declarative-syntax.html">9.1 语法速查</a>）：</p>
+
+<pre><code>// 1) JSON 布局顶层键（先于控件树解析）
+{ "version":"1.0",
+  "viewport": { "width":1920, "height":1080, "scale-mode":"fit" },
+  "controls":[...] }
+
+// 2) C ABI
+UICornerstone_SetCanvasSize(g_inst, 1920, 1080);          // 显式基准画布
+UICornerstone_SetViewportScaleMode(g_inst, 1);            // 0=off 1=fit 2=stretch
+
+// 3) C++ Binding
+ui-&gt;SetCanvasSize(1920, 1080);
+ui-&gt;SetViewportScaleMode(1);</code></pre>
+
+<p>缺省基准 = 跟随窗口：在 <code>off</code> 模式下仅是记录；切换到 fit / stretch 后以最后一次声明的基准为适配依据。</p>
+
+<h2>5.6.4 运行时切换</h2>
+
+<p>缩放模式可在运行时任意切换，无需重建控件树。fit ↔ stretch ↔ off 三态下，布局矩形、命中测试、字号重建均按新模式即时重算（切换成本 ≈ 当帧字号重建一次）：</p>
+
+<pre><code>// 属性系统（C++ 核心：Bench 覆写 setEnumProperty）
+BENCH-&gt;setEnumProperty("viewport-scale-mode", "fit");     // off / fit / stretch
+// 非法枚举值将被拒绝，不改变当前模式
+
+// C ABI
+UICornerstone_SetViewportScaleMode(g_inst, 2);            // 切到 stretch
+
+// C++ Binding（实例方法）
+ui-&gt;SetViewportScaleMode(2);</code></pre>
+
+<div class="tip">提示：JSON <code>"scale-mode"</code> 缺省为 off；C ABI / Binding 实例创建时若不调用
+<code>SetCanvasSize</code> + <code>SetViewportScaleMode</code>，则行为与未启用缩放前完全一致（off 分支隔离，既有应用不受影响）。</div>
+
+<h2>5.6.5 锚点与背景色</h2>
+
+<ul>
+  <li><code>SetViewportAnchor(ax, ay)</code> — 手动锚点偏移（增量叠加）。fit 下配合居中定位；off 模式下可用作手动平移；</li>
+  <li><code>SetViewportBackgroundColor(r, g, b, a)</code> — 视口背景色（RGBA8888，默认透明=不填充）。fit 的等比黑边区域在渲染时以该色填充（clip 范围内）；stretch 铺满无黑边。</li>
+</ul>
+
+<h2>5.6.6 字号随画布缩放</h2>
+
+<p>fit / stretch 模式下（控件自带缩放系数同样生效），文本控件显示字号 = 设定字号 × 复合缩放系数
+（自身系数 × 祖先系数 × 视口根系数），复合系数变化时字号一次性重建（字体资源按缩放系数缓存，不重复加载）：</p>
+
+<ul>
+  <li><strong>全链覆盖</strong>：Label / Button / CheckBox / EditBox / TextArea / NumericUpDown / ProgressBar / ComboBox（下拉项字体同主字体）/ MenuBar + 下拉面板 / Slider 刻度 / TreeView / ColorPicker 均已接入重建链路；</li>
+  <li><strong>行高独立</strong>：TreeView 行高、TextArea 滚动范围等<strong>不随字号</strong>变化（滚动范围保持本地语义恒定，避免缩放后滚不动）；Slider 刻度字体懒加载重建（字体数据复用，无重复 IO）；</li>
+  <li><strong>可见性过滤</strong>：不可见文本控件（Label / EditBox）延后字号重建，避免批量切换时的无谓开销；控件变为可见的当帧 <code>update()</code> 补重建，保证任何时刻可见即正确字号。</li>
+</ul>
+
+<h2>5.6.7 坐标反查</h2>
+
+<p>窗口坐标 → 画布坐标的反向换算：<code>ControlBase::mapViewportToCanvas(SPoint)</code>
+（内部为 <code>mapToDrawPoint</code> 的逆变换，含零缩放保护）。典型用途：把鼠标原始窗口坐标换算回画布坐标后，再与画布坐标系的命中测试结果比对：</p>
+
+<pre><code>// C++ 核心库公开 API（ControlBase::mapViewportToCanvas，窗口坐标 → 画布坐标，含零缩放保护）
+SPoint canvasPt = BENCH-&gt;mapViewportToCanvas({ mouseWinX, mouseWinY });</code></pre>
+
+<h2>5.6.8 统计与过滤</h2>
+
+<ul>
+  <li><code>TextRenderer::getFontCacheEntryCount()</code> — 字号缓存条目数（字体数据按缩放系数缓存的资源统计，调试/资源审计用；Callback 前端计数，对 C ABI 零侵入）；</li>
+  <li><code>LuotiAni::setFrameFilter(bool)</code> + <code>RenderDevice::setTextureFilter</code> — 缩放后帧位图的采样过滤开关：<code>true</code> 双线性（平滑，缩放显示推荐）、<code>false</code> 最近邻（像素风）。三后端均已实现（SDL3 <code>SDL_SetTextureScaleMode</code>、SFML <code>setSmooth</code>、raylib <code>SetTextureFilter</code>）。</li>
+</ul>
+
+<h2>5.6.9 测试守护</h2>
+
+<p>缩放语义由 <code>test_viewport_scale</code> 守护（81 项断言，SDL3 / SFML / raylib 三后端同码运行）：
+T1-T4 模式系数与命中、T5/T6 弹层契约（下拉翻转、取色器贴边、光标字数）、T7 resize 实时重建（字号 epoch 单调）、
+T8 子视口嵌入、T9 JSON 加载、T9x/T9y 编辑类缩放与行高自适应、Ta 属性切换（非法枚举拒绝）、
+Tb-Td 字号重建（TreeView / Slider / Menu）、Te/Tf 可见性过滤与坐标逆变换、Tg 统计与过滤开关。
+运行方式：<code>test_viewport_scale.exe auto=&lt;秒&gt;</code>（无参运行不自动退出）。</p>
+
+<div class="chapter-nav">
+  <a href="scale.html">← 5.5 控件缩放（Scale）</a>
+  <a href="../backends.html">下一节：5.7 使用其它后端 →</a>
+</div>
+
+</div>
+</body>
+</html>

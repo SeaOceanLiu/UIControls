@@ -42,11 +42,14 @@ typedef struct {
     int         windowWidth;        /* 0 → 默认 1024 */
     int         windowHeight;       /* 0 → 默认 768 */
     uint32_t    windowFlags;        /* 跨后端统一窗口标志（UIWindowFlags，值对齐 SDL_WINDOW_*） */
-    uint32_t    reserved[6];        /* 未来扩展预留 */
+    float       canvasWidth;        /* 显式基准画布宽，0 → 跟随窗口（viewport） */
+    float       canvasHeight;       /* 显式基准画布高，0 → 跟随窗口 */
+    int         viewportScaleMode;  /* 初始视口缩放模式：0=off 1=fit 2=stretch */
+    uint32_t    reserved[3];        /* 未来扩展预留 */
 } UIInstanceConfig;
 
 #define UI_INSTANCE_CONFIG_DEFAULT \
-    { sizeof(UIInstanceConfig), NULL, NULL, NULL, 0, 0, 0, {0} }
+    { sizeof(UIInstanceConfig), NULL, NULL, NULL, 0, 0, 0, 0.0f, 0.0f, 0, {0} }
 
 /* ============ 基础类型 ============ */
 typedef struct { float x, y, w, h; }   UIRect;
@@ -231,6 +234,21 @@ UICORNERSTONE_API UIInstance UICornerstone_CreateViewport(
 UICORNERSTONE_API void UICornerstone_SetViewport(UIInstance instance, float x, float y, float w, float h);
 UICORNERSTONE_API void UICornerstone_GetViewport(UIInstance instance, float* x, float* y, float* w, float* h);
 
+/* 视口背景色（RGBA8888）：Render 前填充视口区域（fit/stretch 留白处也生效）。
+   默认透明（a=0）＝不填充。返回 0 = 参数非法。 */
+UICORNERSTONE_API int UICornerstone_SetViewportBackgroundColor(UIInstance instance, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+
+/* ============ 视口缩放（ViewportScale） ============ */
+/* mode: 0=off（画布跟随窗口，原语义） 1=fit（等比居中） 2=stretch（拉伸铺满） */
+UICORNERSTONE_API int UICornerstone_SetViewportScaleMode(UIInstance instance, int mode);
+UICORNERSTONE_API int UICornerstone_GetViewportScaleMode(UIInstance instance, int* mode);
+/* 显式基准画布尺寸（fit/stretch 的适配基准），0/0 → 跟随窗口 */
+UICORNERSTONE_API int UICornerstone_SetCanvasSize(UIInstance instance, float w, float h);
+/* 当前复合缩放（含画布比例链） */
+UICORNERSTONE_API int UICornerstone_GetViewportScale(UIInstance instance, float* sx, float* sy);
+/* 手动锚点偏移（增量叠加，off 模式手动平移用） */
+UICORNERSTONE_API int UICornerstone_SetViewportAnchor(UIInstance instance, float ax, float ay);
+
 /* ============ 帧循环 ============ */
 UICORNERSTONE_API int UICornerstone_ProcessEvents(UIInstance instance);
 UICORNERSTONE_API void UICornerstone_Update(UIInstance instance, double deltaTime);
@@ -343,6 +361,14 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImage(
     const char* image,
     float x, float y, float w, float h, float xScale, float yScale);
 
+// 直接创建独立 Actor（图片显示控件），与 CreateImage 等价——图片按钮等组合控件
+// 不需要专用工厂：经 UICornerstone_CreateButton 创建后，用字符串属性
+// "normal-image"/"hover-image"/"pressed-image"/"disabled-image" 设置三态图片即可。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateActor(
+    UIInstance instance,
+    const char* image,
+    float x, float y, float w, float h, float xScale, float yScale);
+
 /* ============ LuotiAni 动画控件 ============ */
 // jsoncPath 为动画描述文件路径（相对路径经基路径拼接），可为 NULL（之后经
 // UICornerstone_SetString(inst, ctl, "animation", path) 设置）；
@@ -350,6 +376,15 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateImage(
 // w/h 传 0 → prepare 回退到 JSON overview.view 画布尺寸；加载失败返回 NULL。
 // xScale/yScale 为初始缩放系数（默认 1.0f）。
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateAnimation(
+    UIInstance instance,
+    const char* jsoncPath,
+    float x, float y, float w, float h, float xScale, float yScale);
+
+// 创建"动画按钮"：Button 承载内嵌 LuotiAni 动画（LuotiAni 仅作为按钮的内部
+// 绘制资源，不响应鼠标事件；按钮自身响应点击并触发 "click" 回调）。
+// 语义同 CreateAnimation：创建后不自动播放（SetBool "playing" 启动）、
+// 加载失败返回 NULL。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateAnimatedButton(
     UIInstance instance,
     const char* jsoncPath,
     float x, float y, float w, float h, float xScale, float yScale);

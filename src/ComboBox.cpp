@@ -361,10 +361,13 @@ void ComboBox::openPopup()
     if (popupRect.width <= 0 || popupRect.height <= 0)
         return;
 
-    // 绝对坐标（computePopupRect 基于 getDrawRect）转父（bench）相对本地坐标
+    // 绝对坐标（computePopupRect 基于 getDrawRect）转父（bench）相对本地坐标。
+    // 弹层复合恒 1（物理像素面板），但位置经 getDrawRect 乘父复合 → 需除根复合反查
     SRect br = BENCH ? BENCH->getDrawRect() : SRect(0, 0, 0, 0);
-    popupRect.left -= br.left;
-    popupRect.top -= br.top;
+    float bsx = BENCH ? BENCH->getScaleXX() : 1.0f;
+    float bsy = BENCH ? BENCH->getScaleYY() : 1.0f;
+    popupRect.left = (popupRect.left - br.left) / bsx;
+    popupRect.top = (popupRect.top - br.top) / bsy;
     m_popup->setAbsolute(popupRect);
     m_popup->open();
 }

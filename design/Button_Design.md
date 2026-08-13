@@ -99,6 +99,7 @@ public:
     // 动画和回调
     void setLuotiAni(shared_ptr<LuotiAni> luotiAni);
     void setOnClick(OnClickHandler onClick);
+    void setRenderDevice(RenderDevice* device) override;   // 转发给 m_luotiAni（延迟 prepare）
 };
 ```
 
@@ -417,6 +418,13 @@ Button 内部包含一个 `Label` 控件，用于显示标题文本。Label 的�
 ### 7.3 LuotiAni
 
 支持洛蒂动画，用于按钮的动态效果。
+
+**内嵌动画集成语义（2026-08-10 实施修订）**：
+
+- `setLuotiAni` 将动画挂为内嵌资源：`m_luotiAni->setParent(this)` + 铺满按钮 rect + setVisible(true)——不挂树、不响应鼠标
+- `Button::setRenderDevice` override 转发设备给 m_luotiAni：布局/JSON 场景 parse 阶段 loadAniDesc 时无设备，挂树后此处设备就绪 → `LuotiAni::setRenderDevice` 延迟 prepare（`!m_isPrepared && m_totalFrames > 0` 守卫，异常捕获记日志不崩溃）
+- `setBoolProperty("playing")` 转发给 m_luotiAni（`Button::setBoolProperty` 命中 `kPlaying` 即透传）——JSON 布局中 `"playing": true` 或 `SetBool("playing")=1` 即可启动播放
+- **缩放约定**：内嵌动画构造 scale 恒传 `1.0f,1.0f`，按钮 scale 经 setParent 复合缩放（`m_xxScale = m_xScale * parent->getScaleXX()`）传导到动画；传按钮 scale 会造成双重缩放（2x 按钮 → 4x 内容）
 
 ## 8. 使用示例
 

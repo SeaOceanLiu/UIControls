@@ -12,6 +12,7 @@ Label::Label(Control *parent, SRect rect, float xScale, float yScale):
     , m_fontSize(16)
     , m_caption("")
     , m_shadowEnabled(false)
+    , m_fontScaleDirty(false)
     , m_fontName(FontName::HarmonyOS_Sans_SC_Regular)
     , m_fontStyle(0)
     , m_hotRect({0, 0, 0, 0})
@@ -314,6 +315,12 @@ void Label::loadFromResource(string resourceId){
 void Label::update(void){
     if(!getEnable()) return;
 
+    if (m_fontScaleDirty && m_visible) {
+        m_fontScaleDirty = false;
+        releaseFont();
+        recreate();
+    }
+
     ControlImpl::update();
 }
 
@@ -477,6 +484,23 @@ void Label::setParent(Control *parent) {
 }
 SRect Label::getHotRect(void){
     return m_hotRect;
+}
+
+// 父链缩放变更时重建文本：字号随复合缩放（loadFromResource 用 getScaleXX）。
+// 无变化时不重建（拖动不动时零开销）；setParent 已有同逻辑，此处补运行期缩放。
+// 不可见控件延后到可见帧（update）再重建，避免布局变更时重建不可见文本。
+void Label::refreshScaleWith(float parentXX, float parentYY){
+    float oldScaleX = getScaleXX();
+    float oldScaleY = getScaleYY();
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
+        if (m_visible) {
+            releaseFont();
+            recreate();
+        } else {
+            m_fontScaleDirty = true;
+        }
+    }
 }
 
 /*********************************************************for Builder mode**********************************************************/

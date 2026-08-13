@@ -10,6 +10,7 @@
 #include <utility>
 #include <mutex>
 #include "UICornerstoneAPI.h"
+#include "SColor.h"
 #include "Utility.h"
 
 class Window;
@@ -56,6 +57,11 @@ struct UIContext {
     bool quit = false;
     bool destroying = false;   // DestroyInstance 期间置位，防回调重入
     SRect viewport{0, 0, 1024, 768};
+    // 视口背景色（Render 前填充视口区域；默认透明 = 不填充，透出外层 Clear 色）
+    SColor viewportBackground = SColor(0, 0, 0, 0);
+    // 显式基准画布（视口缩放适配基准）：0 → 跟随窗口（viewport）；>0 → SetCanvasSize 显式声明
+    float canvasWidth = 0.0f;
+    float canvasHeight = 0.0f;
     UIInstance activeViewport = nullptr;  // 仅 owner 使用，当前焦点视口；nullptr = 无子视口或焦点在 owner 树
     FocusManager* focusManager = nullptr;  // 每实例独立焦点管理
 

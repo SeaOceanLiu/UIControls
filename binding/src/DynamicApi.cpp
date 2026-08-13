@@ -46,7 +46,14 @@ static Api& LoadInto(Api& api, void* handle) {
 
     RESOLVE(CreateViewport);
     RESOLVE(SetViewport);
+    RESOLVE(SetViewportBackgroundColor);
     RESOLVE(GetViewport);
+
+    RESOLVE(SetViewportScaleMode);
+    RESOLVE(GetViewportScaleMode);
+    RESOLVE(SetCanvasSize);
+    RESOLVE(GetViewportScale);
+    RESOLVE(SetViewportAnchor);
 
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
@@ -93,6 +100,7 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(CreateImageButton);
     RESOLVE(CreateImage);
     RESOLVE(CreateAnimation);
+    RESOLVE(CreateAnimatedButton);
     RESOLVE(CreateDialog);
 
     RESOLVE(SetRect);

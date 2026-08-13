@@ -1,10 +1,12 @@
 ﻿// UICornerstone C++ Binding — 示例：Hosted 模式（UI 循环托管游戏逻辑）
 // 许可证 MIT。编译：链接 UICornerstoneBinding 即可；核心库/后端经 LoadLibrary 动态加载。
-// 命令行参数：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，任意顺序，缺省 sdl3）
+// 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，缺省 sdl3）；
+// auto=<秒> 自动冒烟（注入点击/拖动验证，渲染满时长后自动退出，与标准测试命令行方案一致）
 #include "UICornerstone.h"
 #include "Control.h"
 #include "Event.h"
 #include "PropertyNames.h"
+#include "auto_args.h"
 
 #include <cstdio>
 #include <chrono>
@@ -12,12 +14,14 @@
 #include <cstdlib>
 
 int main(int argc, char* argv[]) {
-    // 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（缺省 sdl3）
     const char* backend = "sdl3";
+    const char* extra[] = {"backend="};
+    uicorn_sample::AutoTimer autoTimer;
+    int autoSeconds = autoTimer.parse(argc, argv, extra, 1);
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "backend=", 8) == 0) backend = argv[i] + 8;
-        else std::printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
     }
+    std::printf("[sample_hosted] autoSeconds=%d backend=%s\n", autoSeconds, backend);
     auto ui = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
             .WithBackend(backend)
@@ -43,8 +47,8 @@ int main(int argc, char* argv[]) {
     });
 
     // ── Hosted 模式：UI 主循环 + 每帧逻辑回调 ──
-    if (std::getenv("UICORN_AUTO")) {
-        // AUTO 模式：手动循环 + 注入点击/拖动，用于回归测试
+    if (autoSeconds > 0) {
+        // AUTO 模式：手动循环 + 注入点击/拖动，达到 auto=<秒> 时长后退出，用于回归测试
         using Clock = std::chrono::steady_clock;
         auto last = Clock::now();
         int frame = 0;
@@ -55,7 +59,7 @@ int main(int argc, char* argv[]) {
             if (frame == 4) { ui->PushMouseButton(1, 150, 86, true); std::fprintf(stderr, "[A] slider down\n"); }
             if (frame == 6) { ui->PushMouseMove(200, 86); std::fprintf(stderr, "[A] slider move\n"); }
             if (frame == 8) { ui->PushMouseButton(1, 200, 86, false); std::fprintf(stderr, "[A] slider up\n"); }
-            if (frame >= 240) break;
+            if (autoTimer.expired()) break;
             auto now = Clock::now();
             double dt = std::chrono::duration<double>(now - last).count();
             last = now;

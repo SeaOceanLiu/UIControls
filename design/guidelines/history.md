@@ -1,5 +1,111 @@
 ﻿## Session History
 
+### 2026-08-13: ViewportScale 设计收尾——剩余项逐项实施（Complete）
+
+**背景**：用户要求按上轮列出的未实施项清单逐项谨慎实施（字号重建剩余控件、属性系统接入、逆变换公开、缓存统计、双线性开关、可见性过滤、三项核对）。
+
+**1. 字号重建补全（§4.5 全部文本控件落实）**：
+
+- `TreeView::refreshScaleWith`：字号随复合重建（setFontSize 同语义）；行高独立不随字号；
+- `Slider::refreshScaleWith`：tickFont 按 `m_tickLabelFontSize×getScaleXX()` 重建 + 刻度文本重排；`ensureTickFont` 复用已读字体数据（避免 refresh 重复 IO）；新增 `getTickFont` 访问器；
+- `MenuBar/MenuPanel::refreshScaleWith`：共享字体重建 + 布局重排（layoutEntries/recalculateSize）；下拉面板与子菜单不在 m_children，手动传播复合缩放（与 setContext 传播对齐）；新增 `getFont` 访问器；
+- NumericUpDown 继承 EditBox 自动覆盖；CheckBox caption/ProgressBar 文本为树成员 Label 自动覆盖；ScrollBar/ColorPicker 无自绘文本——全部文本控件链路闭合。
+
+**2. 属性系统接入（§4.7）**：`Bench::setEnumProperty("viewport-scale-mode", "off|fit|stretch")` 覆写（非法值/未知属性拒绝并透传基类），运行时切换即重算根变换、子树字号/布局自动重建。
+
+**3. 公开 API（§4.8）**：`ControlBase::mapViewportToCanvas`（`mapToDrawPoint` 逆变换：窗口→画布，除复合零保护），高层命中反查可用。
+
+**4. 字号缓存统计**：`TextRenderer::getFontCacheEntryCount`——经排查确认前端 `CallbackTextRenderer`（后端字体走 C ABI 句柄、无缓存透传），改为 Callback 前端计数（loadFont* 成功累加），零 C ABI 侵入；期间排查并排除跨 DLL vtable 错位假象（`typeid = CallbackTextRenderer`）。
+
+**5. LuotiAni 帧位图双线性过滤开关**：`LuotiAni::setFrameFilter` + `RenderDevice::setTextureFilter`（SDL3 `SDL_SetTextureScaleMode`、SFML `setSmooth`、raylib `SetTextureFilter`——raylib 无 `rlSetTextureFilter` 报错改用高层 API），纹理创建处应用。
+
+**6. 字号重建可见性过滤（§8 风险落地）**：Label/EditBox 不可见时 `m_fontScaleDirty` 延后重建，可见帧 `update()` 补重建（TextArea 经继承 + 行高懒检测自动生效）。
+
+**7. 三项核对（关闭，无代码）**：Cursor 系统光标 OS 托管无缩放语义（P3 关闭）；GraphTool.cpp 无 viewport/画布坐标直接引用（坐标全走标准 Control API）；全站 viewport 引用 grep 复查（Bench 根变换入口/LayoutParser/MainWindow/UICornerstoneAPI/UIContext 兜底/弹层本地反查），无遗漏散点。
+
+**8. 测试**：test_viewport_scale 新增 Ta（属性 5 断言）/Tb（TreeView 3）/Tc（Slider 2）/Td（Menu 4）/Te（可见性过滤 3）/Tf（逆变换+过滤 4）/Tg（统计+开关 3）→ **81/81 PASS**；核心 40 项全量回归 rc=0（auto=5）；SDL3/SFML/Raylib 三后端 test_viewport_scale 编译通过（raylib 过滤 API 修正一次）。
+
+**9. 文档**：ViewportScale_Design.md §4.5（实施状态全量）/§4.7（属性已实施）/§4.8（核对结论+统计）/§5 阶段 3（完成标注）/§6（Ta-Tg 行）/§7 附录 A（6 行新条目）/§8（可见性过滤+ grep 复查已实施）/§9 待办 3（核对关闭）全部同步；断言数 57→81。
+
+**10. 教训**：测试运行先检查 test/Debug 下 DLL 时间戳（build.md 已注明）——本会话因 UICornerstone.dll/UIBackend_sdl3.dll 未拷贝、源码未重编导致的 vtable 缺失假象浪费多轮。
+
+---
+
+### 2026-08-13: 弹层随根变换缩放 + 视口背景色 + 编辑类控件缩放修复（Complete）
+
+**背景**：用户明确"Dialog/Popup 本就应可缩放（ColorPicker 缩放与 Swatch 绑定）"，要求撤销设计 §4.2.4 的"弹层物理像素面板"机制；随后实测报告 stretch 下 TextArea 字体高度错乱、字号不随比例及时更新、ScrollBar 厚度/滚动范围错误、行高贴着、选择背景不匹配字高。
+
+**1. 弹层随根变换缩放（撤销物理像素机制）**：
+
+- `Dialog.cpp` `Popup::setParent`：基类快照后向 `m_children` 逐子 `refreshScaleWith(m_xxScale, m_yyScale)`——弹层复合 = 布局 × 父复合，内部已建控件同步；
+- 删除 `Popup::refreshScaleWith` 空覆写；`open()` 改为**先 `BENCH->addControl` 挂树（复合生效）再 `computeTargetRect`**；
+- `computeTargetRect` 钳制换算除根复合（`hiX = (vp.left+localW-bx)/bsx - m_rect.width*sx/bsx`），数学对任意弹层复合自洽；
+- ComboBox/ColorPicker 坐标反查公式无需改动（尺寸/位移同式）；T6 契约改断言：fit 0.64 下弹层 DR=(416,320,192,128)（随画布缩小居中）；
+- 设计文档 §4.2.2/§4.2.4/C2/T6/附录 7 同步修订。
+
+**2. 视口背景色**：
+
+- `UIContext.h` `viewportBackground`（默认透明不填充）+ `#include "SColor.h"`；`UICornerstone_Render` clip 内按 alpha 填充；
+- C ABI `UICornerstone_SetViewportBackgroundColor(r,g,b,a)` + binding 全链 + 样例 B 视口演示；T8x 3 断言。
+
+**3. 编辑类控件缩放修复**（stretch 独立轴）：
+
+- `EditBox::refreshScaleWith`：复合变化 → `loadFontInternal()` 重建字号（字号=fontSize×sx），resize 后即时生效（原需焦点等路径碰巧触发）；
+- `EditBox` 垂直居中/选择条/光标高度改 `getFontHeight`（真字高，非 fontSize×scaleY 近似）；margin 水平/垂直分量分离；
+- `TextArea::refreshScaleWith`：基类（字号重建）后行高自适应 + `rebuildLines()` + 滚动范围重算；
+- **行高自适应**：默认 `m_lineHeight = getFontHeight/getScaleYY()`（本地），stretch 下行距屏幕=真字高、字迹不重叠；`setLineHeight` 定制优先；`update()` 懒检测字体指针变化覆盖 setFont/setFontSize/setText 路径；
+- TextArea draw/命中 `relY` 垂直分量改 `getScaleYY()`；选择条/光标高用 fontHeight；`getVisibleLines`/`scrollToBottom` 统一本地单位（与 updateVScrollBar 同式）；
+- `ScrollBar`：垂直轴 top/height 与命中/拖拽反查用 `getScaleYY()`（水平 `getScaleXX()`）；
+- 测试：T9x（字号重建/滚动范围 clamp=3844 off↔stretch 一致）6 断言 + T9y（行高自适应）4 断言 → 57/57 PASS；核心 40 测试 rc=0；binding 6 样例 rc=0。
+
+**4. 字宽限制（决策，未实施）**：字形按标量字号（sx）重建，宽高等比；三后端能力不对称（raylib `DrawTextEx` spacing / SFML `setScale(x,1)` / SDL3 `TTF_DrawRendererText` 皆无），"字宽系数"需先补 SDL3 后端或走核心层布局换算——用户确认暂不实施。
+
+---
+
+### 2026-08-12: 缩放测试三件套（JSON/C ABI/sample）+ 样例统一 auto=<秒> + 动画按钮接线（Complete）
+
+**背景**：交付缩放对照组三测试（test_scale_json / test_scale_cabi / sample_scale，btn x=60 / img x=580 / ani x=1100，1x y=80、2x y=560）；用户要求所有 Sample 自动测试向标准测试对齐（统一命令行 `auto=<秒>`，废弃 UICORN_AUTO 环境变量方案）。
+
+**1. CreateAnimatedButton 全链路接线**：
+
+- C ABI：`src/UICornerstoneAPI.cpp:1149` `UICornerstone_CreateAnimatedButton(instance, jsoncPath, x, y, w, h, xScale, yScale)`——Button 按 xScale/yScale 构造（参数作用于按钮本身），内嵌 LuotiAni `(btn.get(), 1.0f, 1.0f)`（不挂树、不响应鼠标、rect 铺满按钮局部坐标），loadFromFile + prepare，失败返回 nullptr（异常边界）；jsoncPath 可 NULL（纯按钮）。
+- Binding：`binding/src/DynamicApi.h` fnCreateAnimatedButton + `DynamicApi.cpp` RESOLVE + `binding/src/UICornerstone.cpp` UI_FACTORY + `binding/include/UICornerstone.h` 声明 `Control CreateAnimatedButton(jsoncPath, x, y, w, h, xScale=1, yScale=1)`。
+
+**2. 布局内嵌动画（JSON `"type":"button"` + `"luotiAni"`）**：
+
+- LayoutParser parseButton 内嵌分支（LayoutSystem_Design.md §5）：相对路径拼 `Platform::GetBasePath()`（同 "animation" 类型）；LuotiAni 构造 scale 恒 1.0；**不显式 prepare/play**——挂树后 `Button::setRenderDevice` → `LuotiAni::setRenderDevice` 延迟 prepare（`!m_isPrepared && m_totalFrames > 0` 守卫，异常捕获 logWarn）。
+- JSON 布局文件：节点由 `"type":"animation"` + `path` 改为 `"type":"button"` + `luotiAni`。
+
+**3. 点击 CLICK 修复链**（三测试自动注入点击验证通过）：
+
+- `Button::setBoolProperty` 转发 `"playing"` 给 m_luotiAni；`Button::setRenderDevice` override 转发设备（Button.cpp:344-348、Button.h 声明）。
+- `ControlImpl::setRenderDevice` 移除 `if (m_renderDevice == device) return;` 早退——rootPanel 先经 getRenderDevice 缓存设备后，addControl 传播会被早退阻断，子控件（含内嵌动画）永远收不到设备、永不 prepare（ControlBase.cpp:506 注释）。
+- 测试静态链接 UICornerstone lib：只重建 DLL 无效，必须重建 exe 目标（构建流程关键点）。
+
+**4. 双重缩放修复**：
+
+- 根因：setParent 复合缩放 `m_xxScale = m_xScale * parent->getScaleXX()`——LayoutParser 内嵌分支与 CreateAnimatedButton 曾传按钮 scale 给 LuotiAni 构造，2x 按钮 → 4x 内容。
+- 修复：两处构造恒传 1.0f；插桩验证 `scale=(2,2) drawRect=(1100,560,440,440)`（2x 内容 440 正确）。
+
+**5. 样例统一 auto=<秒>（废弃 UICORN_AUTO）**：
+
+- 新建 `binding/samples/auto_args.h`：`ucorn_sample::AutoTimer`——`parse(argc, argv, extraPrefixes, extraCount)` 任意顺序识别 `auto=<秒>`（未知参数 WARN 后忽略），`expired()` **惰性计时**（首次检查时刻为起点，窗口/后端创建耗时不计入自动时长）；文件须 UTF-8 BOM（无 BOM 时 MSVC 按 GBK 读中文注释 → C2059）。
+- 五个样例（sample_scale / sample_cpp_embed / sample_cpp_hosted / sample_cpp_multiinstance / sample_cpp_multiview）全部替换 `getenv("UICORN_AUTO")` 与 240 帧上限：`if (autoSeconds > 0)` 门控注入、`autoTimer.expired()` 退出；`backend=` 参数保留任意顺序。
+- 验证：`auto=3` 全 rc=0（163-176 帧）；`auto=2 backend=sdl3` 乱序 OK；`foo=1` WARN；`auto=3` + raylib 后端缺 DLL（Create failed，非回归）。
+- 文档同步：CppBinding_Design.md / CppBinding_UserManual.md §15.2 / guidelines/testing.md §4 / guidelines/history.md 2257 行 / README.md——样例统一 `auto=<秒>`；UICORN_AUTO 仅存于旧历史记录（37/58/2243/2271、BackendAbstraction:2096）作为存档。
+
+**6. 文档刷新（2026-08-12）**：
+
+- UICornerstone_DLL_Design.md：动画三件套（CreateActor/CreateAnimation/CreateAnimatedButton）原型 + 语义注释。
+- LayoutSystem_Design.md：luotiAni 实现语义（基路径、1.0 构造、延迟 prepare、SetBool("playing") 启动）+ parseButton 流程图。
+- Button_Design.md：内嵌动画集成语义（setRenderDevice 转发 / playing 透传 / 缩放约定）。
+- ControlBase_Design.md：setRenderDevice 无早退传播语义。
+- LuotiAni_Design.md：§6.6 延迟 prepare、§6.7 布局接入由"不做"转"已实施"；LuotiAni_DevGuide.md：测试矩阵补 test_scale_json/cabi。
+- CppBinding_Design.md：§7.5 sample_scale、主类 CreateAnimatedButton 声明、工厂映射表；CppBinding_UserManual.md：§4.3 CreateAnimatedButton、工厂清单、构建目标补 sample_scale。
+- 测试三件套全绿：json/cabi `PASS: 布局 rect 与缩放系数无关` + CLICK 注入（`[scale-json] CLICK [1x]ani (event=click)`、`[scale-cabi] CLICK … (count=1)`）；sample_scale 7 项 rect PASS；回归 test_animation / test_luotiani（须在 test/Debug 目录运行）/ test_image 全绿。
+
+---
+
 ### 2026-08-08（午夜）: 后端能力位机制 + raylib 单窗口架构多实例 headless 化 + sfml 焦点事件修复（Complete）
 
 **背景**：raylib 后端多实例双窗口测试人工验证时两窗口内容交替闪动；顺带暴露 sfml 焦点环切换失效（点按失去焦点后无法切回）。
@@ -2254,7 +2360,7 @@ Done, 180 frames                        # 帧循环正常完成
 **1. 自动化测试参数规范（`design/guidelines/testing.md` 新增章节）**：
 
 - 所有标准 C++ 测试 / 集成测试 / CABI 测试必须支持 `auto=<秒>`（无人值守自动退出），参数任意顺序；无法识别的参数 WARN 后忽略。
-- 例外与附加：`test_aniviewer` 的 jsonc 路径参数可出现在任意位置、缺省使用 `assets/animations/rotateBtn/rotateBtn.jsonc`；binding 样例不要求 auto=（走 `UICORN_AUTO` 环境变量），但必须支持 `backend=<后端名>` 命令行选择后端（任意顺序，缺省 sdl3）。
+- 例外与附加：`test_aniviewer` 的 jsonc 路径参数可出现在任意位置、缺省使用 `assets/animations/rotateBtn/rotateBtn.jsonc`；binding 样例与标准测试统一使用 `auto=<秒>`（共享解析头 `binding/samples/auto_args.h`），并支持 `backend=<后端名>` 命令行选择后端（任意顺序，缺省 sdl3）。
 
 **2. 测试代码整改**：
 

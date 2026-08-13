@@ -21,6 +21,9 @@ public:
         (void)text; return loadFontFromMemory(data, len, size);
     }
 
+    // 字号缓存条目数（诊断用：字号随复合缩放重建时的缓存增长监控）
+    virtual int getFontCacheEntryCount() { return 0; }
+
     virtual int getFontHeight(Font* font) = 0;
 
     virtual void* createText(Font* font, const std::string& text) = 0;

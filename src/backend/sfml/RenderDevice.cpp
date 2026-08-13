@@ -50,6 +50,10 @@ public:
     int width() const override { return m_w; }
     int height() const override { return m_h; }
 
+    void setFilter(bool bilinear) {
+        if (m_texture) m_texture->setSmooth(bilinear);
+    }
+
     void setBlendMode(BlendMode mode) override {
         m_blendMode = mode;
     }
@@ -539,6 +543,10 @@ public:
         }
         sprite.setColor(sf::Color(255, 255, 255, sfmlTex->getAlphaMod()));
         m_target->draw(sprite);
+    }
+
+    void setTextureFilter(Texture* texture, bool bilinear) override {
+        if (auto* st = static_cast<SFMLTexture*>(texture)) st->setFilter(bilinear);
     }
 
     void drawTextureRotated(Texture* texture, const SRect* srcRect, const SRect* dstRect, float angle) override {

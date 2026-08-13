@@ -340,13 +340,18 @@ SharedFont CallbackTextRenderer::loadFont(const std::string& path, int size) {
     if (!m_cbs->loadFont) return nullptr;
     UIFontHandle fh = m_cbs->loadFont(m_handle, path.c_str(), static_cast<float>(size));
     if (!fh) return nullptr;
+    m_backendLoadedFontCount++;
     return std::make_shared<CallbackFont>(m_cbs, m_handle, fh, static_cast<float>(size));
 }
 SharedFont CallbackTextRenderer::loadFontFromMemory(const void* data, size_t len, int size) {
     if (!m_cbs->loadFontFromMemory) return nullptr;
     UIFontHandle fh = m_cbs->loadFontFromMemory(m_handle, data, static_cast<int>(len), static_cast<float>(size));
     if (!fh) return nullptr;
+    m_backendLoadedFontCount++;
     return std::make_shared<CallbackFont>(m_cbs, m_handle, fh, static_cast<float>(size));
+}
+int CallbackTextRenderer::getFontCacheEntryCount() {
+    return m_backendLoadedFontCount;
 }
 int CallbackTextRenderer::getFontHeight(Font* font) {
     auto* cf = dynamic_cast<CallbackFont*>(font);

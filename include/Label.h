@@ -53,6 +53,7 @@ private:
     int m_fontSize;
     string m_caption;
     bool m_shadowEnabled;
+    bool m_fontScaleDirty;
     FontName m_fontName;
     fs::path m_fontFile;
     int m_fontStyle;
@@ -97,6 +98,7 @@ public:
     bool handleEvent(shared_ptr<Event> event) override;
     void setRect(SRect rect) override;
     void setParent(Control *parent) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
     SRect getHotRect(void);
 
     SharedFont getFont() const { return m_font; }

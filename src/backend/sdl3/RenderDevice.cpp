@@ -251,6 +251,14 @@ public:
         SDL_RenderTexture(m_renderer, sdlTex->native(), nullptr, &sdlDst);
     }
 
+    void setTextureFilter(Texture* texture, bool bilinear) override {
+        auto* t = static_cast<SDL3Texture*>(texture);
+        if (t && t->native()) {
+            SDL_SetTextureScaleMode(t->native(),
+                bilinear ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
+        }
+    }
+
     void drawTextureRotated(Texture* texture, const SRect* srcRect, const SRect* dstRect, float angle) override {
         if (!m_renderer || !texture || !dstRect) return;
         SDL3Texture* sdlTex = static_cast<SDL3Texture*>(texture);

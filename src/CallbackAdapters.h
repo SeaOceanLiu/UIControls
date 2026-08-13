@@ -118,11 +118,13 @@ class CallbackTextRenderer : public TextRenderer {
     UITextRendererHandle m_handle;
     const UIBackendCallbacks* m_cbs;
     UIRenderDeviceHandle m_deviceHandle;
+    int m_backendLoadedFontCount = 0;   // 后端本次会话加载字体数（统计用途，随 loadFont* 成功累加）
 public:
     CallbackTextRenderer(const UIBackendCallbacks* cbs, UITextRendererHandle handle, UIRenderDeviceHandle dev);
     ~CallbackTextRenderer() override;
     SharedFont loadFont(const std::string& path, int size) override;
     SharedFont loadFontFromMemory(const void* data, size_t len, int size) override;
+    int getFontCacheEntryCount() override;
     int getFontHeight(Font* font) override;
     void* createText(Font* font, const std::string& text) override;
     void destroyText(void* text) override;

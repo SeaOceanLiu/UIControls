@@ -15,6 +15,8 @@
 
 <p>ComboBox 是支持<strong>只读 / 可编辑</strong>双模式的下拉选择控件：闭合时显示当前选中项，展开时下拉列表（超出显示滚动条），支持循环切换（↑/↓/滚轮）。继承链：<code>ComboBox → EditBox → ControlImpl → Control</code>。</p>
 
+<div class="note">缩放联动：主框文本与下拉列表项共用同一字体（继承 EditBox），置于缩放画布（fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6 视口画布缩放</a>）时字号随复合缩放系数重建。</div>
+
 <h2>4.6.1 控件的创建</h2>
 
 <pre><code>// C++

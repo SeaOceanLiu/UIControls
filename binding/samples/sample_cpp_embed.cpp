@@ -1,11 +1,13 @@
 ﻿// UICornerstone C++ Binding — 示例：Embedded 模式（用户循环嵌入 UI）
 // 许可证 MIT。编译：链接 UICornerstoneBinding 即可；核心库/后端经 LoadLibrary 动态加载。
-// 命令行参数：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，任意顺序，缺省 sdl3）
+// 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，缺省 sdl3）；
+// auto=<秒> 自动冒烟（注入点击验证，渲染满时长后自动退出，与标准测试命令行方案一致）
 #include "UICornerstone.h"
 #include "Control.h"
 #include "Event.h"
 #include "PropertyNames.h"
 #include "UIEventFactory.h"
+#include "auto_args.h"
 
 #include <cstdio>
 #include <chrono>
@@ -13,12 +15,14 @@
 #include <cstdlib>
 
 int main(int argc, char* argv[]) {
-    // 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（缺省 sdl3）
     const char* backend = "sdl3";
+    const char* extra[] = {"backend="};
+    uicorn_sample::AutoTimer autoTimer;
+    int autoSeconds = autoTimer.parse(argc, argv, extra, 1);
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "backend=", 8) == 0) backend = argv[i] + 8;
-        else std::printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
     }
+    std::printf("[sample_embed] autoSeconds=%d backend=%s\n", autoSeconds, backend);
     auto ui = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
             .WithBackend(backend)
@@ -37,8 +41,6 @@ int main(int argc, char* argv[]) {
         label.SetString(PropertyNames::kCaption, "Clicked " + std::to_string(++count));
     });
 
-    bool autoMode = std::getenv("UICORN_AUTO") != nullptr;
-
     // ── 用户主循环（游戏/应用逻辑在前，UI 帧在其中）──
     using Clock = std::chrono::steady_clock;
     auto last = Clock::now();
@@ -47,14 +49,15 @@ int main(int argc, char* argv[]) {
     while (!ui->IsQuitRequested()) {
         ui->ProcessEvents();
 
-        if (autoMode) {
+        if (autoTimer.expired()) {
+            std::printf("[AUTO] done, %d frames\n", frame);
+            break;
+        }
+
+        if (autoSeconds > 0) {
             int f = frame;
             if (f == 0)  ui->PushMouseButton(1, 80, 98, true);
             if (f == 2)  ui->PushMouseButton(1, 80, 98, false);
-            if (f >= 240) {
-                std::printf("[AUTO] done, %d frames\n", frame);
-                break;
-            }
         }
 
         auto now = Clock::now();

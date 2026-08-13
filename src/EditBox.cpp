@@ -29,6 +29,7 @@ EditBox::EditBox(Control *parent, SRect rect, float xScale, float yScale)
     , m_fontName(FontName::HarmonyOS_Sans_SC_Regular)
     , m_focusWatcherRegistered(false)
     , m_AlignmentMode(AlignmentMode::AM_MID_LEFT)
+    , m_fontScaleDirty(false)
 {
     m_id = 0;
     m_visible = true;
@@ -164,14 +165,15 @@ float EditBox::getCursorX(int cursorPos) {
 void EditBox::updateTextOffset() {
     SRect rect = getRect();
     SRect drawRect = getDrawRect();
-    float scale = getScaleXX();
-    float scaledFontSize = m_fontSize * scale;
-    float textHeight = scaledFontSize;
-    m_textOffsetY = (drawRect.height - textHeight) / 2.0f;
+    float scaleX = getScaleXX();
+    float scaleY = getScaleYY();
+    float fontHeight = (getTextRenderer() && getFont())
+        ? (float)getTextRenderer()->getFontHeight(getFont()) : m_fontSize * scaleY;
+    m_textOffsetY = (drawRect.height - fontHeight) / 2.0f;
 
     float textWidth = getTextWidth(getDisplayText());
-    float visibleWidth = drawRect.width - (m_margin.left + m_margin.right) * scale;
-    float margin = m_margin.left * scale;
+    float visibleWidth = drawRect.width - (m_margin.left + m_margin.right) * scaleX;
+    float margin = m_margin.left * scaleX;
 
     if (textWidth <= visibleWidth) {
         m_textOffsetX = margin;
@@ -235,6 +237,11 @@ void EditBox::deleteSelectedText() {
 }
 
 void EditBox::update(void) {
+    if (m_fontScaleDirty && m_visible) {
+        m_fontScaleDirty = false;
+        loadFontInternal();
+        updateTextOffset();
+    }
     if (m_focused) {
         m_cursorBlinkTime += 16;
         if (m_cursorBlinkTime >= 500) {
@@ -250,13 +257,15 @@ void EditBox::draw(void) {
     ControlImpl::beforeDraw();
 
     SRect drawRect = getDrawRect();
-    float scaledFontSize = m_fontSize * getScaleXX();
+    float fontHeight = (getTextRenderer() && getFont())
+        ? (float)getTextRenderer()->getFontHeight(getFont()) : m_fontSize * getScaleYY();
 
-    float scale = getScaleXX();
-    float marginX = m_margin.left * scale;
-    float marginY = m_margin.top * scale;
-    float marginRight = m_margin.right * scale;
-    float marginBottom = m_margin.bottom * scale;
+    float scaleX = getScaleXX();
+    float scaleY = getScaleYY();
+    float marginX = m_margin.left * scaleX;
+    float marginY = m_margin.top * scaleY;
+    float marginRight = m_margin.right * scaleX;
+    float marginBottom = m_margin.bottom * scaleY;
     SRect clipRect(drawRect.left + marginX, drawRect.top + marginY,
                    drawRect.width - marginX - marginRight, drawRect.height - marginY - marginBottom);
     GET_RENDERDEVICE->pushClipRect(clipRect);
@@ -273,7 +282,7 @@ void EditBox::draw(void) {
         float endX = m_textOffsetX + getTextWidth(prefixForEnd);
 
         SRect selRect(drawRect.left + startX, drawRect.top + m_textOffsetY,
-                      endX - startX, scaledFontSize);
+                      endX - startX, fontHeight);
         GET_RENDERDEVICE->setDrawColor(SColor(100, 149, 237, 128));
         GET_RENDERDEVICE->fillRect(selRect);
     }
@@ -294,7 +303,7 @@ void EditBox::draw(void) {
         float cursorX = getCursorX(m_cursorPosition);
 
         SRect cursorRect(drawRect.left + cursorX, drawRect.top + m_textOffsetY,
-                         2.0f, scaledFontSize);
+                         2.0f, fontHeight);
 
         GET_RENDERDEVICE->setDrawColor(m_textColor.getNormal());
         GET_RENDERDEVICE->fillRect(cursorRect);
@@ -523,6 +532,23 @@ bool EditBox::handleEvent(shared_ptr<Event> event) {
 void EditBox::setRect(SRect rect) {
     ControlImpl::setRect(rect);
     updateTextOffset();
+}
+
+// 父链缩放变更时重建字体：字号随复合（loadFontInternal 用 getScaleXX），
+// 避免 resize 后字号滞后（原仅在 create/setText 等时机加载）。
+// 不可见控件延后到可见帧（update）再重建（TextArea 继承本路径，行高懒检测同步生效）。
+void EditBox::refreshScaleWith(float parentXX, float parentYY){
+    float oldScaleX = getScaleXX();
+    float oldScaleY = getScaleYY();
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
+        if (m_visible) {
+            loadFontInternal();
+            updateTextOffset();
+        } else {
+            m_fontScaleDirty = true;
+        }
+    }
 }
 
 void EditBox::onMouseEnter(float x, float y) {

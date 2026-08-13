@@ -107,6 +107,17 @@ void TreeView::setFontSize(int size) {
     if (m_isCreated) ensureFont();
 }
 
+// 父链缩放变更时重建字体（保持 setFontSize 语义：字号随复合缩放）
+void TreeView::refreshScaleWith(float parentXX, float parentYY){
+    float oldScaleX = getScaleXX();
+    float oldScaleY = getScaleYY();
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
+        m_font.reset();
+        if (m_isCreated) ensureFont();
+    }
+}
+
 void TreeView::setBgColor(const SColor& c) {
     m_bgColor = c;
     syncStateColor();

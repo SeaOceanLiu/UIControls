@@ -15,6 +15,8 @@
 
 <p>菜单系统由三件套组成：<strong>MenuBar</strong>（顶级菜单栏）、<strong>MenuPanel</strong>（下拉面板，支持嵌套子菜单）、<strong>MenuItem</strong>（菜单项，支持 Normal / Separator / SubMenu）。三者均继承 <code>ControlImpl</code>。支持「菜单模式」：点击展开后鼠标移动自动切换顶级菜单。</p>
 
+<div class="note">缩放联动：MenuBar 与下拉面板字号随复合缩放系数重建（Bar 变化经共享字体传播到各面板、嵌套子菜单）。详见 <a href="../advanced/canvas-scale.html">5.6.6</a>。</div>
+
 <h2>4.12.1 控件的创建</h2>
 
 <pre><code>// C++（三件套 + Builder）

@@ -111,6 +111,7 @@ set(UI_TEST_EXECUTABLES
     test_winframe
     test_multi_instance
     test_multiviewport
+    test_viewport_scale
     test_luotiani
     test_animation
     test_aniviewer
@@ -170,6 +171,43 @@ foreach(test_name ${UI_TEST_EXECUTABLES})
                         "${CMAKE_SOURCE_DIR}/layouts"
                     $<TARGET_FILE_DIR:${test_name}>/layouts)
             endif()
+        endif()
+    endif()
+endforeach()
+
+# ============================================================
+# Scale visual tests (C ABI 集成测试) — 仅在 DLL 模式构建树编译，
+# 输出遵循规范：build/{backend}_dll/test/Debug/（见 design/guidelines/build.md）
+# ============================================================
+foreach(scale_test IN ITEMS test_scale_cabi test_scale_json)
+    if(UICORNERSTONE_BUILD_DLL AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${scale_test}.cpp")
+        add_executable(${scale_test} ${scale_test}.cpp)
+        target_include_directories(${scale_test} PRIVATE ${TEST_INCLUDES})
+        target_link_libraries(${scale_test} PRIVATE ${TEST_LIBS})
+
+        if(WIN32)
+            foreach(dll ${TEST_DLLS})
+                add_custom_command(TARGET ${scale_test} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${dll}"
+                        $<TARGET_FILE_DIR:${scale_test}>)
+            endforeach()
+
+            # 与标准测试同理：静态链接核心库，仅保证 POST_BUILD 同步到最新 DLL
+            add_dependencies(${scale_test} UICornerstone_dll UIBackend_${_BACKEND_LOWER})
+            add_custom_command(TARGET ${scale_test} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE_DIR:UICornerstone_dll>/UICornerstone.dll"
+                    "$<TARGET_FILE_DIR:${scale_test}>")
+            add_custom_command(TARGET ${scale_test} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE_DIR:UIBackend_${_BACKEND_LOWER}>/UIBackend_${_BACKEND_LOWER}.dll"
+                    "$<TARGET_FILE_DIR:${scale_test}>")
+
+            add_custom_command(TARGET ${scale_test} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    "${ASSETS_DIR}"
+                    $<TARGET_FILE_DIR:${scale_test}>/assets)
         endif()
     endif()
 endforeach()

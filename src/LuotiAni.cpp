@@ -475,15 +475,29 @@ void LuotiAni::update(void) {
 }
 
 void LuotiAni::draw(float x, float y, uint8_t alpha){
-    draw(m_frameToDraw, x, y, alpha);
+    (void)x; (void)y;  // 帧 Actor 经 getDrawRect 链已定位到本品绝对位置，透传会双重叠加父偏移
+    draw(m_frameToDraw, 0, 0, alpha);
 }
 
 void LuotiAni::draw(uint32_t frameNo, float x, float y, uint8_t alpha) {
     if (!m_visible) return;
     if (!m_isPrepared || m_frames.empty()) return;
 
-    updateChildScale(m_frames[frameNo].get());   // 帧 Actor 缩放校准（§6.9：非控件树成员，快照会陈旧）
+    m_frames[frameNo]->refreshScaleWith(m_xxScale, m_yyScale);  // 帧 Actor 缩放校准（§6.9：非控件树成员，快照会陈旧）
     m_frames[frameNo]->draw(x, y, alpha);
+
+    if (getBorderVisible()) {
+        SColor borderColor;
+        switch (m_state){
+            case ControlState::Disabled: borderColor = m_borderColor.getDisabled(); break;
+            case ControlState::Hover:    borderColor = m_borderColor.getHover();    break;
+            case ControlState::Pressed:  borderColor = m_borderColor.getPressed();  break;
+            default:                     borderColor = m_borderColor.getNormal();   break;
+        }
+        SRect frameDrawRect = getDrawRect();
+        getRenderDevice()->setDrawColor(borderColor);
+        getRenderDevice()->drawRect(frameDrawRect);
+    }
 }
 
 void LuotiAni::setRect(SRect rect){
@@ -520,12 +534,23 @@ Actor* LuotiAni::getFrameActor(uint32_t frameNo) {
 void LuotiAni::setRenderDevice(RenderDevice* device) {
     Material::setRenderDevice(device);
 
+    // 布局加载场景：parse 阶段 loadFromFile 仅解析描述（无设备），挂树时这里
+    // 设备就绪 → 补 prepare（CreateAnimation 路径已在 addControl 后显式 prepare）
+    if (device != nullptr && !m_isPrepared && m_totalFrames > 0) {
+        try {
+            prepare();
+        } catch (...) {
+            Platform::Log("LuotiAni::setRenderDevice: defer prepare failed\n");
+        }
+    }
+
     if (device != nullptr) {
         for (size_t i = 0; i < m_frames.size() && i < m_frameSurfaces.size(); i++) {
             Actor* frameActor = dynamic_cast<Actor*>(m_frames[i].get());
             if (frameActor != nullptr && frameActor->getTexture() == nullptr && m_frameSurfaces[i] != nullptr) {
                 auto tex = m_frameSurfaces[i]->createTexture(device);
                 if (tex != nullptr) {
+                    device->setTextureFilter(tex.get(), m_frameBilinearFilter);
                     frameActor->setTexture(tex);
                 }
             }
@@ -711,6 +736,7 @@ void LuotiAni::prepare(uint32_t startFrame){
         shared_ptr<Actor> frame = make_shared<Actor>(this, true);
         frame->setRect({0, 0, m_rect.width, m_rect.height});
         auto tex = canvas->createTexture(getRenderDevice());
+        if (getRenderDevice()) getRenderDevice()->setTextureFilter(tex.get(), m_frameBilinearFilter);
         frame->setTexture(tex);
         m_frames.push_back(frame);
 

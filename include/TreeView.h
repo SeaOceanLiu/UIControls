@@ -124,6 +124,7 @@ public:
     void create() override;
     void draw() override;
     bool handleEvent(std::shared_ptr<Event> event) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
     // ── CRUD ──
     void setItems(const std::vector<std::shared_ptr<TreeNode>>& items);

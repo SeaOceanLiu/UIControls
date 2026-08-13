@@ -60,6 +60,8 @@ public:
 
     void setLuotiAni(shared_ptr<LuotiAni>luotiAni);
     void setOnClick(OnClickHandler onClick);
+    void setRenderDevice(RenderDevice* device) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
     // ── Property system overrides ──
     int setBoolProperty(const char* prop, int value) override;

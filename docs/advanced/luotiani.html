@@ -152,7 +152,8 @@ auto btn = ButtonBuilder(nullptr, SRect(530, 50, 120, 50))
 btn-&gt;create();
 BENCH-&gt;addControl(btn);</code></pre>
 
-<p>布局 JSON 中挂动画（<code>luotiAni</code> 键，加载即自动播放）：</p>
+<p>布局 JSON 中挂动画（<code>luotiAni</code> 键，挂树后自动延迟 prepare，不自动播放——播放经
+<code>SetBool("playing")=1</code> 启动；相对路径按 exe 所在目录解析）：</p>
 
 <pre><code>{ "type": "button", "id": "aniBtn",
   "rect": { "x": 200, "y": 532, "w": 100, "h": 40 },
@@ -172,12 +173,19 @@ UICornerstone_SetInt(g_inst, ani, "frame", 8);      // 跳帧
 // 换动画：重新走 加载→prepare→播放（状态重置）
 UICornerstone_SetString(g_inst, ani, "animation", "animations/hero.jsonc");</code></pre>
 
+<p><strong>动画按钮（C ABI CreateAnimatedButton / Binding CreateAnimatedButton）</strong>：动画作为<em>内嵌资源</em>挂到按钮
+（不挂树、不响应鼠标、rect 为按钮局部坐标铺满按钮）。两个 scale 参数作用于<strong>按钮本身</strong>，
+内嵌动画构造 scale 恒 <code>1.0f</code>——按钮缩放经 <code>setParent</code> 复合缩放自动传导到动画，
+对动画再乘按钮系数会造成双重缩放（2x 按钮 → 4x 内容，见 <a href="../advanced/scale.html">5.5 控件缩放</a>）。
+JSON 布局等价写法 <code>"luotiAni"</code> 键（见上节）。播放控制与普通动画一致：<code>SetBool("playing")</code>。</p>
+
 <h2>5.1.5 机制细节与语义陷阱</h2>
 
 <ul>
   <li><strong>时间驱动</strong>：<code>update()</code> 用绝对墙钟毫秒推进帧（每帧毫秒 = 1000/frameRate），播放速度只与真实时间有关，<strong>与调用 update 的帧率无关</strong>（帧率低时一次跳多帧）；</li>
   <li><strong>多实例共享烘焙</strong>：<code>LuotiInstance(parent, shared_ptr&lt;LuotiAni&gt;, userId, ...)</code> 共享同一份帧贴图，各实例独立推进；内存与 帧数×画布尺寸 成正比（60 帧 512×512 ≈ 63MB）；</li>
   <li><strong>缩放校准</strong>：帧 Actor 非控件树成员，绘制当前帧前会校准缩放跟随父链（嵌套在 2x 缩放容器内动画也正确）；</li>
+  <li><strong>帧位图过滤</strong>：<code>setFrameFilter(true)</code> 双线性平滑（画布缩放 fit/stretch 下放大帧位图时推荐，见 5.6.8）、<code>false</code> 最近邻像素风；三后端经 <code>RenderDevice::setTextureFilter</code> 统一实现；</li>
   <li><code>play()</code> 总是复位帧到 0 重播；C ABI <code>playing</code> 每次置 1 都是重播（无暂停/继续状态机，暂停/继续用 <code>playing=0/1</code> 近似）；</li>
   <li><code>setFrame</code> 跳帧后首次 update 不复位计时会连跳；<code>animation</code> 属性只写不读；未 prepare 时置 <code>playing=1</code> 被拒绝；</li>
   <li>图层类型 <code>shape</code>/<code>text</code> 解析支持但烘焙跳过（无可见输出）；<code>AnimationEnded</code> 事件已触发但尚无 C ABI 回调链路。</li>
@@ -185,7 +193,7 @@ UICornerstone_SetString(g_inst, ani, "animation", "animations/hero.jsonc");</cod
 
 
 <div class="chapter-nav">
-  <a href="../controls/winframe.html">← 4.20 WinFrame</a>
+  <a href="../controls/treeview.html">← 4.21 TreeView</a>
   <a href="multiwindow.html">下一节：5.2 多视口与多窗口 →</a>
 </div>
 

@@ -60,6 +60,7 @@ public:
     DialogResult getResult() const { return m_result; }
 
     void setRect(SRect rect) override;
+    void setParent(Control* parent) override;
 
     void setContent(shared_ptr<ControlImpl> content);
     shared_ptr<ControlImpl> getContent() const { return m_content; }

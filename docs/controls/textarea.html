@@ -15,6 +15,8 @@
 
 <p>TextArea 是多行文本输入控件：按 \n 分行 + 自动换行（word wrap）、垂直 / 水平内置滚动条、光标与选区、剪贴板（Ctrl+C/V/X）。继承链：<code>TextArea → EditBox → ControlImpl → Control</code>（继承 EditBox 全部文本能力）。</p>
 
+<div class="note">缩放联动：置于缩放画布（fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6 视口画布缩放</a>）时，字号随复合缩放系数重建；滚动范围保持本地语义恒定，不随字号漂移。</div>
+
 <h2>4.19.1 控件的创建</h2>
 
 <pre><code>// C++

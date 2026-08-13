@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>7 嵌入到你的逻辑回路中 - UICornerstone 用户手册</title>
+<title>5.8 嵌入到你的逻辑回路中 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="css/style.css">
 <script id="nav-data" src="assets/nav.js" data-prefix="" data-current="integration.html"></script>
 </head>
@@ -11,7 +11,7 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>7 嵌入到你的逻辑回路中</h1>
+<h1>5.8 嵌入到你的逻辑回路中</h1>
 
 <p>UICornerstone 提供四种集成模式（<code>samples/</code> 各有完整示例），按「谁托管主循环」区分：</p>
 
@@ -99,11 +99,15 @@ UIInstance inst = create(NULL, NULL);
   <li><strong>UI → 数据</strong>：事件回调里更新业务对象（Lambda 捕获 this / shared_ptr）；</li>
   <li><strong>多实例</strong>：工具窗口 / 调试面板可用第二个 <code>UIInstance</code>（见 <a href="advanced.html">5.2</a>）；</li>
   <li><strong>多线程</strong>：UI 线程模型为单线程事件泵——所有 UI 调用应发生在主线程；跨线程发消息请自行转发（如 std::async + 主线程轮询队列）。</li>
+  <li><strong>分辨率适配</strong>：以固定基准画布排布（如 1920×1080），窗口 resize 时用视口缩放整体适配：
+    <code>SetCanvasSize(w, h)</code> 声明基准画布 + <code>SetViewportScaleMode(off|fit|stretch)</code>
+    切换模式（fit = 等比居中留黑边，stretch = 拉伸铺满，off = 画布跟随窗口，默认）。
+    命中 / 焦点 / 弹窗钳制随根变换自动换算，无需业务侧处理。完整用法见 <a href="advanced/canvas-scale.html">5.6 视口画布缩放</a>。</li>
 </ul>
 
 <div class="chapter-nav">
-  <a href="backends.html">← 6 使用其它后端</a>
-  <a href="appendix/declarative-syntax.html">下一章：9 附录 →</a>
+  <a href="backends.html">← 5.7 使用其它后端</a>
+  <a href="appendix/declarative-syntax.html">下一章：6 声明式 UI 语法速查表 →</a>
 </div>
 
 </div>

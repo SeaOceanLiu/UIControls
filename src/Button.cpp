@@ -35,6 +35,20 @@ void Button::create(void){
     ensureActor(m_disabledActor);
 }
 
+// 状态 Actor 与内嵌 LuotiAni 不在 m_children（树内传播到不了），
+// 父链缩放变更时在此收口刷新非树成员（drawRect 仍经 setParent 的父级基准派生）
+void Button::refreshScaleWith(float parentXX, float parentYY){
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    auto refreshActor = [this](shared_ptr<Actor>& child){
+        if (child) child->refreshScaleWith(m_xxScale, m_yyScale);
+    };
+    refreshActor(m_actor);
+    refreshActor(m_hoverActor);
+    refreshActor(m_pressedActor);
+    refreshActor(m_disabledActor);
+    if (m_luotiAni) m_luotiAni->refreshScaleWith(m_xxScale, m_yyScale);
+}
+
 void Button::update(void){
     if (!getEnable()) return;
 
@@ -341,6 +355,10 @@ void Button::setLuotiAni(shared_ptr<LuotiAni>luotiAni){
         m_luotiAni->setVisible(true);
     }
 }
+void Button::setRenderDevice(RenderDevice* device) {
+    ControlImpl::setRenderDevice(device);
+    if (m_luotiAni != nullptr) m_luotiAni->setRenderDevice(device);
+}
 void Button::setOnClick(OnClickHandler onClick){
     m_onClick = onClick;
 }
@@ -348,6 +366,7 @@ void Button::setOnClick(OnClickHandler onClick){
 // ── Property system overrides ──
 int Button::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kTextShadowEnable) == 0) { setTextShadowEnable(value != 0); return 1; }
+    if (strcmp(prop, PropertyNames::kPlaying) == 0 && m_luotiAni) return m_luotiAni->setBoolProperty(prop, value);
     return ControlImpl::setBoolProperty(prop, value);
 }
 int Button::setStringProperty(const char* prop, const char* value) {
@@ -361,6 +380,23 @@ int Button::setStringProperty(const char* prop, const char* value) {
         setLuotiAni(ani);
         ani->prepare();
         ani->play();
+        return 1;
+    }
+    // 状态图：设置后创建对应状态 Actor（matchParentRect=true 跟随按钮框体；
+    // Actor 缩放传 1.0f —— 仅继承父级缩放，避免 xScale² 叠加）
+    if (strcmp(prop, PropertyNames::kNormalImage) == 0 ||
+        strcmp(prop, PropertyNames::kHoverImage) == 0 ||
+        strcmp(prop, PropertyNames::kPressedImage) == 0 ||
+        strcmp(prop, PropertyNames::kDisabledImage) == 0) {
+        if (!value) return 0;
+        fs::path p(value);
+        if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+        auto actor = make_shared<Actor>(this, p, true, 1.0f, 1.0f);
+        actor->setScaleType(ScaleType::FIT_CENTER);
+        if (strcmp(prop, PropertyNames::kNormalImage) == 0)         setNormalStateActor(actor);
+        else if (strcmp(prop, PropertyNames::kHoverImage) == 0)    setHoverStateActor(actor);
+        else if (strcmp(prop, PropertyNames::kPressedImage) == 0)  setPressedStateActor(actor);
+        else                                                       setDisabledStateActor(actor);
         return 1;
     }
     return ControlImpl::setStringProperty(prop, value);

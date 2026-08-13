@@ -53,6 +53,8 @@ public:
     virtual void destroyTexture(Texture* texture) = 0;
     virtual void drawTexture(Texture* texture, const SRect* srcRect, const SRect* dstRect) = 0;
     virtual void drawTextureRotated(Texture* texture, const SRect* srcRect, const SRect* dstRect, float angle) = 0;
+    // 纹理采样过滤开关（true=双线性，false=最近邻）；默认实现无操作
+    virtual void setTextureFilter(Texture* texture, bool bilinear) { (void)texture; (void)bilinear; }
 
     // === 渲染到纹理 ===
     virtual void setRenderTarget(Texture* texture) = 0;

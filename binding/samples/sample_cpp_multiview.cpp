@@ -1,6 +1,7 @@
 ﻿// UICornerstone C++ Binding — 示例：多实例（子视口）— 一个窗口内两个 Bench
 // 许可证 MIT。编译：链接 UICornerstoneBinding 即可；核心库/后端经 LoadLibrary 动态加载。
-// 命令行参数：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，任意顺序，缺省 sdl3）
+// 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，缺省 sdl3）；
+// auto=<秒> 自动冒烟（注入两个视口点击验证，渲染满时长后自动退出，与标准测试命令行方案一致）
 //
 // 布局：
 //   ┌────────────────────┐
@@ -17,6 +18,7 @@
 #include "Control.h"
 #include "Event.h"
 #include "PropertyNames.h"
+#include "auto_args.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -59,12 +61,14 @@ struct Bench {
 } // namespace
 
 int main(int argc, char* argv[]) {
-    // 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（缺省 sdl3）
     const char* backend = "sdl3";
+    const char* extra[] = {"backend="};
+    uicorn_sample::AutoTimer autoTimer;
+    int autoSeconds = autoTimer.parse(argc, argv, extra, 1);
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "backend=", 8) == 0) backend = argv[i] + 8;
-        else std::printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
     }
+    std::printf("[sample_multiview] autoSeconds=%d backend=%s\n", autoSeconds, backend);
     auto ui = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
             .WithBackend(backend)
@@ -87,7 +91,7 @@ int main(int argc, char* argv[]) {
     benchA.Build("Hello from Bench A");
     benchB.Build("Hello from Bench B");
 
-    if (std::getenv("UICORN_AUTO")) {
+    if (autoSeconds > 0) {
         std::fprintf(stderr, "[A] AUTO mode: inject clicks into both viewports\n");
     }
 
@@ -101,14 +105,14 @@ int main(int argc, char* argv[]) {
         vpA->ProcessEvents();       // 子视口注入队列（各自消费）
         vpB->ProcessEvents();
 
-        if (std::getenv("UICORN_AUTO")) {
+        if (autoSeconds > 0) {
             // 事件坐标为窗口绝对坐标：vpA 按钮在 (12,82)，vpB 按钮在 (412,382)
             if (frame == 0) { vpA->PushMouseButton(1, 62, 97, true);  std::fprintf(stderr, "[A] Bench A btn down\n"); }
             if (frame == 2) { vpA->PushMouseButton(1, 62, 97, false); }
             if (frame == 6) { vpB->PushMouseButton(1, 462, 397, true); std::fprintf(stderr, "[A] Bench B btn down\n"); }
             if (frame == 8) { vpB->PushMouseButton(1, 462, 397, false); }
-            if (frame >= 240) break;
         }
+        if (autoTimer.expired()) break;
 
         auto now = Clock::now();
         double dt = std::chrono::duration<double>(now - last).count();

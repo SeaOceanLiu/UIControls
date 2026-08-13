@@ -96,6 +96,7 @@ public:
     void draw() override;
     bool handleEvent(shared_ptr<Event> event) override;
     bool isContainsPoint(float x, float y) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
     // 添加菜单项
     void addItem(shared_ptr<MenuItem> item);
@@ -129,6 +130,7 @@ public:
     // 字体/尺寸（实例状态，修改后即时生效）
     void setFontSize(float size);
     float getFontSize() const { return m_fontSize; }
+    Font* getFont() const { return m_font.get(); }
     void setItemHeightRatio(float ratio);
     float getItemHeightRatio() const { return m_heightRatio; }
     void setFontName(FontName fontName);
@@ -180,6 +182,7 @@ public:
     void setParent(Control *parent) override;
     void setRect(SRect rect) override;
     void setContext(UIContext* ctx) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
     // 添加顶级菜单
     void addMenu(const string& caption, shared_ptr<MenuPanel> panel);
@@ -199,6 +202,7 @@ public:
     // 设置菜单字体大小
     void setFontSize(float size);
     float getFontSize() const { return m_menuTextSize; }
+    Font* getFont() const { return m_font.get(); }
 
     // 菜单模式
     bool isInMenuMode() const { return m_menuMode; }

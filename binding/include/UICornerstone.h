@@ -99,6 +99,7 @@ public:
                               const std::string& pressed, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateImage(const std::string& image, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateAnimation(const std::string& jsoncPath, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    Control CreateAnimatedButton(const std::string& jsoncPath, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateDialog(const std::string& confirmText, const std::string& cancelText,
                          float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
 
@@ -117,6 +118,15 @@ public:
     // ── 视口 ──
     void SetViewport(float x, float y, float w, float h);
     UIRect GetViewport() const;
+    bool SetViewportBackgroundColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a);  // RGBA8888，默认透明=不填充
+
+    // ── 视口缩放 ──
+    // mode: 0=off（画布跟随窗口） 1=fit（等比居中） 2=stretch（拉伸铺满）
+    bool SetViewportScaleMode(int mode);
+    int GetViewportScaleMode() const;
+    bool SetCanvasSize(float w, float h);   // 显式基准画布（fit/stretch 适配基准）
+    bool GetViewportScale(float& sx, float& sy) const;
+    bool SetViewportAnchor(float ax, float ay);
 
     // ── 事件注入 ──
     void PushEvent(const UIEvent& event);

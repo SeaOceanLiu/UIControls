@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9.3 C ABI 速查表 - UICornerstone 用户手册</title>
+<title>8 C ABI 速查表 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/capi.html"></script>
 </head>
@@ -11,11 +11,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>9.3 C ABI 速查表</h1>
+<h1>8 C ABI 速查表</h1>
 
 <p>头文件：<code>include/UICornerstoneAPI.h</code>。所有函数线程安全要求：UI 调用在主线程。</p>
 
-<h2>9.3.1 实例管理</h2>
+<h2>8.1 实例管理</h2>
 
 <table>
 <tr><th>函数</th><th>说明</th></tr>
@@ -23,12 +23,18 @@
 <tr><td><code>UICornerstone_CreateInstanceFromPlugin(name, config)</code></td><td>从后端插件名创建（"sdl3"/"sfml"/"raylib"）</td></tr>
 <tr><td><code>UICornerstone_DestroyInstance(inst)</code></td><td>销毁实例</td></tr>
 <tr><td><code>UICornerstone_SetViewport(inst, x, y, w, h)</code></td><td>设置视口</td></tr>
+<tr><td><code>UICornerstone_SetViewportScaleMode(inst, mode)</code></td><td>视口缩放模式：0=off（画布跟随窗口）1=fit（等比居中）2=stretch（拉伸铺满）</td></tr>
+<tr><td><code>UICornerstone_GetViewportScaleMode(inst, &amp;mode)</code></td><td>查询当前缩放模式</td></tr>
+<tr><td><code>UICornerstone_SetCanvasSize(inst, w, h)</code></td><td>显式基准画布尺寸（fit/stretch 适配基准；off 下仅记录）</td></tr>
+<tr><td><code>UICornerstone_SetViewportBackgroundColor(inst, r, g, b, a)</code></td><td>视口背景色（RGBA8888，默认透明=不填充；fit 黑边区填充色）</td></tr>
+<tr><td><code>UICornerstone_GetViewportScale(inst, &amp;sx, &amp;sy)</code></td><td>当前复合缩放系数</td></tr>
+<tr><td><code>UICornerstone_SetViewportAnchor(inst, ax, ay)</code></td><td>手动锚点偏移（增量叠加，off 模式手动平移）</td></tr>
 <tr><td><code>UICornerstone_IsQuitRequested(inst)</code></td><td>窗口关闭请求查询</td></tr>
 <tr><td><code>UICornerstone_ProcessEvents / Update / Clear / Render / Present</code></td><td>主循环五步</td></tr>
 <tr><td><code>UICornerstone_GetBackendCapabilities(inst)</code></td><td>能力位（UICORN_BACKEND_CAP_*）</td></tr>
 </table>
 
-<h2>9.3.2 布局加载</h2>
+<h2>8.2 布局加载</h2>
 
 <table>
 <tr><th>函数</th><th>说明</th></tr>
@@ -38,7 +44,7 @@
 <tr><td><code>UICornerstone_FindControl(inst, id)</code></td><td>按 id 查找控件句柄</td></tr>
 </table>
 
-<h2>9.3.3 控件工厂</h2>
+<h2>8.3 控件工厂</h2>
 
 <p>所有创建函数末尾均带 <code>xScale, yScale</code>（初始缩放系数，内容按系数渲染；传 <code>1.0f, 1.0f</code> 保持原尺寸，与 JSON 的 <code>"scale": {"x":..,"y":..}</code> 等价）。</p>
 
@@ -63,26 +69,41 @@
 <tr><td><code>UICornerstone_MenuBarAddMenu / MenuPanelAddItem / MenuPanelAddSeparator / MenuItemSetSubMenu</code></td><td>菜单组装</td></tr>
 <tr><td><code>UICornerstone_CreateImage(inst, image, x, y, w, h, xScale, yScale)</code></td><td>Image（Actor）</td></tr>
 <tr><td><code>UICornerstone_CreateAnimation(inst, jsoncPath, x, y, w, h, xScale, yScale)</code></td><td>LuotiAni</td></tr>
+<tr><td><code>UICornerstone_CreateAnimatedButton(inst, jsoncPath, x, y, w, h, xScale, yScale)</code></td><td>带动画的 Button（jsoncPath 可 NULL=纯按钮；内嵌动画构造 scale 恒 1.0，xScale/yScale 作用于按钮本身，双重缩放陷阱见 <a href="../advanced/scale.html">5.5</a>）</td></tr>
+<tr><td><code>UICornerstone_CreateImageButton(inst, normal, hover, pressed, x, y, w, h, xScale, yScale)</code></td><td>ImageButton（3 态图片按钮，图片可 NULL）</td></tr>
+<tr><td><code>UICornerstone_CreateTreeView(inst, x, y, w, h, xScale, yScale)</code></td><td>TreeView（节点经 <code>SetString("items", json)</code> 填充，见 7 TreeView）</td></tr>
+<tr><td><code>UICornerstone_CreateActor(inst, image, x, y, w, h, xScale, yScale)</code></td><td>Actor（静态图片控件，image 可 NULL；w/h=0 → 纹理自然尺寸）</td></tr>
 <tr><td><code>UICornerstone_CreateHandleControl(inst, target, x, y, w, h, xScale, yScale)</code></td><td>HandleControl</td></tr>
 <tr><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td>挂子控件</td></tr>
 </table>
 
-<h2>9.3.4 属性系统</h2>
+<h2>8.4 属性系统</h2>
+
+<p>所有属性读写均成对出现 <code>Set*/Get*</code>（除只写/回调属性），按函数名字母序：</p>
+
+<table>
+<tr><th>写（Set）</th><th>读（Get）</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_SetBool(inst, ctl, name, value)</code></td><td><code>UICornerstone_GetBool(inst, ctl, name, int&amp;)</code></td><td>布尔属性</td></tr>
+<tr><td><code>UICornerstone_SetCallback(inst, ctl, event, cb, user)</code></td><td>—</td><td>回调属性（事件注册，无 Get）</td></tr>
+<tr><td><code>UICornerstone_SetColor(inst, ctl, name, UIColor)</code></td><td><code>UICornerstone_GetColor(inst, ctl, name, UIColor&amp;)</code></td><td>颜色属性（单色）</td></tr>
+<tr><td><code>UICornerstone_SetEnum(inst, ctl, name, const char*)</code></td><td><code>UICornerstone_GetEnum(inst, ctl, name, char*, maxLen)</code></td><td>枚举属性（Get 用缓冲区，同 GetString）</td></tr>
+<tr><td><code>UICornerstone_SetFloat(inst, ctl, name, float)</code></td><td><code>UICornerstone_GetFloat(inst, ctl, name, float&amp;)</code></td><td>浮点属性</td></tr>
+<tr><td><code>UICornerstone_SetInt(inst, ctl, name, int)</code></td><td><code>UICornerstone_GetInt(inst, ctl, name, int&amp;)</code></td><td>整数属性</td></tr>
+<tr><td><code>UICornerstone_SetPtr(inst, ctl, name, void*)</code></td><td><code>UICornerstone_GetPtr(inst, ctl, name, void**)</code></td><td>指针属性</td></tr>
+<tr><td><code>UICornerstone_SetStateColor(inst, ctl, name, n, h, p, d)</code></td><td><code>UICornerstone_GetStateColor(inst, ctl, name, UIColor[4])</code></td><td>状态色（normal/hover/pressed/disabled）</td></tr>
+<tr><td><code>UICornerstone_SetString(inst, ctl, name, const char*)</code></td><td><code>UICornerstone_GetString(inst, ctl, name, char*, maxLen)</code></td><td>字符串属性（Get 用缓冲区，返回 1 成功 / 0 失败）</td></tr>
+</table>
+
+<h2>8.5 控件通用操作</h2>
 
 <table>
 <tr><th>函数</th><th>说明</th></tr>
-<tr><td><code>UICornerstone_SetColor / GetColor</code></td><td>颜色属性</td></tr>
-<tr><td><code>UICornerstone_SetStateColor / GetStateColor</code></td><td>状态色（normal/hover/pressed/disabled）</td></tr>
-<tr><td><code>UICornerstone_SetBool / GetBool</code></td><td>布尔属性</td></tr>
-<tr><td><code>UICornerstone_SetInt / GetInt</code></td><td>整数属性</td></tr>
-<tr><td><code>UICornerstone_SetFloat / GetFloat</code></td><td>浮点属性</td></tr>
-<tr><td><code>UICornerstone_SetString / GetString(inst, ctl, name, char*, maxLen)</code></td><td>字符串属性（Get 用缓冲区）</td></tr>
-<tr><td><code>UICornerstone_SetEnum / GetEnum</code></td><td>枚举属性（同 GetString 缓冲区）</td></tr>
-<tr><td><code>UICornerstone_SetPtr / GetPtr</code></td><td>指针属性</td></tr>
-<tr><td><code>UICornerstone_SetCallback(inst, ctl, event, cb, user)</code></td><td>回调属性（事件注册）</td></tr>
+<tr><td><code>UICornerstone_SetRect(inst, ctl, x, y, w, h)</code> / <code>GetRect(inst, ctl, float* x, *y, *w, *h)</code></td><td>位置尺寸读/写（rect 不含缩放）</td></tr>
+<tr><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td>挂子控件</td></tr>
+<tr><td><code>UICornerstone_DestroyControl(inst, ctl)</code></td><td>销毁控件</td></tr>
 </table>
 
-<h2>9.3.5 事件与负载</h2>
+<h2>8.6 事件与负载</h2>
 
 <pre><code>UI_EVENT_NONE / MOUSE_MOVE / MOUSE_DOWN / MOUSE_UP / MOUSE_WHEEL /
 KEY_DOWN / KEY_UP / TEXT_INPUT / WINDOW_RESIZE / WINDOW_CLOSE /
@@ -96,7 +117,7 @@ UI_EVENT_WHEEL_DELTA(ev) / UI_EVENT_RESIZE_W(ev) / UI_EVENT_RESIZE_H(ev)
 floatVal / doubleVal / intVal / strVal / ptrVal / selection{idx,val}
 / treeNode / color{r,g,b,a}</code></pre>
 
-<h2>9.3.6 实例配置与后端配置</h2>
+<h2>8.7 实例配置与后端配置</h2>
 
 <pre><code>typedef struct {
     uint32_t    structSize;     /* sizeof(UIInstanceConfig) */
@@ -114,8 +135,8 @@ UICornerstone_SetBackendConfigInt / SetBackendConfigBool
 UICornerstone_GetBackendConfig(inst, key, char*, len) /* 只读查询 */</code></pre>
 
 <div class="chapter-nav">
-  <a href="properties.html">← 9.2 属性速查表</a>
-  <a href="debugging.html">下一节：9.4 问题定位手段 →</a>
+  <a href="properties.html">← 7 属性速查表</a>
+  <a href="debugging.html">下一节：9 问题定位手段 →</a>
 </div>
 
 </div>

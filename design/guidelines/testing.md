@@ -42,6 +42,12 @@ double v = uiGetNumericUpDownValue(nud);
 UIControlHandle nud = UICornerstone_CreateNumericUpDown(10, 50, 120, 24);
 ```
 
+## 测试脚本归档策略
+
+1. 测试脚本（自动化回归脚本、批量运行脚本、数据准备/校验脚本等）统一归档在 `testing_scripts` 目录，不得散落在项目其他位置。
+2. 应尽可能编写**可重复使用**的测试脚本（参数化输入、支持不同测试目标/后端/布局），避免一次性脚本。
+3. 后续测试**优先通过修改这些测试脚本的适用性来完成测试**（复用已有脚本、调整参数与目标），而不是新建临时脚本；确需新建时也必须归档到 `testing_scripts` 并保持可重复使用。
+
 ## 执行顺序
 
 1. 先实现**标准 C++ 测试**（单个控件、SDL3 后端），功能稳定后提交审核。
@@ -63,7 +69,7 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(10, 50, 120, 24);
 1. **标准 C++ 测试**：main 走 `TestRunMain<AppT>(argc, argv)`（test/TestInstance.h），其 `scheduleAutoQuit` 已统一实现任意顺序 `auto=<秒>` 解析（定时线程经 `UICornerstone_PushUIEvent` 投递 WINDOW_CLOSE 退出）。新标准测试必须保持此入口。
 2. **CABI / 集成测试**：main 需 `int main(int argc, char* argv[])`，自行按任意顺序循环解析 `auto=<秒>`；窗口循环中达到秒数后退出（或经 PushUIEvent 投递 WINDOW_CLOSE）。无窗口循环的有限步骤逻辑测试也必须解析并接受该参数（不改变行为）。
 3. **test_aniviewer 例外规则**：路径参数**不限定为第 1 个位置**——任何非 `key=` 键值且非纯 `0`/`1` 的参数视为 jsonc 路径（任意位置）；**未提供路径时使用缺省路径** `assets/animations/rotateBtn/rotateBtn.jsonc`（相对 exe 同目录解析）。
-4. **样例程序**：`binding/samples/sample_cpp_*` **不要求**支持 `auto=`，但**必须支持**命令行参数 `backend=<后端名>`（sdl3/sfml/raylib，任意顺序）设定加载哪个后端，缺省 sdl3。
+4. **样例程序**：`binding/samples/sample_*` 与标准测试统一支持 `auto=<秒>`（共享解析头 `binding/samples/auto_args.h`，计时起点为窗口/后端创建后的首帧，初始化耗时不计入），同时**必须支持**命令行参数 `backend=<后端名>`（sdl3/sfml/raylib，任意顺序）设定加载哪个后端，缺省 sdl3；未知参数 WARN 后忽略。自动模式下手动注入鼠标事件（点击/拖动）供 CI 回归，满时长干净退出（exit=0）。
 
 **多实例渲染能力约定（强制）**：多窗口/多实例视觉测试（`test_multiinstance_visual_cabi`、`test_multi_instance_cabi`、`sample_cpp_multiinstance`）在渲染第二个实例前**必须查询后端能力位** `UICornerstone_GetBackendCapabilities`，仅当 `UICORN_BACKEND_CAP_MULTI_WINDOW` 存在时才对其渲染/交换；否则该实例为 headless（无窗口），渲染会串扰到主实例窗口（raylib 单窗口架构，见 BackendAbstraction_Design.md §20）。非 MULTI_WINDOW 后端下渲染冒烟断言弱化为 SKIP（打印 SKIP 即通过），其余断言不受影响。测试头部打印后端能力信息，方便人工模式识别单窗口限制。
 

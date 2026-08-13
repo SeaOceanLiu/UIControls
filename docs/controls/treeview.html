@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.21 TreeView - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/treeview.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.21 TreeView（树形视图）</h1>
+
+<p>TreeView 是层级数据展示控件：节点（TreeNode）支持展开/折叠、选中、滚动（垂直 + 水平）、键盘环行导航与选中项滚动定位。
+继承链：<code>TreeView → ControlImpl → Control</code>。字号随复合缩放重建；行高独立不随字号（见 <a href="../advanced/canvas-scale.html">5.6.6</a>）。</p>
+
+<h2>4.21.1 控件的创建</h2>
+
+<pre><code>// C++
+TreeView(Control* parent, const SRect& rect, float xScale = 1.0f, float yScale = 1.0f);
+auto tree = TreeViewBuilder(BENCH.get(), {20, 20, 240, 300})
+    .setItems({ makeNode("root", "Root", true, { makeNode("child1", "Child 1") }) })
+    .setOnSelect([](shared_ptr&lt;TreeView&gt;, const string&amp; id) { ... })
+    .build();
+
+// C ABI
+UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.0f, 1.0f);
+// 节点数据经 SetString("items", json) 填充
+
+// JSON
+{ "id": "tree", "type": "tree-view",
+  "rect": { "x": 20, "y": 20, "w": 240, "h": 300 },
+  "items": [ { "id": "root", "label": "Root", "expanded": true,
+               "children": [ { "id": "child1", "label": "Child 1" } ] } ],
+  "events": { "onSelect": "onTreeSelect" } }</code></pre>
+
+
+<h2>4.21.2 控件的属性</h2>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
+<tr><td><code>indent-width</code></td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
+<tr><td><code>row-height</code></td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
+<tr><td><code>cycle-navigation</code></td><td>Bool</td><td>true</td><td>Tab 环是否包含树节点</td></tr>
+<tr><td><code>default-expand</code></td><td>Bool</td><td>false</td><td>缺省展开全部节点</td></tr>
+<tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
+<tr><td><code>expand-all</code> / <code>collapse-all</code></td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
+<tr><td><code>background</code> / <code>border</code> / <code>text</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
+<tr><td><code>selected</code> / <code>hover</code></td><td>Color</td><td>主题</td><td>选中行 / 悬停行高亮色</td></tr>
+</table>
+
+
+<h2>4.21.3 控件的回调</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>onSelect</code>（C ABI 事件 <code>select</code>）</td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
+<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code>）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
+<tr><td><code>onCollapse</code>（C ABI 事件 <code>collapse</code>）</td><td>节点折叠</td><td>同上（nodeId）</td></tr>
+</table>
+
+
+<h2>4.21.4 JSON 语法</h2>
+
+<pre><code>{
+  "id": "tree",
+  "type": "tree-view",
+  "rect": { "x": 20, "y": 20, "w": 240, "h": 300 },
+  "indentWidth": 16, "rowHeight": 22,
+  "cycleNavigation": false, "defaultExpand": true,
+  "items": [ { "id": "root", "label": "Root", "expanded": true, "userData": "extra",
+               "children": [ { "id": "child1", "label": "Child 1" } ] } ],
+  "colors": { "background": { "normal": "#2A2A2AFF" },
+              "selected": { "normal": "#1F5FA8FF" },
+              "text": { "normal": "#E8E8E8FF" } },
+  "events": { "onSelect": "onTreeSelect",
+              "onExpand": "onTreeExpand",
+              "onCollapse": "onTreeCollapse" }
+}</code></pre>
+
+
+<h2>4.21.5 C++ Binding 样例</h2>
+
+<pre><code>Control tree = ui-&gt;CreateTreeView(20, 20, 240, 300);
+tree.SetString("items",
+    R"([{"id":"root","label":"Root","expanded":true,
+         "children":[{"id":"child1","label":"Child 1"}]}])");
+tree.SetCallback(PropertyNames::kEventSelect, [](const Event&amp; e) {
+    printf("select: %s\n", e.GetNodeId().c_str());
+});</code></pre>
+
+
+<h2>4.21.6 C ABI 调用样例</h2>
+
+<pre><code>UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.0f, 1.0f);
+
+UICornerstone_SetString(g_inst, tree, "items",
+    "[{\"id\":\"root\",\"label\":\"Root\",\"expanded\":true,"
+    "\"children\":[{\"id\":\"child1\",\"label\":\"Child 1\"}]}]");
+
+static void onSelect(UIControlHandle ctl, const UIEventData* ev, void* ud) {
+    /* ev 负载含选中节点 id */
+}
+UICornerstone_SetCallback(g_inst, tree, "select", onSelect, NULL);</code></pre>
+
+<details class="methods">
+<summary>4.21.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
+<table><tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setItems(vector&lt;shared_ptr&lt;TreeNode&gt;&gt;) / getItems()</code></td><td>整树替换 / 根节点列表（<code>makeNode(id, label, expanded, children)</code> / <code>cloneNode</code> 辅助）</td></tr>
+<tr><td><code>addChild(parentId, node) / removeNode(id) / clearItems()</code></td><td>节点增删</td></tr>
+<tr><td><code>setNodeLabel(id, label) / setNodeUserData(id, void*) / findNodeById(id)</code></td><td>节点编辑 / 查找</td></tr>
+<tr><td><code>expandNode(id) / collapseNode(id) / expandAll() / collapseAll()</code></td><td>展开 / 折叠</td></tr>
+<tr><td><code>selectNode(id) / getSelectedId()</code></td><td>选中 / 查询</td></tr>
+<tr><td><code>setIndentWidth / setRowHeight / setLineSpacing / setArrowGap</code></td><td>几何参数（行高不随字号）</td></tr>
+<tr><td><code>setCycleNavigation(bool) / setDefaultExpand(bool)</code></td><td>键盘环行 / 缺省展开</td></tr>
+<tr><td><code>setFont(FontName) / setFontSize(int) / getFontSize() / getFont()</code></td><td>字体（字号随复合缩放重建）</td></tr>
+<tr><td><code>setOnSelect / setOnSelectData / setOnExpand / setOnCollapse / setOnClearNode</code></td><td>回调注册（SelectData 携带节点 userData）</td></tr>
+<tr><td><code>getScrollBar() / getHScrollBar() / getFlatRowCount() / getSelectedRow()</code></td><td>滚动条 / 展开后行数 / 选中行号</td></tr>
+</table>
+
+</details>
+
+
+<div class="chapter-nav">
+  <a href="winframe.html">← 4.20 WinFrame</a>
+  <a href="../advanced.html">下一章：5 进阶主题 →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -96,11 +96,15 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 ani.SetBool(PropertyNames::kPlaying, true);
 ani.SetBool(PropertyNames::kLoop, true);
 
-// Button 载体（JSON）
+// Button 载体（JSON）——luotiAni 键：挂树后自动延迟 prepare，不自动播放（SetBool("playing")=1 启动）
 { "type": "button", "id": "animatedBtn",
   "rect": { "x": 40, "y": 40, "w": 120, "h": 40 },
   "caption": "Rotate",
-  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc" }</code></pre>
+  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc" }
+
+// Button 载体（编程式）——动画按钮工厂：scale 作用于按钮本身，内嵌动画恒 1.0（防双重缩放）
+UIControlHandle h2 = UICornerstone_CreateAnimatedButton(g_uiInstance, "tA1.jsonc", 40, 100, 120, 40, 2.0f, 2.0f);
+Control aniBtn = ui-&gt;CreateAnimatedButton("animations/breath/breath.jsonc", 40, 150, 120, 40);</code></pre>
 
 
 <details class="methods">
@@ -123,6 +127,7 @@ ani.SetBool(PropertyNames::kLoop, true);
 <tr><td><code>getFrameDuration()</code> / <code>getTotalFrames()</code> / <code>getCurrentFrame()</code></td><td>帧时长(ms) / 总帧数 / 当前帧</td></tr>
 <tr><td><code>isLoop()</code> / <code>setLoop(bool)</code></td><td>循环开关</td></tr>
 <tr><td><code>getFrameOpData(layer, frame)</code> / <code>getFrameCanvas(frame)</code></td><td>调试：层/帧插值结果 / 烘焙画布</td></tr>
+<tr><td><code>setFrameFilter(bool)</code></td><td>帧位图采样过滤：true=双线性（平滑，画布缩放后推荐）、false=最近邻（像素风）；经 <code>RenderDevice::setTextureFilter</code> 落三后端</td></tr>
 </table>
 
 </details>

@@ -330,6 +330,8 @@ void ControlImpl::setParent(Control *parent){
 
 三者通过 `setRenderDevice()`/`setTextRenderer()`/`setResourceProvider()` 设置，并递归传播到所有子控件。`setParent()` 中调用 `inheritRenderer()` 一并完成传播。
 
+> **setRenderDevice 传播语义（2026-08-10 实施修订）**：`ControlImpl::setRenderDevice` **无早退**——即使自身 `m_renderDevice` 已为目标设备，仍须向所有子控件递归传播。原实现 `if (m_renderDevice == device) return;` 在 rootPanel 先经 `getRenderDevice` 缓存设备、后 `addControl` 显式传播的场景下会阻断子控件接收设备（布局加载的内嵌动画因此从未收到设备、永不 prepare）。移除早退后全部子控件接收设备补齐；代价是重复调用多一轮递归，量级小可接受。
+
 #### 坐标转换
 
 ```cpp

@@ -1,6 +1,7 @@
 ﻿// UICornerstone C++ Binding — 示例：多实例（多窗口）— 两个独立窗口各自一套控件树
 // 许可证 MIT。编译：链接 UICornerstoneBinding 即可；核心库/后端经 LoadLibrary 动态加载。
-// 命令行参数：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，任意顺序，缺省 sdl3）
+// 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（sdl3/sfml/raylib，缺省 sdl3）；
+// auto=<秒> 自动冒烟（注入跨窗口点击验证，渲染满时长后自动退出，与标准测试命令行方案一致）
 //
 // 布局：
 //   Window A (640×480)          Window B (640×480)
@@ -17,6 +18,7 @@
 #include "Control.h"
 #include "Event.h"
 #include "PropertyNames.h"
+#include "auto_args.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -24,12 +26,14 @@
 #include <thread>
 
 int main(int argc, char* argv[]) {
-    // 命令行参数任意顺序：backend=<后端名> 指定加载哪个后端（缺省 sdl3）
     const char* backend = "sdl3";
+    const char* extra[] = {"backend="};
+    uicorn_sample::AutoTimer autoTimer;
+    int autoSeconds = autoTimer.parse(argc, argv, extra, 1);
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "backend=", 8) == 0) backend = argv[i] + 8;
-        else std::printf("WARN: 忽略无法识别的参数: %s\n", argv[i]);
     }
+    std::printf("[sample_multiinstance] autoSeconds=%d backend=%s\n", autoSeconds, backend);
     // ── 创建两个独立窗口实例 ──
     auto uiA = UICornerstone::UICornerstone::Create(
         UICornerstone::UICornerstone::Config{}
@@ -80,7 +84,6 @@ int main(int argc, char* argv[]) {
     using Clock = std::chrono::steady_clock;
     auto last = Clock::now();
     int frame = 0;
-    bool autoMode = std::getenv("UICORN_AUTO") != nullptr;
     while (!uiA->IsQuitRequested() && !uiB->IsQuitRequested()) {
         // 全局事件泵：依次驱动每个实例，直到队列中没有任何事件可处理
         // （每个实例的 ProcessEvents 只消费属于自己窗口的事件，其余事件
@@ -93,7 +96,7 @@ int main(int argc, char* argv[]) {
             processedCount = pa + pb;
         }
 
-        if (autoMode) {
+        if (autoSeconds > 0) {
             // AUTO 模式：A 按钮 (20,110,140,36)→(90,128)；B 按钮 (20,110,140,36)→(90,128)
             if (frame == 0) { uiA->PushMouseButton(1, 90, 128, true); std::fprintf(stderr, "[A] btn down\n"); }
             if (frame == 2) { uiA->PushMouseButton(1, 90, 128, false); std::fprintf(stderr, "[A] btn up\n"); }
@@ -107,8 +110,8 @@ int main(int argc, char* argv[]) {
                 std::string got = msgA.GetString(PropertyNames::kCaption);
                 std::fprintf(stderr, "[B] msgA = \"%s\"\n", got.c_str());
             }
-            if (frame >= 240) break;
         }
+        if (autoTimer.expired()) break;
 
         auto now = Clock::now();
         double dt = std::chrono::duration<double>(now - last).count();
@@ -130,7 +133,7 @@ int main(int argc, char* argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
         ++frame;
     }
-    std::printf("[DONE] %d frames (auto=%d)\n", frame, (int)autoMode);
+    std::printf("[DONE] %d frames (auto=%d)\n", frame, autoSeconds > 0 ? 1 : 0);
 
     uiA->Shutdown();
     uiB->Shutdown();

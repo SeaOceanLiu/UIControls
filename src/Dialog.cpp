@@ -22,6 +22,16 @@ Popup::Popup(Control* parent, SRect rect,
 Popup::~Popup() {
 }
 
+void Popup::setParent(Control* parent) {
+    ControlImpl::setParent(parent);
+    // 弹层作为画布内容随根变换缩放：复合 = 自身布局缩放 × 父（bench）复合。
+    // setParent 仅更新自身快照，挂树后须向子树传播（create() 已就绪的内部
+    // 控件如确认按钮/内容面板的复合此时才随根变换生效）。
+    for (auto& child : m_children) {
+        child->refreshScaleWith(m_xxScale, m_yyScale);
+    }
+}
+
 void Popup::create() {
     if (m_isCreated) return;
     if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建（open() 挂树后重建）
@@ -53,6 +63,8 @@ SRect Popup::computeTargetRect() {
     // 父相对坐标语义：m_rect 为相对父（bench）的本地坐标（与普通控件一致，
     // getDrawRect 由通用实现叠加父偏移）。视口/bench 为绝对区域，居中与
     // 锚定计算在本函数内换算为本地坐标。
+    // 弹层随根变换缩放：复合 = 自身布局缩放 × 父复合，屏幕宽度 = m_rect.width*sx，
+    // 屏幕位置 = m_rect.left*父复合 + 父 DR.left —— 公式同步适配（除以根复合反查）
     SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
     float localW = vp.width;
     float localH = vp.height;
@@ -62,21 +74,32 @@ SRect Popup::computeTargetRect() {
 
     switch (m_anchorMode) {
     case AnchorMode::Centered: {
-        float cx = (localW - m_rect.width * sx) / 2.0f;
-        float cy = (localH - m_rect.height * sy) / 2.0f;
+        // 弹层随画布缩放（sx = 复合）：居中基准 = 视口中心，反查（- 偏移后 ÷ 父复合）
+        // 到父（bench）本地坐标（getDrawRect 位置乘父复合，见 ControlBase.cpp 非根分支）
+        float bsx = BENCH ? BENCH->getScaleXX() : 1.0f;
+        float bsy = BENCH ? BENCH->getScaleYY() : 1.0f;
+        float cx = (vp.left + (localW - m_rect.width * sx) / 2.0f - bx) / bsx;
+        float cy = (vp.top + (localH - m_rect.height * sy) / 2.0f - by) / bsy;
         return SRect(cx, cy, m_rect.width, m_rect.height);
     }
     case AnchorMode::Anchored: {
         if (!m_anchorControl)
             return SRect(0, 0, m_rect.width, m_rect.height);
         SRect adr = m_anchorControl->getDrawRect();
-        float x = adr.left - bx + m_anchorOffset.left * sx;
-        float y = adr.bottom() - by + m_anchorOffset.top * sy;
-        // Clamp to viewport (local coordinates)
-        if (x + m_rect.width * sx > localW) x = localW - m_rect.width * sx;
-        if (x < 0) x = 0;
-        if (y + m_rect.height * sy > localH) y = localH - m_rect.height * sy;
-        if (y < 0) y = 0;
+        float bsx = BENCH ? BENCH->getScaleXX() : 1.0f;
+        float bsy = BENCH ? BENCH->getScaleYY() : 1.0f;
+        float x = (adr.left - bx + m_anchorOffset.left * sx) / bsx;
+        float y = (adr.bottom() - by + m_anchorOffset.top * sy) / bsy;
+        // Clamp to viewport（换算到弹层本地：屏幕 [vp.left, vp.left+W] 反查，
+        // 弹层屏幕宽度 = m_rect.width*sx，减项需除以父复合还原到本地单位）
+        float loX = (vp.left - bx) / bsx;
+        float hiX = (vp.left + localW - bx) / bsx - m_rect.width * sx / bsx;
+        float loY = (vp.top - by) / bsy;
+        float hiY = (vp.top + localH - by) / bsy - m_rect.height * sy / bsy;
+        if (x > hiX) x = hiX;
+        if (x < loX) x = loX;
+        if (y > hiY) y = hiY;
+        if (y < loY) y = loY;
         return SRect(x, y, m_rect.width, m_rect.height);
     }
     case AnchorMode::Absolute:
@@ -113,12 +136,14 @@ void Popup::open() {
         UIContext* ctx = UIContext::getLastInstance();
         if (ctx) setContext(ctx);
     }
+    auto self = static_pointer_cast<Control>(getThis());
+    // 先挂树再算位置：弹层作为画布内容，复合 = 布局缩放 × 根变换，须在
+    // setParent 继承复合后 computeTargetRect 才能得到正确的复合与反查基准
+    BENCH->addControl(self);
     SRect target = computeTargetRect();
     setRect(target);
     layoutContent();
     setVisible(true);
-    auto self = static_pointer_cast<Control>(getThis());
-    BENCH->addControl(self);
     registerWatcher();
     GET_FOCUSMANAGER->registerBoundary(this);
     m_result = DialogResult::None;

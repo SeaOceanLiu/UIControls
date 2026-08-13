@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9.6 C++ Binding 速查表 - UICornerstone 用户手册</title>
+<title>11 C++ Binding 速查表 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/binding.html"></script>
 </head>
@@ -11,12 +11,12 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>9.6 C++ Binding 速查表</h1>
+<h1>11 C++ Binding 速查表</h1>
 
 <p>头文件：<code>binding/include/UICornerstone.h</code>（含 <code>Control.h</code>、<code>Event.h</code>、<code>UIEventFactory.h</code>）。
 C++ Binding 是 C ABI 的类型安全封装，仅依赖 C ABI 头，跨后端 DLL 动态加载。所有 UI 调用在主线程。</p>
 
-<h2>9.6.1 实例创建</h2>
+<h2>11.1 实例创建</h2>
 
 <pre><code>struct Config {
     std::string backend            = "sdl3";   // "sdl3" | "sfml" | "raylib"
@@ -33,7 +33,7 @@ C++ Binding 是 C ABI 的类型安全封装，仅依赖 C ABI 头，跨后端 DL
 static std::unique_ptr&lt;UICornerstone&gt; Create(const Config&amp; config);
 static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* callbacks, ...);</code></pre>
 
-<h2>9.6.2 实例管理</h2>
+<h2>11.2 实例管理</h2>
 
 <table>
 <tr><th>方法</th><th>说明</th></tr>
@@ -45,7 +45,7 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>void Shutdown()</code></td><td>退出并释放实例</td></tr>
 </table>
 
-<h2>9.6.3 布局与资源</h2>
+<h2>11.3 布局与资源</h2>
 
 <table>
 <tr><th>方法</th><th>说明</th></tr>
@@ -56,7 +56,7 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>std::string ResolveResource(const std::string&amp; relativePath) const</code></td><td>将相对路径解析为绝对资源路径</td></tr>
 </table>
 
-<h2>9.6.4 控件工厂（创建参数末尾 xScale/yScale，默认 1.0f）</h2>
+<h2>11.4 控件工厂（创建参数末尾 xScale/yScale，默认 1.0f）</h2>
 
 <table>
 <tr><th>方法</th><th>返回</th></tr>
@@ -78,6 +78,7 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>CreateImage(image, x, y, w, h, xScale, yScale)</code></td><td>Image</td></tr>
 <tr><td><code>CreateImageButton(normal, hover, pressed, x, y, w, h, xScale, yScale)</code></td><td>ImageButton</td></tr>
 <tr><td><code>CreateAnimation(jsoncPath, x, y, w, h, xScale, yScale)</code></td><td>Animation</td></tr>
+<tr><td><code>CreateAnimatedButton(jsoncPath, x, y, w, h, xScale, yScale)</code></td><td>带动画的 Button（jsoncPath 可空串=纯按钮；内嵌动画构造 scale 恒 1.0，两个 scale 参数作用于按钮本身）</td></tr>
 <tr><td><code>CreateTreeView(x, y, w, h, xScale, yScale)</code></td><td>TreeView</td></tr>
 <tr><td><code>CreateHandleControl(target, x, y, w, h, xScale, yScale)</code></td><td>HandleControl</td></tr>
 <tr><td><code>CreateMenuBar(x, y, w, h, xScale, yScale)</code></td><td>MenuBar</td></tr>
@@ -91,7 +92,7 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <p>缩放说明见<a href="../advanced/scale.html">5.5 控件缩放</a>：系数作用于绘制内容，rect 不变，
 父子累积连乘；C++ Binding 仅创建时生效（运行时属性系统未挂接 xScale/yScale）。</p>
 
-<h2>9.6.5 Control 代理类</h2>
+<h2>11.5 Control 代理类</h2>
 
 <table>
 <tr><th>方法</th><th>说明</th></tr>
@@ -106,7 +107,7 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>std::string GetId() const</code></td><td>取控件 id</td></tr>
 </table>
 
-<h2>9.6.6 事件访问器（Event 类）</h2>
+<h2>11.6 事件访问器（Event 类）</h2>
 
 <table>
 <tr><th>事件</th><th>判定 / 访问器</th></tr>
@@ -125,31 +126,36 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <code>GetNameRaw()</code> / <code>GetIntVal()</code> / <code>GetFloatVal()</code> / <code>GetDoubleVal()</code> /
 <code>GetStrVal()</code> / <code>GetPtrVal()</code>。</p>
 
-<h2>9.6.7 视口 / 事件注入 / 动作注册</h2>
+<h2>11.7 视口 / 事件注入 / 动作注册</h2>
 
 <table>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>CreateViewport(x, y, w, h)</code></td><td>在当前窗口内创建子视口（单窗口多视口，见 5.2）</td></tr>
 <tr><td><code>SetViewport(x, y, w, h) / GetViewport()</code></td><td>切换 / 查询当前视口</td></tr>
+<tr><td><code>SetViewportScaleMode(int) / GetViewportScaleMode()</code></td><td>视口缩放模式 0=off 1=fit 2=stretch（见 5.6）</td></tr>
+<tr><td><code>SetCanvasSize(w, h)</code></td><td>显式基准画布尺寸（fit/stretch 适配基准）</td></tr>
+<tr><td><code>GetViewportScale(float&amp; sx, float&amp; sy)</code></td><td>当前复合缩放系数</td></tr>
+<tr><td><code>SetViewportAnchor(ax, ay)</code></td><td>手动锚点偏移（增量叠加）</td></tr>
+<tr><td><code>SetViewportBackgroundColor(r, g, b, a)</code></td><td>视口背景色（RGBA8888）</td></tr>
 <tr><td><code>PushEvent(const UIEvent&amp;)</code></td><td>注入任意事件（UIEventFactory 构造）</td></tr>
 <tr><td><code>PushMouseButton / PushMouseMove / PushMouseWheel / PushKey / PushTextInput</code></td><td>输入注入（模拟输入/测试）</td></tr>
 <tr><td><code>RegisterAction(name, ActionCallback)</code></td><td>注册 JSON 布局动作处理器</td></tr>
 </table>
 
-<h2>9.6.8 后端配置 / 错误 / Debug</h2>
+<h2>11.8 后端配置 / 错误 / Debug</h2>
 
 <table>
 <tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>SetBackendConfig(key, value) / SetBackendConfigBool(key, bool) / GetBackendConfigBool(key, bool&amp;)</code></td><td>后端差异配置（见 9.5）</td></tr>
+<tr><td><code>SetBackendConfig(key, value) / SetBackendConfigBool(key, bool) / GetBackendConfigBool(key, bool&amp;)</code></td><td>后端差异配置（见 12）</td></tr>
 <tr><td><code>const std::string&amp; GetLastError() const</code></td><td>最近一次错误信息</td></tr>
 <tr><td><code>DebugGetAliveCount()</code></td><td>存活实例数（静态）</td></tr>
 <tr><td><code>DebugGetAliveInstance(index) / DebugGetActiveViewport(instance)</code></td><td>实例巡检（静态）</td></tr>
 <tr><td><code>DebugIsControlFocused(instance, handle)</code></td><td>焦点查询（静态）</td></tr>
 </table>
 
-<div class="prev-next">
-  <a href="backend-config.html">← 9.5 后端差异及后端配置</a>
-  <a href="../faq.html">下一章：10 常见问题 →</a>
+<div class="chapter-nav">
+  <a href="backend-config.html">← 10 后端差异及后端配置</a>
+  <a href="../faq.html">下一章：12 常见问题 →</a>
 </div>
 
 </div>

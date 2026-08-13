@@ -82,7 +82,7 @@ Binding 位于主工程内时，随主工程一起构建：
 
 ```bash
 cmake -B build -DUICORNERSTONE_BUILD_DLL=ON -DUICORNERSTONE_BACKEND=SDL3
-cmake --build build --config Debug --target sample_cpp_hosted sample_cpp_embed sample_cpp_multiview sample_cpp_multiinstance
+cmake --build build --config Debug --target sample_cpp_hosted sample_cpp_embed sample_cpp_multiview sample_cpp_multiinstance sample_scale
 ```
 
 仅当主工程存在 `UICornerstone` 核心 target 时，Binding samples 才会构建（`binding/CMakeLists.txt:53`）。
@@ -205,9 +205,12 @@ auto imgBtn = ui->CreateImageButton("btn.png", "btn_hover.png", "btn_pressed.png
                                     20, 20, 100, 40);
 auto img    = ui->CreateImage("hero.png", 20, 80, 128, 128);
 auto anim   = ui->CreateAnimation("idle.jsonc", 20, 220, 256, 256);  // LuotiAni 动画
+auto aniBtn = ui->CreateAnimatedButton("spin.jsonc", 20, 340, 100, 40, 2.0f, 2.0f);  // 2x 动画按钮
 ```
 
 图片/动画路径相对 `resourceRoot` 解析（§9）。
+
+**CreateAnimatedButton**（C ABI `UICornerstone_CreateAnimatedButton`）：`jsoncPath` 可传空串创建纯按钮；动画为**内嵌资源**——不挂树、不响应鼠标、rect 为按钮局部坐标（铺满按钮），播放由 `SetBool("playing")=1` 启动。`xScale`/`yScale` 作用于**按钮本身**；内嵌动画构造 scale 恒 1.0，按钮 scale 经 `setParent` 复合缩放传导到动画——对动画再设按钮同值 scale 会造成双重缩放（2x 按钮 → 4x 内容）。JSON 布局等价写法：`{"type":"button","luotiAni":"..."}`（LayoutSystem_Design.md §5）。
 
 ### 4.4 对话框
 
@@ -257,6 +260,8 @@ void*   p = ctl.GetPtr("user-data");
 | `kSelectedIndex` | `"selected-index"` | ComboBox 选中索引 |
 | `kCheckState` | `"check-state"` | CheckBox 状态 |
 | `kOrientation` | `"orientation"` | 滚动条/分割条方向 |
+| `kPlaying` / `kLoop` | `"playing"` / `"loop"` | 动画（Animation/AnimatedButton：置 1=play 帧复位重播）/ 循环 |
+| `kAnimation` | `"animation"` | 动画 jsonc 路径（重载换动画，播放中从第 0 帧重播） |
 
 > 全部常量以 `include/PropertyNames.h` 为准（约 590 个）；控件不支持某个属性时，Set 静默失败、Get 返回空值/0——不会崩溃。
 
@@ -372,6 +377,15 @@ auto ctl = ui->FindControl("start_button");  // JSON 中 id 字段
 if (ctl.IsValid()) { /* 操作 */ }
 ```
 
+JSON 布局中的按钮可内嵌洛蒂动画（`"luotiAni"` 属性，路径相对 `resourceRoot`）：
+
+```jsonc
+{ "type": "button", "id": "ani1x", "rect": { "x": 1100, "y": 80, "w": 220, "h": 220 },
+  "luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc" }
+```
+
+挂树后经 `Button::setRenderDevice` 自动延迟 prepare，`SetBool("playing")=1` 启动播放；点击事件经 `SetCallback(ctl, "click", ...)` 注册（或 JSON `"events": {"onClick": "动作名"}` + `RegisterAction`，§8.3）。详见 LayoutSystem_Design.md；参考样例 `sample_scale` 与核心测试 `test_scale_json`。
+
 ### 8.3 布局动作注册
 
 JSON 布局中的动作（onClick 等）经 `RegisterAction` 绑定：
@@ -471,7 +485,7 @@ while (!uiA->IsQuitRequested() && !uiB->IsQuitRequested()) {
 }
 ```
 
-> `ProcessEvents()` 返回 `bool`（是否处理了 ≥1 个事件）；单窗口场景忽略返回值即可，行为与旧版一致。跨窗口隔离（鼠标/hover/焦点/键盘）由核心库与 sdl3 后端按窗口 ID 过滤，Binding 无感知。参考样例：`binding/samples/sample_cpp_multiinstance.cpp`（双窗口双向通信，`UICORN_AUTO=1` 冒烟验证）。
+> `ProcessEvents()` 返回 `bool`（是否处理了 ≥1 个事件）；单窗口场景忽略返回值即可，行为与旧版一致。跨窗口隔离（鼠标/hover/焦点/键盘）由核心库与 sdl3 后端按窗口 ID 过滤，Binding 无感知。参考样例：`binding/samples/sample_cpp_multiinstance.cpp`（双窗口双向通信，`auto=<秒>` 冒烟验证）。
 
 **能力位查询（后端差异，必读）**：多窗口渲染前先查询后端能力 `uiA->GetBackendCapabilities()`，与 `UICORN_BACKEND_CAP_MULTI_WINDOW` 按位与后再决定是否渲染第二个实例：
 
@@ -578,9 +592,9 @@ int main() {
 
 - Label 文本用 `PropertyNames::kCaption`（`"caption"`）；EditBox 内容读写用 `PropertyNames::kTextContent`（`"text"`）
 - 弹窗：`CreateDialog(confirmText, cancelText, x, y, w, h)`（`x=y=0` 自动居中）——确认/取消按钮自动生成，点击确认（`kEventConfirm`）或取消（`kEventCancel`）自动关闭；取消文本传空串则为纯信息弹窗（只保留确认按钮）；弹窗内容须自行创建 Label 并 `dialog.AddChild(label)`（Label 坐标相对 Dialog 本地）
-- 自动冒烟：`UICORN_AUTO=1` 时给两个视口分别注入按钮点击（窗口绝对坐标：
+- 自动冒烟：`auto=<秒>` 时给两个视口分别注入按钮点击（窗口绝对坐标：
   vpA 按钮在 (12,82) 起、vpB 按钮在 (412,382) 起），验证 `popup: Hello from
-  Bench A/B` 输出后 240 帧干净退出（exit=0）
+  Bench A/B` 输出后满时长干净退出（exit=0）
 
 ### 12.4 后端配置
 
@@ -653,14 +667,19 @@ Release 构建下 `DebugGetAliveCount()` 返回 0、`DebugGetAliveInstance()` �
 
 ### 15.2 自动冒烟（样例自带）
 
-四个样例支持 `UICORN_AUTO` 环境变量：设置后自动注入鼠标事件并运行 240 帧后干净退出（exit=0），供 CI 回归：
+五个样例与标准测试统一使用命令行参数 `auto=<秒>`（任意顺序，可与其他参数如 `backend=` 混用）：自动注入鼠标事件（点击/拖动），渲染满时长后干净退出（exit=0），供 CI 回归：
 
 ```bash
-UICORN_AUTO=1 ./build/binding/Debug/sample_cpp_hosted.exe && echo OK
-UICORN_AUTO=1 ./build/binding/Debug/sample_cpp_embed.exe && echo OK
-UICORN_AUTO=1 ./build/binding/Debug/sample_cpp_multiview.exe && echo OK
-UICORN_AUTO=1 ./build/binding/Debug/sample_cpp_multiinstance.exe && echo OK  # 双向通信注入
+./build/binding/Debug/sample_scale.exe auto=4 && echo OK
+./build/binding/Debug/sample_cpp_hosted.exe auto=4 && echo OK
+./build/binding/Debug/sample_cpp_embed.exe auto=4 && echo OK
+./build/binding/Debug/sample_cpp_multiview.exe auto=4 && echo OK
+./build/binding/Debug/sample_cpp_multiinstance.exe auto=4 && echo OK  # 双向通信注入
 ```
+
+计时起点为窗口/后端创建完成后的首帧（`binding/samples/auto_args.h`），
+初始化耗时不计入自动时长；不传 `auto=` 即人工模式（关闭窗口退出），
+未识别参数打印 `WARN` 后忽略。
 
 ### 15.3 核心库测试
 
@@ -709,7 +728,7 @@ ui->Handle()                                   // UIInstance 裸句柄
 CreateButton / CreateLabel / CreateCheckBox / CreateEditBox / CreateProgressBar
 CreateSlider / CreatePanel / CreateTextArea / CreateWinFrame / CreateComboBox
 CreateColorPicker / CreateNumericUpDown / CreateSplitter / CreateImageButton
-CreateImage / CreateAnimation / CreateDialog
+CreateImage / CreateAnimation / CreateAnimatedButton / CreateDialog
 CreateMenuBar / CreateMenuPanel / CreateMenuItem / CreateScrollBar
 CreateTreeView / CreateHandleControl(target, x, y, w, h)
 

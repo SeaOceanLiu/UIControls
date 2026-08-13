@@ -110,6 +110,7 @@ public:
     void draw(void) override;
     bool handleEvent(shared_ptr<Event> event) override;
     void setRect(SRect rect) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
     // Range
     void  setRange(float minValue, float maxValue);
@@ -151,6 +152,8 @@ public:
     // Tick marks
     void setTickInterval(float interval);
     float getTickInterval() const { return m_tickInterval; }
+    // 刻度字号对象（懒加载：首帧绘制/缩放刷新时创建；未加载返回 nullptr）
+    Font* getTickFont() const { return m_tickFont.get(); }
     void setTickLength(float length);
     float getTickLength() const { return m_tickLength; }
     void setTickColor(SColor color);

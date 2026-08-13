@@ -1,5 +1,9 @@
 ﻿# UICornerstone
 
+<p align="center">
+  <img src="docs/assets/UICornerstone_Logo.svg" alt="UICornerstone Logo" width="200"/>
+</p>
+
 基于 C++17 的多后端跨平台 UI 控件库，适用于游戏和图形应用。
 
 支持 **SDL3 / SFML / Raylib** 三种渲染后端，提供 C ABI 接口可被纯 C / C++ / 动态加载等多种集成方式调用；另附 **C++ Binding**（`binding/`，纯动态加载封装）与 4 个可直接修改的样例程序。
@@ -130,13 +134,14 @@ build\sdl3_dll --config Debug --target sample_fromsource
 | `sample_cpp_embed` | Embedded 模式：UI 嵌入用户游戏循环 |
 | `sample_cpp_multiview` | 单窗口两个子视口（Bench A/B），弹窗展示本视口输入 |
 | `sample_cpp_multiinstance` | 双窗口独立实例双向通信（A 按钮 → B 标签），多窗口事件泵 + 能力位条件化渲染 |
+| `sample_scale` | 缩放对照组：1x/2x 按钮/图片按钮/动画按钮 rect 断言 |
 
 构建/运行（`build\binding\Debug\` 下）：
 
 ```cmd
 cmake --build build\binding --config Debug
 sample_cpp_multiinstance.exe backend=sdl3      # 命令行选后端（缺省 sdl3）
-set UICORN_AUTO=1 && sample_cpp_multiinstance.exe   # 无人值守冒烟（240 帧自动退出）
+sample_cpp_multiinstance.exe auto=4            # 无人值守冒烟（auto=<秒> 满时长自动退出，与标准测试同方案）
 ```
 
 详见 [CppBinding_UserManual.md](design/CppBinding_UserManual.md)（用户手册）与 [CppBinding_Design.md](design/CppBinding_Design.md)（设计）。

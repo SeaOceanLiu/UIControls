@@ -31,6 +31,14 @@ struct Api {
     UIInstance (*fnCreateViewport)(UIInstance, UIRect) = nullptr;
     void (*fnSetViewport)(UIInstance, float, float, float, float) = nullptr;
     void (*fnGetViewport)(UIInstance, float*, float*, float*, float*) = nullptr;
+    int (*fnSetViewportBackgroundColor)(UIInstance, uint8_t, uint8_t, uint8_t, uint8_t) = nullptr;
+
+    // 视口缩放
+    int (*fnSetViewportScaleMode)(UIInstance, int) = nullptr;
+    int (*fnGetViewportScaleMode)(UIInstance, int*) = nullptr;
+    int (*fnSetCanvasSize)(UIInstance, float, float) = nullptr;
+    int (*fnGetViewportScale)(UIInstance, float*, float*) = nullptr;
+    int (*fnSetViewportAnchor)(UIInstance, float, float) = nullptr;
 
     // 帧循环
     int (*fnProcessEvents)(UIInstance) = nullptr;   // 返回是否处理了事件（多实例调度）
@@ -81,6 +89,7 @@ struct Api {
     UIControlHandle (*fnCreateImageButton)(UIInstance, const char*, const char*, const char*, float, float, float, float, float, float) = nullptr;
     UIControlHandle (*fnCreateImage)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
     UIControlHandle (*fnCreateAnimation)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
+    UIControlHandle (*fnCreateAnimatedButton)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
     UIControlHandle (*fnCreateDialog)(UIInstance, const char*, const char*, float, float, float, float, float, float) = nullptr;
 
     // 控件通用操作

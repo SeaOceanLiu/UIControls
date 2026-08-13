@@ -364,6 +364,13 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
 - **字符串**：文件路径，通过 `LuotiAni::loadAniDesc` 加载
 - **对象**：`{ "file": "..." }`
 
+**内嵌动画实现语义（2026-08-10 实施修订）**：
+
+- 相对路径按 `Platform::GetBasePath()` 拼接（与 `"animation"` 类型同级），避免从任意 cwd 启动时加载失败
+- 动画以 `LuotiAni(btn.get(), 1.0f, 1.0f)` 构造内嵌到按钮（不挂树、不响应鼠标）；**构造 scale 恒为 1.0**——按钮自身的 scale 会经 `setParent` 复合缩放（`m_xxScale = m_xScale * parent->getScaleXX()`）传导到动画，传按钮 scale 会造成双重缩放（2x 按钮 → 4x 内容）
+- **不显式 prepare**：加载阶段仅 `loadAniDesc` 解析描述（无渲染设备）；挂树后 `Button::setRenderDevice` 转发设备 → `LuotiAni::setRenderDevice` 以 `m_totalFrames > 0` 为守卫延迟 prepare（'CreateAnimation' 路径在 addControl 后显式 prepare，两者语义一致）
+- 播放由调用方 `SetBool("playing")=1` 启动（`Button::setBoolProperty` 转发给内嵌动画）
+
 **绘制顺序**（从上到下）：
 
 ```
@@ -1531,7 +1538,9 @@ parseButton(j, parent)
   │     └─ j["actors"]["disabled"] → setDisabledStateActor
   │
   ├─ 5. 解析 LuotiAni（粒子动画，异常安全）
-  │     ├─ j["luotiAni"] 存在 → try-catch 加载
+  │     ├─ j["luotiAni"] 存在 → try-catch：相对路径拼 GetBasePath →
+  │     │     LuotiAni(btn.get(), 1.0f, 1.0f) 构造（scale 恒 1.0，防双重缩放）+ loadAniDesc
+  │     │     （不 prepare/play——挂树后经 Button::setRenderDevice → 延迟 prepare）
   │     └─ 加载失败 → logWarn（不崩溃）
   │
   ├─ 6. parseEvents

@@ -131,6 +131,8 @@ void MainWindow::update(AppCallbacks* app) {
     uint64_t now = Platform::GetTicks();
     if (m_pendingResizeW >= 0 && m_pendingResizeH >= 0 &&
         now - m_lastResizeArrival >= 200) {
+        // 视口先同步（recomputeViewportTransform 读取），再通知画布
+        m_context->viewport = {0, 0, (float)m_pendingResizeW, (float)m_pendingResizeH};
         m_context->bench->resized({0, 0, (float)m_pendingResizeW, (float)m_pendingResizeH});
         m_pendingResizeW = -1;
         m_pendingResizeH = -1;

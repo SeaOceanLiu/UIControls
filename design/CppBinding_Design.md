@@ -1,6 +1,6 @@
 ﻿# CAPI C++ Binding 设计
 
-> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel | 修订 2026-08-06：**P1-P13 全部实施并验证**（sdl3/sfml/raylib 三后端构建+冒烟通过）| 修订 2026-08-07：**P14 纯动态加载模式实施**——核心 DLL + 后端 DLL 全部经 LoadLibrary 显式加载（DynamicApi 层），不再链接任何导入库；Config 新增 coreLibraryDir；删除便捷方法族（SetText/SetVisible 等）；PropertyNames.h 构建时从核心复制（CopyPropertyNames.cmake）；示例改为平铺 cpp | 修订 2026-08-08：**P16 多窗口隔离**——`ProcessEvents()` 返回 bool（handled ≥ 1，多窗口事件泵 §5.6.1）；Config.resourceRoot 默认空串（核心回退 exe 目录/assets）；新增 §7.4 sample_cpp_multiinstance
+> 对应 Phase 17 | 编制 2026-07-30 | 状态: **草案** | 修订 2026-08-01：对齐多实例改造后的 C ABI（UICornerstoneAPI.h 实测）| 修订 2026-08-04：按实施后代码（a0fcfa7/6064bd5）刷新——windowFlags 正式字段、菜单族/ScrollBar/TreeView/HandleControl 工厂已落地、Debug 辅助 4 件套、句柄归属校验、treeNode 访问器、UIInstanceConfig.debugLabel | 修订 2026-08-06：**P1-P13 全部实施并验证**（sdl3/sfml/raylib 三后端构建+冒烟通过）| 修订 2026-08-07：**P14 纯动态加载模式实施**——核心 DLL + 后端 DLL 全部经 LoadLibrary 显式加载（DynamicApi 层），不再链接任何导入库；Config 新增 coreLibraryDir；删除便捷方法族（SetText/SetVisible 等）；PropertyNames.h 构建时从核心复制（CopyPropertyNames.cmake）；示例改为平铺 cpp | 修订 2026-08-08：**P16 多窗口隔离**——`ProcessEvents()` 返回 bool（handled ≥ 1，多窗口事件泵 §5.6.1）；Config.resourceRoot 默认空串（核心回退 exe 目录/assets）；新增 §7.4 sample_cpp_multiinstance | 修订 2026-08-12：**P18 缩放测试三件套 + 样例统一 auto=<秒>**——新增 §7.5 sample_scale、CreateAnimatedButton 工厂（§5.15/工厂映射表）；五个样例废弃 UICORN_AUTO 环境变量、统一 `auto=<秒>` 命令行（共享 `binding/samples/auto_args.h`，惰性计时）
 
 ## 目录
 
@@ -312,6 +312,8 @@ public:
                               const std::string& pressed, float x, float y, float w, float h);
     Control CreateImage(const std::string& image, float x, float y, float w, float h);
     Control CreateAnimation(const std::string& jsoncPath, float x, float y, float w, float h);
+    Control CreateAnimatedButton(const std::string& jsoncPath, float x, float y, float w, float h,
+                                 float xScale = 1.0f, float yScale = 1.0f);  // xScale/yScale 作用于按钮，内嵌动画恒 1.0
     Control CreateDialog(const std::string& confirmText, const std::string& cancelText,
                          float x, float y, float w, float h);
 
@@ -1412,7 +1414,7 @@ int main() {
 
 > 事件名/属性名一律使用 `PropertyNames.h` 常量（`kEventClick`/`kCaption` 等），避免魔法字符串。
 >
-> **AUTO 回归模式**：设置环境变量 `UICORN_AUTO` 后走手动循环，每帧注入鼠标点击/拖动（`PushMouseButton`/`PushMouseMove`），240 帧后干净退出（exit=0）——供自动化冒烟测试，人工运行时不带该变量。
+> **AUTO 回归模式**：与标准测试统一使用命令行参数 `auto=<秒>`（共享解析头 `binding/samples/auto_args.h`），走手动循环每帧注入鼠标点击/拖动（`PushMouseButton`/`PushMouseMove`），渲染满时长后干净退出（exit=0）——供自动化冒烟测试，人工运行时不传该参数。
 
 ### 7.2 sample_cpp_embed — 在用户游戏循环中嵌入 UICornerstone
 
@@ -1484,7 +1486,7 @@ int main() {
 }
 ```
 
-> 渲染顺序由用户决定（先游戏后 UI，或反之）。真实样例支持 `UICORN_AUTO` 环境变量进入自动冒烟模式（点击切换 label 可见性，240 帧干净退出）。
+> 渲染顺序由用户决定（先游戏后 UI，或反之）。真实样例支持 `auto=<秒>` 参数进入自动冒烟模式（点击切换 label 可见性，满时长干净退出）。
 
 ### 7.3 sample_cpp_multiview — 多视口（一个窗口两个 Bench）
 
@@ -1495,8 +1497,8 @@ int main() {
 - 一个窗口内两个子视口：左上 `CreateViewport(0, 0, 400, 300)`、右下 `CreateViewport(400, 300, 400, 300)`——各自独立控件树，共享后端
 - 每个视口（Bench）内：Label（caption 标明 Bench A/B）、EditBox、Button；按钮点击 → `GetString("text")` 读 EditBox → `CreateDialog("OK", "", ...)` 居中弹窗 + `CreateLabel` 内容 + `dialog.AddChild(label)`（实施修订 2026-08-08：CreateDialog 不再内置文本，内容用 Label 挂入）
 - **多视口驱动**：`Run()` 只驱动 owner——主循环必须显式 `vp->ProcessEvents()/Update()/Render()`（Render 按视口区域裁剪），最后 `ui->Present()`
-- **事件注入**：`UICORN_AUTO` 下 `vp->PushMouseButton(...)` 用**视口本地坐标**（注入直达视口队列，不经坐标路由）；owner 注入只进 owner 队列
-- **验证**：AUTO 输出 `[Bench A] popup: Hello from Bench A` / `[Bench B] popup: Hello from Bench B`，240 帧后 3 实例（owner + 2 视口）干净销毁，exit=0
+- **事件注入**：`auto=<秒>` 下 `vp->PushMouseButton(...)` 用**视口本地坐标**（注入直达视口队列，不经坐标路由）；owner 注入只进 owner 队列
+- **验证**：AUTO 输出 `[Bench A] popup: Hello from Bench A` / `[Bench B] popup: Hello from Bench B`，满时长后 3 实例（owner + 2 视口）干净销毁，exit=0
 
 ### 7.4 sample_cpp_multiinstance — 多窗口（两独立实例双向通信）
 
@@ -1509,6 +1511,12 @@ int main() {
 - **多窗口事件泵**（实施修订 2026-08-08）：主循环内层 `do { processed = A.ProcessEvents()?1:0 + B.ProcessEvents()?1:0; } while (processed > 0)` 驱动所有实例直到队列空——每个实例只消费自己窗口的事件（sdl3 按 windowID 隔离），不再跨窗口串扰
 - **能力位条件化渲染**（实施修订 2026-08-08）：第二实例的 Clear/Render/Present 包在 `if (uiA->GetBackendCapabilities() & UICORN_BACKEND_CAP_MULTI_WINDOW)` 内——单窗口架构后端（raylib）非首个实例为 headless，无条件渲染会串扰到主实例窗口（内容闪动，见 BackendAbstraction_Design.md §20）；`GetBackendCapabilities()` 封装 C ABI `UICornerstone_GetBackendCapabilities`（§5.1）
 - **验证**：AUTO 双向注入输出 `[A] sent to B: hello from A` / `[B] sent to A: hello from B`，exit=0；手动验证 hover/焦点/键盘跨窗口隔离（点击 B 的 EditBox → A 的焦点环消失）
+
+### 7.5 sample_scale — 缩放对照组（1x/2x）
+
+**文件**：`binding/samples/sample_scale.cpp`（平铺单文件）
+
+**要点**：与核心测试 `test_scale_json` / `test_scale_cabi` 相同的三列布局（btn x=60 / img x=580 / ani x=1100，1x 行 y=80、2x 行 y=560），7 项控件的 `GetRect()` 断言与 xScale/yScale 系数无关——覆盖编程式创建（`CreateButton`/`CreateImageButton(3-state)`/`CreateAnimatedButton(luotiAni)`）在缩放下的 rect 一致性；自动模式（`auto=<秒>`）注入点击验证 `CreateAnimatedButton` 内嵌动画按钮的 CLICK 事件（`event=click`）。
 
 ## 8. 实施计划
 
@@ -1568,6 +1576,9 @@ UICornerstone_CreateSplitter      ui.CreateSplitter(x, y, w, h, orientation)
 UICornerstone_CreateImageButton   ui.CreateImageButton(n, h, p, x, y, w, h)
 UICornerstone_CreateDialog        ui.CreateDialog(confirm, cancel, x, y, w, h)
 UICornerstone_CreateImage / CreateAnimation  ui.CreateImage / CreateAnimation
+UICornerstone_CreateAnimatedButton  ui.CreateAnimatedButton(jsoncPath, x, y, w, h, xScale=1, yScale=1)
+  // 带动画的按钮：xScale/yScale 作用于按钮本身；内嵌 LuotiAni 构造 scale 恒 1.0
+  //   （按钮 scale 经 setParent 复合缩放传导到动画，内嵌动画再乘按钮 scale 会双重缩放）
 
 ── 控件工厂（菜单族 / 滚动条 / 树 / 句柄）──
 UICornerstone_CreateMenuBar       ui.CreateMenuBar(x, y, w, h)

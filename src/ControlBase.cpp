@@ -427,6 +427,16 @@ void ControlImpl::setScaleY(float yScale){
     }
 }
 
+// 父链缩放变更后的子树复合缩放刷新：刷新自身快照 → 递归树内子树。
+// 非树成员子控件（如 Button 的状态 Actor）由各自覆写收口。
+void ControlImpl::refreshScaleWith(float parentXX, float parentYY){
+    m_xxScale = m_xScale * parentXX;
+    m_yyScale = m_yScale * parentYY;
+    for (auto& child : m_children){
+        child->refreshScaleWith(m_xxScale, m_yyScale);
+    }
+}
+
 // 注：override 时建议在最前面加 if (m_rect == rect) return;
 // 以防止不必要的 recreate() cascade（参见 CheckBox::setRect, Label::setRect）
 void ControlImpl::setRect(SRect rect){
@@ -504,8 +514,8 @@ RenderDevice* ControlImpl::getRenderDevice(void) {
 }
 
 void ControlImpl::setRenderDevice(RenderDevice* device) {
-    if (m_renderDevice == device) return;
-
+    // 无早退：即使自身 m_renderDevice 已为目标设备，仍须向子控件传播
+    // （rootPanel 先经 getRenderDevice 缓存设备后，子控件可能从未收到过设备）
     m_renderDevice = device;
     for (auto& child : m_children){
         child->setRenderDevice(device);
@@ -613,6 +623,14 @@ SPoint ControlImpl::mapToDrawPoint(SPoint point){
     SRect drawRect = m_frameDrawRectValid ? m_frameDrawRect : getDrawRect();
     return {point.x * getScaleXX() + drawRect.left,
         point.y * getScaleYY() + drawRect.top};
+}
+// mapToDrawPoint 逆变换：视口（窗口）坐标 → 画布（局部）坐标
+SPoint ControlImpl::mapViewportToCanvas(SPoint point){
+    SRect drawRect = m_frameDrawRectValid ? m_frameDrawRect : getDrawRect();
+    float sx = getScaleXX();
+    float sy = getScaleYY();
+    return {(sx != 0.0f) ? (point.x - drawRect.left) / sx : 0.0f,
+        (sy != 0.0f) ? (point.y - drawRect.top) / sy : 0.0f};
 }
 bool ControlImpl::isContainsPoint(float x, float y){
     SRect drawRect = getDrawRect();

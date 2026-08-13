@@ -108,16 +108,18 @@ float ScrollBar::positionToValue(float position) const {
 
 bool ScrollBar::isPointInThumb(float x, float y) {
     SRect drawRect = getDrawRect();
+    bool isVertical = (m_orientation == ScrollBarOrientation::Vertical);
     float localX = (x - drawRect.left) / getScaleXX();
-    float localY = (y - drawRect.top) / getScaleXX();
+    float localY = (y - drawRect.top) / (isVertical ? getScaleYY() : getScaleXX());
     return localX >= m_thumbRect.left && localX <= m_thumbRect.left + m_thumbRect.width &&
            localY >= m_thumbRect.top && localY <= m_thumbRect.top + m_thumbRect.height;
 }
 
 bool ScrollBar::isPointInTrack(float x, float y) {
     SRect drawRect = getDrawRect();
+    bool isVertical = (m_orientation == ScrollBarOrientation::Vertical);
     float localX = (x - drawRect.left) / getScaleXX();
-    float localY = (y - drawRect.top) / getScaleXX();
+    float localY = (y - drawRect.top) / (isVertical ? getScaleYY() : getScaleXX());
     return localX >= 0 && localX <= m_trackRect.width &&
            localY >= 0 && localY <= m_trackRect.height;
 }
@@ -158,12 +160,13 @@ void ScrollBar::draw(void) {
         thumbColor = m_thumbHoverColor;
     }
 
-    float scale = getScaleXX();
+    float scaleX = getScaleXX();
+    float scaleY = getScaleYY();
     SRect thumbDrawRect(
-        drawRect.left + m_thumbRect.left * scale,
-        drawRect.top + m_thumbRect.top * scale,
-        m_thumbRect.width * scale,
-        m_thumbRect.height * scale
+        drawRect.left + m_thumbRect.left * scaleX,
+        drawRect.top + m_thumbRect.top * scaleY,
+        m_thumbRect.width * scaleX,
+        m_thumbRect.height * scaleY
     );
 
     GET_RENDERDEVICE->setDrawColor(thumbColor);
@@ -176,11 +179,13 @@ bool ScrollBar::handleEvent(shared_ptr<Event> event) {
     if (!m_enable || !m_visible) return false;
 
     SRect drawRect = getDrawRect();
-    float scale = getScaleXX();
+    float scaleX = getScaleXX();
+    bool isVertical = (m_orientation == ScrollBarOrientation::Vertical);
+    float scaleY = isVertical ? getScaleYY() : getScaleXX();
 
     if (event->m_type == EventType::MouseDown && event->mouseButton.button == MouseButton::Left) {
-        float localX = (event->mouseButton.x - drawRect.left) / scale;
-        float localY = (event->mouseButton.y - drawRect.top) / scale;
+        float localX = (event->mouseButton.x - drawRect.left) / scaleX;
+        float localY = (event->mouseButton.y - drawRect.top) / scaleY;
 
         if (isPointInThumb(event->mouseButton.x, event->mouseButton.y)) {
             m_dragging = true;
@@ -217,8 +222,8 @@ bool ScrollBar::handleEvent(shared_ptr<Event> event) {
 
     if (event->m_type == EventType::MouseMove) {
         if (!m_dragging) return false;
-        float localX = (event->mousePos.x - drawRect.left) / scale;
-        float localY = (event->mousePos.y - drawRect.top) / scale;
+        float localX = (event->mousePos.x - drawRect.left) / scaleX;
+        float localY = (event->mousePos.y - drawRect.top) / scaleY;
 
         float trackLength = (m_orientation == ScrollBarOrientation::Vertical) ? m_trackRect.height : m_trackRect.width;
         float thumbLength = (m_orientation == ScrollBarOrientation::Vertical) ? m_thumbRect.height : m_thumbRect.width;

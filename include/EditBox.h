@@ -44,6 +44,7 @@ protected:
     OnEnterHandler m_onEnter;
     bool m_focusWatcherRegistered;
     AlignmentMode m_AlignmentMode;
+    bool m_fontScaleDirty;
 
 protected:
     void loadFontInternal();
@@ -65,6 +66,7 @@ public:
     bool handleEvent(shared_ptr<Event> event) override;
     bool beforeEventHandlingWatcher(shared_ptr<Event> event) override;
     void setRect(SRect rect) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
 
     void onMouseEnter(float x, float y) override;

@@ -53,15 +53,9 @@
 <tr><td>样例与测试</td><td>4 种集成模式样例、全量自动化测试</td><td><code>samples/</code>、<code>test/</code></td></tr>
 </table>
 
-<div class="grid2">
-  <div class="img-frame">
-    <img src="assets/screenshot-hosted.png" alt="C++ Hosted 样例">
-    <div class="img-caption">C++ Binding Hosted 样例（sample_cpp_hosted）</div>
-  </div>
-  <div class="img-frame">
-    <img src="assets/screenshot-fromsource.png" alt="混合集成样例">
-    <div class="img-caption">混合集成样例（sample_fromsource，核心 DLL + 后端源码）</div>
-  </div>
+<div class="img-frame">
+  <img src="assets/architecture.svg" alt="UICornerstone 分层架构图">
+  <div class="img-caption">UICornerstone 分层架构：应用 → 接入层 → 核心引擎 → 渲染抽象 → 后端插件</div>
 </div>
 
 <h2>1.2 阅读路线</h2>
@@ -79,19 +73,20 @@
     <h3>基础</h3>
     <ul>
       <li><a href="quickstart.html">2 快速起步</a></li>
-      <li><a href="basics.html">3.1 使用 C++ Binding 搭建</a></li>
-      <li><a href="basics.html">3.2 第一个 UICornerstone 应用</a></li>
+      <li><a href="basics.html">3 从基础入门</a></li>
+      <li><a href="cpp-binding.html">3.1 使用 C++ Binding 搭建</a></li>
+      <li><a href="first-app.html">3.2 第一个 UICornerstone 应用</a></li>
       <li><a href="property-system.html">3.3 属性系统</a></li>
       <li><a href="declarative-ui.html">3.4 声明式 UI</a></li>
       <li><a href="events-focus.html">3.5 事件</a></li>
-      <li><a href="events-focus.html">3.6 焦点系统</a></li>
+      <li><a href="focus.html">3.6 焦点系统</a></li>
       <li><a href="luotiani.html">3.7 洛蒂动画</a></li>
     </ul>
   </div>
   <div class="toc-sec">
     <h3>深入控件</h3>
     <ul>
-      <li><a href="controls/index.html">4.0 控件概念与共性</a></li>
+      <li><a href="controls/index.html">4 控件概念与共性</a></li>
       <li><a href="controls/actor.html">4.1 Actor</a></li>
       <li><a href="controls/bench.html">4.2 Bench</a></li>
       <li><a href="controls/button.html">4.3 Button</a></li>
@@ -112,26 +107,33 @@
       <li><a href="controls/splitter.html">4.18 Splitter</a></li>
       <li><a href="controls/textarea.html">4.19 TextArea</a></li>
       <li><a href="controls/winframe.html">4.20 WinFrame</a></li>
+      <li><a href="controls/treeview.html">4.21 TreeView</a></li>
     </ul>
   </div>
   <div class="toc-sec">
     <h3>进阶</h3>
     <ul>
       <li><a href="advanced.html">5 进阶主题</a></li>
-      <li><a href="backends.html">6 使用其它后端</a></li>
-      <li><a href="integration.html">7 嵌入到你的逻辑回路中</a></li>
+      <li><a href="advanced/luotiani.html">5.1 洛蒂动画引擎</a></li>
+      <li><a href="advanced/multiwindow.html">5.2 多视口与多窗口</a></li>
+      <li><a href="advanced/tools.html">5.3 非可视化控件</a></li>
+      <li><a href="advanced/cabi.html">5.4 纯 C ABI 程序化构建</a></li>
+      <li><a href="advanced/scale.html">5.5 控件缩放（Scale）</a></li>
+      <li><a href="advanced/canvas-scale.html">5.6 视口画布缩放（Canvas Scale）</a></li>
+      <li><a href="backends.html">5.7 使用其它后端</a></li>
+      <li><a href="integration.html">5.8 嵌入到你的逻辑回路中</a></li>
     </ul>
   </div>
   <div class="toc-sec">
     <h3>附录与 FAQ</h3>
     <ul>
-      <li><a href="appendix/declarative-syntax.html">9.1 声明式 UI 语法速查表</a></li>
-      <li><a href="appendix/properties.html">9.2 属性速查表</a></li>
-      <li><a href="appendix/capi.html">9.3 C ABI 速查表</a></li>
-      <li><a href="appendix/debugging.html">9.4 问题定位手段</a></li>
-      <li><a href="appendix/backend-config.html">9.5 后端差异及后端配置</a></li>
-      <li><a href="appendix/binding.html">9.6 C++ Binding 速查表</a></li>
-      <li><a href="faq.html">10 常见问题（FAQ）</a></li>
+      <li><a href="appendix/declarative-syntax.html">6 声明式 UI 语法速查表</a></li>
+      <li><a href="appendix/properties.html">7 属性速查表</a></li>
+      <li><a href="appendix/capi.html">8 C ABI 速查表</a></li>
+      <li><a href="appendix/debugging.html">9 问题定位手段</a></li>
+      <li><a href="appendix/backend-config.html">10 后端差异及后端配置</a></li>
+      <li><a href="appendix/binding.html">11 C++ Binding 速查表</a></li>
+      <li><a href="faq.html">12 常见问题（FAQ）</a></li>
     </ul>
   </div>
 </div>

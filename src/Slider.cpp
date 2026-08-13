@@ -241,11 +241,26 @@ void Slider::ensureTickFont()
     m_tickFontAttempted = true;
     auto it = ConstDef::fontFiles.find(m_labelFont);
     if (it == ConstDef::fontFiles.end()) return;
-    auto data = getResourceProvider()->readFile(it->second);
+    // 复用已读取的字体数据（refreshScaleWith 重建时避免重复 IO）
+    auto data = m_tickFontData ? m_tickFontData : getResourceProvider()->readFile(it->second);
     if (!data || data->empty()) return;
     m_tickFontData = data;
     int scaledSize = std::max(1, static_cast<int>(m_tickLabelFontSize * getScaleXX()));
     m_tickFont = getTextRenderer()->loadFontFromMemory(data->data(), data->size(), scaledSize);
+}
+
+void Slider::refreshScaleWith(float parentXX, float parentYY){
+    float oldScaleX = getScaleXX();
+    float oldScaleY = getScaleYY();
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
+        m_tickFont.reset();
+        m_tickFontAttempted = false;
+        if (m_isCreated) {
+            ensureTickFont();
+            rebuildTickTexts();
+        }
+    }
 }
 
 void Slider::handleKeyRepeat()

@@ -379,6 +379,7 @@ void draw(uint32_t frameNo, float x, float y, uint8_t alpha) {
 - 帧推进：依赖帧循环 `update()`（:549-571）毫秒驱动，无需 C ABI 额外驱动；
 - 销毁：`UICornerstone_DestroyControl` 通用路径，无特殊处理；
 - 多实例：LuotiAni 无 create()/两阶段链（不走 Actor 的两阶段），工厂顺序"addControl → loadFromFile+prepare"保证 provider 就绪（prepare 的 getImageFromResource 依赖 ResourceProvider，:342-354）；
+- **延迟 prepare（2026-08-10 实施修订）**：`LuotiAni::setRenderDevice`（:534）在设备就绪且 `!m_isPrepared && m_totalFrames > 0` 时补 `prepare()`（异常捕获记日志）。布局/JSON 内嵌动画场景 `loadFromFile` 时无设备，挂树后经 `Button::setRenderDevice` 转发设备触发补齐——与 CreateAnimation 的"addControl 后显式 prepare"语义一致；依赖此链路的调用方无需自行 prepare/play；
 - 非循环播放结束：`m_frameToDraw` 复位 0（:560-564）。
 
 ### 6.7 不做的事（范围界定）
@@ -387,7 +388,7 @@ void draw(uint32_t frameNo, float x, float y, uint8_t alpha) {
 - **`speed` 属性**：LuotiAni 无速度系数支持（帧推进硬编码 `deltaTick / m_frameMSDuration`，:557），需引擎改动——列可选后续；
 - **LuotiInstance 暴露**：共享帧数据多实例播放器已存在（:853），"同一动画多处播放"场景可后续独立暴露；**注：LuotiInstance::loadFromFile 为空实现（:869）**，未来暴露前需先实现其加载链路；
 - **SHAPE/TEXT 图层实现**（:663-668 解析有、prepare 无）；
-- **LayoutParser JSON 布局接入**（同 Image 控件化理由：parse 分发链属正交扩展 + 基线冲突风险）；
+- **LayoutParser JSON 布局接入**（~~同 Image 控件化理由：parse 分发链属正交扩展 + 基线冲突风险~~ **已实施 2026-08-10：`"type":"button"` 节点新增 `luotiAni` 属性，内嵌动画构造 scale 恒 1.0（防双重缩放）、相对路径拼 GetBasePath、延迟 prepare，含 test_scale_json 验证，详见 LayoutSystem_Design.md**）；
 - **Button 现有 `"animation"` 属性的异常防护**（§6.4 注）——既有行为，不改（范围控制）。
 
 ### 6.8 验收标准

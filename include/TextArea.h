@@ -21,11 +21,14 @@ private:
     shared_ptr<ScrollBar> m_hScrollBar;
     bool m_autoScroll;
     bool m_updatingScrollBar;
+    bool m_lineHeightCustom;
+    Font* m_lastFontForLineHeight;
 
     std::string m_lastTextForRebuild;
 
 private:
     void rebuildLines();
+    void refreshLineHeightFromFont();
     void updateVScrollBar();
     void updateHScrollBar();
     void ensureCursorHorizontalVisible();
@@ -43,6 +46,7 @@ public:
     void draw(void) override;
     bool handleEvent(shared_ptr<Event> event) override;
     void setRect(SRect rect) override;
+    void refreshScaleWith(float parentXX, float parentYY) override;
 
     void setText(const std::string& text);
     void insertTextAtCursor(const std::string& text);

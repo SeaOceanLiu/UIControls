@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9.2 属性速查表 - UICornerstone 用户手册</title>
+<title>7 属性速查表 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/properties.html"></script>
 </head>
@@ -11,11 +11,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>9.2 属性速查表</h1>
+<h1>7 属性速查表</h1>
 
 <p>全部属性名可在 <code>include/PropertyNames.h</code> 找到对应 <code>k*</code> 常量。C++ Binding 建议直接使用常量。</p>
 
-<h2>9.2.1 通用属性（所有控件）</h2>
+<h2>9.1 通用属性（所有控件）</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
@@ -27,9 +27,9 @@
 <tr><td><code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
 </table>
 
-<h2>9.2.2 按控件速查</h2>
+<h2>9 按控件速查（字母序）</h2>
 
-<h3>Actor（Image）</h3>
+<h3>Actor（Image，类型 <code>image</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>image</code> / <code>image-resource</code></td><td>String（只写）</td><td>—</td></tr>
@@ -39,16 +39,24 @@
 <tr><td><code>anchor</code></td><td>Enum</td><td><code>top-left</code> … <code>center</code> …（9 值）</td></tr>
 </table>
 
-<h3>Button</h3>
+<h3>Bench（控件树根，无 JSON type / C ABI 句柄）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>viewport-scale-mode</code></td><td>Enum</td><td><code>off</code> / <code>fit</code> / <code>stretch</code>（视口缩放三态，核心引擎 <code>setEnumProperty</code>；C ABI / Binding 用实例级 <code>SetViewportScaleMode</code>，见 5.6）</td></tr>
+<tr><td><code>background</code> / <code>border</code> / <code>visible</code> / <code>enabled</code> / <code>transparent</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
+</table>
+
+<h3>Button（类型 <code>button</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>text-shadow-enable</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>animation</code></td><td>String</td><td>—（LuotiAni 路径）</td></tr>
+<tr><td><code>animation</code></td><td>String</td><td>—（LuotiAni 路径，加载即播放）</td></tr>
+<tr><td><code>normal-image</code> / <code>hover-image</code> / <code>pressed-image</code></td><td>String（只写）</td><td>—（状态 Actor，跟随时设边框）</td></tr>
 <tr><td><code>caption-size</code></td><td>Float</td><td>16（JSON 键 captionSize）</td></tr>
 </table>
 
-<h3>CheckBox</h3>
+<h3>CheckBox（类型 <code>check-box</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>check</code> / <code>cross</code> / <code>indeterminate</code> / <code>box-border</code></td><td>Color</td><td>绿 / 红 / 灰 / 深灰</td></tr>
@@ -61,82 +69,17 @@
 <tr><td><code>vertical-align</code></td><td>Enum</td><td><code>center</code> / <code>top</code> / <code>bottom</code></td></tr>
 </table>
 
-<h3>EditBox / TextArea</h3>
+<h3>ColorPicker（类型 <code>color-picker</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>password-mode</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
-<tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td></tr>
-<tr><td><code>align</code></td><td>Enum</td><td><code>mid-left</code>（9 值）</td></tr>
-<tr><td><code>word-wrap</code>（TextArea）</td><td>Bool</td><td>—</td></tr>
-<tr><td><code>line-height</code>（TextArea）</td><td>Int</td><td>—</td></tr>
-<tr><td><code>scroll-x</code> / <code>scroll-y</code>（TextArea）</td><td>Int</td><td>0</td></tr>
-<tr><td><code>scrollbar-thickness</code>（TextArea）</td><td>Float</td><td>16</td></tr>
+<tr><td><code>color-hex</code></td><td>String</td><td>—（读）</td></tr>
+<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td></tr>
+<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td></tr>
+<tr><td><code>closed-font-size</code></td><td>Int</td><td>12</td></tr>
+<tr><td><code>closed-text-color</code> / <code>popup-bg-color</code></td><td>String</td><td>#DBDBDB / #3C3C41</td></tr>
 </table>
 
-<h3>Label</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
-<tr><td><code>font</code> / <code>align</code></td><td>Enum</td><td>HarmonyOS / <code>mid-left</code></td></tr>
-<tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>expand</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>clickable</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>line-height</code> / <code>line-spacing-ratio</code></td><td>Int / Float</td><td>字体默认</td></tr>
-</table>
-
-<h3>ProgressBar</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0.0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0.0 / 100.0</td></tr>
-<tr><td><code>progress</code> / <code>background</code> / <code>text</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
-<tr><td><code>animation-speed</code></td><td>Float</td><td>0.1</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>14</td></tr>
-<tr><td><code>custom-text</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
-<tr><td><code>text-mode</code></td><td>Enum</td><td><code>none</code> / <code>percent</code> / <code>custom</code></td></tr>
-</table>
-
-<h3>Slider</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code> / <code>step</code></td><td>Float</td><td>0 / 1.0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
-<tr><td><code>track-thickness</code> / <code>thumb-size</code></td><td>Float</td><td>4 / 16</td></tr>
-<tr><td><code>tick-interval</code> / <code>tick-length</code></td><td>Float</td><td>0 / 8</td></tr>
-<tr><td><code>label-gap</code> / <code>label-format</code></td><td>Float / String</td><td>4 / —</td></tr>
-<tr><td><code>show-value-label</code> / <code>reverse</code></td><td>Bool</td><td>false / false</td></tr>
-<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
-<tr><td><code>track</code> / <code>track-fill</code> / <code>thumb</code> / <code>thumb-border</code> / <code>thumb-hover</code> / <code>tick</code> / <code>label</code></td><td>Color</td><td>见 4.17 属性表</td></tr>
-</table>
-
-<h3>ScrollBar</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
-<tr><td><code>page-size</code> / <code>step-size</code></td><td>Float</td><td>—</td></tr>
-<tr><td><code>thickness</code></td><td>Float</td><td>16</td></tr>
-<tr><td><code>orientation</code></td><td>Enum</td><td><code>vertical</code> / <code>horizontal</code></td></tr>
-<tr><td><code>track</code> / <code>thumb</code> / <code>thumb-hover</code> / <code>thumb-pressed</code></td><td>Color</td><td>见 4.16 属性表</td></tr>
-</table>
-
-<h3>NumericUpDown</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
-<tr><td><code>step</code> / <code>page-step</code></td><td>Float</td><td>1.0 / 10.0</td></tr>
-<tr><td><code>decimals</code></td><td>Int</td><td>0</td></tr>
-<tr><td><code>read-only</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>button-width</code></td><td>Float</td><td>28</td></tr>
-<tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>arrow-pressed</code></td><td>Color</td><td>见 4.13 属性表</td></tr>
-</table>
-
-<h3>ComboBox</h3>
+<h3>ComboBox（类型 <code>combo-box</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>editable</code></td><td>Bool</td><td>false</td></tr>
@@ -149,39 +92,7 @@
 <tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>item-selected</code> / <code>item-hover</code> / <code>item-disabled</code> / <code>list-bg</code> / <code>list-border</code></td><td>Color</td><td>见 4.6 属性表</td></tr>
 </table>
 
-<h3>ColorPicker</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>color-hex</code></td><td>String</td><td>—（读）</td></tr>
-<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td></tr>
-<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td></tr>
-<tr><td><code>closed-font-size</code></td><td>Int</td><td>12</td></tr>
-<tr><td><code>closed-text-color</code> / <code>popup-bg-color</code></td><td>String</td><td>#DBDBDB / #3C3C41</td></tr>
-</table>
-
-<h3>Splitter</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>ratio</code>（别名 <code>value</code>）</td><td>Float</td><td>0.5</td></tr>
-<tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td></tr>
-<tr><td><code>first-min</code> / <code>second-min</code>（别名 <code>range-min</code>/<code>range-max</code>）</td><td>Float</td><td>20</td></tr>
-<tr><td><code>edge-margin</code></td><td>Float</td><td>—（同时设两侧 min）</td></tr>
-<tr><td><code>horizontal</code></td><td>Bool</td><td>—</td></tr>
-<tr><td><code>line</code> / <code>line-hover</code> / <code>line-drag</code></td><td>Color</td><td>灰 / 蓝 / 深蓝</td></tr>
-<tr><td><code>first-linked</code> / <code>second-linked</code></td><td>Ptr</td><td>null</td></tr>
-</table>
-
-<h3>WinFrame</h3>
-<table>
-<tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>title</code></td><td>String</td><td>"WinFrame"</td></tr>
-<tr><td><code>win-frame-bg</code> / <code>win-frame-border</code> / <code>title-bar-bg</code> / <code>title-text</code> / <code>closed-text</code></td><td>Color</td><td>见 4.20 属性表</td></tr>
-<tr><td><code>resizable</code></td><td>Bool</td><td>true</td></tr>
-<tr><td><code>edge-margin</code></td><td>Float</td><td>4.0</td></tr>
-<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code> / <code>confirm-visible</code></td><td>Bool</td><td>—</td></tr>
-</table>
-
-<h3>Dialog / Popup</h3>
+<h3>Dialog / Popup / ConfirmPopup（类型 <code>dialog</code> / <code>popup</code> / <code>confirm-popup</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>visible</code></td><td>Bool</td><td>0（置 1=open，置 0=close）</td></tr>
@@ -193,7 +104,45 @@
 <tr><td><code>button-height</code> / <code>button-gap</code> / <code>padding</code></td><td>Float</td><td>28 / 8 / 10</td></tr>
 </table>
 
-<h3>Menu</h3>
+<h3>EditBox（类型 <code>edit-box</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>password-mode</code> / <code>password-char</code></td><td>Bool / String</td><td>false / "●"</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
+<tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td></tr>
+<tr><td><code>align</code></td><td>Enum</td><td><code>mid-left</code>（9 值）</td></tr>
+<tr><td><code>editable</code></td><td>Bool</td><td>true</td></tr>
+</table>
+
+<h3>HandleControl（无 JSON 类型）</h3>
+<p>核心类专属能力（C ABI 经 <code>UICornerstone_CreateHandleControl(inst, target, ...)</code> 创建，无属性系统键名 / 无布局 JSON 分支）：手柄拖动调整目标控件尺寸。尺寸/颜色/显隐均为 C++ API（<code>setHandleSize</code> / <code>setMinSize</code> / <code>setHandleColor</code> 等，见 <a href="../controls/handlecontrol.html">4.9 HandleControl</a>）。</p>
+
+<h3>ImageButton（类型 <code>image-button</code>，与 button 同语法）</h3>
+<p>属性 = Button 全量 + 状态图片（<code>normal-image</code> / <code>hover-image</code> / <code>pressed-image</code>，String 只写）；布局 JSON 也可用 <code>"actors": {"normal": path, "hover": ..., "pressed": ...}</code> 声明三态图。</p>
+
+<h3>Label（类型 <code>label</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
+<tr><td><code>font</code> / <code>align</code></td><td>Enum</td><td>HarmonyOS / <code>mid-left</code></td></tr>
+<tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>expand</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>clickable</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>line-height</code> / <code>line-spacing-ratio</code></td><td>Int / Float</td><td>字体默认</td></tr>
+</table>
+
+<h3>LuotiAni（类型 <code>animation</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>animation</code></td><td>String</td><td>JSONC 路径（只写）</td></tr>
+<tr><td><code>playing</code></td><td>Bool</td><td>命令式（置 1=play 重播，置 0=pause）</td></tr>
+<tr><td><code>loop</code></td><td>Bool</td><td>循环</td></tr>
+<tr><td><code>frame</code></td><td>Int</td><td>跳帧</td></tr>
+</table>
+
+<h3>Menu（类型 <code>menu-bar</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>caption</code> / <code>shortcut</code></td><td>String</td><td>MenuItem 文字 / 快捷键</td></tr>
@@ -203,18 +152,106 @@
 <tr><td><code>font</code></td><td>Enum</td><td>菜单字体（默认 MapleMono_NF_CN_Regular）</td></tr>
 </table>
 
-<h3>LuotiAni</h3>
+<h3>NumericUpDown（类型 <code>numeric-up-down</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
+<tr><td><code>step</code> / <code>page-step</code></td><td>Float</td><td>1.0 / 10.0</td></tr>
+<tr><td><code>decimals</code></td><td>Int</td><td>0</td></tr>
+<tr><td><code>read-only</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>button-width</code></td><td>Float</td><td>28</td></tr>
+<tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>arrow-pressed</code></td><td>Color</td><td>见 4.13 属性表</td></tr>
+</table>
+
+<h3>Panel（类型 <code>panel</code>）</h3>
+<p>无特有属性键（仅通用属性）；容器能力经 JSON <code>"children"</code> + <code>"layout"</code>（h-flow / v-flow / anchor / grid，见 6.1.5）声明，编程式经 <code>AddChild</code> / <code>CreatePanel</code>。</p>
+
+<h3>ProgressBar（类型 <code>progress-bar</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0.0</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0.0 / 100.0</td></tr>
+<tr><td><code>progress</code> / <code>background</code> / <code>text</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
+<tr><td><code>animation-speed</code></td><td>Float</td><td>0.1</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>14</td></tr>
+<tr><td><code>custom-text</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
+<tr><td><code>text-mode</code></td><td>Enum</td><td><code>none</code> / <code>percent</code> / <code>custom</code></td></tr>
+</table>
+
+<h3>ScrollBar（类型 <code>scroll-bar</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
+<tr><td><code>page-size</code> / <code>step-size</code></td><td>Float</td><td>—</td></tr>
+<tr><td><code>thickness</code></td><td>Float</td><td>16</td></tr>
+<tr><td><code>orientation</code></td><td>Enum</td><td><code>vertical</code> / <code>horizontal</code></td></tr>
+<tr><td><code>track</code> / <code>thumb</code> / <code>thumb-hover</code> / <code>thumb-pressed</code></td><td>Color</td><td>见 4.16 属性表</td></tr>
+</table>
+
+<h3>Slider（类型 <code>slider</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>value</code> / <code>step</code></td><td>Float</td><td>0 / 1.0</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
+<tr><td><code>track-thickness</code> / <code>thumb-size</code></td><td>Float</td><td>4 / 16</td></tr>
+<tr><td><code>tick-interval</code> / <code>tick-length</code></td><td>Float</td><td>0 / 8</td></tr>
+<tr><td><code>label-gap</code> / <code>label-format</code></td><td>Float / String</td><td>4 / —</td></tr>
+<tr><td><code>show-value-label</code> / <code>reverse</code></td><td>Bool</td><td>false / false</td></tr>
+<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
+<tr><td><code>track</code> / <code>track-fill</code> / <code>thumb</code> / <code>thumb-border</code> / <code>thumb-hover</code> / <code>tick</code> / <code>label</code></td><td>Color</td><td>见 4.17 属性表</td></tr>
+</table>
+
+<h3>Splitter（类型 <code>splitter</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>ratio</code>（别名 <code>value</code>）</td><td>Float</td><td>0.5</td></tr>
+<tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td></tr>
+<tr><td><code>first-min</code> / <code>second-min</code>（别名 <code>range-min</code>/<code>range-max</code>）</td><td>Float</td><td>20</td></tr>
+<tr><td><code>edge-margin</code></td><td>Float</td><td>—（同时设两侧 min）</td></tr>
+<tr><td><code>horizontal</code></td><td>Bool</td><td>—</td></tr>
+<tr><td><code>line</code> / <code>line-hover</code> / <code>line-drag</code></td><td>Color</td><td>灰 / 蓝 / 深蓝</td></tr>
+<tr><td><code>first-linked</code> / <code>second-linked</code></td><td>Ptr</td><td>null</td></tr>
+</table>
+
+<h3>TextArea（类型 <code>text-area</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>font-size</code> / <code>font</code> / <code>align</code></td><td>Int / Enum / Enum</td><td>16 / HarmonyOS / mid-left</td></tr>
+<tr><td><code>word-wrap</code></td><td>Bool</td><td>—</td></tr>
+<tr><td><code>line-height</code></td><td>Int</td><td>—</td></tr>
+<tr><td><code>scroll-x</code> / <code>scroll-y</code></td><td>Int</td><td>0</td></tr>
+<tr><td><code>scrollbar-thickness</code></td><td>Float</td><td>16</td></tr>
+</table>
+
+<h3>TreeView（类型 <code>tree-view</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>animation</code></td><td>String</td><td>JSONC 路径（只写）</td></tr>
-<tr><td><code>playing</code></td><td>Bool</td><td>命令式（置 1=play 重播，置 0=pause）</td></tr>
-<tr><td><code>loop</code></td><td>Bool</td><td>循环</td></tr>
-<tr><td><code>frame</code></td><td>Int</td><td>跳帧</td></tr>
+<tr><td><code>indent-width</code></td><td>Float</td><td>子节点缩进宽度</td></tr>
+<tr><td><code>row-height</code></td><td>Float</td><td>行高</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>节点文本字号（默认 14）</td></tr>
+<tr><td><code>cycle-navigation</code></td><td>Bool</td><td>Tab 环是否包含树节点</td></tr>
+<tr><td><code>default-expand</code></td><td>Bool</td><td>缺省展开全部节点</td></tr>
+<tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>按节点 id 展开 / 折叠</td></tr>
+</table>
+<p>节点数据经布局 JSON <code>"items": [{"id","label","expanded","userData","children":[...]}]</code> 声明（见 6.1.3 tree-view）；编程式用 C ABI <code>CreateTreeView</code> + 核心 TreeView API。</p>
+
+<h3>WinFrame（类型 <code>win-frame</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>title</code></td><td>String</td><td>"WinFrame"</td></tr>
+<tr><td><code>win-frame-bg</code> / <code>win-frame-border</code> / <code>title-bar-bg</code> / <code>title-text</code> / <code>closed-text</code></td><td>Color</td><td>见 4.20 属性表</td></tr>
+<tr><td><code>resizable</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>edge-margin</code></td><td>Float</td><td>4.0</td></tr>
+<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code> / <code>confirm-visible</code></td><td>Bool</td><td>—</td></tr>
 </table>
 
 <div class="chapter-nav">
-  <a href="declarative-syntax.html">← 9.1 声明式 UI 语法速查表</a>
-  <a href="capi.html">下一节：9.3 C ABI 速查表 →</a>
+  <a href="declarative-syntax.html">← 6 声明式 UI 语法速查表</a>
+  <a href="capi.html">下一节：8 C ABI 速查表 →</a>
 </div>
 
 </div>

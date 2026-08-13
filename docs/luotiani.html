@@ -110,10 +110,16 @@ ani.SetBool(PropertyNames::kLoop, true);</code></pre>
 
 <div class="tip">多实例共享：同一动画文件的多个播放器共享烘焙帧数据（<code>LuotiInstance</code> 机制），内存仅一份。</div>
 
+<p><code>luotiAni</code> 键内嵌的动画<strong>不自动播放</strong>：挂树后经 <code>Button::setRenderDevice</code> 自动延迟
+prepare（加载阶段无渲染设备、prepare 自然延迟到设备就绪），之后 <code>SetBool("playing")=1</code> 启动。
+编程式等价写法：C ABI <code>UICornerstone_CreateAnimatedButton(inst, jsonc, x, y, w, h, xScale, yScale)</code>
+或 Binding <code>ui-&gt;CreateAnimatedButton(jsonc, x, y, w, h)</code>——内嵌动画构造 scale 恒 1.0，
+两个 scale 参数作用于按钮本身（双重缩放陷阱见 <a href="advanced/scale.html">5.5 控件缩放</a>）。</p>
+
 <div class="note">动画结束事件：非循环播放到最后一帧后触发 <code>AnimationEnded</code> 自定义事件（C ABI 回调链路暂未适配）。</div>
 
 <div class="chapter-nav">
-  <a href="events-focus.html">← 3.5 事件 · 3.6 焦点系统</a>
+  <a href="focus.html">← 3.6 焦点系统</a>
   <a href="controls/index.html">下一章：4 深入控件 →</a>
 </div>
 

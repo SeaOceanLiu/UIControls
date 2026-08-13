@@ -270,6 +270,9 @@ UI_FACTORY(CreateImage,
 UI_FACTORY(CreateAnimation,
     (const std::string& jsoncPath, float x, float y, float w, float h, float xScale, float yScale),
     jsoncPath.c_str(), x, y, w, h, xScale, yScale)
+UI_FACTORY(CreateAnimatedButton,
+    (const std::string& jsoncPath, float x, float y, float w, float h, float xScale, float yScale),
+    jsoncPath.c_str(), x, y, w, h, xScale, yScale)
 UI_FACTORY(CreateDialog,
     (const std::string& confirmText, const std::string& cancelText, float x, float y, float w, float h,
      float xScale, float yScale),
@@ -323,10 +326,39 @@ void UICornerstone::MenuItemSetSubMenu(Control& item, Control& panel) {
 void UICornerstone::SetViewport(float x, float y, float w, float h) {
     if (m_impl->instance) Dyn::API().fnSetViewport(m_impl->instance, x, y, w, h);
 }
+
+bool UICornerstone::SetViewportBackgroundColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    if (!m_impl->instance || !Dyn::API().fnSetViewportBackgroundColor) return false;
+    return Dyn::API().fnSetViewportBackgroundColor(m_impl->instance, r, g, b, a) != 0;
+}
 UIRect UICornerstone::GetViewport() const {
     UIRect r{0, 0, 0, 0};
     if (m_impl->instance) Dyn::API().fnGetViewport(m_impl->instance, &r.x, &r.y, &r.w, &r.h);
     return r;
+}
+
+bool UICornerstone::SetViewportScaleMode(int mode) {
+    if (!m_impl->instance || !Dyn::API().fnSetViewportScaleMode) return false;
+    return Dyn::API().fnSetViewportScaleMode(m_impl->instance, mode) != 0;
+}
+int UICornerstone::GetViewportScaleMode() const {
+    int mode = 0;
+    if (m_impl->instance && Dyn::API().fnGetViewportScaleMode)
+        Dyn::API().fnGetViewportScaleMode(m_impl->instance, &mode);
+    return mode;
+}
+bool UICornerstone::SetCanvasSize(float w, float h) {
+    if (!m_impl->instance || !Dyn::API().fnSetCanvasSize) return false;
+    return Dyn::API().fnSetCanvasSize(m_impl->instance, w, h) != 0;
+}
+bool UICornerstone::GetViewportScale(float& sx, float& sy) const {
+    sx = sy = 0.0f;
+    if (!m_impl->instance || !Dyn::API().fnGetViewportScale) return false;
+    return Dyn::API().fnGetViewportScale(m_impl->instance, &sx, &sy) != 0;
+}
+bool UICornerstone::SetViewportAnchor(float ax, float ay) {
+    if (!m_impl->instance || !Dyn::API().fnSetViewportAnchor) return false;
+    return Dyn::API().fnSetViewportAnchor(m_impl->instance, ax, ay) != 0;
 }
 
 // ============================================================

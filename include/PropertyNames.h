@@ -76,6 +76,12 @@ PROP_CONSTEXPR const char* kEnabled             = "enabled";
 PROP_CONSTEXPR const char* kTransparent         = "transparent";
 PROP_CONSTEXPR const char* kBorderVisible       = "border-visible";
 
+// -- Button 状态图（字符串属性：图片路径；设置后创建对应状态 Actor）--
+PROP_CONSTEXPR const char* kNormalImage         = "normal-image";
+PROP_CONSTEXPR const char* kHoverImage          = "hover-image";
+PROP_CONSTEXPR const char* kPressedImage        = "pressed-image";
+PROP_CONSTEXPR const char* kDisabledImage       = "disabled-image";
+
 // -- Bool 属性 --
 PROP_CONSTEXPR const char* kTextShadowEnable    = "text-shadow-enable";
 PROP_CONSTEXPR const char* kShadow              = "shadow";
@@ -347,6 +353,8 @@ PROP_CONSTEXPR const char* kJsonComponents      = "components";
 PROP_CONSTEXPR const char* kJsonLayouts         = "layouts";
 PROP_CONSTEXPR const char* kJsonControls        = "controls";
 PROP_CONSTEXPR const char* kJsonDialogs         = "dialogs";
+PROP_CONSTEXPR const char* kJsonViewport        = "viewport";
+PROP_CONSTEXPR const char* kJsonViewportScaleMode = "scale-mode";
 PROP_CONSTEXPR const char* kJsonRect            = "rect";
 PROP_CONSTEXPR const char* kJsonW               = "w";
 PROP_CONSTEXPR const char* kJsonH               = "h";
@@ -542,6 +550,8 @@ PROP_CONSTEXPR const char* kControlTypeMenuBar = "menu-bar";
 PROP_CONSTEXPR const char* kControlTypeNumericUpDown = "numeric-up-down";
 PROP_CONSTEXPR const char* kControlTypeSplitter = "splitter";
 PROP_CONSTEXPR const char* kControlTypeTreeView = "tree-view";
+PROP_CONSTEXPR const char* kControlTypeImageButton = "image-button";
+PROP_CONSTEXPR const char* kControlTypeAnimation = "animation";
 
 // ============================================================
 // -- LuotiAni 枚举值 --

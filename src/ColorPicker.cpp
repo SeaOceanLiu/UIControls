@@ -270,10 +270,13 @@ SRect ColorPicker::computePopupRect() {
 void ColorPicker::openPopup() {
     if (!m_dialog) return;
     SRect pr = computePopupRect();
-    // 绝对坐标（computePopupRect 基于 getDrawRect）转父（bench）相对本地坐标
+    // 绝对坐标（computePopupRect 基于 getDrawRect）转父（bench）相对本地坐标。
+    // 弹层复合恒 1（物理像素面板），但位置经 getDrawRect 乘父复合 → 需除根复合反查
     SRect br = BENCH ? BENCH->getDrawRect() : SRect(0, 0, 0, 0);
-    pr.left -= br.left;
-    pr.top -= br.top;
+    float bsx = BENCH ? BENCH->getScaleXX() : 1.0f;
+    float bsy = BENCH ? BENCH->getScaleYY() : 1.0f;
+    pr.left = (pr.left - br.left) / bsx;
+    pr.top = (pr.top - br.top) / bsy;
     m_dialog->setAbsolute(pr);
     layoutButtons();
     m_committedColor = m_color;

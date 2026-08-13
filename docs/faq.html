@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>10 常见问题（FAQ）- UICornerstone 用户手册</title>
+<title>12 常见问题（FAQ）- UICornerstone 用户手册</title>
 <link rel="stylesheet" href="css/style.css">
 <script id="nav-data" src="assets/nav.js" data-prefix="" data-current="faq.html"></script>
 </head>
@@ -11,7 +11,7 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>10 常见问题（FAQ）</h1>
+<h1>12 常见问题（FAQ）</h1>
 
 <h2>Q1: 用哪个后端？</h2>
 <p><strong>SDL3</strong>。功能最全（多窗口、渲染器探测、四能力位）。要求单 DLL 极简部署选 <strong>raylib</strong>（注意单窗口限制）；偏好 C++ 风格 API 选 <strong>SFML</strong>。</p>
@@ -28,6 +28,16 @@
 <h2>Q5: 怎么让控件在窗口缩放时自动布局？</h2>
 <p>把控件放进带布局引擎的 Panel（<code>layout: {"type":"h-flow"/"v-flow"/"anchor"/"grid"}</code>），窗口 resize 会自动触发 <code>reflowChildren()</code>。百分比尺寸（<code>"50%"</code>）也随父容器缩放。</p>
 
+<h2>Q5b: 界面如何整体适配不同分辨率？</h2>
+<p>用视口缩放（基准画布 + 缩放模式）：布局按固定基准像素排布（如 1920×1080），
+窗口 resize 时画布整体等比或拉伸适配。</p>
+<ul>
+<li>C ABI：<code>SetCanvasSize(w, h)</code> 声明基准画布，<code>SetViewportScaleMode(mode)</code> 切换
+<code>off / fit / stretch</code>（fit = 等比居中留黑边，stretch = 拉伸铺满）；</li>
+<li>JSON 布局：顶层 <code>"viewport": {"width":1920, "height":1080, "scale-mode":"fit"}</code> 加载即生效；</li>
+<li>off 模式为默认：画布跟随窗口，无缩放（原语义，逐像素兼容）。</li>
+</ul>
+
 <h2>Q6: 热加载后状态丢了？</h2>
 <p>热重载会重建整棵控件树，状态不保留。需要保留的状态请存在业务侧（回调里回写），或加载后按 id 重新设置。</p>
 
@@ -35,7 +45,12 @@
 <p>raylib 是单窗口架构，只有首个实例有真实窗口，其余 headless。渲染前必须查 <code>UICORN_BACKEND_CAP_MULTI_WINDOW</code> 条件化（headless 实例跳过渲染）。</p>
 
 <h2>Q8: 中文显示乱码？</h2>
-<p>源码/布局 JSON 文件必须保存为 <strong>UTF-8 with BOM</strong>；raylib 后端中文需码点扩展。字体用项目自带 HarmonyOS Sans SC 或按 <code>font</code> 属性指定。</p>
+<p>分三层处理：</p>
+<ol>
+  <li><strong>文件编码</strong>：源码 / 布局 JSON 文件必须保存为 <strong>UTF-8 with BOM</strong>；</li>
+  <li><strong>源码字面量</strong>：C++ 代码中的中文字符串必须加 <code>u8</code> 前缀，如 <code>setCaption(u8"提交")</code>——MSVC 默认执行字符集为 GBK，裸中文窄字符串会被转成 GBK 字节导致乱码；</li>
+  <li><strong>后端限制</strong>：raylib 后端需码点扩展；字体用项目自带 HarmonyOS Sans SC 或按 <code>font</code> 属性指定。</li>
+</ol>
 
 <h2>Q9: 控件点击没反应？</h2>
 <p>依次检查：<code>enabled</code> 是否为 true；是否真的挂到了可见父容器；回调是否注册（SetCallback 事件名拼写）；上层控件是否覆盖（z 序靠后绘制在顶层）；Label 需要 <code>clickable</code>。</p>
@@ -56,7 +71,7 @@
 <p>EditBox/TextArea/Slider/Button/CheckBox 默认可聚焦：Tab 切换、Enter/Space 激活（Button 触发 click，CheckBox 循环三态）、方向键调节 Slider/NumericUpDown。Ctrl+Tab 在多窗口间切换焦点作用域。</p>
 
 <div class="chapter-nav">
-  <a href="appendix/binding.html">← 9.6 C++ Binding 速查表</a>
+  <a href="appendix/binding.html">← 11 C++ Binding 速查表</a>
   <span></span>
 </div>
 

@@ -36,6 +36,7 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 
 <tr><td><code>caption</code></td><td>String</td><td>空</td><td>标题文本</td></tr>
 <tr><td><code>text-shadow-enable</code></td><td>Bool</td><td>false</td><td>文字阴影开关</td></tr>
 <tr><td><code>animation</code></td><td>String</td><td>—</td><td>LuotiAni 描述文件路径：加载并自动播放</td></tr>
+<tr><td><code>luotiAni</code>（JSON 布局键）</td><td>String / {file}</td><td>—</td><td>内嵌动画：挂树后自动延迟 prepare，<strong>不自动播放</strong>——<code>SetBool("playing")=1</code> 启动（<code>animation</code> 属性立即播放，两者不同）</td></tr>
 <tr><td><code>caption-size</code>（JSON 键 <code>captionSize</code>）</td><td>Float</td><td>16</td><td>标题字号（仅布局 JSON 生效）</td></tr>
 <tr><td><code>background</code> / <code>border</code> / <code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>主题</td><td>通用状态色（JSON 中支持 .hover/.pressed/.disabled 子键）</td></tr>
 <tr><td><code>visible</code> / <code>enabled</code> / <code>transparent</code> / <code>border-visible</code></td><td>Bool</td><td>—</td><td>通用属性</td></tr>
@@ -78,7 +79,9 @@ button.SetCallback(PropertyNames::kEventClick, [&](const Event&) {
 button.SetString(PropertyNames::kCaption, "新标题");
 button.SetBool(PropertyNames::kEnabled, false);</code></pre>
 
-<div class="tip">给按钮挂动画：JSON <code>"luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"</code> 或 C++ <code>btn->setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code>。</div>
+<div class="tip">给按钮挂动画：JSON <code>"luotiAni": "assets/animations/rotateBtn/rotateBtn.jsonc"</code> 或 C++ <code>btn->setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code>，
+或直接用动画按钮工厂 <code>UICornerstone_CreateAnimatedButton</code> / <code>ui-&gt;CreateAnimatedButton(jsoncPath, x, y, w, h, xScale, yScale)</code>
+（scale 作用于按钮本身，内嵌动画恒 1.0，见 <a href="../advanced/scale.html">5.5 控件缩放</a>）。</div>
 
 
 <h2>4.3.6 C ABI 调用样例</h2>

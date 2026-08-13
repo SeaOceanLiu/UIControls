@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9.5 后端差异及后端配置 - UICornerstone 用户手册</title>
+<title>10 后端差异及后端配置 - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/backend-config.html"></script>
 </head>
@@ -11,9 +11,9 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>9.5 后端差异及后端配置</h1>
+<h1>10 后端差异及后端配置</h1>
 
-<h2>9.5.1 选择后端</h2>
+<h2>10.1 选择后端</h2>
 
 <table>
 <tr><th>后端</th><th>适用场景</th><th>代价</th></tr>
@@ -22,12 +22,12 @@
 <tr><td><strong>raylib</strong></td><td>单 DLL 部署最简；原型 / 演示</td><td>单窗口架构（无 MULTI_WINDOW）；中文需码点扩展；vsync 需创建期全局配置</td></tr>
 </table>
 
-<h2>9.5.2 编译期配置</h2>
+<h2>10.2 编译期配置</h2>
 
 <pre><code>cmake -B build -DUICORNERSTONE_BACKEND=SDL3    // SDL3 / SFML / RAYLIB
 build_scripts\build.bat sdl3                   // Windows 快捷脚本</code></pre>
 
-<h2>9.5.3 运行时配置键</h2>
+<h2>10.3 运行时配置键</h2>
 
 <table>
 <tr><th>key</th><th>类型</th><th>sdl3</th><th>sfml</th><th>raylib</th><th>说明</th></tr>
@@ -44,7 +44,7 @@ UICornerstone_SetBackendConfig(g_inst, "swap-ratio", "1");
 char name[64];
 UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</code></pre>
 
-<h2>9.5.4 能力位</h2>
+<h2>10.4 能力位</h2>
 
 <pre><code>uint32_t caps = UICornerstone_GetBackendCapabilities(inst);
 // UICORN_BACKEND_CAP_MULTI_WINDOW   多窗口
@@ -54,7 +54,7 @@ UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</co
 
 <div class="warn">raylib 声明不含 MULTI_WINDOW：多实例下仅首个实例有真实窗口，其余为 headless（<code>Window::isHeadless()</code>），对其渲染会串扰到主实例窗口（内容闪动）。多窗口渲染前须条件化。</div>
 
-<h2>9.5.5 窗口配置（UIInstanceConfig）</h2>
+<h2>10.5 窗口配置（UIInstanceConfig）</h2>
 
 <table>
 <tr><th>字段</th><th>默认</th><th>说明</th></tr>
@@ -65,7 +65,7 @@ UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</co
 <tr><td><code>debugLabel</code></td><td>"Instance_&lt;id&gt;"</td><td>多实例日志区分</td></tr>
 </table>
 
-<h2>9.5.6 Binding Config</h2>
+<h2>10.6 Binding Config</h2>
 
 <pre><code>UICornerstone::UICornerstone::Config{}
     .WithBackend("sdl3")              // "sdl3" / "sfml" / "raylib"
@@ -74,13 +74,13 @@ UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</co
     .WithResourceRoot("./assets")
     .WithWindow("My App", 800, 600);  // 标题 / 宽 / 高</code></pre>
 
-<h2>9.5.7 高 DPI</h2>
+<h2>10.7 高 DPI</h2>
 
 <p>内置 <code>dpiScale</code> 机制：布局坐标与渲染自动按显示器 DPI 缩放，无需业务代码适配。<code>UIBackendCallbacks.getDpiScale</code> 提供当前缩放值；窗口 flag 置 <code>0x00002000</code> 时 SDL3 按物理像素创建窗口。</p>
 
 <div class="chapter-nav">
-  <a href="debugging.html">← 9.4 问题定位手段</a>
-  <a href="binding.html">下一节：9.6 C++ Binding 速查表 →</a>
+  <a href="debugging.html">← 9 问题定位手段</a>
+  <a href="binding.html">下一节：11 C++ Binding 速查表 →</a>
 </div>
 
 </div>

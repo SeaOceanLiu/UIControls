@@ -15,6 +15,8 @@ TextArea::TextArea(Control *parent, SRect rect, float xScale, float yScale)
     , m_hScrollBar(nullptr)
     , m_autoScroll(true)
     , m_updatingScrollBar(false)
+    , m_lineHeightCustom(false)
+    , m_lastFontForLineHeight(nullptr)
 {
     m_lines.push_back("");
 
@@ -387,13 +389,26 @@ void TextArea::setScrollX(int x) {
 int TextArea::getVisibleLines() {
     SRect rect = getRect();
     if (rect.height <= 0 || m_lineHeight <= 0) return 0;
-    int availableHeight = (int)rect.height;
-    float scale = getScaleXX();
+    Margin margin = getMargin();
+    int availableHeight = (int)rect.height - (int)(margin.top + margin.bottom);
     float hThickness = m_hScrollBar ? m_hScrollBar->getThickness() : 16.0f;
     if (m_hScrollBar && m_hScrollBar->getVisible()) {
-        availableHeight -= (int)(hThickness * scale);
+        availableHeight -= (int)hThickness;
     }
     return (int)(availableHeight / m_lineHeight);
+}
+
+// 行高自适应：默认 = 当前字号实际字体高度（屏幕）/ 垂直复合（本地单位），
+// 保证缩放后行距 ≥ 字高不重叠；setLineHeight 显式定制后不再自动跟随。
+void TextArea::refreshLineHeightFromFont() {
+    m_lastFontForLineHeight = getFont();
+    if (m_lineHeightCustom) return;
+    TextRenderer* renderer = getTextRenderer();
+    if (renderer == nullptr || getFont() == nullptr) return;
+    int fontHeight = renderer->getFontHeight(getFont());
+    if (fontHeight > 0) {
+        m_lineHeight = std::max(1, (int)(fontHeight / getScaleYY()));
+    }
 }
 
 void TextArea::update(void) {
@@ -402,6 +417,12 @@ void TextArea::update(void) {
     if (m_text != m_lastTextForRebuild) {
         m_lastTextForRebuild = m_text;
         rebuildLines();
+        updateVScrollBar();
+        updateHScrollBar();
+    }
+
+    if (getFont() != m_lastFontForLineHeight) {
+        refreshLineHeightFromFont();
         updateVScrollBar();
         updateHScrollBar();
     }
@@ -425,7 +446,8 @@ void TextArea::draw(void) {
     }
 
     SRect drawRect = getDrawRect();
-    float scale = getScaleXX();
+    float scaleX = getScaleXX();
+    float scaleY = getScaleYY();
 
     if (drawRect.width <= 0 || drawRect.height <= 0 || m_lineHeight <= 0) {
         return;
@@ -445,18 +467,18 @@ void TextArea::draw(void) {
     int clipWidth = (int)drawRect.width;
     int clipHeight = (int)drawRect.height;
     Margin margin = getMargin();
-    float marginX = margin.left * scale;
-    float marginY = margin.top * scale;
-    float marginRight = margin.right * scale;
-    float marginBottom = margin.bottom * scale;
+    float marginX = margin.left * scaleX;
+    float marginY = margin.top * scaleY;
+    float marginRight = margin.right * scaleX;
+    float marginBottom = margin.bottom * scaleY;
     clipHeight -= (int)(marginY + marginBottom);
     float vThickness = m_vScrollBar ? m_vScrollBar->getThickness() : 16.0f;
     float hThickness = m_hScrollBar ? m_hScrollBar->getThickness() : 16.0f;
     if (m_vScrollBar && m_vScrollBar->getVisible()) {
-        clipWidth -= (int)(vThickness * scale);
+        clipWidth -= (int)(vThickness * scaleX);
     }
     if (m_hScrollBar && m_hScrollBar->getVisible()) {
-        clipHeight -= (int)(hThickness * scale);
+        clipHeight -= (int)(hThickness * scaleY);
     }
     SRect clipRect(drawRect.left + marginX, drawRect.top + marginY,
                    (float)(clipWidth - (int)(marginX + marginRight)), (float)clipHeight);
@@ -467,8 +489,10 @@ void TextArea::draw(void) {
     int availableHeight = (int)drawRect.height;
     availableHeight -= (int)(marginY + marginBottom);
     if (m_hScrollBar && m_hScrollBar->getVisible()) {
-        availableHeight -= (int)(hThickness * scale);
+        availableHeight -= (int)(hThickness * scaleY);
     }
+    float fontHeight = (getTextRenderer() && getFont())
+        ? (float)getTextRenderer()->getFontHeight(getFont()) : m_fontSize * scaleY;
     if (m_lineHeight > 0) {
         startLine = m_scrollY / m_lineHeight;
         int visibleLines = availableHeight / m_lineHeight;
@@ -481,7 +505,7 @@ void TextArea::draw(void) {
 
         GET_RENDERDEVICE->setBlendMode(BlendMode::Blend);
         for (int i = startLine; i < endLine && i < getTotalLines(); ++i) {
-            float y = drawRect.top + (i * m_lineHeight) * scale - m_scrollY * scale + marginY;
+            float y = drawRect.top + (i * m_lineHeight) * scaleY - m_scrollY * scaleY + marginY;
 
             if (i >= (int)m_lineStartPositions.size()) continue;
             int lineStartByte = m_lineStartPositions[i];
@@ -510,7 +534,7 @@ void TextArea::draw(void) {
                 selEndX += size.width;
             }
 
-            SRect selRect(selStartX, y - marginY / 2, selEndX - selStartX, m_fontSize * scale + marginY);
+            SRect selRect(selStartX, y - marginY / 2, selEndX - selStartX, fontHeight + marginY);
             GET_RENDERDEVICE->setDrawColor(SColor(173, 214, 255, 128));
             GET_RENDERDEVICE->fillRect(selRect);
         }
@@ -520,7 +544,7 @@ void TextArea::draw(void) {
     for (int i = startLine; i < endLine; ++i) {
         if (i >= getTotalLines()) break;
 
-        float y = drawRect.top + (i * m_lineHeight) * scale - m_scrollY * scale + marginY;
+        float y = drawRect.top + (i * m_lineHeight) * scaleY - m_scrollY * scaleY + marginY;
 
         if (!m_lines[i].empty()) {
             std::string displayLine = m_lines[i];
@@ -582,8 +606,8 @@ void TextArea::draw(void) {
         }
     }
 
-    float cursorY = drawRect.top + (currentLine * m_lineHeight) * scale - m_scrollY * scale + marginY;
-    float cursorH = m_fontSize * scale;
+    float cursorY = drawRect.top + (currentLine * m_lineHeight) * scaleY - m_scrollY * scaleY + marginY;
+    float cursorH = fontHeight;
 
     std::string textOnCurrentLine;
     if (currentLine < getTotalLines() && currentLine < (int)m_lines.size()) {
@@ -597,7 +621,7 @@ void TextArea::draw(void) {
     }
 
     if (m_focused && m_cursorVisible && cursorY >= drawRect.top && cursorY + cursorH <= drawRect.top + drawRect.height) {
-        SRect cursorRect((float)cursorX, cursorY, 2.0f * scale, cursorH);
+        SRect cursorRect((float)cursorX, cursorY, 2.0f * scaleX, cursorH);
         GET_RENDERDEVICE->setDrawColor(m_textColor.getNormal());
         GET_RENDERDEVICE->fillRect(cursorRect);
     }
@@ -702,12 +726,13 @@ bool TextArea::handleEvent(shared_ptr<Event> event) {
                 setFocused(true);
 
                 SRect drawRect = getDrawRect();
-                float scale = getScaleXX();
+                float scaleX = getScaleXX();
+                float scaleY = getScaleYY();
                 Margin margin = getMargin();
-                float marginX = margin.left * scale;
+                float marginX = margin.left * scaleX;
                 float baseX = drawRect.left + marginX - (float)m_scrollX;
                 float relX = event->mouseButton.x - baseX;
-                float relY = (event->mouseButton.y - drawRect.top) / scale + m_scrollY;
+                float relY = (event->mouseButton.y - drawRect.top) / scaleY + m_scrollY;
                 int targetLine = (int)(relY / m_lineHeight);
                 targetLine = std::max(0, std::min(targetLine, getTotalLines() - 1));
 
@@ -757,12 +782,13 @@ bool TextArea::handleEvent(shared_ptr<Event> event) {
     if (event->m_type == EventType::MouseMove) {
         if (m_focused && m_isDragging) {
             SRect drawRect = getDrawRect();
-            float scale = getScaleXX();
+            float scaleX = getScaleXX();
+            float scaleY = getScaleYY();
             Margin margin = getMargin();
-            float marginX = margin.left * scale;
+            float marginX = margin.left * scaleX;
             float baseX = drawRect.left + marginX - (float)m_scrollX;
             float relX = event->mousePos.x - baseX;
-            float relY = (event->mousePos.y - drawRect.top) / scale + m_scrollY;
+            float relY = (event->mousePos.y - drawRect.top) / scaleY + m_scrollY;
             int targetLine = (int)(relY / m_lineHeight);
             targetLine = std::max(0, std::min(targetLine, getTotalLines() - 1));
 
@@ -1192,7 +1218,13 @@ void TextArea::setScrollY(int y) {
 void TextArea::scrollToBottom() {
     SRect rect = getRect();
     int totalHeight = getTotalLines() * m_lineHeight;
-    int targetScroll = totalHeight - (int)rect.height;
+    Margin margin = getMargin();
+    int availableHeight = (int)rect.height - (int)(margin.top + margin.bottom);
+    if (m_hScrollBar && m_hScrollBar->getVisible()) {
+        availableHeight -= (int)m_hScrollBar->getThickness();
+    }
+    int targetScroll = totalHeight - availableHeight;
+    if (targetScroll < 0) targetScroll = 0;
 
     setScrollY(targetScroll);
 }
@@ -1369,6 +1401,16 @@ void TextArea::setRect(SRect rect) {
     updateHScrollBar();
 }
 
+// 父链缩放变更时（EditBox 已重建字号）同步重排换行与滚动范围：
+// 行宽/可用高度依赖新字号与复合，缓存行不同步会导致排版错位。
+void TextArea::refreshScaleWith(float parentXX, float parentYY) {
+    EditBox::refreshScaleWith(parentXX, parentYY);
+    refreshLineHeightFromFont();
+    rebuildLines();
+    updateVScrollBar();
+    updateHScrollBar();
+}
+
 void TextArea::setText(const std::string& text) {
     EditBox::setText(text);
     rebuildLines();
@@ -1384,6 +1426,7 @@ void TextArea::setWordWrap(bool enable) {
 }
 
 void TextArea::setLineHeight(int height) {
+    m_lineHeightCustom = true;
     m_lineHeight = height;
     updateVScrollBar();
     updateHScrollBar();

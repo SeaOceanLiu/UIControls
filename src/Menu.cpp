@@ -264,6 +264,26 @@ void MenuPanel::ensureFont() {
     m_font = loadMenuFont(this, m_fontName, m_fontSize);
 }
 
+// 父链缩放变更时重建共享字体并刷新布局；子菜单面板不在 m_children 中，
+// 与 setContext 手动传播对齐，直接下发复合缩放（面板字体随自身缩放重建）
+void MenuPanel::refreshScaleWith(float parentXX, float parentYY) {
+    float oldScaleX = getScaleXX();
+    float oldScaleY = getScaleYY();
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
+        m_font.reset();
+        if (m_isCreated) {
+            ensureFont();
+            updateItemsFont();
+        }
+        recalculateSize();
+    }
+    for (auto& item : m_items) {
+        if (item->m_subMenu) item->m_subMenu->refreshScaleWith(m_xxScale, m_yyScale);
+    }
+    if (m_openSubMenu) m_openSubMenu->refreshScaleWith(m_xxScale, m_yyScale);
+}
+
 void MenuPanel::updateItemsFont() {
     for (auto& item : m_items) {
         item->setMenuFont(m_font, m_fontSize);
@@ -656,6 +676,22 @@ void MenuBar::setContext(UIContext* ctx) {
 void MenuBar::ensureFont() {
     if (m_font) return;
     m_font = loadMenuFont(this, m_fontName, m_menuTextSize);
+}
+
+// 父链缩放变更时重建菜单栏字体并重排条目；下拉面板不在 m_children 中，
+// 手动传播复合缩放（与 setContext 传播一致）
+void MenuBar::refreshScaleWith(float parentXX, float parentYY) {
+    float oldScaleX = getScaleXX();
+    float oldScaleY = getScaleYY();
+    ControlImpl::refreshScaleWith(parentXX, parentYY);
+    if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
+        m_font.reset();
+        if (m_isCreated) ensureFont();
+        layoutEntries();
+    }
+    for (auto& e : m_entries) {
+        e.panel->refreshScaleWith(m_xxScale, m_yyScale);
+    }
 }
 
 void MenuBar::setParent(Control *parent) {
