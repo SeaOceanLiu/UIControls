@@ -84,12 +84,13 @@
       var cls = "item" + (item[0] === CUR ? " active" : "");
       html += '<a class="' + cls + '" href="' + href + '">' + esc(item[1]) + "</a>";
     }
-  }
-  html += '<div class="sec">控件速查（4.1 - 4.21）</div>';
-  for (var k = 0; k < CONTROLS.length; k++) {
-    var c = CONTROLS[k];
-    var cls2 = "item sub" + (c[0] === CUR ? " active" : "");
-    html += '<a class="' + cls2 + '" href="' + PREFIX + c[0] + '">' + esc(c[1]) + "</a>";
+    if (sec[0] === "controls/index.html") {
+      for (var k = 0; k < CONTROLS.length; k++) {
+        var c = CONTROLS[k];
+        var cls2 = "item sub" + (c[0] === CUR ? " active" : "");
+        html += '<a class="' + cls2 + '" href="' + PREFIX + c[0] + '">' + esc(c[1]) + "</a>";
+      }
+    }
   }
   function renderNav() {
     var side = document.getElementById("sidebar");
