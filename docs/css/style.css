@@ -133,11 +133,12 @@ details.methods table { margin-top: 8px; }
 .hero {
   background: linear-gradient(135deg, #232a3d 0%, #1a2430 60%, #14201c 100%);
   border: 1px solid var(--border); border-radius: 14px;
-  padding: 36px 40px; margin: 20px 0 30px;
+  padding: 36px 40px; margin: 20px 0 30px; text-align: center;
 }
+.hero .hero-logo img { width: 92px; height: 92px; margin-bottom: 12px; }
 .hero h1 { border: none; margin: 0 0 10px; font-size: 32px; }
 .hero .sub { color: var(--text-dim); font-size: 16px; margin-bottom: 14px; }
-.hero .badges { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero .badges { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .badge {
   background: var(--tag); color: var(--accent);
   padding: 3px 12px; border-radius: 999px; font-size: 12.5px; border: 1px solid rgba(74,144,217,0.35);
