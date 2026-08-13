@@ -70,28 +70,53 @@
     ]]
   ];
   function esc(s) { return s.replace(/</g, "&lt;"); }
-  var html = '<div class="brand"><img src="' + PREFIX + 'assets/UICornerstone_Logo_256.png" alt="logo"><span>UICornerstone</span></div>';
-  for (var i = 0; i < NAV.length; i++) {
-    var sec = NAV[i];
-    html += '<div class="sec">' + esc(sec[1]) + "</div>";
-    for (var j = 0; j < sec[2].length; j++) {
-      var item = sec[2][j];
-      var href = item[0] === "" ? PREFIX + "index.html" : PREFIX + item[0];
-      var cls = "item" + (item[0] === CUR ? " active" : "");
-      html += '<a class="' + cls + '" href="' + href + '">' + esc(item[1]) + "</a>";
-    }
-    if (sec[0] === "controls/index.html") {
-      for (var k = 0; k < CONTROLS.length; k++) {
-        var c = CONTROLS[k];
-        var cls2 = "item sub" + (c[0] === CUR ? " active" : "");
-        html += '<a class="' + cls2 + '" href="' + PREFIX + c[0] + '">' + esc(c[1]) + "</a>";
-      }
-    }
-  }
   function renderNav() {
     var side = document.getElementById("sidebar");
     if (!side) return;
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem("uicsNavCollapsed") || "{}") || {}; } catch (e) {}
+    var html = '<div class="brand"><img src="' + PREFIX + 'assets/UICornerstone_Logo_256.png" alt="logo"><span>UICornerstone</span></div>';
+    for (var i = 0; i < NAV.length; i++) {
+      var sec = NAV[i];
+      var collapsed = saved[i] ? " collapsed" : "";
+      html += '<div class="sec' + collapsed + '" data-sec="' + i + '">' + esc(sec[1]) + '<span class="tw">▾</span></div>';
+      html += '<div class="sec-items' + collapsed + '" data-sec="' + i + '">';
+      for (var j = 0; j < sec[2].length; j++) {
+        var item = sec[2][j];
+        var href = item[0] === "" ? PREFIX + "index.html" : PREFIX + item[0];
+        var cls = "item" + (item[0] === CUR ? " active" : "");
+        html += '<a class="' + cls + '" href="' + href + '">' + esc(item[1]) + "</a>";
+      }
+      if (sec[0] === "controls/index.html") {
+        for (var k = 0; k < CONTROLS.length; k++) {
+          var c = CONTROLS[k];
+          var cls2 = "item sub" + (c[0] === CUR ? " active" : "");
+          html += '<a class="' + cls2 + '" href="' + PREFIX + c[0] + '">' + esc(c[1]) + "</a>";
+        }
+      }
+      html += "</div>";
+    }
     side.innerHTML = html;
+    side.addEventListener("click", function (e) {
+      var t = e.target;
+      while (t && t !== side && !(t.className && String(t.className).indexOf("sec") === 0)) t = t.parentNode;
+      if (!t || t === side) return;
+      var idx = t.getAttribute("data-sec");
+      var collapsed = t.className.indexOf("collapsed") >= 0;
+      var cls = collapsed ? "collapsed" : "";
+      for (var n = 0; n < side.children.length; n++) {
+        var el = side.children[n];
+        if (el.getAttribute && el.getAttribute("data-sec") === idx) {
+          if (el.className && String(el.className).indexOf("sec") === 0) {
+            el.className = (collapsed ? "sec" : "sec collapsed");
+          } else if (String(el.className).indexOf("sec-items") === 0) {
+            el.className = "sec-items" + (collapsed ? "" : " collapsed");
+          }
+        }
+      }
+      saved[idx] = collapsed ? false : true;
+      try { localStorage.setItem("uicsNavCollapsed", JSON.stringify(saved)); } catch (err) {}
+    });
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", renderNav);

@@ -36,7 +36,11 @@ a:hover { text-decoration: underline; }
   color: var(--text); border-bottom: 1px solid var(--border); margin-bottom: 10px;
 }
 #sidebar .brand img { width: 30px; height: 30px; }
-#sidebar .sec { font-size: 12px; color: var(--text-dim); padding: 10px 18px 4px; letter-spacing: 1px; }
+#sidebar .sec { font-size: 12px; color: var(--text-dim); padding: 10px 18px 4px; letter-spacing: 1px; cursor: pointer; user-select: none; }
+#sidebar .sec:hover { color: var(--text); }
+#sidebar .sec .tw { float: right; font-size: 10px; color: var(--text-dim); transition: transform 0.15s; }
+#sidebar .sec.collapsed .tw { transform: rotate(-90deg); }
+#sidebar .sec-items.collapsed { display: none; }
 #sidebar a.item {
   display: block; padding: 4px 18px; color: var(--text-dim); font-size: 13.5px;
   border-left: 2px solid transparent;
