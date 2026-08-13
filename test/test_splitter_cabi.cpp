@@ -100,11 +100,11 @@ static int runTest(const char* shortName, const char* displayName) {
 
     UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
     cfg.windowTitle = "test_splitter_cabi";
-    cfg.windowWidth = 600;
-    cfg.windowHeight = 320;
+    cfg.windowWidth = 700;
+    cfg.windowHeight = 420;
     g_inst = uiCreateInstance(callbacks, &cfg);
     if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
-    uiSetViewport(g_inst, 0, 0, 600, 320);
+    uiSetViewport(g_inst, 0, 0, 700, 420);
     printf("OK: initialized\n");
 
     uiRegisterAction(g_inst, "onSplitterMoved", onSplitterMoved, nullptr);
@@ -115,7 +115,7 @@ static int runTest(const char* shortName, const char* displayName) {
             {
                 "type": "panel",
                 "id": "rootPanel",
-                "rect": { "x": 0, "y": 0, "w": 600, "h": 320 },
+                "rect": { "x": 0, "y": 0, "w": 700, "h": 420 },
                 "colors": { "background": { "normal": "#282828FF" } },
                 "children": [
                     {

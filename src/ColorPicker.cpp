@@ -377,7 +377,7 @@ void ColorPicker::createHexInput() {
     m_hexInput = make_shared<EditBox>(m_dialog.get(),
         SRect(hexX, hexY, hexW, inputH), 1.0f, 1.0f);
     m_hexInput->setText(m_color.toRRGGBBAA());
-    m_hexInput->setOnTextChanged([this](shared_ptr<Control>, string) {
+    m_hexInput->setOnEnter([this](shared_ptr<Control>) {
         onHexInputChanged(m_hexInput->getText());
     });
     m_hexInput->create();
@@ -584,8 +584,8 @@ void ColorPicker::onHexInputChanged(const string& text) {
     SColor c;
     if (SColor::fromRRGGBBAA(filtered, c)) {
         m_color = c;
-        syncUIFromColor();
     }
+    syncUIFromColor();
 }
 
 void ColorPicker::onSliderRChanged(shared_ptr<Slider> s, float val) {
@@ -605,6 +605,7 @@ void ColorPicker::onSliderAChanged(shared_ptr<Slider> s, float val) {
 }
 
 void ColorPicker::onOK() {
+    if (m_hexInput) onHexInputChanged(m_hexInput->getText());
     m_committedColor = m_color;
     if (m_onColorChanged)
         m_onColorChanged(std::dynamic_pointer_cast<ColorPicker>(getThis()), m_committedColor);

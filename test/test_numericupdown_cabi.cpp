@@ -114,11 +114,11 @@ static int runTest(const char* shortName, const char* displayName) {
 
     UIInstanceConfig cfg = UI_INSTANCE_CONFIG_DEFAULT;
     cfg.windowTitle = "test_numericupdown_cabi";
-    cfg.windowWidth = 600;
-    cfg.windowHeight = 480;
+    cfg.windowWidth = 800;
+    cfg.windowHeight = 560;
     g_inst = uiCreateInstance(callbacks, &cfg);
     if (!g_inst) { printf("FAIL: CreateInstance\n"); FreeLibrary(g_uiDll); return 1; }
-    uiSetViewport(g_inst, 0, 0, 600, 480);
+    uiSetViewport(g_inst, 0, 0, 800, 560);
     printf("OK: initialized\n");
 
     const char* layoutJson = R"json({
@@ -127,7 +127,7 @@ static int runTest(const char* shortName, const char* displayName) {
             {
                 "type": "panel",
                 "id": "rootPanel",
-                "rect": { "x": 0, "y": 0, "w": 600, "h": 480 },
+                "rect": { "x": 0, "y": 0, "w": 800, "h": 560 },
                 "colors": { "background": { "normal": "#282828FF" } },
                 "children": [
                     {
