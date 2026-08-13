@@ -28,13 +28,13 @@
     ["controls/treeview.html", "TreeView"]
   ];
   var NAV = [
-    ["", "首页 · 介绍", [
+    ["", "1 介绍", [
       ["", "1 介绍"]
     ]],
-    ["quickstart.html", "快速起步", [
+    ["quickstart.html", "2 快速起步", [
       ["quickstart.html", "2 快速起步"]
     ]],
-    ["basics.html", "从基础入门", [
+    ["basics.html", "3 从基础入门", [
       ["cpp-binding.html", "3.1 使用 C++ Binding 搭建"],
       ["first-app.html", "3.2 第一个 UICornerstone 应用"],
       ["property-system.html", "3.3 属性系统"],
@@ -43,10 +43,10 @@
       ["focus.html", "3.6 焦点系统"],
       ["luotiani.html", "3.7 洛蒂动画"]
     ]],
-    ["controls/index.html", "深入控件", [
+    ["controls/index.html", "4 深入控件", [
       ["controls/index.html", "4 控件概念与共性"]
     ]],
-    ["advanced.html", "进阶主题", [
+    ["advanced.html", "5 进阶主题", [
       ["advanced.html", "5 进阶主题"],
       ["advanced/luotiani.html", "5.1 洛蒂动画引擎"],
       ["advanced/multiwindow.html", "5.2 多视口与多窗口"],
