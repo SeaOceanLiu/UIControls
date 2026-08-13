@@ -17,7 +17,7 @@
 
 <p>本章逐个讲解 21 个控件。阅读任一控件页前，建议先掌握本节描述的<strong>控件共同骨架</strong>。</p>
 
-<h2>4.0.1 继承体系</h2>
+<h2>继承体系</h2>
 
 <pre><code>Control（根抽象：位置/尺寸/可见性/父指针/事件入口）
  └─ ControlImpl（通用实现：状态色、属性系统、焦点支持）
@@ -31,7 +31,7 @@
  旁支：Actor → Material → ControlImpl（纯图片显示）
      LuotiAni → Material → ControlImpl（关键帧动画）</code></pre>
 
-<h2>4.0.2 每个控件的六个共同维度</h2>
+<h2>每个控件的六个共同维度</h2>
 
 <p>本手册的每个控件页都按固定六节组织：</p>
 
@@ -45,7 +45,7 @@
 <tr><td>C++ Binding 样例</td><td>可运行的绑定用法代码</td></tr>
 </table>
 
-<h2>4.0.3 所有控件的共性</h2>
+<h2>所有控件的共性</h2>
 
 <h3>位置与尺寸（SRect）</h3>
 
@@ -127,7 +127,7 @@ std::string s = c.GetString("caption");</code></pre>
 
 <div class="note">「控件的方法」一节仅供源码级集成（直接使用核心类）的开发者参考；方法表中部分高级方法（如挂载 Actor / LuotiAni 对象、自定义 CaptionLabel）在 C ABI / Binding 中不一定有等价属性键，属核心类专属能力。</div>
 
-<h2>4.0.4 截图</h2>
+<h2>截图</h2>
 
 <div class="img-frame">
   <img src="../assets/CheckBox图样.svg" alt="CheckBox 图样">

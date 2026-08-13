@@ -56,10 +56,10 @@
       ["advanced/canvas-scale.html", "5.6 视口画布缩放"]
     ]],
     ["backends.html", "其它后端", [
-      ["backends.html", "6 使用其它后端（SFML/raylib）"]
+      ["backends.html", "5.7 使用其它后端（SFML/raylib）"]
     ]],
     ["integration.html", "嵌入逻辑回路", [
-      ["integration.html", "7 嵌入到你的逻辑回路中"]
+      ["integration.html", "5.8 嵌入到你的逻辑回路中"]
     ]],
     ["appendix/declarative-syntax.html", "附录", [
       ["appendix/declarative-syntax.html", "6 声明式 UI 语法速查"],

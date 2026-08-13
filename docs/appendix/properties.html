@@ -17,7 +17,7 @@
 
 <p>全部属性名可在 <code>include/PropertyNames.h</code> 找到对应 <code>k*</code> 常量。C++ Binding 建议直接使用常量。</p>
 
-<h2>9.1 通用属性（所有控件）</h2>
+<h2>7.1 通用属性（所有控件）</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
@@ -29,7 +29,7 @@
 <tr><td><code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
 </table>
 
-<h2>9 按控件速查（字母序）</h2>
+<h2>7.2 按控件速查（字母序）</h2>
 
 <h3>Actor（Image，类型 <code>image</code>）</h3>
 <table>
@@ -167,7 +167,7 @@
 </table>
 
 <h3>Panel（类型 <code>panel</code>）</h3>
-<p>无特有属性键（仅通用属性）；容器能力经 JSON <code>"children"</code> + <code>"layout"</code>（h-flow / v-flow / anchor / grid，见 6.1.5）声明，编程式经 <code>AddChild</code> / <code>CreatePanel</code>。</p>
+<p>无特有属性键（仅通用属性）；容器能力经 JSON <code>"children"</code> + <code>"layout"</code>（h-flow / v-flow / anchor / grid，见 6.5）声明，编程式经 <code>AddChild</code> / <code>CreatePanel</code>。</p>
 
 <h3>ProgressBar（类型 <code>progress-bar</code>）</h3>
 <table>
@@ -239,7 +239,7 @@
 <tr><td><code>default-expand</code></td><td>Bool</td><td>缺省展开全部节点</td></tr>
 <tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>按节点 id 展开 / 折叠</td></tr>
 </table>
-<p>节点数据经布局 JSON <code>"items": [{"id","label","expanded","userData","children":[...]}]</code> 声明（见 6.1.3 tree-view）；编程式用 C ABI <code>CreateTreeView</code> + 核心 TreeView API。</p>
+<p>节点数据经布局 JSON <code>"items": [{"id","label","expanded","userData","children":[...]}]</code> 声明（见 6.3 tree-view）；编程式用 C ABI <code>CreateTreeView</code> + 核心 TreeView API。</p>
 
 <h3>WinFrame（类型 <code>win-frame</code>）</h3>
 <table>

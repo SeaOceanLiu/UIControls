@@ -15,7 +15,7 @@
 
 <h1>6 声明式 UI 语法速查表</h1>
 
-<h2>6.1.1 顶层结构</h2>
+<h2>6.1 顶层结构</h2>
 
 <pre><code>{
   "version": "1.0",
@@ -35,7 +35,7 @@
 <tr><td><code>scale-mode</code></td><td>string</td><td><code>off</code>（缺省，画布跟随窗口）/ <code>fit</code>（等比居中）/ <code>stretch</code>（拉伸铺满）</td></tr>
 </table>
 
-<h2>6.1.2 控件通用键</h2>
+<h2>6.2 控件通用键</h2>
 
 <table>
 <tr><th>键</th><th>类型</th><th>说明</th></tr>
@@ -46,11 +46,11 @@
 <tr><td><code>visible</code> / <code>enabled</code></td><td>bool</td><td>可见 / 启用</td></tr>
 <tr><td><code>margin</code></td><td>object</td><td><code>{"left","top","right","bottom"}</code></td></tr>
 <tr><td><code>colors</code></td><td>object</td><td>状态色：<code>{"background":{"normal","hover","pressed","disabled"}}</code>；键含 background/border/text/textShadow/控件特有（progressColor、titleBar 等）</td></tr>
-<tr><td><code>events</code></td><td>object</td><td><code>{"onClick":"handlerName"}</code>，见 6.1.7</td></tr>
+<tr><td><code>events</code></td><td>object</td><td><code>{"onClick":"handlerName"}</code>，见 6.7</td></tr>
 <tr><td><code>children</code></td><td>array</td><td>子控件（容器类型）</td></tr>
 </table>
 
-<h2>6.1.3 各控件专用键（全部 21 种）</h2>
+<h2>6.3 各控件专用键（全部 21 种）</h2>
 
 <h3>label</h3>
 <pre><code>{ "type":"label", "id":"title", "rect":{"x":0,"y":52,"w":800,"h":40},
@@ -139,7 +139,7 @@
 <h3>panel（容器 + 布局引擎）</h3>
 <pre><code>{ "type":"panel", "id":"formPanel",
   "rect":{"x":50,"y":112,"w":400,"h":200},
-  "layout":{"type":"h-flow","gap":4,"padding":{"left":4,"top":4,"right":4,"bottom":4}},  // h-flow/v-flow/anchor/grid，见 6.1.5
+  "layout":{"type":"h-flow","gap":4,"padding":{"left":4,"top":4,"right":4,"bottom":4}},  // h-flow/v-flow/anchor/grid，见 6.5
   "colors":{"border":{"normal":"#808080FF"}},
   "children":[ { "type":"edit-box","id":"nameEdit","flowWeight":1,"rect":{"w":0,"h":30} },
                { "type":"button","id":"submitBtn","caption":"OK","rect":{"w":100,"h":35} } ] }</code></pre>
@@ -199,11 +199,11 @@
               "children":[ { "id":"child1","label":"Child 1" } ] } ],
   "events":{"onSelect":"onTreeSelect","onExpand":"onTreeExpand","onCollapse":"onTreeCollapse"} }</code></pre>
 
-<h2>6.1.4 颜色格式</h2>
+<h2>6.4 颜色格式</h2>
 
 <pre><code>"#RGB" | "#RRGGBB" | "#RRGGBBAA" | { "r":255, "g":0, "b":0, "a":128 }</code></pre>
 
-<h2>6.1.5 布局引擎</h2>
+<h2>6.5 布局引擎</h2>
 
 <h3>h-flow / v-flow</h3>
 <pre><code>"layout": { "type": "h-flow", "gap": 4,
@@ -226,7 +226,7 @@
 // 子控件：{ ..., "grid": { "row":0, "col":1, "rowSpan":1, "colSpan":1 } }
 // 尺寸：Fixed "100px" / Flex "1fr" / Auto "auto"</code></pre>
 
-<h2>6.1.6 事件引用与注册</h2>
+<h2>6.6 事件引用与注册</h2>
 
 <pre><code>// C ABI
 UICornerstone_RegisterAction(g_inst, "handleSubmit", cb, NULL);
@@ -237,7 +237,7 @@ ui->RegisterAction("handleSubmit", [](Control ctl){ /* ... */ });
 // 核心库 LayoutParser
 parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ... */ });</code></pre>
 
-<h2>6.1.7 事件键名 → 控件对照</h2>
+<h2>6.7 事件键名 → 控件对照</h2>
 
 <table>
 <tr><th>JSON 事件键</th><th>适用控件</th></tr>
@@ -252,7 +252,7 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
 <tr><td><code>onSplitterMoved</code></td><td>Splitter</td></tr>
 </table>
 
-<h2>6.1.8 主题</h2>
+<h2>6.8 主题</h2>
 
 <pre><code>"theme": {
   "fonts": { "default": { "name": "HarmonyOS_Sans_SC_Regular", "size": 16 },
@@ -268,7 +268,7 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
 
 <p>类别：<code>button / label / editbox / textarea / checkbox / progressbar / panel / scrollbar / menubar</code>；应用顺序：Theme 默认 → 公共 colors → 控件专用颜色 → 控件专用字体。</p>
 
-<h2>6.1.9 组件与实例化</h2>
+<h2>6.9 组件与实例化</h2>
 
 <pre><code>"components": {
   "SearchBar": {
@@ -290,7 +290,7 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
     "rect": { "x": 20, "y": 20, "w": 300, "h": 40 } }
 ]</code></pre>
 
-<h2>6.1.10 热加载</h2>
+<h2>6.10 热加载</h2>
 
 <pre><code>HotReloader reloader("layouts/main.json", rebuildCallback);
 reloader.poll();                 // 每帧调用（默认 30 帧检查一次）
