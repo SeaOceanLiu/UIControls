@@ -82,7 +82,7 @@
       var item = sec[2][j];
       var href = item[0] === "" ? PREFIX + "index.html" : PREFIX + item[0];
       var cls = "item" + (item[0] === CUR ? " active" : "");
-      html += '<a class="' + cls + '" href="' + href + '">' + esc(item[2]) + "</a>";
+      html += '<a class="' + cls + '" href="' + href + '">' + esc(item[1]) + "</a>";
     }
   }
   html += '<div class="sec">控件速查（4.1 - 4.21）</div>';
