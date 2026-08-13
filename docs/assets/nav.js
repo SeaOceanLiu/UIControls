@@ -5,36 +5,35 @@
   if (SCRIPT && SCRIPT.getAttribute("data-prefix")) PREFIX = SCRIPT.getAttribute("data-prefix");
   var CUR = (SCRIPT && SCRIPT.getAttribute("data-current")) || "";
   var CONTROLS = [
-    ["controls/actor.html", "Actor（图片控件）"],
-    ["controls/bench.html", "Bench（测试台/根）"],
-    ["controls/button.html", "Button"],
-    ["controls/checkbox.html", "CheckBox"],
-    ["controls/colorpicker.html", "ColorPicker"],
-    ["controls/combobox.html", "ComboBox"],
-    ["controls/dialog.html", "Dialog / Popup"],
-    ["controls/editbox.html", "EditBox"],
-    ["controls/handlecontrol.html", "HandleControl"],
-    ["controls/label.html", "Label"],
-    ["controls/luotiani.html", "LuotiAni（动画）"],
-    ["controls/menu.html", "Menu"],
-    ["controls/numericupdown.html", "NumericUpDown"],
-    ["controls/panel.html", "Panel"],
-    ["controls/progressbar.html", "ProgressBar"],
-    ["controls/scrollbar.html", "ScrollBar"],
-    ["controls/slider.html", "Slider"],
-    ["controls/splitter.html", "Splitter"],
-    ["controls/textarea.html", "TextArea"],
-    ["controls/winframe.html", "WinFrame"],
-    ["controls/treeview.html", "TreeView"]
+    ["controls/actor.html", "4.1 Actor（图片控件）"],
+    ["controls/bench.html", "4.2 Bench（测试台/根）"],
+    ["controls/button.html", "4.3 Button"],
+    ["controls/checkbox.html", "4.4 CheckBox"],
+    ["controls/colorpicker.html", "4.5 ColorPicker"],
+    ["controls/combobox.html", "4.6 ComboBox"],
+    ["controls/dialog.html", "4.7 Dialog / Popup"],
+    ["controls/editbox.html", "4.8 EditBox"],
+    ["controls/handlecontrol.html", "4.9 HandleControl"],
+    ["controls/label.html", "4.10 Label"],
+    ["controls/luotiani.html", "4.11 LuotiAni（动画）"],
+    ["controls/menu.html", "4.12 Menu"],
+    ["controls/numericupdown.html", "4.13 NumericUpDown"],
+    ["controls/panel.html", "4.14 Panel"],
+    ["controls/progressbar.html", "4.15 ProgressBar"],
+    ["controls/scrollbar.html", "4.16 ScrollBar"],
+    ["controls/slider.html", "4.17 Slider"],
+    ["controls/splitter.html", "4.18 Splitter"],
+    ["controls/textarea.html", "4.19 TextArea"],
+    ["controls/winframe.html", "4.20 WinFrame"],
+    ["controls/treeview.html", "4.21 TreeView"]
   ];
   var NAV = [
-    ["", "1 介绍", [
+    ["", "概述", [
       ["", "1 介绍"]
     ]],
-    ["quickstart.html", "2 快速起步", [
-      ["quickstart.html", "2 快速起步"]
-    ]],
-    ["basics.html", "3 从基础入门", [
+    ["quickstart.html", "基础", [
+      ["quickstart.html", "2 快速起步"],
+      ["basics.html", "3 从基础入门"],
       ["cpp-binding.html", "3.1 使用 C++ Binding 搭建"],
       ["first-app.html", "3.2 第一个 UICornerstone 应用"],
       ["property-system.html", "3.3 属性系统"],
@@ -43,10 +42,10 @@
       ["focus.html", "3.6 焦点系统"],
       ["luotiani.html", "3.7 洛蒂动画"]
     ]],
-    ["controls/index.html", "4 深入控件", [
+    ["controls/index.html", "深入控件", [
       ["controls/index.html", "4 控件概念与共性"]
     ]],
-    ["advanced.html", "5 进阶主题", [
+    ["advanced.html", "进阶", [
       ["advanced.html", "5 进阶主题"],
       ["advanced/luotiani.html", "5.1 洛蒂动画引擎"],
       ["advanced/multiwindow.html", "5.2 多视口与多窗口"],
@@ -57,15 +56,13 @@
       ["backends.html", "5.7 使用其它后端（SFML/raylib）"],
       ["integration.html", "5.8 嵌入到你的逻辑回路中"]
     ]],
-    ["appendix/declarative-syntax.html", "附录", [
+    ["appendix/declarative-syntax.html", "附录与 FAQ", [
       ["appendix/declarative-syntax.html", "6 声明式 UI 语法速查"],
       ["appendix/properties.html", "7 属性速查表"],
       ["appendix/capi.html", "8 C ABI 速查表"],
       ["appendix/debugging.html", "9 问题定位手段"],
       ["appendix/backend-config.html", "10 后端差异及配置"],
-      ["appendix/binding.html", "11 C++ Binding 速查表"]
-    ]],
-    ["faq.html", "FAQ", [
+      ["appendix/binding.html", "11 C++ Binding 速查表"],
       ["faq.html", "12 常见问题（FAQ）"]
     ]]
   ];
@@ -75,10 +72,10 @@
     if (!side) return;
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem("uicsNavCollapsed") || "{}") || {}; } catch (e) {}
-    var html = '<div class="brand"><img src="' + PREFIX + 'assets/UICornerstone_Logo_256.png" alt="logo"><span>UICornerstone</span></div>';
+    var html = '<div class="brand"><a href="' + PREFIX + 'index.html"><img src="' + PREFIX + 'assets/UICornerstone_Logo_256.png" alt="logo"><span>UICornerstone</span></a></div>';
     for (var i = 0; i < NAV.length; i++) {
       var sec = NAV[i];
-      var collapsed = saved[i] ? " collapsed" : "";
+      var collapsed = saved[i] === false ? "" : " collapsed";
       html += '<div class="sec' + collapsed + '" data-sec="' + i + '">' + esc(sec[1]) + '<span class="tw">▾</span></div>';
       html += '<div class="sec-items' + collapsed + '" data-sec="' + i + '">';
       for (var j = 0; j < sec[2].length; j++) {
