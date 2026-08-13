@@ -91,5 +91,14 @@
     var cls2 = "item sub" + (c[0] === CUR ? " active" : "");
     html += '<a class="' + cls2 + '" href="' + PREFIX + c[0] + '">' + esc(c[1]) + "</a>";
   }
-  document.getElementById("sidebar").innerHTML = html;
+  function renderNav() {
+    var side = document.getElementById("sidebar");
+    if (!side) return;
+    side.innerHTML = html;
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderNav);
+  } else {
+    renderNav();
+  }
 })();
