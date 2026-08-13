@@ -99,16 +99,19 @@
     side.innerHTML = html;
     side.addEventListener("click", function (e) {
       var t = e.target;
-      while (t && t !== side && !(t.className && String(t.className).indexOf("sec") === 0)) t = t.parentNode;
+      while (t && t !== side) {
+        var cn = t.className;
+        if (cn === "sec" || (typeof cn === "string" && cn.indexOf("sec ") === 0)) break;
+        t = t.parentNode;
+      }
       if (!t || t === side) return;
       var idx = t.getAttribute("data-sec");
-      var collapsed = t.className.indexOf("collapsed") >= 0;
-      var cls = collapsed ? "collapsed" : "";
+      var collapsed = String(t.className).indexOf("collapsed") >= 0;
       for (var n = 0; n < side.children.length; n++) {
         var el = side.children[n];
         if (el.getAttribute && el.getAttribute("data-sec") === idx) {
-          if (el.className && String(el.className).indexOf("sec") === 0) {
-            el.className = (collapsed ? "sec" : "sec collapsed");
+          if (el.className === "sec" || String(el.className).indexOf("sec ") === 0) {
+            el.className = "sec" + (collapsed ? "" : " collapsed");
           } else if (String(el.className).indexOf("sec-items") === 0) {
             el.className = "sec-items" + (collapsed ? "" : " collapsed");
           }
