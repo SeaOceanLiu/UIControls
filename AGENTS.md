@@ -31,6 +31,11 @@
 | 测试用例规范 | [testing.md](design/guidelines/testing.md) |
 | C ABI 属性系统 | [CABI_Property_Design.md](design/CABI_Property_Design.md) |
 
+## 提交与推送规则
+
+- 提交（commit）和推送（push）必须经过用户的明确指示，**未经同意不得自行 push**，也不得自行执行 git add/commit。
+- 用户未明确要求时，代码修改仅限于工作区内的文件变更，不创建任何提交。
+
 ## Quick Links
 
 - [开发指南索引](design/guidelines/README.md) — 全部规范文档目录

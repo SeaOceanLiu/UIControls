@@ -32,7 +32,7 @@
 | 图片 | ✅ `Actor::loadFromFile`（fopen） | ✅ | `Actor::loadFromResource` → `provider->readFile` → `Surface::loadFromMemory`（src/Actor.cpp:101-117）；三后端均已注册内存工厂。**SVG 矩阵见 §6.3** |
 | 字体 | ✅ `loadFont` | ✅ | `Label::loadFromResource` → `provider->readFile` 得 `m_fontData` → `renderer->loadFontFromMemoryWithText`（src/Label.cpp:287-309；src/TextRenderer.h:15） |
 | 动画描述 JSON | ✅ `loadFromFile` | ✅ | **本来就是内存加载**：`loadFromResource` 实参为 `std::string`，重载决议精确命中 `loadAniDesc(string)` 内存版 → `provider->readFile`（src/LuotiAni.cpp:176-193）；`loadAniDesc(fs::path)` fopen 版仅服务 `loadFromFile` |
-| JSON 布局中 `"image"` 属性 | ✅ `loadFromFile`（fopen） | ❌ **缺口** | 布局 JSON 中“ `"image"` 属性经 `UICornerstone_SetString` → `loadFromFile` 直接读文件（src/UICornerstoneAPI.cpp:1192）；需新增 `provider:` 前缀路由到 `loadFromResource`（见 §4.2） |
+| JSON 布局中 `"image"` 属性 | ✅ `loadFromFile`（fopen） | ❌ **缺口** | 布局 JSON 中“ `"image"` 属性经 `UICornerstone_SetString` → `loadFromFile` 直接读文件（src/UICornerstoneAPI.cpp:1192）；`provider:` 前缀经 §3.5 入口分流路由到 `loadFromResource`（见 §4.2） |
 | ResourceProvider 实现 | 仅文件系统 | ❌ **缺口** | 无内存实现；C ABI 仅有 create/destroy/readFile/fileExists 四函数（include/UICornerstoneAPI.h:185-189） |
 | C++ Binding | `SetResourceRoot` / `ResolveResource` / `CreateImage`…（路径字符串） | ❌ **缺口** | binding/ 层为纯 C ABI 封装（pimpl），尚无内存资源 API，需新增（见 §5.1） |
 
@@ -99,9 +99,16 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 - `readFile` 未命中注册表 → 返回空（与现有文件系统 provider 找不到文件一致，控件层已打印 `'%s' not found` 并跳过，不崩溃）。
 - 同名重复 `memoryProviderRegister` / `memoryProviderAdopt` → 覆盖旧条目（后注册优先；adopt 覆盖时先经 `freeFn` 释放旧块）。
 
-### 3.5 缺口修复（控件侧，一处）
+### 3.5 缺口修复（控件侧，入口分流，两处）
 
-布局 JSON 中“ `"image"`（及三态图片、`"font"`、`"animation"` 等字符串资源属性）：`SetString` 分支中把 `"provider:xxx"` 前缀的字符串路由到 `loadFromResource`（而非 `loadFromFile`），见 §4.2 语法。
+散布在多个控件的 `setStringProperty` 资源分支（Actor `"image"`、Button 三态/`"animation"`、工厂路径）全部汇流到**每类资源载体控件唯一的 `loadFromFile` 入口**，在两个类内做统一分流即可覆盖全部路径：
+
+1. `Actor::loadFromFile(fs::path)`：`p` 以 `"provider:"` 开头 → 剥前缀调 `loadFromResource(name)`；否则维持原文件逻辑。
+2. `LuotiAni::loadFromFile(fs::path)`：同上分流。
+
+属性层、工厂（`CreateImage`/`CreateImageButton`/`CreateAnimation`/`CreateAnimatedButton`）、JSON 布局零改动；现有 `"image-resource"` 属性（直接资源 ID）语义不变。
+
+> 例外：`Label` 的 `"font"` 是枚举属性（FontNameFromString），不走 `loadFromFile`。字体内存引用于实施时新增字符串属性 `"font-resource"` → `loadFromResource`（TTF 内存管线已具备）。
 
 ---
 
@@ -158,7 +165,7 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 
 `actors` 解析器对"对象值"做归一化：读 `providerName` 键 → 等价于 `"provider:<name>"`；字符串值维持现状（文件路径）。
 
-统一规则：`SetString` 属性赋值时，值以 `"provider:"` 前缀开始 → 剥前缀后调 `loadFromResource(id)`；否则 `loadFromFile(path)`。前缀与名字之间不留空格。
+统一规则：所有控件资源引用（经属性或工厂路径传入），值以 `"provider:"` 前缀开始 → 剥前缀 → 收敛到 `loadFromResource(id)`（经 §3.5 的 `loadFromFile` 入口分流，无需改属性分发）；否则维持文件路径语义。前缀与名字之间不留空格。
 
 ### 4.3 作用域与优先级
 
@@ -191,14 +198,16 @@ bool UICornerstone::AdoptResource(const std::string& name, void* data, size_t le
 
 ### 5.2 属性系统变更（C ABI 属性系统，见 CABI_Property_Design.md）
 
-现有属性系统无需新增属性名（`image`/`animation`/`font` 等均已注册），变更发生在**字符串属性值语义**：
+现有属性系统无需新增属性名（`image`/`animation`/`font` 等均已注册），变更发生在**资源引用值语义**：
 
 | 层 | 变更 | 位置 |
 |----|------|------|
-| `SetString` 字符串属性 | 值以 `provider:` 前缀开头 → 剥前缀 → `loadFromResource(id)`；否则维持 `loadFromFile` | src/UICornerstoneAPI.cpp SetString 分发（含 1192 行 image 分支） |
+| 资源载体控件 `loadFromFile` 入口 | 值以 `provider:` 前缀开头 → 剥前缀 → `loadFromResource(id)`；否则维持 `loadFromFile` | `Actor::loadFromFile`、`LuotiAni::loadFromFile`（属性/工厂路径汇流点） |
 | 布局 `actors` 解析 | 对象值 → 归一化为 `provider:<providerName>`（字符串值不动） | 布局 actors 解析 |
+| Label 字体 | 新增字符串属性 `"font-resource"` → `loadFromResource`（`"font"` 枚举不变） | Label |
 
-- 无新 Ptr/Float/String/Enum/Bool 属性类型；`PropertyNames.h` 注册表不变。
+- 无新 Ptr/Float/String/Enum/Bool 属性类型；`PropertyNames.h` 注册表仅追加 `"font-resource"`。
+- **GetString 维持只写不读**（2026-08-14 决策）：`image`/`image-resource`/`font-resource` 等资源属性不新增读支持，`GetString` 仍返回 0；`provider:` 前缀只影响写入路由，不涉及读回对称——避免引入过多变化，序列化需求后续再议。
 - 回调/事件系统不受影响（资源异步失败仅打日志，同现有 not found 语义）。
 - C ABI 函数表：`createResourceProvider` 之后追加 `createMemoryResourceProvider` / `memoryProviderRegister` / `memoryProviderAdopt` / `setResourceProvider` 四个函数指针（表版本 +1），三后端 bridge 同步（§2.1 差异仅 SVG，bridge 无差异）。
 
@@ -254,7 +263,7 @@ main()
 |---|------|------|
 | 1 | `MemoryResourceProvider` 类（注册表 + readFile/exists 命中 + 懒加载缓存表；Register 拷贝 / Adopt 零拷贝两种条目） | `src/ResourceProvider.cpp`、`include/ResourceProvider.h` |
 | 2 | C ABI 四函数 + bridge 实现（createMemory/register/adopt/set） | `src/backend/BackendBridge.h`、三后端 `BackendPlugin.cpp`、`include/UICornerstoneAPI.h` |
-| 3 | `SetString` 属性值 `provider:` 前缀路由 + `actors` 对象式 `providerName` 归一化 | `src/UICornerstoneAPI.cpp`、布局 actors 解析 |
+| 3 | 资源载体控件 `loadFromFile` 入口分流（`provider:` 前缀 → `loadFromResource`）+ `actors` 对象式 `providerName` 归一化 + Label `"font-resource"` 新增 | `src/Actor.cpp`、`src/LuotiAni.cpp`、`src/Label.cpp`、布局 actors 解析 |
 | 4 | `LoadLayout` 顶层 `resourceProviders` 扫描 + 懒加载缓存 | `src/UICornerstoneAPI.cpp`（LoadLayout 入口） |
 | 5 | C++ Binding：`RegisterResource` / `AdoptResource`（懒创建 + 自动挂载，pimpl） | `binding/src/UICornerstone.cpp`、`binding/src/Impl.h`、`binding/include/UICornerstone.h` |
 | 6 | 自动化测试（C ABI 版 + Binding 版） | `test/test_resourceprovider_memory.cpp`、binding 测试 + CMake 注册 |
