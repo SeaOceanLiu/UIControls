@@ -57,22 +57,47 @@
 
 ```c
 UIResourceProviderHandle (*createMemoryResourceProvider)(void);
-// 注册 name → 内存块。data 由调用方持有，引擎不拷贝所有权（内部拷贝字节）。
+// 注册 name → 内存块（默认拷贝模式：内部复制一份字节，调用方可立即释放 data）。
 int  (*memoryProviderRegister)(UIResourceProviderHandle h,
                                const char* name, const void* data, int len);
+// 零拷贝注册（adopt 模式）：转移 data 所有权给引擎，引擎不再拷贝；
+// 调用方此后不得再访问/释放 data；引擎析构或覆盖同名条目时经 freeFn 释放
+// （freeFn 由调用方提供，保证跨 DLL 堆由原分配者释放，可为 NULL → 走引擎默认 free）。
+int  (*memoryProviderAdopt)(UIResourceProviderHandle h,
+                            const char* name, const void* data, int len,
+                            void (*freeFn)(void*));
 // 将指定 provider 挂到实例：替换 UIContext::resourceProvider（取 ControlBase 级联传播，
 // 见 src/ControlBase.cpp:593-598；UIContext.cpp:80 从 mainWindow 继承）。
 int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 ```
 
-调用时机（用户要求）：**`UICornerstone_Initialize` 之前**，先把资源文件读入堆内存 → `createMemoryResourceProvider` → 逐个 `memoryProviderRegister` → 初始化实例后 `setResourceProvider`，布局即可按名字引用。
+调用时机（用户要求）：**`UICornerstone_Initialize` 之前**，先把资源文件读入堆内存 → `createMemoryResourceProvider` → 逐个 `memoryProviderRegister` / `memoryProviderAdopt` → 初始化实例后 `setResourceProvider`，布局即可按名字引用。
 
-### 3.3 失败语义
+### 3.3 内存占用与零拷贝
+
+资源在引擎中存在**两层拷贝**，需分别对待：
+
+| 拷贝层 | 位置 | 能否消除 |
+|--------|------|----------|
+| ① provider 注册拷贝 | `memoryProviderRegister` 内部复制字节 | ✅ 可消除（adopt 模式） |
+| ② 解码器拷贝 | `Surface::loadFromMemory` / `loadFontFromMemory` 内部（纹理上传、字形图集烘焙） | ❌ 由后端解码 API 决定，不可避免 |
+
+即：adopt 模式最多消除第 ① 层（小资源约几十 KB 级），像素级资源在第 ② 层仍有纹理拷贝——**adopt 是内存优化手段而非全部**。
+
+**注册模式选择建议**：
+
+- **默认 `Register`（拷贝）**：动画 JSON、字体等小资源；代码路径简单、无生命周期契约。
+- **`Adopt`（零拷贝）**：大纹理等体积敏感资源；调用方须承诺放弃 buffer（转移所有权），并配套 `freeFn` 保证跨 DLL 释放归属。
+- **JSON 挂载（path 型）**：引擎懒加载后字节归引擎自有，天然无第 ① 层拷贝，不涉及本设计。
+
+`readFile` 命中 adopt 条目时直接 move 进 `shared_ptr<vector<char>>` 返回（不复制）；命中 register 条目时拷贝返回。同名重复 adopt → 先 `freeFn` 释放旧块再接管新块。
+
+### 3.4 失败语义
 
 - `readFile` 未命中注册表 → 返回空（与现有文件系统 provider 找不到文件一致，控件层已打印 `'%s' not found` 并跳过，不崩溃）。
-- 同名重复 `memoryProviderRegister` → 覆盖旧字节（后注册优先）。
+- 同名重复 `memoryProviderRegister` / `memoryProviderAdopt` → 覆盖旧条目（后注册优先；adopt 覆盖时先经 `freeFn` 释放旧块）。
 
-### 3.4 缺口修复（控件侧，两处）
+### 3.5 缺口修复（控件侧，两处）
 
 1. `LuotiAni::loadFromResource`：`fopen` 改为 `provider->readFile(resourceId)` 后走既有 `parseJsonDesc()`（src/Luotiani.cpp:143-160 改为复用 `m_pJsonFileContent` 内存构造路径；`loadFromFile` 保持文件路径不变）。
 2. 布局 JSON 中“ `"image"`（及三态图片、`"font"` 等字符串资源属性）：`SetString` 分支中把 `"provider:xxx"` 前缀的字符串路由到 `loadFromResource`（而非 `loadFromFile`），见 §4.2 语法。
@@ -171,7 +196,8 @@ main()
 ### 5.4 失败路径用例
 
 - `provider:not-exists` → 资源空、控件存活、日志含 `not found`；
-- `memoryProviderRegister(h, "", ...)` 空名 → 拒绝注册（返回 0）。
+- `memoryProviderRegister(h, "", ...)` 空名 → 拒绝注册（返回 0）；
+- **adopt 释放契约**：adopt 后调用方释放原 buffer、正常渲染（零拷贝生效）；provider 析构时 `freeFn` 恰被调用一次（用计数断言）；adopt 覆盖同名条目时旧块先经 `freeFn` 释放。
 
 ---
 
@@ -179,8 +205,8 @@ main()
 
 | # | 内容 | 文件 |
 |---|------|------|
-| 1 | `MemoryResourceProvider` 类（注册表 + readFile/exists 命中 + 懒加载缓存表） | `src/ResourceProvider.cpp`、`include/ResourceProvider.h` |
-| 2 | C ABI 三函数 + bridge 实现（createMemory/register/set） | `src/backend/BackendBridge.h`、三后端 `BackendPlugin.cpp`、`include/UICornerstoneAPI.h` |
+| 1 | `MemoryResourceProvider` 类（注册表 + readFile/exists 命中 + 懒加载缓存表；Register 拷贝 / Adopt 零拷贝两种条目） | `src/ResourceProvider.cpp`、`include/ResourceProvider.h` |
+| 2 | C ABI 四函数 + bridge 实现（createMemory/register/adopt/set） | `src/backend/BackendBridge.h`、三后端 `BackendPlugin.cpp`、`include/UICornerstoneAPI.h` |
 | 3 | `LuotiAni::loadFromResource` 改走 provider（修 fopen 缺口） | `src/Luotiani.cpp` |
 | 4 | `SetString` 属性值 `provider:` 前缀路由 + `actors` 对象式 `provider-name` 归一化 | `src/UICornerstoneAPI.cpp`、布局 actors 解析 |
 | 5 | `LoadLayout` 顶层 `resourceProviders` 扫描 + 懒加载缓存 | `src/UICornerstoneAPI.cpp`（LoadLayout 入口） |
@@ -192,4 +218,4 @@ main()
 - **向后兼容**：新增 API 追加到函数表尾部（函数表版本号 +1），既有 `createFilesystem` 语义不变；`loadFromFile` 全部保留。
 - **风险 1**：`provider:` 前缀与真实文件名冲突（极小概率）——约定文档声明该前缀为保留字。
 - **风险 2**：`actors` 对象式值会影响现有字符串解析分支——归一化只增加"对象 → 取 provider-name"一路，字符串分支不动。
-- **风险 3**：内存 provider 字节生命周期由引擎拷贝持有，调用方可释放原 buffer；跨 DLL 传指针用 `memcpy` 拷贝，不存裸指针。
+- **风险 3**：内存占用与生命周期分两种模式——默认 `Register` 拷贝持有字节（调用方可释放原 buffer，跨 DLL 安全，代价双份内存）；`Adopt` 零拷贝转移所有权（省第 ① 层拷贝，但调用方须放弃 buffer，且跨 DLL 必须经 `freeFn` 由原分配者释放，不存裸指针）。解码层第 ② 层拷贝（纹理上传/字形图集）由后端 API 决定，adopt 无法消除，属预期。
