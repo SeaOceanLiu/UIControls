@@ -420,6 +420,9 @@ FodyWeavers.xsd
 # Build output
 build/
 
+# 发布产物（make_release.bat 组装，不入库）
+release/
+
 # Test/log output files (debug prints, test stdout/stderr redirects)
 test*.txt
 *log.txt

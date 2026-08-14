@@ -99,6 +99,93 @@ ResourceProvider* ResourceProvider::createFilesystem(const std::string& basePath
     return new FilesystemResourceProvider(basePath);
 }
 
+// --- MemoryResourceProvider (完整实现) ---
+// 内存资源注册表（C ABI 四函数由核心 DLL 经 GetProcAddress 解析，
+// 但 BackendBridge.h 的 bridge_* 直接 new MemoryResourceProvider，
+// 本文件须提供完整实现以满足链接；与核心 src/ResourceProvider.cpp 保持同步）。
+#include <cstring>
+#include <cstdlib>
+#include <unordered_map>
+struct MemoryResourceProvider::Entry {
+    std::shared_ptr<std::vector<char>> data;   // register 条目：拷贝后即最终存储
+    const void* rawPtr = nullptr;              // adopt 条目：零拷贝持有调用方缓冲
+    size_t rawLen = 0;
+    void (*freeFn)(void*) = nullptr;
+};
+struct MemoryResourceProvider::Impl {
+    std::unordered_map<std::string, Entry> entries;
+    std::unordered_map<std::string, std::string> paths;   // mountPath 懒加载条目
+    std::unordered_map<std::string, std::shared_ptr<std::vector<char>>> lazy;
+    std::unique_ptr<ResourceProvider> delegate;           // 文件系统兜底（懒创建）
+};
+MemoryResourceProvider::MemoryResourceProvider() : m_impl(new Impl()) {}
+MemoryResourceProvider::~MemoryResourceProvider() {
+    for (auto& [name, e] : m_impl->entries) {
+        if (e.freeFn && e.rawPtr) e.freeFn(const_cast<void*>(e.rawPtr));
+    }
+    delete m_impl;
+}
+bool MemoryResourceProvider::registerMemory(const std::string& name, const void* data, size_t len) {
+    if (name.empty() || !data || len == 0) return false;
+    auto& e = m_impl->entries[name];
+    if (e.freeFn && e.rawPtr) e.freeFn(const_cast<void*>(e.rawPtr));
+    e.data = std::make_shared<std::vector<char>>(static_cast<const char*>(data),
+                                                 static_cast<const char*>(data) + len);
+    e.rawPtr = nullptr; e.rawLen = 0; e.freeFn = nullptr;
+    return true;
+}
+bool MemoryResourceProvider::adoptMemory(const std::string& name, void* data, size_t len,
+                                         void (*freeFn)(void*)) {
+    if (name.empty() || !data || len == 0) return false;
+    auto& e = m_impl->entries[name];
+    if (e.freeFn && e.rawPtr) e.freeFn(const_cast<void*>(e.rawPtr));
+    e.data = nullptr;
+    e.rawPtr = data; e.rawLen = len;
+    e.freeFn = freeFn ? freeFn : std::free;
+    m_impl->lazy.erase(name);
+    return true;
+}
+void MemoryResourceProvider::mountPath(const std::string& name, const std::string& path,
+                                       const std::string& basePath) {
+    if (name.empty() || path.empty()) return;
+    if (!m_impl->delegate) m_impl->delegate.reset(ResourceProvider::createFilesystem(basePath));
+    m_impl->paths[name] = path;
+}
+static std::string stripProviderPrefix(const std::string& s) {
+    if (s.rfind("provider:", 0) == 0) return s.substr(8);
+    return s;
+}
+std::shared_ptr<std::vector<char>> MemoryResourceProvider::readFile(const std::string& path) {
+    const std::string name = stripProviderPrefix(path);
+    auto it = m_impl->entries.find(name);
+    if (it != m_impl->entries.end()) {
+        const Entry& e = it->second;
+        if (e.data) return e.data;
+        auto cached = m_impl->lazy.find(name);
+        if (cached != m_impl->lazy.end()) return cached->second;
+        auto buf = std::make_shared<std::vector<char>>(
+            static_cast<const char*>(e.rawPtr), static_cast<const char*>(e.rawPtr) + e.rawLen);
+        m_impl->lazy[name] = buf;
+        return buf;
+    }
+    auto p = m_impl->paths.find(name);
+    if (p != m_impl->paths.end()) {
+        auto cached = m_impl->lazy.find(name);
+        if (cached != m_impl->lazy.end()) return cached->second;
+        if (!m_impl->delegate) return nullptr;
+        auto buf = m_impl->delegate->readFile(p->second);
+        if (buf) m_impl->lazy[name] = buf;
+        return buf;
+    }
+    return nullptr;
+}
+bool MemoryResourceProvider::exists(const std::string& path) {
+    const std::string name = stripProviderPrefix(path);
+    if (m_impl->entries.find(name) != m_impl->entries.end()) return true;
+    if (m_impl->paths.find(name) != m_impl->paths.end()) return true;
+    return false;
+}
+
 // ===== C ABI 函数指针 =====
 //
 // 每个指针对应 UICornerstone.dll 中的一个导出函数。

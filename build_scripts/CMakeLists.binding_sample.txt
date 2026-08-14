@@ -1,0 +1,36 @@
+# =========================================================================
+# UICornerstone C++ Binding — 独立构建样例（用户工程引用发布包内 binding）
+#
+# 用法:
+#   1. 将本文件改名为 CMakeLists.txt 放入你的工程（与 main.cpp 同级），
+#      并把发布包内的 binding/ 目录复制到本目录下。
+#   2. 构建:
+#        cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release
+#        cmake --build build --config Release
+#   3. 运行期依赖（与 exe 同目录）:
+#        UICornerstone.dll + UIBackend_<backend>.dll + 对应后端运行时 DLL
+#       （SDL3.dll/SDL3_ttf.dll/SDL3_image.dll 或 sfml-*.dll 或 raylib.dll）
+#       以及 assets/ 目录（可经 WithResourceRoot 指向任意位置）。
+#
+# 纯动态加载：本工程只链接 UICornerstoneBinding（静态包装库），
+# 不链接 UICornerstone.lib / UICornerstone_dll.lib。
+# =========================================================================
+cmake_minimum_required(VERSION 3.16)
+project(MyApp LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 发布包无核心构建树：置空跳过 binding 自带样例的构建
+set(UICORNERSTONE_CORE_OUTPUT "" CACHE PATH "核心库产物目录（发布包置空）")
+
+# 引入发布包内的 binding 源码（含独立编译所需头文件）
+add_subdirectory(binding UICornerstoneBinding)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE UICornerstoneBinding)
+
+# 提示：Create 时选择后端并指定资源根
+#   auto ui = UICornerstone::Create(UICornerstone::Config{}
+#       .WithBackend("sdl3")
+#       .WithResourceRoot("assets"));

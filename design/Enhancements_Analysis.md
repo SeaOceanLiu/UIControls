@@ -1,11 +1,11 @@
-# 增强需求分析（7 项 × 三后端）
+# 增强需求分析（8 项 × 三后端）
 
 > 状态：分析中 · 依据：2026-08 全仓库勘察（含子模块） · 用途：持续思考的结论依据
 > 相关文档：[LuotiAni_Design.md](LuotiAni_Design.md)、[BackendAbstraction_Design.md](BackendAbstraction_Design.md)、[GraphTool_Design.md](GraphTool_Design.md)
 
 ## 1. 背景与范围
 
-以下 7 项增强需求，逐一给出"现状 → 三后端（SDL3 / SFML / Raylib）支持度 → 实现要点 → 取舍点"：
+以下 8 项增强需求，逐一给出"现状 → 三后端（SDL3 / SFML / Raylib）支持度 → 实现要点 → 取舍点"：
 
 1. 起线程做 LuotiAni 烘焙，避免影响主程序加载
 2. LuotiAni 支持基本 Shape、text、线宽，最好将 SVG 能力整体迁入
@@ -14,6 +14,7 @@
 5. 支持触控滚动
 6. 快捷键系统——菜单快捷键绑定 / 全局快捷键
 7. JSON 解析是否放到窗体初始化完成后（以便有 renderer、叠加多线程烘焙提速）
+8. 跨平台移植（Linux / Android）——SDL3 能否"不编译源码"方式运行（预编译 vs 源码编译路线）
 
 另有两项独立小问题（ColorPicker 十六进制回车生效、两个 test 窗体尺寸），已由主设计开发 Session 完成，本分析不涉及。
 
@@ -30,6 +31,7 @@
 | 5 | 触控滚动 | ✅ 桌面触屏可用 | ✅ 桌面触屏可用 | ❌ 桌面无触控 | raylib GetTouch* 仅移动平台；三端均需新接事件 |
 | 6 | 快捷键系统 | ⚠️ 全局热键半支持 | ⚠️ 同左 | ⚠️ 同左 | 窗口内快捷键三端全支持；系统级热键无原生通路 |
 | 7 | JSON 解析时机 | ✅ | ✅ | ✅ | 无差异（且已是现状） |
+| 8 | 跨平台移植（Linux/Android） | ⚠️ 需改造 | ❌ Android 无移植 | ⚠️ 需改造 | SDL3/raylib 官方支持 Android（可编 .so 复用）；SFML 无官方 Android 移植（排除）；Linux 仅 SDL3 有发行版预编译 |
 
 ---
 
@@ -51,6 +53,8 @@
 | createTexture（sdl3/sfml/raylib） | GPU | 三端均仅渲染线程（SDL renderer / sfml setActive / raylib GL） |
 
 **结论**：三端均可实现"CPU 合成后台化 + 纹理主线程上传"的两阶段模型；但 sdl3/sfml 必须先补 CPU 旋转实现（仿 raylib 双线性），否则 rotate 阶段无法离开渲染线程。
+
+**平台无关性**（与 §7 呼应）：上述"渲染线程约束"（SDL renderer / GL setActive / raylib rlgl）在 Linux、Android 上同样成立——后台化方案不依赖宿主平台，跨平台移植时无需重做。
 
 ### 3.2 LuotiAni Shape / text / 线宽 / SVG
 
@@ -90,6 +94,8 @@ LuotiAni 素材走 `loadFromMemory` → 三端 SVG 素材路径均可用 ✓
 
 **能力不对称**：sdl3/sfml 桌面 Windows 触屏可产生触摸事件；**raylib 桌面端触摸 API 恒无效**（仅 Android/iOS/Web）。
 
+**跨平台视角**（与 §7 呼应）：触控滚动不仅是桌面增强，更是 Android 移植（三后端均以触摸为主力输入）的前置条件——raylib 在桌面端的能力缺口通过能力位声明解决，在 Android 端则自然可用。
+
 **建议**：三端统一实现事件转换；raylib 侧利用既有"后端能力位机制"（`UICornerstone_GetBackendCapabilities`）声明触摸能力，调用方条件化。
 
 ### 3.6 快捷键系统
@@ -103,7 +109,7 @@ LuotiAni 素材走 `loadFromMemory` → 三端 SVG 素材路径均可用 ✓
 - raylib：公共 API 无 WndProc 钩子（仅 TraceLog/文件 IO 回调类）
 - 原生 HWND 均可得：sdl3 `SDL_PROP_WINDOW_WIN32_HWND_POINTER`、sfml `getNativeHandle()`（已有 GetDpiForWindow 先例，`sfml/Window.cpp:47`）、raylib `GetWindowHandle()`（`raylib.h:1014`，当前后端返回 nullptr 需补）
 
-**方案**：统一走 win32 窗口子类化（`SetWindowLongPtr`）收 `WM_HOTKEY`——平台适配层，与后端正交，三端对称；Linux/移动端暂缓。
+**方案**：统一走 win32 窗口子类化（`SetWindowLongPtr`）收 `WM_HOTKEY`——平台适配层，与后端正交，三端对称；Linux/移动端暂缓（见 §7 跨平台可行性）。
 
 ### 3.7 JSON 解析时机
 
@@ -113,6 +119,19 @@ LuotiAni 素材走 `loadFromMemory` → 三端 SVG 素材路径均可用 ✓
 - 纹理延迟到挂树后、设备下发时创建（`src/ControlBase.cpp:344-363`）
 
 真正的慢点是第 3.1 项同步 prepare + GPU 往返旋转，与本项无关。
+
+### 3.8 跨平台移植（Linux / Android）
+
+**现状**：项目 Windows-first——预编译库仅 `subModules/libs/` 的 Windows x64；`subModules/SDL3/` 为裁剪头文件（85 个，无 src/、无 Android 头）；Win32 特有代码未条件化（sfml `GetDpiForWindow` `sfml/Window.cpp:47`、sdl3 HWND 属性、raylib 桌面输入）。
+
+**三条路线**（详细结论见 §7）：
+- Linux：SDL3 用发行版预编译包（apt `libsdl3-dev` 等，含 SDL3_image/ttf）✅——需系统头文件替换裁剪头文件、与项目 API 版本对齐
+- Android：官方无预编译 .so，唯一可靠路径为 NDK 交叉编译（项目本体 + SDLActivity Java 壳 + JNI）⚠️
+- Raylib：单文件源码分发，各端均源码编译，体量小、无负担
+
+**与其它增强的耦合**：触控滚动（3.5）是 Android 移植前置（触摸为 Android 主力输入）；全局热键（3.6）仅 Windows 实现；多线程烘焙（3.1）平台无关，移植时无需重做。
+
+**取舍**：确认 Linux 走发行版包还是源码子模块（版本可控性 vs 零系统依赖）；Android 是否排入规划。
 
 ---
 
@@ -153,3 +172,68 @@ LuotiAni 素材走 `loadFromMemory` → 三端 SVG 素材路径均可用 ✓
 3. 第 5 项 raylib 桌面触控缺口：接受"能力位声明 + 调用方条件化"方案？
 4. 第 6 项全局热键：是否接受仅 Windows 平台实现（win32 子类化），其他平台暂缓？
 5. 多线程方案：确认近期 A+B、远期 D 的路线？
+6. 跨平台（§7）：确认 Linux 走发行版预编译包 vs 源码子模块的路线；Android NDK 移植是否排入规划？
+
+---
+
+## 7. 跨平台可行性（预编译 vs 源码编译）
+
+> 问题："SDL3 能否不使用源码编译方式跑在 Android / Linux 上？"
+
+### 7.1 现状：Windows 上本就是"预编译"模式
+
+本项目 sdl3 后端**不编译 SDL3 源码**：`subModules/libs/` 提供预编译 `SDL3.lib/SDL3.dll`、`SDL3_image`、`SDL3_ttf`（Windows x64），`CMakeLists.txt` 直接链接。"不编译源码"在 Windows 上已成立。
+
+### 7.2 三平台对比
+
+| 平台 | "预编译 SDL3"形态 | 可行性 | 主要风险 |
+|---|---|---|---|
+| Windows | 子模块裁剪头文件 + `subModules/libs` .lib/.dll | ✅ 已成立 | — |
+| Linux | 发行版包（apt `libsdl3-dev`、dnf `SDL3-devel`，含 SDL3_image/ttf） | ✅ 可行 | SDL3 版本与项目代码 API 版本错配（需系统头文件替换裁剪头文件） |
+| Android | 官方不发布预编译 .so（仅源码 + Gradle 模板） | ⚠️ 高风险 | 社区包版本/ABI（arm64-v8a 等）对齐难 |
+
+### 7.3 关键事实
+
+- **SDL3 头文件快照是裁剪版**：`subModules/SDL3/` 仅 85 个头文件，无 src/、无 CMakeLists、无 `SDL_android.h`，`SDL_platform.h` 无 ANDROID 宏——第三方 .so 需先补头文件并精确对齐版本
+- **SDL3 / SDL3_image / SDL3_ttf 源码均可在 GitHub 官方仓库获取**（`libsdl-org/SDL`、`libsdl-org/SDL_image`、`libsdl-org/SDL_ttf`，按 release tag 可精确对齐版本）——"外部拉源码"障碍可消除，但需将子模块结构从"裁剪头+预编译"切换为"完整源码+NDK 构建"
+- **"不编译源码"仅对 SDL3 依赖成立**，项目本体（UI 库 + C ABI + 三端后端）无论任何平台都需源码编译（Linux 走 CMake、Android 走 NDK 交叉编译）
+- **Android 集成另需** `SDLActivity` Java 壳 + AndroidManifest + JNI；Android 上触摸是主力输入，与第 5 项增强（触控滚动）强耦合
+- **Raylib 例外**：单文件源码分发（发行版包滞后少见），各端均走源码编译，但体量小、无负担
+- **Win32 特有代码需条件编译**：sfml `GetDpiForWindow`（`src/backend/sfml/Window.cpp:47`）、sdl3 HWND 属性、raylib 桌面输入等
+
+### 7.4 结论
+
+- Linux：SDL3 可用发行版预编译包 ✅（版本对齐后）；项目本体 CMake 源码编译
+- Android：无官方预编译，唯一可靠路径是 **NDK 自编全套 .so**（SDL3 + SDL3_image + SDL3_ttf + 项目 C ABI）→ "不编译源码"不成立
+- 任何平台移植的共性前提：源码平台编译 + Win32 代码条件化 + 平台差异（触摸/热键）适配
+
+### 7.5 Android 自编 libSDL3.so 的问题清单
+
+**编译本身无问题**（官方构建指南支持 Android：NDK toolchain + `-DANDROID_ABI`），风险集中在配套链：
+
+1. **子模块缺源码**：`subModules/SDL3/` 无 src/——需自 GitHub 拉取完整源码树，release tag 与头文件快照版本对齐（否则项目调用的 API 与 .so 不一致）；子模块结构需改为"完整源码 + NDK 构建"
+2. **SDL3_image / SDL3_ttf 同源编译**：项目 sdl3 后端同时依赖二者（`IMG_Load`、`TTF_*`），需与 SDL3 同版本同源编译；ttf 依赖 freetype/harfbuzz、image 依赖 libpng/jpeg/webp 等第三方库（Android 上需一并交叉编译或手动提供）
+3. **多 ABI + 打包 + 加载链**：arm64-v8a + x86_64（模拟器）至少两份 .so；`System.loadLibrary` 顺序（先 SDL3 后项目库，沿用 SDLActivity 模板）；GLES/vulkan renderer 差异需实测
+4. **版本迭代维护**：SDL3 快速迭代期每次升级三库都要重编——"编一次存档复用"仅在锁定版本时成立
+5. **"编一次复用"成立前提（锁三样）**：锁版本（release tag + 头文件与 .so 同版本）、锁 ABI（各架构 .so 独立归档）、锁 API 用法（项目只用当前版本已有 API）；日常开发直接取用归档 .so，与 Windows 上直接用 `subModules/libs/SDL3.dll` 同手感；编译参数与 NDK 版本需文档化
+
+### 7.6 Raylib / SFML 的 Android 复用可行性
+
+按"编一次 .so 复用"思路（同 §7.5），两后端结论截然相反：
+
+| 后端 | Android .so | 锁版复用 | 备注 |
+|---|---|---|---|
+| SDL3 | ✅ 官方支持 | ✅（三库联动） | 需连带编 image/ttf，见 §7.5 |
+| Raylib | ✅ 官方支持 | ✅（最省事） | 单库无依赖，API 最稳 |
+| SFML | ❌ 无官方移植 | — | 社区 fork 止步 2.x，排除 |
+
+**Raylib ✅**：
+- 官方支持 Android（自带 `rcore_android.c` 平台层，直连 EGL/JNI，不依赖 GLFW）
+- 单文件自包含，无 SDL3_image/ttf 式多库联动与 freetype/libpng 等第三方依赖——交叉编译链最简
+- API 稳定度高（迭代慢、改动小）→ "锁版后永久复用"可靠性高于 SDL3
+- 桌面与 Android 为同源码不同平台产物，分别编译即可；`GetTouch*` 在 Android 端真实可用，恰好补上 §3.5 桌面触控缺口
+
+**SFML ❌**：
+- 官方不支持 Android：SFML 3.x 仅桌面（Win32/X11/Wayland），无 Android 平台层，不存在官方 Android 版
+- 社区 fork（如 sfml-mobile）止步 2.x 且长期不维护、基于旧 GLES，与项目所用 SFML 3.x API 脱节
+- 结论：Android 上直接排除，"编一次"的对象不存在
