@@ -374,7 +374,8 @@ int Button::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kAnimation) == 0) {
         if (!value) return 0;
         fs::path p(value);
-        if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+        // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+        if (p.is_relative() && p.string().rfind(PropertyNames::kProviderPrefix, 0) != 0) p = fs::path(Platform::GetBasePath()) / p;
         auto ani = make_shared<LuotiAni>(this);
         ani->loadFromFile(p);
         setLuotiAni(ani);
@@ -390,7 +391,8 @@ int Button::setStringProperty(const char* prop, const char* value) {
         strcmp(prop, PropertyNames::kDisabledImage) == 0) {
         if (!value) return 0;
         fs::path p(value);
-        if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+        // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+        if (p.is_relative() && p.string().rfind(PropertyNames::kProviderPrefix, 0) != 0) p = fs::path(Platform::GetBasePath()) / p;
         auto actor = make_shared<Actor>(this, p, true, 1.0f, 1.0f);
         actor->setScaleType(ScaleType::FIT_CENTER);
         if (strcmp(prop, PropertyNames::kNormalImage) == 0)         setNormalStateActor(actor);

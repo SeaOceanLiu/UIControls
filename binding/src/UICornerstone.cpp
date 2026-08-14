@@ -26,6 +26,34 @@ uint64_t nowMillis() {
     return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 }
 
+// 内存资源注册表的懒创建 + 挂载（首次 Register/Adopt 时生效）
+bool ensureMemoryProvider(Impl* impl) {
+    if (impl->memoryProvider) return true;
+    if (!impl->callbacks || !impl->callbacks->createMemoryResourceProvider) return false;
+    impl->memoryProvider = impl->callbacks->createMemoryResourceProvider();
+    if (!impl->memoryProvider) return false;
+    if (impl->instance && impl->callbacks->setResourceProvider)
+        impl->callbacks->setResourceProvider(impl->instance, impl->memoryProvider);
+    return true;
+}
+
+void releaseMemoryProvider(Impl* impl) {
+    if (impl->callbacks && impl->callbacks->destroyResourceProvider && impl->memoryProvider) {
+        impl->callbacks->destroyResourceProvider(impl->memoryProvider);
+    }
+    impl->memoryProvider = nullptr;
+}
+
+// std::function 无法直接作 C 函数指针：全局 trampoline（rawPtr 唯一，进程内单线程用例）
+std::unordered_map<const void*, std::function<void(void*)>> g_adoptFreeFns;
+void adoptFreeTrampoline(void* p) {
+    auto it = g_adoptFreeFns.find(p);
+    if (it == g_adoptFreeFns.end()) return;
+    auto fn = std::move(it->second);
+    g_adoptFreeFns.erase(it);
+    fn(p);
+}
+
 } // namespace
 
 // ============================================================
@@ -43,6 +71,7 @@ UICornerstone::UICornerstone(UIInstance instance, bool ownsInstance)
 UICornerstone::~UICornerstone() {
     if (m_impl && m_impl->ownsInstance && m_impl->instance)
         Dyn::API().fnDestroyInstance(m_impl->instance);
+    if (m_impl) releaseMemoryProvider(m_impl.get());
     if (m_impl && m_impl->dllHandle) {   // 后端 DLL 句柄（实例级生命周期）
 #ifdef _WIN32
         FreeLibrary(m_impl->dllHandle);
@@ -85,6 +114,7 @@ std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
     auto ui = std::unique_ptr<UICornerstone>(new UICornerstone(instance, true));
     ui->m_impl->config = config;
     ui->m_impl->resourceRoot = config.resourceRoot;
+    ui->m_impl->callbacks = callbacks;
     ui->m_impl->dllHandle = h;
     return ui;
 }
@@ -110,6 +140,7 @@ std::unique_ptr<UICornerstone> UICornerstone::Create(const UIBackendCallbacks* c
     auto ui = std::unique_ptr<UICornerstone>(new UICornerstone(instance, true));
     ui->m_impl->config = config;
     ui->m_impl->resourceRoot = config.resourceRoot;
+    ui->m_impl->callbacks = callbacks;
     return ui;
 }
 
@@ -178,6 +209,25 @@ void UICornerstone::SetResourceRoot(const std::string& path) { m_impl->resourceR
 std::string UICornerstone::GetResourceRoot() const { return m_impl->resourceRoot; }
 std::string UICornerstone::ResolveResource(const std::string& relativePath) const {
     return m_impl->resourceRoot + "/" + relativePath;
+}
+
+bool UICornerstone::RegisterResource(const std::string& name, const void* data, size_t len) {
+    if (!m_impl || !m_impl->instance || name.empty() || !data || len == 0) return false;
+    if (!ensureMemoryProvider(m_impl.get())) return false;
+    return m_impl->callbacks->memoryProviderRegister(m_impl->memoryProvider, name.c_str(),
+                                                     data, (int)len) != 0;
+}
+
+bool UICornerstone::AdoptResource(const std::string& name, void* data, size_t len,
+                                  std::function<void(void*)> freeFn) {
+    if (!m_impl || !m_impl->instance || name.empty() || !data || len == 0) return false;
+    if (!ensureMemoryProvider(m_impl.get())) return false;
+    if (freeFn) g_adoptFreeFns[data] = std::move(freeFn);
+    int rc = m_impl->callbacks->memoryProviderAdopt(m_impl->memoryProvider, name.c_str(),
+                                                    data, (int)len,
+                                                    g_adoptFreeFns.count(data) ? &adoptFreeTrampoline : nullptr);
+    if (!rc) g_adoptFreeFns.erase(data);
+    return rc != 0;
 }
 
 // ============================================================

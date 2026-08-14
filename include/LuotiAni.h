@@ -263,6 +263,7 @@ private:
 
     string m_version;
     string m_name;
+    string m_resourceId;              // 内存资源引用：parse 阶段 provider 未就绪时记忆，挂树后由 setRenderDevice 补读
     SSize m_canvasSize;
     uint16_t m_frameRate;
     uint32_t m_totalFrames;

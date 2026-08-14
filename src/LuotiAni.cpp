@@ -138,12 +138,23 @@ LuotiAni::OpData LuotiAni::keyFrameToOpData(shared_ptr<KeyFrame> keyFrame, OpDat
 
 
 void LuotiAni::loadFromFile(fs::path filePath) {
+    std::string p = filePath.string();
+    if (p.rfind(PropertyNames::kProviderPrefix, 0) == 0) {  // 内存资源引用：剥前缀走资源 ID 路径
+        loadFromResource(p.substr(strlen(PropertyNames::kProviderPrefix)));
+        return;
+    }
     loadAniDesc(filePath);
 }
 void LuotiAni::loadFromResource(string resourceId) {
+    m_resourceId = resourceId;
     loadAniDesc(resourceId);
 }
 void LuotiAni::loadAniDesc(fs::path filePath){
+    std::string p = filePath.string();
+    if (p.rfind(PropertyNames::kProviderPrefix, 0) == 0) {  // 兜底：任何 fopen 入口先分流
+        loadAniDesc(p.substr(strlen(PropertyNames::kProviderPrefix)));
+        return;
+    }
     FILE* stream = fopen(filePath.string().c_str(), "rb");
     if (!stream) {
         printf("Open aniDesc json file error\n");
@@ -536,11 +547,17 @@ void LuotiAni::setRenderDevice(RenderDevice* device) {
 
     // 布局加载场景：parse 阶段 loadFromFile 仅解析描述（无设备），挂树时这里
     // 设备就绪 → 补 prepare（CreateAnimation 路径已在 addControl 后显式 prepare）
-    if (device != nullptr && !m_isPrepared && m_totalFrames > 0) {
-        try {
-            prepare();
-        } catch (...) {
-            Platform::Log("LuotiAni::setRenderDevice: defer prepare failed\n");
+    if (device != nullptr && !m_isPrepared) {
+        // 内存资源两阶段：parse 阶段 provider 未就绪（控件未挂树），此处补读描述
+        if (!m_resourceId.empty() && m_totalFrames == 0) {
+            loadAniDesc(m_resourceId);
+        }
+        if (m_totalFrames > 0) {
+            try {
+                prepare();
+            } catch (...) {
+                Platform::Log("LuotiAni::setRenderDevice: defer prepare failed\n");
+            }
         }
     }
 
@@ -835,7 +852,8 @@ int LuotiAni::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kAnimation) == 0) {
         if (!value || !value[0]) return 0;
         fs::path p(value);
-        if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+        // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+        if (p.is_relative() && p.string().rfind(PropertyNames::kProviderPrefix, 0) != 0) p = fs::path(Platform::GetBasePath()) / p;
         try {
             bool wasPlaying = m_isPlaying;
             loadFromFile(p);     // 依赖 §6.5 换动画状态重置（parseJsonDesc 开头）

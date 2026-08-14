@@ -188,6 +188,17 @@ typedef struct {
     int                      (*readFile)(UIResourceProviderHandle, const char* path, void* buf, int maxLen);
     int                      (*fileExists)(UIResourceProviderHandle, const char* path);
 
+    // --- Memory ResourceProvider（内存资源注册表，可选）---
+    // 创建内存注册表：name → 字节，readFile 命中返回；自动剥离 "provider:"（PropertyNames::kProviderPrefix）前缀
+    UIResourceProviderHandle (*createMemoryResourceProvider)(void);
+    // 拷贝注册：引擎内部复制 data，调用方可立即释放；同名覆盖旧条目
+    int  (*memoryProviderRegister)(UIResourceProviderHandle, const char* name, const void* data, int len);
+    // 零拷贝注册：转移 data 所有权给引擎；析构/覆盖时经 freeFn 释放（freeFn NULL → free）
+    int  (*memoryProviderAdopt)(UIResourceProviderHandle, const char* name,
+                                const void* data, int len, void (*freeFn)(void*));
+    // 挂载到实例：替换 UIContext::resourceProvider（控件经级联传播动态生效）
+    int  (*setResourceProvider)(UIInstance, UIResourceProviderHandle);
+
     // 后端能力位（UICORN_BACKEND_CAP_*），0 = 无声明能力
     uint32_t                 capabilities;
 } UIBackendCallbacks;

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "UICornerstoneAPI.h"
+#include "UIContext.h"
 #include "Window.h"
 #include "RenderDevice.h"
 #include "Texture.h"
@@ -289,5 +290,24 @@ inline int bridge_readFile(UIResourceProviderHandle h, const char* path, void* b
 }
 inline int bridge_fileExists(UIResourceProviderHandle h, const char* path) {
     return static_cast<ResourceProvider*>(h)->exists(path ? path : "") ? 1 : 0;
+}
+inline UIResourceProviderHandle bridge_createMemoryResourceProvider() {
+    return static_cast<UIResourceProviderHandle>(new MemoryResourceProvider);
+}
+inline int bridge_memoryProviderRegister(UIResourceProviderHandle h, const char* name,
+                                         const void* data, int len) {
+    if (!name || !name[0] || !data || len <= 0) return 0;
+    return static_cast<MemoryResourceProvider*>(h)->registerMemory(name, data, len) ? 1 : 0;
+}
+inline int bridge_memoryProviderAdopt(UIResourceProviderHandle h, const char* name,
+                                      const void* data, int len, void (*freeFn)(void*)) {
+    if (!name || !name[0] || !data || len <= 0) return 0;
+    return static_cast<MemoryResourceProvider*>(h)->adoptMemory(name, const_cast<void*>(data), len, freeFn) ? 1 : 0;
+}
+inline int bridge_setResourceProvider(UIInstance inst, UIResourceProviderHandle h) {
+    auto* ctx = static_cast<UIContext*>(inst);
+    if (!ctx) return 0;
+    ctx->resourceProvider = static_cast<ResourceProvider*>(h);
+    return 1;
 }
 

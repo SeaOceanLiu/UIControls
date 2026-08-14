@@ -27,6 +27,10 @@ struct Impl {
     // 资源根（Binding 侧路径解析）
     std::string resourceRoot;
 
+    // Memory ResourceProvider（懒创建；析构时经 destroyResourceProvider 释放）
+    const UIBackendCallbacks* callbacks = nullptr;
+    UIResourceProviderHandle memoryProvider = nullptr;
+
     // 后端插件 DLL 句柄（纯动态加载模式；实例析构时 FreeLibrary）
     // 核心 DLL 由 DynamicApi 进程级持有（不随实例卸载）
     void* dllHandle = nullptr;

@@ -66,6 +66,11 @@ void Actor::create() {
 }
 
 void Actor::loadFromFile(fs::path filePath) {
+    std::string p = filePath.string();
+    if (p.rfind(PropertyNames::kProviderPrefix, 0) == 0) {  // 内存资源引用：剥前缀走资源 ID 路径
+        loadFromResource(p.substr(strlen(PropertyNames::kProviderPrefix)));
+        return;
+    }
     m_filePath = filePath;
     if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后由 create() 加载
     if (filePath.is_relative()) {

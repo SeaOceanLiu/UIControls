@@ -360,6 +360,12 @@ shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
         popJsonPath();
     }
 
+    // fontResource：内存字体引用（String 属性 font-resource，两阶段：create() 补读）
+    if (j.contains(PropertyNames::kJsonFontResource) && j[PropertyNames::kJsonFontResource].is_string()) {
+        label->setStringProperty(PropertyNames::kFontResource,
+                                 j[PropertyNames::kJsonFontResource].get<string>().c_str());
+    }
+
     // shadow
     if (j.contains(PropertyNames::kJsonShadow) && j[PropertyNames::kJsonShadow].is_object()) {
         pushJsonPath(PropertyNames::kJsonShadow);
@@ -436,7 +442,8 @@ shared_ptr<Control> LayoutParser::parseAnimation(const json& j, Control* parent)
     if (j.contains(PropertyNames::kJsonPath) && j[PropertyNames::kJsonPath].is_string()) {
         string p = j[PropertyNames::kJsonPath].get<string>();
         fs::path fp(p);
-        if (fp.is_relative()) fp = fs::path(Platform::GetBasePath()) / fp;
+        // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+        if (fp.is_relative() && p.rfind(PropertyNames::kProviderPrefix, 0) != 0) fp = fs::path(Platform::GetBasePath()) / fp;
         try {
             ani->loadFromFile(fp);
         } catch (...) {
@@ -564,6 +571,9 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
                 if (v.contains(PropertyNames::kJsonResourceId) && v[PropertyNames::kJsonResourceId].is_string()) {
                     resourceId = v[PropertyNames::kJsonResourceId].get<string>();
                 }
+                if (v.contains(PropertyNames::kJsonProviderName) && v[PropertyNames::kJsonProviderName].is_string()) {
+                    resourceId = v[PropertyNames::kJsonProviderName].get<string>();
+                }
                 if (v.contains(PropertyNames::kJsonScaleType) && v[PropertyNames::kJsonScaleType].is_string()) {
                     string st = v[PropertyNames::kJsonScaleType].get<string>();
                     if (st == PropertyNames::kScaleTypeFitCenter)      scaleType = ScaleType::FIT_CENTER;
@@ -628,8 +638,9 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
                 // 传按钮 scale 会造成双重缩放
                 auto luotiAni = make_shared<LuotiAni>(btn.get(), 1.0f, 1.0f);
                 fs::path rp(filePath);
-                if (rp.is_relative()) rp = fs::path(Platform::GetBasePath()) / rp;
-                luotiAni->loadAniDesc(rp);
+                // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+                if (rp.is_relative() && filePath.rfind(PropertyNames::kProviderPrefix, 0) != 0) rp = fs::path(Platform::GetBasePath()) / rp;
+                luotiAni->loadFromFile(rp);
                 luotiAni->setRect(SRect(0, 0, rect.width, rect.height));
                 // parse 阶段尚无渲染设备：不 prepare/play，挂树后由
                 // LuotiAni::setRenderDevice 补 prepare（同 CreateAnimation 模式），

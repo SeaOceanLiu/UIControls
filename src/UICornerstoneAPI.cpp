@@ -23,6 +23,7 @@
 #include "HandleControl.h"
 #include "Menu.h"
 #include "LayoutParser.h"
+#include "ResourceProvider.h"
 #include "PlatformUtils.h"
 #include "Actor.h"
 #include "LuotiAni.h"
@@ -872,6 +873,23 @@ int UICornerstone_Debug_ClearMousePosition(UIInstance instance) {
 int UICornerstone_LoadLayout(UIInstance instance, const char* jsonContent) {
     if (!instance || !instance->initialized || instance->destroying || !jsonContent) return 0;
 
+    // 顶层 resourceProviders 挂载：path 型条目注册进内存 provider（懒加载缓存）
+    if (auto* mem = dynamic_cast<MemoryResourceProvider*>(instance->resourceProvider)) {
+        try {
+            auto j = json::parse(std::string(jsonContent));
+            if (j.is_object() && j.contains(PropertyNames::kJsonResourceProviders) && j[PropertyNames::kJsonResourceProviders].is_array()) {
+                for (auto& item : j[PropertyNames::kJsonResourceProviders]) {
+                    if (!item.is_object()) continue;
+                    std::string name = item.value(PropertyNames::kJsonRPMountName, "");
+                    std::string path = item.value(PropertyNames::kJsonRPMountPath, "");
+                    if (!name.empty() && !path.empty()) {
+                        mem->mountPath(name, path, instance->resourceRoot);
+                    }
+                }
+            }
+        } catch (...) { /* 布局语法错误由 parseLayout 报告 */ }
+    }
+
     LayoutParser parser(instance->dataContext);
     parser.setViewportTarget(instance);
 
@@ -1212,7 +1230,8 @@ UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
     if (jsoncPath) {
         try {                                                 // §6.4-1：异常边界，失败回滚 + 返回 nullptr
             fs::path p(jsoncPath);
-            if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+            // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+            if (p.is_relative() && p.string().rfind(PropertyNames::kProviderPrefix, 0) != 0) p = fs::path(Platform::GetBasePath()) / p;
             ani->loadFromFile(p);
             ani->prepare();
             // 设计语义（test_animation A2）：创建后不自动播放，由调用方 SetBool "playing" 启动
@@ -1238,7 +1257,8 @@ UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
     if (jsoncPath) {
         try {
             fs::path p(jsoncPath);
-            if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+            // provider: 前缀是资源引用（非文件路径）：不拼 base，由 loadFromFile 分流
+            if (p.is_relative() && p.string().rfind(PropertyNames::kProviderPrefix, 0) != 0) p = fs::path(Platform::GetBasePath()) / p;
             ani->loadFromFile(p);
             ani->prepare();
         } catch (...) {

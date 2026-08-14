@@ -76,6 +76,13 @@ public:
     std::string GetResourceRoot() const;
     std::string ResolveResource(const std::string& relativePath) const;
 
+    // ── 内存资源注册表（MemoryResourceProvider，懒创建 + 自动挂载）──
+    // 拷贝注册：引擎内部复制 data，调用方可立即释放。需在 Create 之后调用。
+    bool RegisterResource(const std::string& name, const void* data, size_t len);
+    // 零拷贝注册：转移 data 所有权给引擎（析构/覆盖时经 freeFn 释放，freeFn 空 → free）。
+    bool AdoptResource(const std::string& name, void* data, size_t len,
+                       std::function<void(void*)> freeFn = nullptr);
+
     // ── 布局 ──
     bool LoadLayout(const std::string& jsonContent);
     bool LoadLayoutFromFile(const std::string& filePath);

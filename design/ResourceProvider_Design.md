@@ -62,9 +62,10 @@ UIResourceProviderHandle (*createMemoryResourceProvider)(void);
 // 注册 name → 内存块（默认拷贝模式：内部复制一份字节，调用方可立即释放 data）。
 int  (*memoryProviderRegister)(UIResourceProviderHandle h,
                                const char* name, const void* data, int len);
-// 零拷贝注册（adopt 模式）：转移 data 所有权给引擎，引擎不再拷贝；
-// 调用方此后不得再访问/释放 data；引擎析构或覆盖同名条目时经 freeFn 释放
-// （freeFn 由调用方提供，保证跨 DLL 堆由原分配者释放，可为 NULL → 走引擎默认 free）。
+// 零拷贝注册（adopt 模式）：引擎不复制，仅引用调用方 buffer；
+// 调用方须保持 buffer 有效直至引擎销毁（或同名覆盖）；首次 readFile 命中后引擎
+// 包装进自家缓存（此后调用方可随时释放原缓冲）。引擎析构或覆盖同名条目时经
+// freeFn 回调通知调用方释放原缓冲（freeFn 保证跨 DLL 堆由原分配者释放，可为 NULL → 走引擎默认 free）。
 int  (*memoryProviderAdopt)(UIResourceProviderHandle h,
                             const char* name, const void* data, int len,
                             void (*freeFn)(void*));
@@ -89,10 +90,10 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 **注册模式选择建议**：
 
 - **默认 `Register`（拷贝）**：动画 JSON、字体等小资源；代码路径简单、无生命周期契约。
-- **`Adopt`（零拷贝）**：大纹理等体积敏感资源；调用方须承诺放弃 buffer（转移所有权），并配套 `freeFn` 保证跨 DLL 释放归属。
+- **`Adopt`（零拷贝）**：大纹理等体积敏感资源；引擎零拷贝引用，调用方保持 buffer 有效（直至引擎销毁/覆盖，届时 freeFn 回调释放原缓冲），配套 `freeFn` 保证跨 DLL 释放归属。
 - **JSON 挂载（path 型）**：引擎懒加载后字节归引擎自有，天然无第 ① 层拷贝，不涉及本设计。
 
-`readFile` 命中 adopt 条目时直接 move 进 `shared_ptr<vector<char>>` 返回（不复制）；命中 register 条目时拷贝返回。同名重复 adopt → 先 `freeFn` 释放旧块再接管新块。
+`readFile` 首次命中 adopt 条目时包装复制进引擎缓存（零拷贝收益=注册阶段不复制，此后调用方释放原缓冲无碍）；命中 register 条目时拷贝返回。同名重复 adopt → 先 `freeFn` 释放旧块再接管新块。
 
 ### 3.4 失败语义
 
@@ -108,7 +109,11 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 
 属性层、工厂（`CreateImage`/`CreateImageButton`/`CreateAnimation`/`CreateAnimatedButton`）、JSON 布局零改动；现有 `"image-resource"` 属性（直接资源 ID）语义不变。
 
-> 例外：`Label` 的 `"font"` 是枚举属性（FontNameFromString），不走 `loadFromFile`。字体内存引用于实施时新增字符串属性 `"font-resource"` → `loadFromResource`（TTF 内存管线已具备）。
+> 例外：`Label` 的 `"font"` 是枚举属性（FontNameFromString），不走 `loadFromFile`。字体内存引用于实施时新增字符串属性 `"font-resource"` → `loadFromResource`（TTF 内存管线已具备），布局 JSON 键为 `"fontResource"`（camelCase）。
+>
+> 前缀剥离的统一性：`"provider:"`（`PropertyNames::kProviderPrefix`）判定一律在**字符串层**完成（`rfind` 前缀），不能依赖 `fs::path` 解析——MSVC 将 `"provider:xxx"` 视为相对路径（多字符冒号不是合法根名），上游 `is_relative()` 拼接 basePath 会污染前缀导致分流失效。因此所有 `is_relative()` 拼接点（布局 `path`、`CreateAnimation`、`CreateAnimatedButton`、属性 `animation`/状态图、内嵌 la）均先判前缀豁免拼接。
+>
+> 动画 JSON 内层图片引用：`LuotiAni::getImageFromResource` 直接以 jsonc 中 `src` 原串（如 `"animations/bombBlock/marker.svg"`）作资源 ID 读取；内存模式下调用方以相同原串注册即可（文件模式对应 basePath 拼接读取，语义一致）。
 
 ---
 
@@ -184,7 +189,7 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 ```cpp
 // 内存资源注册（懒创建内部 MemoryResourceProvider，实例创建后自动挂载 setResourceProvider）
 bool UICornerstone::RegisterResource(const std::string& name, const void* data, size_t len);
-// 零拷贝 adopt：转移所有权，freeFn 缺省 nullptr → 引擎默认 free
+// 零拷贝 adopt：引擎仅引用 data（调用方保持有效直至销毁/覆盖），freeFn 缺省 nullptr → 引擎默认 free
 bool UICornerstone::AdoptResource(const std::string& name, void* data, size_t len,
                                   std::function<void(void*)> freeFn = nullptr);
 ```
@@ -253,7 +258,7 @@ main()
 
 - `provider:not-exists` → 资源空、控件存活、日志含 `not found`；
 - `memoryProviderRegister(h, "", ...)` 空名 → 拒绝注册（返回 0）；
-- **adopt 释放契约**：adopt 后调用方释放原 buffer、正常渲染（零拷贝生效）；provider 析构时 `freeFn` 恰被调用一次（用计数断言）；adopt 覆盖同名条目时旧块先经 `freeFn` 释放。
+- **adopt 释放契约**：adopt 后调用方保持 buffer 有效、正常渲染（引擎零拷贝引用，注册阶段不复制）；provider 析构时 `freeFn` 恰被调用一次（计数断言，回调负责实际释放）；adopt 覆盖同名条目时旧块先经 `freeFn` 释放。
 
 ---
 
@@ -274,4 +279,4 @@ main()
 - **向后兼容**：新增 API 追加到函数表尾部（函数表版本号 +1），既有 `createFilesystem` 语义不变；`loadFromFile` 全部保留；`provider:` 前缀只影响新写法，历史布局不受影响。
 - **风险 1**：`provider:` 前缀与真实文件名冲突（极小概率）——约定文档声明该前缀为保留字。
 - **风险 2**：`actors` 对象式值会影响现有字符串解析分支——归一化只增加"对象 → 取 providerName"一路，字符串分支不动。
-- **风险 3**：内存占用与生命周期分两种模式——默认 `Register` 拷贝持有字节（调用方可释放原 buffer，跨 DLL 安全，代价双份内存）；`Adopt` 零拷贝转移所有权（省第 ① 层拷贝，但调用方须放弃 buffer，且跨 DLL 必须经 `freeFn` 由原分配者释放，不存裸指针）。解码层第 ② 层拷贝（纹理上传/字形图集）由后端 API 决定，adopt 无法消除，属预期。
+- **风险 3**：内存占用与生命周期分两种模式——默认 `Register` 拷贝持有字节（调用方可释放原 buffer，跨 DLL 安全，代价双份内存）；`Adopt` 零拷贝引用（注册阶段不复制，但调用方须保持 buffer 有效直至引擎销毁/覆盖，跨 DLL 必须经 `freeFn` 由原分配者释放，不存裸指针）。解码层第 ② 层拷贝（纹理上传/字形图集）由后端 API 决定，adopt 无法消除，属预期。

@@ -28,4 +28,29 @@ public:
     static ResourceProvider* createFilesystem(const std::string& basePath);
 };
 
+// 内存资源注册表：name → 字节。
+// 两种注册模式：
+//   registerMemory —— 拷贝（引擎内部复制字节，调用方可立即释放 data）；
+//   adoptMemory   —— 零拷贝（转移所有权，析构/覆盖时经 freeFn 释放，freeFn 可 NULL → free）。
+// 另支持 mountPath 懒加载（布局 JSON resourceProviders 的 path 条目）：
+//   首次 readFile 时经内部文件系统兜底读入并缓存。
+// readFile 自动剥离 PropertyNames::kProviderPrefix 前缀（工厂路径 / image-resource 等直接透传的场景）。
+class CORE_API MemoryResourceProvider : public ResourceProvider {
+public:
+    MemoryResourceProvider();
+    ~MemoryResourceProvider() override;
+
+    std::shared_ptr<std::vector<char>> readFile(const std::string& path) override;
+    bool exists(const std::string& path) override;
+
+    bool registerMemory(const std::string& name, const void* data, size_t len);
+    bool adoptMemory(const std::string& name, void* data, size_t len, void (*freeFn)(void*));
+    void mountPath(const std::string& name, const std::string& path, const std::string& basePath);
+
+private:
+    struct Entry;
+    struct Impl;
+    Impl* m_impl;
+};
+
 #endif // ResourceProviderH

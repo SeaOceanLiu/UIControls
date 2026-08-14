@@ -98,7 +98,8 @@ void Label::create(void) {
     if (m_isCreated) return;
     if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建（字体依赖 context）
 
-    loadFromResource(m_fontFile.string());
+    if (!m_fontResourceId.empty()) loadFromResource(m_fontResourceId);
+    else loadFromResource(m_fontFile.string());
     createMultilineText();
 
     TextRenderer* renderer = getTextRenderer();
@@ -616,6 +617,15 @@ int Label::setFloatProperty(const char* prop, float value) {
 }
 int Label::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kCaption) == 0) { setCaption(value); return 1; }
+    if (strcmp(prop, PropertyNames::kFontResource) == 0) {
+        if (value && value[0]) {           // 强制换用内存字体：释放旧字体与旧数据
+            m_fontResourceId = value;      // 两阶段记忆：parse 阶段 provider 未就绪时由 create() 补读
+            releaseFont();
+            m_fontData = nullptr;
+            loadFromResource(value);
+        }
+        return 1;
+    }
     return ControlImpl::setStringProperty(prop, value);
 }
 int Label::setEnumProperty(const char* prop, const char* value) {

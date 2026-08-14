@@ -56,6 +56,7 @@ private:
     bool m_fontScaleDirty;
     FontName m_fontName;
     fs::path m_fontFile;
+    std::string m_fontResourceId;   // font-resource 内存字体引用：parse 阶段记忆，create() 补读
     int m_fontStyle;
     SRect m_hotRect;
 

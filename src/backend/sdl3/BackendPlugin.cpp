@@ -203,6 +203,10 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     cb.destroyResourceProvider  = bridge_destroyResourceProvider;
     cb.readFile                 = bridge_readFile;
     cb.fileExists               = bridge_fileExists;
+    cb.createMemoryResourceProvider = bridge_createMemoryResourceProvider;
+    cb.memoryProviderRegister      = bridge_memoryProviderRegister;
+    cb.memoryProviderAdopt         = bridge_memoryProviderAdopt;
+    cb.setResourceProvider         = bridge_setResourceProvider;
 
     printf("SDL3: GetUIBackendCallbacks ready\n");
     return &cb;
