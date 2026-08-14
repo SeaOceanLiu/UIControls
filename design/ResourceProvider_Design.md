@@ -141,7 +141,7 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
 }
 ```
 
-**写法 B（兼容用户示例）——`provider-name` 对象形式**，用于 `actors` 的分态缺省图（`actors.normal/hover/pressed`）：
+**写法 B（兼容用户示例）——`providerName` 对象形式**，用于 `actors` 的分态缺省图（`actors.normal/hover/pressed`）：
 
 ```json
 {
@@ -149,20 +149,20 @@ int  (*setResourceProvider)(UIInstance inst, UIResourceProviderHandle h);
     "id": "img1x",
     "rect": { "x": 580, "y": 80, "w": 240, "h": 176 },
     "actors": {
-        "normal": { "provider-name": "up-image" },
+        "normal": { "providerName": "up-image" },
         "hover": "assets/images/down_hover.png",
         "pressed": "assets/images/down_pressed.png"
     }
 }
 ```
 
-`actors` 解析器对"对象值"做归一化：读 `provider-name` 键 → 等价于 `"provider:<name>"`；字符串值维持现状（文件路径）。
+`actors` 解析器对"对象值"做归一化：读 `providerName` 键 → 等价于 `"provider:<name>"`；字符串值维持现状（文件路径）。
 
 统一规则：`SetString` 属性赋值时，值以 `"provider:"` 前缀开始 → 剥前缀后调 `loadFromResource(id)`；否则 `loadFromFile(path)`。前缀与名字之间不留空格。
 
 ### 4.3 作用域与优先级
 
-1. `SetString("...", "provider:xxx")` 或 `actors.provider-name` → 内存注册表 → 未命中再查布局 `resourceProviders` 懒加载缓存 → 仍未命中则报 `not found` 并跳过（不崩溃）。
+1. `SetString("...", "provider:xxx")` 或 `actors.providerName` → 内存注册表 → 未命中再查布局 `resourceProviders` 懒加载缓存 → 仍未命中则报 `not found` 并跳过（不崩溃）。
 2. 未命中路径**不回退**到 `loadFromFile`——`provider:` 前缀是显式契约，避免静默落到磁盘。
 3. `resourceProviders` 条目在 `LoadLayout` 时注册到实例级 provider，多视口共享；控件级 `setResourceProvider` 传播语义不变（ControlBase.cpp:593）。
 
@@ -196,7 +196,7 @@ bool UICornerstone::AdoptResource(const std::string& name, void* data, size_t le
 | 层 | 变更 | 位置 |
 |----|------|------|
 | `SetString` 字符串属性 | 值以 `provider:` 前缀开头 → 剥前缀 → `loadFromResource(id)`；否则维持 `loadFromFile` | src/UICornerstoneAPI.cpp SetString 分发（含 1192 行 image 分支） |
-| 布局 `actors` 解析 | 对象值 → 归一化为 `provider:<provider-name>`（字符串值不动） | 布局 actors 解析 |
+| 布局 `actors` 解析 | 对象值 → 归一化为 `provider:<providerName>`（字符串值不动） | 布局 actors 解析 |
 
 - 无新 Ptr/Float/String/Enum/Bool 属性类型；`PropertyNames.h` 注册表不变。
 - 回调/事件系统不受影响（资源异步失败仅打日志，同现有 not found 语义）。
@@ -225,7 +225,7 @@ main()
  └─ DestroyInstance / destroyResourceProvider
 ```
 
-另补一个 **Binding 版用例**（`test_cppbinding_resource` 或并入既有 binding 测试）：`RegisterResource` 后 `CreateImage("provider:up-image")` / `LoadLayout` 引用 provider-name，复用同一断言。
+另补一个 **Binding 版用例**（`test_cppbinding_resource` 或并入既有 binding 测试）：`RegisterResource` 后 `CreateImage("provider:up-image")` / `LoadLayout` 引用 providerName，复用同一断言。
 
 ### 6.2 断言要点
 
@@ -254,7 +254,7 @@ main()
 |---|------|------|
 | 1 | `MemoryResourceProvider` 类（注册表 + readFile/exists 命中 + 懒加载缓存表；Register 拷贝 / Adopt 零拷贝两种条目） | `src/ResourceProvider.cpp`、`include/ResourceProvider.h` |
 | 2 | C ABI 四函数 + bridge 实现（createMemory/register/adopt/set） | `src/backend/BackendBridge.h`、三后端 `BackendPlugin.cpp`、`include/UICornerstoneAPI.h` |
-| 3 | `SetString` 属性值 `provider:` 前缀路由 + `actors` 对象式 `provider-name` 归一化 | `src/UICornerstoneAPI.cpp`、布局 actors 解析 |
+| 3 | `SetString` 属性值 `provider:` 前缀路由 + `actors` 对象式 `providerName` 归一化 | `src/UICornerstoneAPI.cpp`、布局 actors 解析 |
 | 4 | `LoadLayout` 顶层 `resourceProviders` 扫描 + 懒加载缓存 | `src/UICornerstoneAPI.cpp`（LoadLayout 入口） |
 | 5 | C++ Binding：`RegisterResource` / `AdoptResource`（懒创建 + 自动挂载，pimpl） | `binding/src/UICornerstone.cpp`、`binding/src/Impl.h`、`binding/include/UICornerstone.h` |
 | 6 | 自动化测试（C ABI 版 + Binding 版） | `test/test_resourceprovider_memory.cpp`、binding 测试 + CMake 注册 |
@@ -264,5 +264,5 @@ main()
 
 - **向后兼容**：新增 API 追加到函数表尾部（函数表版本号 +1），既有 `createFilesystem` 语义不变；`loadFromFile` 全部保留；`provider:` 前缀只影响新写法，历史布局不受影响。
 - **风险 1**：`provider:` 前缀与真实文件名冲突（极小概率）——约定文档声明该前缀为保留字。
-- **风险 2**：`actors` 对象式值会影响现有字符串解析分支——归一化只增加"对象 → 取 provider-name"一路，字符串分支不动。
+- **风险 2**：`actors` 对象式值会影响现有字符串解析分支——归一化只增加"对象 → 取 providerName"一路，字符串分支不动。
 - **风险 3**：内存占用与生命周期分两种模式——默认 `Register` 拷贝持有字节（调用方可释放原 buffer，跨 DLL 安全，代价双份内存）；`Adopt` 零拷贝转移所有权（省第 ① 层拷贝，但调用方须放弃 buffer，且跨 DLL 必须经 `freeFn` 由原分配者释放，不存裸指针）。解码层第 ② 层拷贝（纹理上传/字形图集）由后端 API 决定，adopt 无法消除，属预期。
