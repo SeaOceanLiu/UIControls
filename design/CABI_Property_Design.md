@@ -1325,3 +1325,16 @@ assert(ok == 1 && strcmp(buf, "hello") == 0);
 
 > `*` = Button 重写了 `setTextStateColor` / `setTextShadowStateColor` 以同步到内部 caption Label。
 > `4态` = StateColor (Normal/Hover/Pressed/Disabled)，`SColor` = 简单单色。
+
+---
+
+## 变更注记（2026-08-14）
+
+Label 新增两个 String 属性（走 `Control::setStringProperty`，`GetString` 只写不读，未设置时返回空串）：
+
+| 属性（kJson 键） | 说明 |
+|------------------|------|
+| `font-resource`（`kJsonFontResource`="fontResource"） | 内存字体资源 ID，经 MemoryResourceProvider 注册（`RegisterResource`/`AdoptResource`），优先级低于 `font-file` |
+| `font-file`（`kJsonFontFile`="fontFile"） | 任意字体文件路径（相对 resourceRoot，或 `provider:` 前缀引用内存资源），覆盖 `font` 枚举 |
+
+三形态互斥（详见 ResourceProvider_Design.md §5.2）：`font` 枚举 < `font-file` 路径 < `font-resource` 内存 ID。文件路径一律**在字符串层判定前缀**（`provider:`），不得经 `fs::path::is_relative` 判断——MSVC 会把带前缀的字符串当作相对路径并拼接 basePath 污染前缀。

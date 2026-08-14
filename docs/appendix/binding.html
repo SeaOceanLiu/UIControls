@@ -56,7 +56,11 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>Control FindControl(const std::string&amp; id)</code></td><td>按 id 查找控件（未找到返回无效句柄）</td></tr>
 <tr><td><code>void SetResourceRoot(const std::string&amp; path)</code></td><td>运行时切换资源根目录</td></tr>
 <tr><td><code>std::string ResolveResource(const std::string&amp; relativePath) const</code></td><td>将相对路径解析为绝对资源路径</td></tr>
+<tr><td><code>bool RegisterResource(const std::string&amp; name, const void* data, size_t len)</code></td><td>拷贝注册内存资源（引擎复制字节，data 用后可释放）；须在 <code>Create</code> 后调用，懒创建 provider 并自动挂载</td></tr>
+<tr><td><code>bool AdoptResource(const std::string&amp; name, void* data, size_t len, std::function&lt;void(void*)&gt; freeFn = nullptr)</code></td><td>零拷贝注册（引擎仅引用 data，调用方保持缓冲有效；覆盖/销毁时经 freeFn 释放，空 → 默认 free）</td></tr>
 </table>
+
+<p>引用方式：以 <code>provider:name</code> 前缀传给工厂 / 布局 / 字符串属性（如 <code>kFontFile</code> / <code>kFontResource</code>），未命中回退文件系统。对应 C ABI：<code>createMemoryResourceProvider</code> / <code>memoryProviderRegister</code> / <code>memoryProviderAdopt</code> / <code>setResourceProvider</code>（见 8.8）。</p>
 
 <h2>11.4 控件工厂（创建参数末尾 xScale/yScale，默认 1.0f）</h2>
 

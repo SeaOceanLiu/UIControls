@@ -83,6 +83,7 @@ private:
     void releaseFont(void);
     void releaseTexts(void);
     void loadFromFile(void);
+    void loadFromFile(fs::path filePath);   // 任意字体文件路径（font-file 属性）→ 走 provider 查询
     void loadFromResource(string resourceId);
     void createMultilineText(void);
     void computeLineOffsets(void);

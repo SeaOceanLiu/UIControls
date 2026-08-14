@@ -209,9 +209,10 @@ bool UICornerstone::AdoptResource(const std::string& name, void* data, size_t le
 |----|------|------|
 | 资源载体控件 `loadFromFile` 入口 | 值以 `provider:` 前缀开头 → 剥前缀 → `loadFromResource(id)`；否则维持 `loadFromFile` | `Actor::loadFromFile`、`LuotiAni::loadFromFile`（属性/工厂路径汇流点） |
 | 布局 `actors` 解析 | 对象值 → 归一化为 `provider:<providerName>`（字符串值不动） | 布局 actors 解析 |
-| Label 字体 | 新增字符串属性 `"font-resource"` → `loadFromResource`（`"font"` 枚举不变） | Label |
+| Label 字体 | 新增字符串属性 `"font-resource"` → `loadFromResource`（`"font"` 枚举不变）；新增字符串属性 `"font-file"` → 覆盖枚举默认 `m_fontFile` → 经 provider 查询任意路径 | Label |
 
-- 无新 Ptr/Float/String/Enum/Bool 属性类型；`PropertyNames.h` 注册表仅追加 `"font-resource"`。
+- 无新 Ptr/Float/String/Enum/Bool 属性类型；`PropertyNames.h` 注册表追加 `"font-resource"` / `"font-file"`（JSON 键 `"fontResource"` / `"fontFile"`）。
+- **字体三形态（互斥覆盖，优先级即序）**：`font`（枚举，内置 28 种 `ConstDef::fontFiles`）< `font-file`（任意文件路径，相对 resourceRoot 经 provider 查询，支持 `provider:` 前缀）< `font-resource`（内存注册 ID）。设置任一形态即清除另一形态的记忆（`m_fontResourceId` / `m_fontFile`），两阶段补读经既有 `create()` 完成。
 - **GetString 维持只写不读**（2026-08-14 决策）：`image`/`image-resource`/`font-resource` 等资源属性不新增读支持，`GetString` 仍返回 0；`provider:` 前缀只影响写入路由，不涉及读回对称——避免引入过多变化，序列化需求后续再议。
 - 回调/事件系统不受影响（资源异步失败仅打日志，同现有 not found 语义）。
 - C ABI 函数表：`createResourceProvider` 之后追加 `createMemoryResourceProvider` / `memoryProviderRegister` / `memoryProviderAdopt` / `setResourceProvider` 四个函数指针（表版本 +1），三后端 bridge 同步（§2.1 差异仅 SVG，bridge 无差异）。
@@ -268,15 +269,15 @@ main()
 |---|------|------|
 | 1 | `MemoryResourceProvider` 类（注册表 + readFile/exists 命中 + 懒加载缓存表；Register 拷贝 / Adopt 零拷贝两种条目） | `src/ResourceProvider.cpp`、`include/ResourceProvider.h` |
 | 2 | C ABI 四函数 + bridge 实现（createMemory/register/adopt/set） | `src/backend/BackendBridge.h`、三后端 `BackendPlugin.cpp`、`include/UICornerstoneAPI.h` |
-| 3 | 资源载体控件 `loadFromFile` 入口分流（`provider:` 前缀 → `loadFromResource`）+ `actors` 对象式 `providerName` 归一化 + Label `"font-resource"` 新增 | `src/Actor.cpp`、`src/LuotiAni.cpp`、`src/Label.cpp`、布局 actors 解析 |
+| 3 | 资源载体控件 `loadFromFile` 入口分流（`provider:` 前缀 → `loadFromResource`）+ `actors` 对象式 `providerName` 归一化 + Label `"font-resource"` / `"font-file"` 新增 + 拼接点前缀豁免 + LuotiAni/Label 两阶段补读 | `src/Actor.cpp`、`src/LuotiAni.cpp`、`src/Label.cpp`、`src/Button.cpp`、`src/UICornerstoneAPI.cpp`、布局解析 |
 | 4 | `LoadLayout` 顶层 `resourceProviders` 扫描 + 懒加载缓存 | `src/UICornerstoneAPI.cpp`（LoadLayout 入口） |
 | 5 | C++ Binding：`RegisterResource` / `AdoptResource`（懒创建 + 自动挂载，pimpl） | `binding/src/UICornerstone.cpp`、`binding/src/Impl.h`、`binding/include/UICornerstone.h` |
-| 6 | 自动化测试（C ABI 版 + Binding 版） | `test/test_resourceprovider_memory.cpp`、binding 测试 + CMake 注册 |
-| 7 | 文档：控件 JSON 引用语法、布局键说明（随实施） | `docs/` |
+| 6 | 自动化测试（C ABI 版）——`test_resourceprovider_cabi` 三后端运行通过（6 项核心断言 + adopt freeFn 计数） | `test/test_resourceprovider_cabi.cpp`、`test/CMakeLists.txt` |
+| 7 | 文档：控件 JSON 引用语法、布局键说明、Binding 手册 | `docs/` |
 
 ## 8. 兼容性与风险
 
 - **向后兼容**：新增 API 追加到函数表尾部（函数表版本号 +1），既有 `createFilesystem` 语义不变；`loadFromFile` 全部保留；`provider:` 前缀只影响新写法，历史布局不受影响。
-- **风险 1**：`provider:` 前缀与真实文件名冲突（极小概率）——约定文档声明该前缀为保留字。
+- **风险 1**：`provider:` 前缀与真实文件名冲突（极小概率）——约定文档声明该前缀为保留字。MSVC 下 `fs::path("provider:xxx")` 被视相对路径，因此**前缀判定一律在字符串层**（`rfind`），所有 `is_relative()` 拼接点先判前缀豁免（布局 `path`、`CreateAnimation`、`CreateAnimatedButton`、属性 `animation`/状态图、内嵌 la）。
 - **风险 2**：`actors` 对象式值会影响现有字符串解析分支——归一化只增加"对象 → 取 providerName"一路，字符串分支不动。
 - **风险 3**：内存占用与生命周期分两种模式——默认 `Register` 拷贝持有字节（调用方可释放原 buffer，跨 DLL 安全，代价双份内存）；`Adopt` 零拷贝引用（注册阶段不复制，但调用方须保持 buffer 有效直至引擎销毁/覆盖，跨 DLL 必须经 `freeFn` 由原分配者释放，不存裸指针）。解码层第 ② 层拷贝（纹理上传/字形图集）由后端 API 决定，adopt 无法消除，属预期。

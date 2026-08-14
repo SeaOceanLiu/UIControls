@@ -280,6 +280,11 @@ float Label::getStringWidth(const string& text) {
     return getTextSize(text).width;
 }
 
+void Label::loadFromFile(fs::path filePath){
+    if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后 create() 经 m_fontFile 加载
+    loadFromResource(filePath.string());
+}
+
 void Label::loadFromResource(string resourceId){
     if (m_font) return;
     if (GET_CONTEXT == nullptr) return;  // 两阶段：挂树后由 create() 加载
@@ -620,9 +625,20 @@ int Label::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kFontResource) == 0) {
         if (value && value[0]) {           // 强制换用内存字体：释放旧字体与旧数据
             m_fontResourceId = value;      // 两阶段记忆：parse 阶段 provider 未就绪时由 create() 补读
+            m_fontFile = fs::path();       // 与 font-file 互斥：清除路径形态
             releaseFont();
             m_fontData = nullptr;
             loadFromResource(value);
+        }
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kFontFile) == 0) {
+        if (value && value[0]) {           // 任意字体文件路径：覆盖枚举默认 m_fontFile（两阶段：create() 加载）
+            m_fontFile = fs::path(value);
+            m_fontResourceId.clear();
+            releaseFont();
+            m_fontData = nullptr;
+            loadFromFile(fs::path(value));
         }
         return 1;
     }

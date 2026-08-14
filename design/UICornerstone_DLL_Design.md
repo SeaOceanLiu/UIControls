@@ -300,7 +300,7 @@ gh repo rename UICornerstone
 
 ## 6. C ABI 公开 API 定义
 
-> **修订注记（2026-08-05）**：本节为本项目早期（DLL 化改造阶段）的 API 设计快照，**仅作历史参考**。其中 `UICornerstone_Init`/`UICornerstone_Shutdown`/`UICornerstone_InitFromPlugin` 及 `SetText`/`SetOnClick`/`SetBGColor` 等旧导出已在后续演进中**移除或迁移**：多实例改造后所有函数以 `UIInstance` 为首参（`CreateInstance`/`CreateInstanceFromPlugin`/`DestroyInstance` 管理生命周期），旧专用导出由统一属性系统 API（`SetString`/`SetColor`/`SetBool`/`SetFloat`/`SetCallback`…）替代。**当前 API 以 `include/UICornerstoneAPI.h` 为准**，多实例设计见 `design/CABI_MultiInstance_Design.md`，属性系统见 `design/CABI_Property_Design.md`。
+> **修订注记（2026-08-05）**：本节为本项目早期（DLL 化改造阶段）的 API 设计快照，**仅作历史参考**。其中 `UICornerstone_Init`/`UICornerstone_Shutdown`/`UICornerstone_InitFromPlugin` 及 `SetText`/`SetOnClick`/`SetBGColor` 等旧导出已在后续演进中**移除或迁移**：多实例改造后所有函数以 `UIInstance` 为首参（`CreateInstance`/`CreateInstanceFromPlugin`/`DestroyInstance` 管理生命周期），旧专用导出由统一属性系统 API（`SetString`/`SetColor`/`SetBool`/`SetFloat`/`SetCallback`…）替代。**当前 API 以 `include/UICornerstoneAPI.h` 为准**，多实例设计见 `design/CABI_MultiInstance_Design.md`，属性系统见 `design/CABI_Property_Design.md`。2026-08-14 追加内存资源 API：`createMemoryResourceProvider` / `memoryProviderRegister` / `memoryProviderAdopt` / `setResourceProvider`（`resourceProviders` 挂载到实例），详见 `design/ResourceProvider_Design.md`。
 
 ### 6.1 回调表
 

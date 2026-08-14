@@ -129,6 +129,8 @@
 <tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
 <tr><td><code>font</code> / <code>align</code></td><td>Enum</td><td>HarmonyOS / <code>mid-left</code></td></tr>
+<tr><td><code>font-file</code></td><td>String（只写）</td><td>任意字体文件路径（相对 resourceRoot，可 <code>provider:</code> 前缀引用内存）；覆盖 <code>font</code> 枚举</td></tr>
+<tr><td><code>font-resource</code></td><td>String（只写）</td><td>内存字体资源 ID（MemoryResourceProvider 注册名）；优先级低于 font-file</td></tr>
 <tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>expand</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>clickable</code></td><td>Bool</td><td>false</td></tr>

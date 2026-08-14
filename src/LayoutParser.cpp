@@ -366,6 +366,12 @@ shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
                                  j[PropertyNames::kJsonFontResource].get<string>().c_str());
     }
 
+    // fontFile：任意字体文件路径（String 属性 font-file，两阶段：create() 补读）
+    if (j.contains(PropertyNames::kJsonFontFile) && j[PropertyNames::kJsonFontFile].is_string()) {
+        label->setStringProperty(PropertyNames::kFontFile,
+                                 j[PropertyNames::kJsonFontFile].get<string>().c_str());
+    }
+
     // shadow
     if (j.contains(PropertyNames::kJsonShadow) && j[PropertyNames::kJsonShadow].is_object()) {
         pushJsonPath(PropertyNames::kJsonShadow);

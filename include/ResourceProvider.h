@@ -31,7 +31,8 @@ public:
 // 内存资源注册表：name → 字节。
 // 两种注册模式：
 //   registerMemory —— 拷贝（引擎内部复制字节，调用方可立即释放 data）；
-//   adoptMemory   —— 零拷贝（转移所有权，析构/覆盖时经 freeFn 释放，freeFn 可 NULL → free）。
+//   adoptMemory   —— 零拷贝（引擎不复制、仅引用调用方 buffer；调用方须保持有效直至
+//                    销毁/覆盖，届时经 freeFn 回调释放，freeFn 可 NULL → 默认 free）。
 // 另支持 mountPath 懒加载（布局 JSON resourceProviders 的 path 条目）：
 //   首次 readFile 时经内部文件系统兜底读入并缓存。
 // readFile 自动剥离 PropertyNames::kProviderPrefix 前缀（工厂路径 / image-resource 等直接透传的场景）。

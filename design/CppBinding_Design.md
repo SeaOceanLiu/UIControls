@@ -289,6 +289,14 @@ public:
     std::string GetResourceRoot() const;
     std::string ResolveResource(const std::string& relativePath) const;
 
+    // ── 内存资源注册表（MemoryResourceProvider，懒创建 + 自动挂载）──
+    // 拷贝注册：引擎内部复制 data，调用方可立即释放。需在 Create 之后调用。
+    bool RegisterResource(const std::string& name, const void* data, size_t len);
+    // 零拷贝注册：引擎不复制、仅引用 data（调用方须保持缓冲有效直至实例销毁；
+    // 析构/覆盖时经 freeFn 回调释放，freeFn 空 → 默认 free）。
+    bool AdoptResource(const std::string& name, void* data, size_t len,
+                       std::function<void(void*)> freeFn = nullptr);
+
     // ── 布局 ──
     bool LoadLayout(const std::string& jsonContent);
     bool LoadLayoutFromFile(const std::string& filePath);
@@ -673,6 +681,35 @@ std::unique_ptr<UICornerstone> UICornerstone::Create(const Config& config) {
 ```
 
 > 注：`UI_INSTANCE_CONFIG_DEFAULT` 宏（UICornerstoneAPI.h:48）自动填充 `structSize`——Binding 必须使用该宏或显式填 `sizeof(UIInstanceConfig)`（版本兼容检查）。
+
+#### 5.4.1 内存资源注册（MemoryResourceProvider）
+
+`provider:` 前缀将文件引用分流到内存注册表，工厂/布局/属性三入口均可使用（核心设计见 `design/ResourceProvider_Design.md`）：
+
+```cpp
+// 拷贝注册：引擎内部复制 data，调用方可立即释放。需在 Create 之后调用。
+bool RegisterResource(const std::string& name, const void* data, size_t len);
+// 零拷贝注册：引擎不复制、仅引用 data；析构/覆盖时经 freeFn 回调释放（空 → free）。
+bool AdoptResource(const std::string& name, void* data, size_t len,
+                   std::function<void(void*)> freeFn = nullptr);
+```
+
+**内部实现**（对齐 C ABI）：
+
+1. **懒创建 + 自动挂载**：首次调用时经 `createMemoryResourceProvider` 创建 provider，立即 `setResourceProvider("resourceProviders", ...)` 挂到实例——用户无需手动挂载。
+2. **adopt 契约**：`memoryProviderAdopt` 零拷贝引用调用方 buffer，调用方须保持有效直至销毁/覆盖；覆盖或销毁时引擎回调 `freeFn`（空 → 默认 `free`）。
+3. **前缀路由**：`provider:name` 由核心库在字符串层判定（不得经 `fs::path::is_relative`——MSVC 会把 `provider:` 当作相对路径拼 basePath 污染前缀），未命中注册名时回退文件系统查找，最终失败返回空资源。
+4. **Binding trampoline**：`std::function` 不能直接作 C 函数指针，`AdoptResource` 的 freeFn 经进程级全局表 `g_adoptFreeFns`（binding/src/UICornerstone.cpp，rawPtr 唯一，进程内单线程用例）转发到 `memoryProviderAdopt` 的 C freeFn 回调；注册失败时回滚擦除。
+
+**Label 字体三形态互斥**（`font` 枚举 < `font-file` 任意路径 < `font-resource` 内存 ID）：
+
+```cpp
+label.SetString(PropertyNames::kFontFile, "fonts/maple.ttf");            // 文件（相对 resourceRoot）
+label.SetString(PropertyNames::kFontFile, "provider:maple-ttf");         // 内存（provider: 前缀）
+label.SetString(PropertyNames::kFontResource, "maple-ttf");              // 内存（直接 ID）
+```
+
+> `GetString` 对这两个属性只写不读：Set 后 Get 返回空串（属性系统约定，见 CABI_Property_Design.md 变更注记）。
 
 ### 5.5 后端管理（纯动态加载）
 

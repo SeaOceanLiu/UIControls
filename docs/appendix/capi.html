@@ -136,6 +136,26 @@ UICornerstone_SetBackendConfig(inst, key, value)      /* inst=NULL 为全局默�
 UICornerstone_SetBackendConfigInt / SetBackendConfigBool
 UICornerstone_GetBackendConfig(inst, key, char*, len) /* 只读查询 */</code></pre>
 
+<h2>8.8 内存资源（MemoryResourceProvider）</h2>
+
+<p>注册内存资源后，以 <code>provider:name</code> 前缀在工厂 / 布局 / 属性（<code>font-file</code> 等）中引用，引擎不再访问磁盘；未命中注册名时回退文件系统查找。详细设计见 <code>design/ResourceProvider_Design.md</code>。</p>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UIMemoryResourceProvider* createMemoryResourceProvider(alloc, freeFn, user)</code></td><td>创建内存 provider（alloc/freeFn 可 null → 默认 malloc/free）</td></tr>
+<tr><td><code>int memoryProviderRegister(provider, name, data, len)</code></td><td>拷贝注册：引擎复制字节，调用方可立即释放</td></tr>
+<tr><td><code>int memoryProviderAdopt(provider, name, data, len, freeFn)</code></td><td>零拷贝注册：引擎仅引用 data，覆盖/销毁时经 freeFn 释放（null → 默认 free）</td></tr>
+<tr><td><code>int setResourceProvider(inst, role, provider)</code></td><td>挂载到实例（角色 <code>"resourceProviders"</code>）；同名 provider 覆盖旧条目并先释放</td></tr>
+</table>
+
+<pre><code>/* 直连 C ABI 用法 */
+UIMemoryResourceProvider* rp = createMemoryResourceProvider(NULL, NULL, NULL);
+memoryProviderAdopt(rp, "cross-down", pngData, pngLen, NULL);   /* 零拷贝引用 */
+setResourceProvider(inst, "resourceProviders", rp);
+UICornerstone_CreateImage(inst, "provider:cross-up", 20, 70, 0, 0);</code></pre>
+
+<div class="note">adopt 契约：调用方须保持缓冲有效直至实例销毁；C++ Binding 的 <code>RegisterResource</code> / <code>AdoptResource</code> 封装了懒创建 + 自动挂载（见 11.3）。</div>
+
 <div class="chapter-nav">
   <a href="properties.html">← 7 属性速查表</a>
   <a href="debugging.html">下一节：9 问题定位手段 →</a>

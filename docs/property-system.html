@@ -42,7 +42,9 @@ slider.SetFloat(PropertyNames::kValue, 50.0f);              // "value"
 button.SetCallback(PropertyNames::kEventClick, [](const Event&){});
 editBox.SetCallback(PropertyNames::kEventTextChanged, [](const Event& e){
     auto text = e.GetTextChanged();
-});</code></pre>
+});
+label.SetString(PropertyNames::kFontResource, "maple-font");           // "font-resource"：内存注册字体 ID
+label.SetString(PropertyNames::kFontFile, "fonts/MyCustom.ttf");       // "font-file"：任意字体文件路径</code></pre>
 
 <h2>3.3.3 属性在控件中的实现</h2>
 

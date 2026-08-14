@@ -188,6 +188,14 @@ static int runTest(const char* shortName, const char* displayName) {
                     "fontResource": "maple-font"
                 },
                 {
+                    "type": "label",
+                    "id": "lblFile",
+                    "rect": { "x": 20, "y": 56, "w": 760, "h": 32 },
+                    "caption": "Font-file label",
+                    "fontSize": 16,
+                    "fontFile": "provider:maple-font"
+                },
+                {
                     "type": "image-button",
                     "id": "imgBtn",
                     "rect": { "x": 20, "y": 70, "w": 64, "h": 64 },

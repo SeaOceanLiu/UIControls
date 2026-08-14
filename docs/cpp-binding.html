@@ -62,6 +62,24 @@ int main() {
 
 <div class="note">工厂方法对应 C ABI 创建函数：<code>CreateButton(text,x,y,w,h)</code>、<code>CreateLabel(text,fontSize,x,y,w,h)</code>、<code>CreateCheckBox(text,x,y,w,h)</code>、<code>CreateEditBox(x,y,w,h)</code>、<code>CreateProgressBar(x,y,w,h)</code>、<code>CreateImage(image,x,y,w,h)</code> 等。</div>
 
+<h2>3.1.4 内存资源注册（RegisterResource / AdoptResource）</h2>
+
+<p>实例创建后、加载资源前注册内存资源：资源以 <code>provider:</code> 前缀在属性 / 工厂 / 布局中引用，引擎不再访问磁盘（配合 <code>Config::WithResourceRoot</code> 指向空目录可全内存运行）。两种注册模式：</p>
+
+<pre><code>// ① 拷贝注册：引擎内部复制字节，data 用后可立即释放，适用小资源
+bool ok = ui->RegisterResource("maple-font", ttfData, ttfLen);
+
+// ② 零拷贝 adopt：引擎仅引用 data（不复制），调用方须保持缓冲有效
+//    直至实例销毁；释放由 freeFn 回调负责（跨 DLL 堆安全，可为 nullptr → 默认 free）
+bool ok2 = ui->AdoptResource("cross-down", pngData, pngLen, [](void* p){ free(p); });
+
+// 引用方式（与 C API 等价）：
+auto img  = ui->CreateImage("provider:cross-up", 20, 70, 0, 0);
+label.SetString(PropertyNames::kFontResource, "maple-font");
+ui->LoadLayout(layoutJson);   // 布局内 provider:name / fontResource / actors.providerName / path 均可</code></pre>
+
+<div class="note">注册须在 <code>Create</code> 之后调用（不可在 Create 前暂存）；同名重复注册后注册覆盖前者；adopt 覆盖旧条目时先调旧 <code>freeFn</code> 释放。销毁实例即销毁 provider，adopt 缓冲经 <code>freeFn</code> 归还。</div>
+
 <div class="chapter-nav">
   <a href="basics.html">← 3 从基础入门</a>
   <a href="first-app.html">下一节：3.2 创建你的第 1 个 UICornerstone 应用 →</a>

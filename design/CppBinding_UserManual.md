@@ -210,6 +210,20 @@ auto aniBtn = ui->CreateAnimatedButton("spin.jsonc", 20, 340, 100, 40, 2.0f, 2.0
 
 图片/动画路径相对 `resourceRoot` 解析（§9）。
 
+**内存资源注册**（不碰磁盘）：`RegisterResource`（拷贝）/ `AdoptResource`（零拷贝）在 `Create` 之后注册，随后以 `provider:` 前缀引用：
+
+```cpp
+ui->RegisterResource("maple-font", ttfData, ttfLen);          // 拷贝：data 用后可立即释放
+ui->AdoptResource("cross-down", pngData, pngLen, [](void* p){ free(p); });  // 零拷贝：调用方保持 buffer 有效，销毁时 freeFn 释放
+
+auto img    = ui->CreateImage("provider:cross-up", 20, 80, 128, 128);      // 工厂
+auto anim   = ui->CreateAnimation("provider:bomb-ani", 20, 220, 256, 256);
+label.SetString(PropertyNames::kFontResource, "maple-font");               // 属性
+ui->LoadLayout(jsonWithProviderRefs);                                       // 布局（provider:/providerName/fontResource/fontFile）
+```
+
+> `provider:` 是保留前缀（文件与内存引用分流），勿用作真实文件名；adopt 语义为引擎零拷贝引用——调用方须保持缓冲有效直至实例销毁，同名覆盖/销毁时经 `freeFn` 归还。
+
 **CreateAnimatedButton**（C ABI `UICornerstone_CreateAnimatedButton`）：`jsoncPath` 可传空串创建纯按钮；动画为**内嵌资源**——不挂树、不响应鼠标、rect 为按钮局部坐标（铺满按钮），播放由 `SetBool("playing")=1` 启动。`xScale`/`yScale` 作用于**按钮本身**；内嵌动画构造 scale 恒 1.0，按钮 scale 经 `setParent` 复合缩放传导到动画——对动画再设按钮同值 scale 会造成双重缩放（2x 按钮 → 4x 内容）。JSON 布局等价写法：`{"type":"button","luotiAni":"..."}`（LayoutSystem_Design.md §5）。
 
 ### 4.4 对话框
@@ -262,6 +276,8 @@ void*   p = ctl.GetPtr("user-data");
 | `kOrientation` | `"orientation"` | 滚动条/分割条方向 |
 | `kPlaying` / `kLoop` | `"playing"` / `"loop"` | 动画（Animation/AnimatedButton：置 1=play 帧复位重播）/ 循环 |
 | `kAnimation` | `"animation"` | 动画 jsonc 路径（重载换动画，播放中从第 0 帧重播） |
+| `kFontResource` | `"font-resource"` | Label 内存字体资源 ID（provider 注册名） |
+| `kFontFile` | `"font-file"` | Label 任意字体文件路径（相对 resourceRoot，可带 `provider:`） |
 
 > 全部常量以 `include/PropertyNames.h` 为准（约 590 个）；控件不支持某个属性时，Set 静默失败、Get 返回空值/0——不会崩溃。
 

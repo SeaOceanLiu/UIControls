@@ -1,5 +1,33 @@
 ﻿## Session History
 
+### 2026-08-14: ResourceProvider 全链路实施 + Label 任意字体（Complete）
+
+**背景**：设计定稿（commit 42e19b4，含 AGENTS.md 提交/推送规则）后按 §7 实施清单逐项落地：内存资源加载（初始化前堆内存 → C ABI 注册 → 挂载实例）+ JSON 集中配置（顶层 resourceProviders 挂载点 + provider: 引用分流），并扩展 Label 任意字体加载。
+
+**1. MemoryResourceProvider（src/ResourceProvider.cpp / include/ResourceProvider.h）**：pimpl 实现；两种注册模式——`registerMemory`（拷贝，调用方可立即释放）/ `adoptMemory`（零拷贝引用：引擎不复制，调用方保持 buffer 有效直至销毁/覆盖，析构/覆盖时经 freeFn 回调释放，freeFn 可为 NULL → 默认 free）；`mountPath` 懒建文件系统 delegate（首次 readFile 读入并缓存）；`readFile`/`exists` 自动剥离 `provider:` 前缀（PropertyNames::kProviderPrefix）。
+
+**2. C ABI 四函数 + bridge（include/UICornerstoneAPI.h / src/backend/BackendBridge.h / 三后端 BackendPlugin.cpp）**：`createMemoryResourceProvider` / `memoryProviderRegister` / `memoryProviderAdopt` / `setResourceProvider` 追加函数表尾，三后端注册（sed 应用 + grep 各 1 处验证）；`bridge_setResourceProvider` 写 `UIContext::resourceProvider`（ControlBase 级联传播）。
+
+**3. 入口分流（字符串层，非 fs::path）**：`Actor::loadFromFile` / `LuotiAni::loadFromFile` 首行 `rfind("provider:",0)` → `loadFromResource(substr(9))`；`LuotiAni::loadAniDesc(fs::path)` 兜底分流；**关键教训——MSVC 将 `fs::path("provider:xxx")` 判为相对路径**，上游 `is_relative()` 拼接 basePath 会污染前缀导致分流失效，故全部 6 处拼接点（布局 path / CreateAnimation / CreateAnimatedButton / 属性 animation / 状态图 / 内嵌 la）先判前缀豁免。
+
+**4. 两阶段补读**：布局 parse 阶段控件未挂树（provider 未就绪）→ `LuotiAni::loadFromResource` 记忆 `m_resourceId`、`setRenderDevice` 时补读描述再 prepare；Label `font-resource` 记忆 `m_fontResourceId`、`create()` 补读。
+
+**5. LoadLayout 顶层挂载（src/UICornerstoneAPI.cpp）**：`resourceProviders` 数组（camelCase 键 `name`/`path`）→ `mountPath(name, path, resourceRoot)`，json::parse 失败静默交 parseLayout 报告。
+
+**6. Label 任意字体三形态**：`font`（枚举 28 种）< `font-file`（任意路径，覆盖 m_fontFile，相对 resourceRoot 经 provider 查询，支持 provider: 前缀）< `font-resource`（内存 ID）；互斥覆盖（m_fontResourceId / m_fontFile 互清）；JSON 键 `fontFile` / `fontResource`（parseLabel 白名单新增）；`loadFromFile(fs::path)` 新重载。
+
+**7. C++ Binding（binding/）**：`RegisterResource` / `AdoptResource`（须在 Create 后调用，懒创建内部 provider + 自动 setResourceProvider）；std::function 不能直作 C 函数指针 → 全局 `g_adoptFreeFns` + `adoptFreeTrampoline`（调用时移除条目）；析构先 DestroyInstance 再销毁 provider。
+
+**8. 测试（test/test_resourceprovider_cabi.cpp，三后端运行通过）**：SDL3/SFML/Raylib 各 6 项核心断言全绿——5 资源（cross_up/cross_down png、MapleMono ttf、bombBlock.jsonc、marker.svg）堆内存注册（4 register + 1 adopt 零拷贝）、`resourceRoot="_nonexistent_dir_"` 零磁盘初始化、布局三引用语法（actors providerName 对象式 + 字符串式 + animation path provider:）、工厂 provider: 三引用、GetRect 32×32 证明纹理来自内存、负用例存活、adopt freeFn 恰一次计数；fontFile 前缀形态经 `fontFile:"provider:maple-font"` label 验证。期间修复：测试文件缺 UTF-8 BOM 导致 MSVC 936 代码页中文注释吞声明行（已补 BOM）。
+
+**9. Release 构建**：三后端 Release（build/{sdl3,sfml,raylib}_dll --config Release）→ `release/` 目录收集 UICornerstone.dll + 三后端插件 + 运行时 DLL + assets 资源。
+
+**10. 文档**：ResourceProvider_Design.md（adopt 零拷贝契约修正、前缀拼接豁免、fontResource/fontFile JSON 键、动画 JSON 内层图片 src 原串注册、§7 清单状态、§8 风险）；docs/declarative-ui.html 新增 3.4.7 资源提供者；docs/controls/label.html 属性表 + C ABI 样例；docs/cpp-binding.html 新增 3.1.4；docs/property-system.html 3.3.2 常量示例。提交 99b2764（实施）+ f659681（Enhancements_Analysis.md）。
+
+**11. 教训**：① DLL 模式测试 exe 目录的 UICornerstone.dll 由 POST_BUILD 拷贝，只重编核心库不重编 test 目标会导致 exe 目录 DLL 陈旧（vtable/分流行为"假象"）——重编 test 目标或核对 DLL 时间戳；② adopt 语义一旦定稿（调用方保持有效），测试与文档须同步修正，避免"释放后渲染"矛盾断言。
+
+---
+
 ### 2026-08-13: ViewportScale 设计收尾——剩余项逐项实施（Complete）
 
 **背景**：用户要求按上轮列出的未实施项清单逐项谨慎实施（字号重建剩余控件、属性系统接入、逆变换公开、缓存统计、双线性开关、可见性过滤、三项核对）。

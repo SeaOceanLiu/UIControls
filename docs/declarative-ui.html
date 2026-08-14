@@ -205,6 +205,43 @@ reloader.setPollInterval(15);   // 调整检查间隔（帧数）</code></pre>
 
 <div class="note">热重载会重建整棵控件树：控件状态（选中、输入内容）不保留；仅支持单文件轮询监视。适合开发期调整布局/样式。</div>
 
+<h2>3.4.7 资源提供者（ResourceProviders）</h2>
+
+<p>支持在初始化前把资源读入内存注册（<code>MemoryResourceProvider</code>），或经布局顶层 <code>resourceProviders</code> 键把磁盘路径挂载为资源名（懒加载 + 缓存）。挂载后控件引用一律使用 <code>provider:</code> 前缀，引擎在 <code>loadFromFile</code> 入口自动分流，绝不触碰磁盘（挂载点在 <code>controls</code> 之前）：</p>
+
+<pre><code>{
+  "version": "1.0",
+  "resourceProviders": [
+    { "name": "up-image", "path": "images/cross_up.png" },
+    { "name": "bomb-ani", "path": "animations/bombBlock/bombBlock.jsonc" }
+  ],
+  "controls": [ ... ]
+}</code></pre>
+
+<p>引用语法（与 C ABI 属性 / 工厂等价）：</p>
+
+<pre><code>// ① image-button 状态图：actors 对象式（providerName）或字符串式（provider:）
+{ "type": "image-button",
+  "actors": {
+    "normal":  { "providerName": "up-image" },
+    "hover":   "provider:cross-down",
+    "pressed": { "providerName": "up-image" }
+  } }
+
+// ② 动画描述 path
+{ "type": "animation", "path": "provider:bomb-ani" }</code></pre>
+
+<p>Label 字体三形态（<code>font</code> 枚举、<code>fontResource</code> 内存资源、<code>fontFile</code> 任意路径）与字符串属性互斥覆盖，均可带 <code>provider:</code> 前缀：</p>
+
+<pre><code>{ "type": "label", "caption": "Hello",
+  "fontResource": "maple-font", "fontSize": 20 }        // 内存注册的字体 ID
+{ "type": "label", "caption": "Hello",
+  "fontFile": "fonts/MyCustom.ttf" }                    // 任意字体文件（相对 resourceRoot）
+{ "type": "label", "caption": "Hello",
+  "fontFile": "provider:maple-font" }                   // 文件形态走内存注册</code></pre>
+
+<div class="note">内存 provider 模式下引擎不读磁盘：<code>resourceRoot</code> 指向不存在目录也可运行，全部资源（含动画 JSON 内层图片 <code>src</code> 原串，如 <code>animations/bombBlock/marker.svg</code>）须按原串注册进 provider。<code>provider:</code> 是保留前缀，请勿用作真实文件名。</div>
+
 <div class="chapter-nav">
   <a href="property-system.html">← 3.3 属性系统</a>
   <a href="events-focus.html">下一章：3.5 事件 →</a>
