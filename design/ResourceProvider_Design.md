@@ -28,7 +28,16 @@
 | 资源 | 文件加载 | 内存加载能力 | 说明 |
 |------|----------|--------------|------|
 | 布局 JSON | ✅ `LoadLayoutFromFile` | ✅ | `LoadLayoutFromFile` 已经 `provider->readFile`（src/UICornerstoneAPI.cpp:944-951）；`UICornerstone_LoadLayout(jsonContent)` 直接收内存字符串 |
-| 图片 | ✅ `Actor::loadFromFile`（fopen） | ✅ | `Actor::loadFromResource` → `provider->readFile` → `Surface::loadFromMemory`（src/Actor.cpp:101-117）；三后端均已注册内存工厂 |
+| 图片 | ✅ `Actor::loadFromFile`（fopen） | ✅ | `Actor::loadFromResource` → `provider->readFile` → `Surface::loadFromMemory`（src/Actor.cpp:101-117）；三后端均已注册内存工厂。**SVG 矩阵见 §5.3** |
+
+### 2.1 后端差异：SVG 支持矩阵
+
+| 加载途径 | SDL3（SDL_image 3.2.4） | SFML | Raylib |
+|----------|-------------------------|------|--------|
+| 文件路径 | ✅（内置 SVG 解码器，`IMG_Load`，subModules/SDL3_image/src/IMG.c:66） | ❌（`sf::Image(path)` 原生不支持） | ❌（`LoadImage` 按扩展名分派，无 SVG） |
+| 内存路径 | ✅（`IMG_Load_IO` 共用解码器表） | ✅（SVG 签名嗅探 + nanosvg，src/backend/sfml/RenderDevice.cpp:194） | ✅（同款嗅探 + nanosvg，src/backend/raylib/RenderDevice.cpp:166） |
+
+> **结论**：内存路径是三后端唯一一致的 SVG 途径；文件路径仅 SDL3 支持。内存加载测试选用 SVG 反而跨后端一致（见 §5.3）。
 | 字体 | ✅ `loadFont` | ✅ | `Label::loadFromResource` → `provider->readFile` 得 `m_fontData` → `renderer->loadFontFromMemoryWithText`（src/Label.cpp:287-309；src/TextRenderer.h:15） |
 | 动画描述 JSON | ✅ `loadAniDesc`（fopen） | ❌ **缺口** | `LuotiAni::loadFromResource` 直接 `fopen(filePath)` 读文件（src/Luotiani.cpp:143-160），未走 provider |
 | JSON 布局中 `"image"` 属性 | ✅ `loadFromFile`（fopen） | ❌ **缺口** | 布局 JSON 中“ `"image"` 属性经 `UICornerstone_SetString` → `loadFromFile` 直接读文件（src/UICornerstoneAPI.cpp:1192） |
@@ -155,7 +164,11 @@ main()
 | 动画 JSON | `UICornerstone_GetInt("frame-count")` > 0；两帧 AABB 与 jsonc 一致（覆盖 LuotiAni 内存路径修复） |
 | 布局 JSON | `LoadLayout` 返回非 0、控件可 FindControl |
 
-### 5.3 失败路径用例
+### 5.3 SVG 内存用例（跨后端一致）
+
+按 §2.1 矩阵，三后端内存路径均支持 SVG：在用例中额外注册一个内存 SVG（如纯色圆），断言纹理尺寸与 SVG 视口一致。注意**不得**用文件路径加载 SVG 做跨后端断言（仅 SDL3 支持文件路径）。
+
+### 5.4 失败路径用例
 
 - `provider:not-exists` → 资源空、控件存活、日志含 `not found`；
 - `memoryProviderRegister(h, "", ...)` 空名 → 拒绝注册（返回 0）。
