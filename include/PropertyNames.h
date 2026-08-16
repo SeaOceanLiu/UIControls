@@ -407,6 +407,8 @@ PROP_CONSTEXPR const char* kJsonEnableTextShadow    = "enableTextShadow";
 PROP_CONSTEXPR const char* kJsonActors              = "actors";
 PROP_CONSTEXPR const char* kJsonMatchParentRect     = "matchParentRect";
 PROP_CONSTEXPR const char* kJsonFile                = "file";
+PROP_CONSTEXPR const char* kJsonImage               = "image";                // 独立 image 节点：图片文件路径
+PROP_CONSTEXPR const char* kJsonImageResource       = "imageResource";        // 独立 image 节点：内存资源 ID
 PROP_CONSTEXPR const char* kJsonResourceId          = "resourceId";
 PROP_CONSTEXPR const char* kJsonProviderName        = "providerName";
 PROP_CONSTEXPR const char* kProviderPrefix          = "provider:";            // 资源引用前缀：provider:<resourceId>
@@ -415,6 +417,7 @@ PROP_CONSTEXPR const char* kJsonRPMountName         = "name";                 //
 PROP_CONSTEXPR const char* kJsonRPMountPath         = "path";                 // 挂载点项：相对路径
 PROP_CONSTEXPR const char* kJsonScaleType           = "scaleType";
 PROP_CONSTEXPR const char* kJsonLuotiAni            = "luotiAni";
+PROP_CONSTEXPR const char* kJsonPlaying             = "playing";           // 内嵌动画：置 true 挂树后自动播放
 PROP_CONSTEXPR const char* kJsonPlaceholder         = "placeholder";
 PROP_CONSTEXPR const char* kJsonPasswordMode        = "passwordMode";
 PROP_CONSTEXPR const char* kJsonPasswordChar        = "passwordChar";
@@ -560,6 +563,7 @@ PROP_CONSTEXPR const char* kControlTypeNumericUpDown = "numeric-up-down";
 PROP_CONSTEXPR const char* kControlTypeSplitter = "splitter";
 PROP_CONSTEXPR const char* kControlTypeTreeView = "tree-view";
 PROP_CONSTEXPR const char* kControlTypeImageButton = "image-button";
+PROP_CONSTEXPR const char* kControlTypeImage       = "image";
 PROP_CONSTEXPR const char* kControlTypeAnimation = "animation";
 
 // ============================================================

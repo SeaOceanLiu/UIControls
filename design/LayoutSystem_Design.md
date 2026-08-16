@@ -280,6 +280,22 @@
 | `"MapleMono_NF_CN_Regular"`   | `FontName::MapleMono_NF_CN_Regular`   |
 | `"Muyao_Softbrush"`           | `FontName::Muyao_Softbrush`           |
 
+#### Image（独立 Actor 图片控件）
+
+```jsonc
+{
+    "type": "image",                         // 独立图片节点（Actor）
+    "id": "hero",
+    "rect": { "x": 20, "y": 20, "w": 128, "h": 128 },
+    "image": "assets/images/cross_up.png",   // 文件路径（相对 resourceRoot）
+    // 或内存资源（三选一）："imageResource" / "providerName" / "resourceId"
+    "scaleType": "fit-center",               // stretch(默认) / fit-center / center-crop / none
+    "matchParentRect": false                 // true: 强制使用父矩形
+}
+```
+
+> 独立图片与 Button 的 `actors` 状态图共用 Actor 实现；`image` 键为文件路径，`imageResource`/`providerName`/`resourceId` 为内存资源 ID（`provider:` 前缀同样适用）。`scaleType` 取值见 4.9.x 说明与 `docs/controls/actor.html`。
+
 #### Button
 
 Button 内部使用 `Label`（`m_caption`）来渲染文字，因此 Button 的 JSON 提供两种方式来配置标题文字：简单方式和嵌入方式。
@@ -380,6 +396,12 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
 4. 标题文字 / Label   ← caption 或 captionLabel
 5. 子控件             ← ControlImpl::draw() 递归
 ```
+
+> **绘制坐标约定**：`Material::draw(float,float,uint8)` / `Actor::draw(float,float,uint8)` 的
+> 入参 posx/posy 已是**绝对链坐标**（`rect.left + anchor`，由 getDrawRect 链逐级合成），
+> 绘制目标必须直接用 `getDrawRect()`，**严禁**再经 `mapToDrawRect(targetRect)` 叠加父偏移
+> （会造成双重偏移——按钮类控件因 rect=(0,0) 不受影响而常被掩盖；独立节点 rect 非零时
+> 绘制目标翻倍画出窗口。2026-08 修复，与 LuotiAni 帧绘制处理一致）。
 
 **嵌入方式（Phase 2 加入）**：
 

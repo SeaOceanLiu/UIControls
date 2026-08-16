@@ -38,7 +38,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>animation</code></td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
-<tr><td><code>playing</code></td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 返回 0 拒绝</td></tr>
+<tr><td><code>playing</code></td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 记录请求并返回 1，prepare 完成后自动播放</td></tr>
 <tr><td><code>loop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
 <tr><td><code>frame</code></td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
 </table>
@@ -98,7 +98,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 ani.SetBool(PropertyNames::kPlaying, true);
 ani.SetBool(PropertyNames::kLoop, true);
 
-// Button 载体（JSON）——luotiAni 键：挂树后自动延迟 prepare，不自动播放（SetBool("playing")=1 启动）
+// Button 载体（JSON）——luotiAni 键：挂树后自动延迟 prepare；"playing": true 则 prepare 后自动播放，缺省不播（SetBool("playing")=1 启动）
 { "type": "button", "id": "animatedBtn",
   "rect": { "x": 40, "y": 40, "w": 120, "h": 40 },
   "caption": "Rotate",

@@ -1,4 +1,5 @@
 ﻿#include "LayoutParser.h"
+#include "Actor.h"
 #include "Menu.h"
 #include "Bench.h"
 #include "MainWindow.h"
@@ -106,6 +107,19 @@ void testBenchInitialize(shared_ptr<Bench>) {
     TestUtil::log("Total controls with IDs: %zu", allIds.size());
     for (auto& id : allIds) {
         cout << "  - ID: " << id << endl;
+    }
+
+    // 独立 image 节点（Actor）：{"type":"image",...}
+    auto hero = g_parser.findControlById("heroImage");
+    if (hero) {
+        TestUtil::log("[Image] standalone image node created (id=heroImage)");
+        auto heroActor = dynamic_pointer_cast<Actor>(hero);
+        if (heroActor) {
+            TestUtil::log("[Image] scaleType=fit-center? %s",
+                          heroActor->getScaleType() == ScaleType::FIT_CENTER ? "yes" : "no");
+        }
+    } else {
+        TestUtil::log("[Image] FAIL: standalone image node NOT created");
     }
 
     g_reloader = HotReloader(g_layoutPath, reloadLayout);

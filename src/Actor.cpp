@@ -170,12 +170,8 @@ void Actor::setRect(SRect rect) {
 void Actor::draw(float posx, float posy, Uint8 alpha) {
     inheritRenderer();
     if (!m_texture) return;
-
-    SRect targetRect = getRect();
-    targetRect.left = posx - m_anchorPoint.x;
-    targetRect.top = posy - m_anchorPoint.y;
-
-    SRect drawRect = mapToDrawRect(targetRect);
+    (void)posx; (void)posy;
+    SRect drawRect = getDrawRect();
 
     m_texture->setBlendMode(BlendMode::Blend);
     m_texture->setAlphaMod(alpha);

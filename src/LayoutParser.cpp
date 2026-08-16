@@ -259,6 +259,8 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         // image-button：与 button 同语法（caption/actors/styles/scale/events），
         // 图片经 "actors" 或状态图属性设置；别名避免与普通按钮语义混淆
         result = parseButton(j, parent);
+    } else if (type == PropertyNames::kControlTypeImage) {
+        result = parseImage(j, parent);
     } else if (type == PropertyNames::kControlTypeAnimation) {
         result = parseAnimation(j, parent);
     } else if (type == PropertyNames::kControlTypeEditBox) {
@@ -457,7 +459,62 @@ shared_ptr<Control> LayoutParser::parseAnimation(const json& j, Control* parent)
             return nullptr;
         }
     }
+    // 与 parseButton 内嵌 luotiAni 一致：JSON "playing": true → 挂树补 prepare 后自动播放
+    if (j.contains(PropertyNames::kJsonPlaying)) {
+        ani->setBoolProperty(PropertyNames::kPlaying, j[PropertyNames::kJsonPlaying].get<bool>() ? 1 : 0);
+    }
     return ani;
+}
+
+// ==================== Image（Actor 独立节点） ====================
+
+shared_ptr<Control> LayoutParser::parseImage(const json& j, Control* parent) {
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
+    popJsonPath();
+
+    float xScale = 1.0f, yScale = 1.0f;
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
+    }
+
+    string filePath;
+    string resourceId;
+    if (j.contains(PropertyNames::kJsonImage) && j[PropertyNames::kJsonImage].is_string()) {
+        filePath = j[PropertyNames::kJsonImage].get<string>();
+    } else if (j.contains(PropertyNames::kJsonImageResource) && j[PropertyNames::kJsonImageResource].is_string()) {
+        resourceId = j[PropertyNames::kJsonImageResource].get<string>();
+    } else if (j.contains(PropertyNames::kJsonResourceId) && j[PropertyNames::kJsonResourceId].is_string()) {
+        resourceId = j[PropertyNames::kJsonResourceId].get<string>();
+    } else if (j.contains(PropertyNames::kJsonProviderName) && j[PropertyNames::kJsonProviderName].is_string()) {
+        resourceId = j[PropertyNames::kJsonProviderName].get<string>();
+    } else {
+        logWarn("image control requires \"image\" or \"imageResource\" key, skipping");
+        return nullptr;
+    }
+
+    bool matchRect = j.value(PropertyNames::kJsonMatchParentRect, false);
+    shared_ptr<Actor> actor = nullptr;
+    if (!filePath.empty()) {
+        actor = make_shared<Actor>(parent, fs::path(filePath), matchRect, xScale, yScale);
+    } else {
+        actor = make_shared<Actor>(parent, resourceId, matchRect, xScale, yScale);
+    }
+    actor->setRect(rect);
+    if (j.contains(PropertyNames::kJsonScaleType) && j[PropertyNames::kJsonScaleType].is_string()) {
+        string st = j[PropertyNames::kJsonScaleType].get<string>();
+        if (st == PropertyNames::kScaleTypeFitCenter)       actor->setScaleType(ScaleType::FIT_CENTER);
+        else if (st == PropertyNames::kScaleTypeCenterCrop) actor->setScaleType(ScaleType::CENTER_CROP);
+        else if (st == PropertyNames::kScaleTypeNone)       actor->setScaleType(ScaleType::NONE);
+    }
+    m_theme.applyCommonColors(actor, PropertyNames::kThemeCatPanel);
+    parseCommonProperties(actor, j);
+
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
+        m_controlsById[j[PropertyNames::kJsonId].get<string>()] = actor;
+    }
+    return actor;
 }
 
 // ==================== Button ====================
@@ -670,6 +727,12 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
             }
         }
         popJsonPath();
+    }
+
+    // playing：声明式启动内嵌动画（挂树前设置 → 记录请求，prepare 完成后自动播放）
+    if (j.contains(PropertyNames::kJsonPlaying) && j[PropertyNames::kJsonPlaying].is_boolean()
+        && j[PropertyNames::kJsonPlaying].get<bool>()) {
+        btn->setBoolProperty(PropertyNames::kPlaying, 1);
     }
 
     parseEvents(btn, j);

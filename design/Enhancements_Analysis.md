@@ -83,7 +83,7 @@ LuotiAni 素材走 `loadFromMemory` → 三端 SVG 素材路径均可用 ✓
 
 ### 3.4 RadioButton / 状态栏
 
-两控件均不存在；基于既有 Panel/Label/CheckBox 模式 + 第 3 项圆形能力即可组合实现 → **三端无差异**。需注册进 PropertyNames + LayoutParser 控件分发（现有 21 种控件，`src/LayoutParser.cpp:254-312`）。
+两控件均不存在；基于既有 Panel/Label/CheckBox 模式 + 第 3 项圆形能力即可组合实现 → **三端无差异**。需注册进 PropertyNames + LayoutParser 控件分发（现有 22 种控件，`src/LayoutParser.cpp:254-312`）。
 
 ### 3.5 触控滚动
 

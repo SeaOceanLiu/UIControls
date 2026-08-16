@@ -44,11 +44,10 @@ void Material::draw(SPoint pos, Uint8 alpha){
 void Material::draw(float posx, float posy, Uint8 alpha){
     inheritRenderer();
 
-    SRect targetRect = getRect();
-    targetRect.left = posx - m_anchorPoint.x;
-    targetRect.top = posy - m_anchorPoint.y;
-
-    SRect drawRect = mapToDrawRect(targetRect);
+    // 注意：posx/posy 由 draw(void) 传入 m_rect.left + m_anchorPoint.x（绝对链坐标），
+    // 不能再经 mapToDrawRect 二次叠加父偏移（会双重偏移），与 LuotiAni::draw 的处理一致
+    (void)posx; (void)posy;
+    SRect drawRect = getDrawRect();
 
     if (!m_texture) return;
 

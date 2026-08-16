@@ -154,8 +154,8 @@ auto btn = ButtonBuilder(nullptr, SRect(530, 50, 120, 50))
 btn-&gt;create();
 BENCH-&gt;addControl(btn);</code></pre>
 
-<p>布局 JSON 中挂动画（<code>luotiAni</code> 键，挂树后自动延迟 prepare，不自动播放——播放经
-<code>SetBool("playing")=1</code> 启动；相对路径按 exe 所在目录解析）：</p>
+<p>布局 JSON 中挂动画（<code>luotiAni</code> 键，挂树后自动延迟 prepare；加 <code>"playing": true</code> 则 prepare 后
+自动播放，缺省不播——播放经 <code>SetBool("playing")=1</code> 启动；相对路径按 exe 所在目录解析）：</p>
 
 <pre><code>{ "type": "button", "id": "aniBtn",
   "rect": { "x": 200, "y": 532, "w": 100, "h": 40 },

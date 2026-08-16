@@ -42,7 +42,7 @@
 
 <table>
 <tr><th>键</th><th>说明</th></tr>
-<tr><td><code>type</code></td><td>控件类型（kebab 小写）：<code>label</code> / <code>button</code> / <code>edit-box</code> / <code>check-box</code> / <code>combo-box</code> / <code>numeric-up-down</code> / <code>progress-bar</code> / <code>scroll-bar</code> / <code>color-picker</code> / <code>text-area</code> / <code>panel</code> / <code>menu-bar</code> / <code>win-frame</code> / <code>splitter</code></td></tr>
+<tr><td><code>type</code></td><td>控件类型（kebab 小写）：<code>label</code> / <code>button</code> / <code>image</code> / <code>image-button</code> / <code>animation</code> / <code>edit-box</code> / <code>check-box</code> / <code>combo-box</code> / <code>numeric-up-down</code> / <code>progress-bar</code> / <code>scroll-bar</code> / <code>color-picker</code> / <code>text-area</code> / <code>panel</code> / <code>menu-bar</code> / <code>win-frame</code> / <code>splitter</code> / <code>tree-view</code></td></tr>
 <tr><td><code>id</code></td><td>全局唯一标识，供 <code>FindControl</code> / <code>findControlById</code> 查找</td></tr>
 <tr><td><code>rect</code></td><td><code>{"x","y","w","h"}</code>；支持百分比字符串（<code>"50%"</code>）</td></tr>
 <tr><td><code>scale</code></td><td><code>{"x":1.0,"y":1.0}</code> 本地缩放</td></tr>
@@ -229,7 +229,13 @@ reloader.setPollInterval(15);   // 调整检查间隔（帧数）</code></pre>
   } }
 
 // ② 动画描述 path
-{ "type": "animation", "path": "provider:bomb-ani" }</code></pre>
+{ "type": "animation", "path": "provider:bomb-ani" }
+
+// ③ 独立图片节点（Actor）：image 键（文件路径）或 imageResource / providerName（内存资源 ID）
+{ "type": "image", "id": "hero", "rect": { "x": 20, "y": 20, "w": 128, "h": 128 },
+  "image": "assets/images/cross_up.png", "scaleType": "fit-center" }
+{ "type": "image", "rect": { "x": 160, "y": 20, "w": 64, "h": 64 },
+  "providerName": "cross-down", "matchParentRect": false }</code></pre>
 
 <p>Label 字体三形态（<code>font</code> 枚举、<code>fontResource</code> 内存资源、<code>fontFile</code> 任意路径）与字符串属性互斥覆盖，均可带 <code>provider:</code> 前缀：</p>
 

@@ -31,7 +31,7 @@ ActorBuilder(parent).loadFromFile("assets/img/icon.png").setMatchParentRect(true
 // C ABI（w/h 传 0 按纹理自然尺寸）
 UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 128, 128, 1.0f, 1.0f);</code></pre>
 
-<div class="note">JSON 布局中 Actor 不作为独立节点，只作为 Button 的 <code>actors</code> 子键（见下）。</div>
+<div class="note">JSON 布局中 Actor 两种用法：独立 <code>image</code> 节点（见 4.1.4），或作为 Button 的 <code>actors</code> 子键（见 4.1.5）。</div>
 
 
 <h2>4.1.2 控件的属性</h2>
@@ -52,7 +52,18 @@ UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 2
 <p>无（纯显示控件，不产生任何事件）。</p>
 
 
-<h2>4.1.4 JSON 语法（Button 的 actors）</h2>
+<h2>4.1.4 JSON 语法（独立 image 节点）</h2>
+
+<pre><code>// 独立图片：image 键（文件路径，相对 resourceRoot）或 imageResource / providerName（内存资源 ID）
+{ "type": "image", "id": "hero", "rect": { "x": 60, "y": 60, "w": 128, "h": 128 },
+  "image": "assets/images/cross_up.png", "scaleType": "fit-center" }
+
+// 支持键：image / imageResource / providerName / matchParentRect / scaleType /
+//          rect / scale / visible / enabled / margin / colors / styles / events / id
+// scaleType：stretch（默认）/ fit-center / center-crop / none</code></pre>
+
+
+<h2>4.1.5 JSON 语法（Button 的 actors）</h2>
 
 <pre><code>{
   "type": "button", "id": "imageBtn",
@@ -65,7 +76,7 @@ UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 2
 }</code></pre>
 
 
-<h2>4.1.5 C++ Binding 样例</h2>
+<h2>4.1.6 C++ Binding 样例</h2>
 
 <pre><code>// Binding：CreateImage（对应 C ABI CreateImage）
 Control img = ui->CreateImage("assets/hero.png", 20, 80, 128, 128);
@@ -82,7 +93,7 @@ auto btn = ButtonBuilder(nullptr, SRect(380, 50, 120, 50))
 BENCH->addControl(btn);</code></pre>
 
 
-<h2>4.1.6 C ABI 调用样例</h2>
+<h2>4.1.7 C ABI 调用样例</h2>
 
 <pre><code>// C ABI 中 Actor 即 Image 控件（w/h 传 0 按纹理自然尺寸）
 UIControlHandle img = UICornerstone_CreateImage(g_inst, "assets/img/icon.png", 20, 20, 0, 0, 1.0f, 1.0f);
@@ -95,7 +106,7 @@ UICornerstone_SetBool(g_inst, img, "match-parent-rect", 0);
 // Actor 纯显示、无事件；经 SetRect / DestroyControl 通用操作
 UICornerstone_SetRect(g_inst, img, 60, 20, 128, 128);</code></pre>
 <details class="methods">
-<summary>4.1.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.1.8 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table><tr><th>方法</th><th>说明</th></tr>

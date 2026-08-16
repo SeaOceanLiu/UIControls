@@ -39,7 +39,7 @@
 
 <table>
 <tr><th>键</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 21 种：<code>label / button / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view</code></td></tr>
+<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 22 种：<code>label / button / image / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view</code></td></tr>
 <tr><td><code>id</code></td><td>string</td><td>全局唯一，FindControl 用</td></tr>
 <tr><td><code>rect</code></td><td>object</td><td><code>{"x","y","w","h"}</code>；支持百分比字符串 <code>"50%"</code></td></tr>
 <tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code>；内容按系数缩放，布局矩形不变</td></tr>
@@ -50,7 +50,14 @@
 <tr><td><code>children</code></td><td>array</td><td>子控件（容器类型）</td></tr>
 </table>
 
-<h2>6.3 各控件专用键（全部 21 种）</h2>
+<h2>6.3 各控件专用键（全部 22 种）</h2>
+
+<h3>image（独立 Actor 图片控件）</h3>
+<pre><code>{ "type":"image", "id":"hero", "rect":{"x":20,"y":20,"w":128,"h":128},
+  "image":"assets/images/cross_up.png",          // 文件路径（相对 resourceRoot）
+  // 或内存资源："imageResource":"cross-down" / "providerName":"cross-down" / "resourceId":"cross-down"
+  "scaleType":"fit-center",                      // stretch(默认) / fit-center / center-crop / none
+  "matchParentRect":false }                      // 强制使用父矩形</code></pre>
 
 <h3>label</h3>
 <pre><code>{ "type":"label", "id":"title", "rect":{"x":0,"y":52,"w":800,"h":40},
@@ -71,13 +78,15 @@
     "matchParentRect":true,
     "normal":"assets/images/normal.png",                   // 或 {"file":..., "scaleType":"fit-center"}
     "hover":"assets/images/hover.png", "pressed":"assets/images/pressed.png" },
-  "luotiAni":"assets/animations/rotateBtn/rotateBtn.jsonc", // 内嵌动画：延迟 prepare，SetBool("playing") 启动
+  "luotiAni":"assets/animations/rotateBtn/rotateBtn.jsonc", // 内嵌动画：延迟 prepare；"playing":true 挂树后自动播放，缺省 SetBool("playing") 启动
+  "playing":true,
   "events":{"onClick":"onSubmit"} }</code></pre>
 
 <h3>animation（LuotiAni 动画控件）</h3>
 <pre><code>{ "type":"animation", "id":"ani1x", "rect":{"x":1100,"y":80,"w":256,"h":256},
   "path":"assets/animations/rotateBtn/rotateBtn.jsonc",     // 相对 exe 目录；w/h=0 → 画布尺寸
-  "scale":{"x":1,"y":1} }                                  // 挂树后延迟 prepare，SetBool("playing") 启动</code></pre>
+  "scale":{"x":1,"y":1},                                    // 挂树后延迟 prepare，SetBool("playing") 启动
+  "playing":true }                                          // "playing":true 挂树后自动播放</code></pre>
 
 <h3>edit-box</h3>
 <pre><code>{ "type":"edit-box", "id":"nameEdit",

@@ -765,6 +765,11 @@ void LuotiAni::prepare(uint32_t startFrame){
     }
 
     m_isPrepared = true;
+
+    if (m_playAfterPrepare) {
+        m_playAfterPrepare = false;
+        play();                          // prepare 前收到 playing=1：补播放（不 throw）
+    }
 }
 void LuotiAni::pause(void){
     m_isPlaying = false;
@@ -874,10 +879,16 @@ int LuotiAni::setStringProperty(const char* prop, const char* value) {
 int LuotiAni::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kPlaying) == 0) {
         if (value != 0) {
-            if (!m_isPrepared) return 0;   // §6.4-3：未 prepare 拒绝（play() 会 throw）
+            if (!m_isPrepared) {
+                // §6.4-3 两阶段：未 prepare 拒绝直接 play（会 throw）；
+                // 记录请求，prepare 完成后自动播放（JSON 布局挂树前设 playing=1 的场景）
+                m_playAfterPrepare = true;
+                return 1;
+            }
             play();                        // 每次置 1 均为 play()（帧复位 0 重播，§6.2 语义）
         } else {
             pause();
+            m_playAfterPrepare = false;
         }
         return 1;
     }

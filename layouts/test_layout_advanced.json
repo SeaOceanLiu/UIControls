@@ -656,6 +656,13 @@
                     "type": "self-ref",
                     "id": "selfRef1",
                     "rect": { "x": 470, "y": 1090, "w": 200, "h": 100 }
+                },
+                {
+                    "type": "image",
+                    "id": "heroImage",
+                    "rect": { "x": 1100, "y": 700, "w": 120, "h": 60 },
+                    "image": "assets/images/cross_down.png",
+                    "scaleType": "fit-center"
                 }
             ]
         }

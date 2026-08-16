@@ -257,6 +257,7 @@ private:
     bool m_isLoaded;
     bool m_isPrepared;
     bool m_isPlaying;
+    bool m_playAfterPrepare = false;   // 两阶段：prepare 前收到 playing=1 → 记录请求，prepare 完成后自动播放
 
     shared_ptr<char[]>m_pJsonFileContent;
     json m_jsonAniDesc;
