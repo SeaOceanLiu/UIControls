@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="280" viewBox="0 0 500 280">
+  <!-- ============ 左侧主体：TreeView 面板（行高 24；LEFT_PADDING=4，arrowGap=16，indentWidth=16） ============ -->
+  <rect x="0" y="0" width="300" height="195" rx="4" fill="#1A1A1A" stroke="#555" stroke-width="1"/>
+  <text x="10" y="20" font-family="Arial,sans-serif" font-size="11" fill="#AAA">Control Tree（前置控件 + 逐 Item 字体）</text>
+  <line x1="6" y1="26" x2="294" y2="26" stroke="#444" stroke-width="0.5"/>
+
+  <!-- 行0 Root Panel（选中 + CheckBox）：槽起点=20，槽[20,34]16x16，文字 x=42 -->
+  <rect x="6" y="30" width="284" height="24" rx="2" fill="#3A80C9" opacity="0.35"/>
+  <path d="M10,38 l0,8 l6,-4 Z" fill="#FFF"/>
+  <rect x="20" y="34" width="16" height="16" rx="3" fill="#3C3C3C" stroke="#CCCCCC" stroke-width="1.5"/>
+  <path d="M24,42 l3,3 l5,-6" fill="none" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="42" y="46" font-family="Arial,sans-serif" font-size="10" fill="#FFF">Root Panel</text>
+
+  <!-- 行1 SubPanel（图片槽 16x16 等比，缩进1 → 槽起点=36，文字 x=58） -->
+  <rect x="6" y="54" width="284" height="24" rx="2" fill="#2D2D2D"/>
+  <path d="M26,62 l0,8 l6,-4 Z" fill="#CCC"/>
+  <rect x="36" y="58" width="16" height="16" rx="2" fill="#2E7D32"/>
+  <path d="M38,66 l3,-2 l4,6 h-8 z" fill="#B9F6CA"/>
+  <text x="58" y="70" font-family="Arial,sans-serif" font-size="10" fill="#CCC">SubPanel</text>
+
+  <!-- 行2 btn1（无前置控件：文字起点=36） -->
+  <rect x="6" y="78" width="284" height="24" rx="2" fill="#2D2D2D"/>
+  <path d="M26,86 l0,8 l6,-4 Z" fill="#CCC"/>
+  <text x="36" y="94" font-family="Arial,sans-serif" font-size="10" fill="#CCC">Button (btn1)</text>
+
+  <!-- 行3 subPanel2（缩进2 → 槽起点=52；逐 Item 字体 font-size:16 粗体 → 槽[52,104]20x20，文字 x=78） -->
+  <rect x="6" y="102" width="284" height="24" rx="2" fill="#2D2D2D"/>
+  <path d="M42,110 l0,8 l6,-4 Z" fill="#CCC"/>
+  <rect x="52" y="104" width="20" height="20" rx="3" fill="#3C3C3C" stroke="#CCCCCC" stroke-width="1.5"/>
+  <path d="M56,114 l3,3 l5,-6" fill="none" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="78" y="118" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#E8E8E8">Panel (subPanel2)</text>
+
+  <!-- 行4 lbl1（缩进0，无控件，文字起点=20） -->
+  <rect x="6" y="126" width="284" height="24" rx="2" fill="#2D2D2D"/>
+  <path d="M10,134 l0,8 l6,-4 Z" fill="#CCC"/>
+  <text x="20" y="142" font-family="Arial,sans-serif" font-size="10" fill="#CCC">Label (lbl1)</text>
+
+  <!-- 槽起点基准线（细虚线，不遮内容） -->
+  <line x1="20" y1="28" x2="20" y2="52" stroke="#1976D2" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>
+  <line x1="36" y1="52" x2="36" y2="100" stroke="#1976D2" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>
+  <line x1="52" y1="100" x2="52" y2="124" stroke="#1976D2" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>
+  <line x1="20" y1="124" x2="20" y2="148" stroke="#1976D2" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>
+
+  <!-- ScrollBar -->
+  <rect x="294" y="6" width="4" height="185" rx="2" fill="#444"/>
+  <rect x="294" y="30" width="4" height="60" rx="2" fill="#888"/>
+
+  <!-- ============ 右侧标注（引线从面板右缘引出，水平对齐各行） ============ -->
+  <line x1="300" y1="34" x2="314" y2="34" stroke="#2E7D32" stroke-width="1.5"/>
+  <text x="318" y="38" font-size="11" fill="#2E7D32" font-family="sans-serif">槽高 = 文字高度（行内垂直居中，行间留空隙）</text>
+  <line x1="300" y1="42" x2="314" y2="42" stroke="#2E7D32" stroke-width="1.5"/>
+  <text x="318" y="46" font-size="11" fill="#666666" font-family="sans-serif">无字体时回退行高；宽按原始宽高比等比</text>
+
+  <line x1="300" y1="66" x2="314" y2="66" stroke="#1976D2" stroke-width="1.5"/>
+  <text x="318" y="70" font-size="11" fill="#1976D2" font-family="sans-serif">槽起点 = 原文本起点 labelX</text>
+  <text x="318" y="84" font-size="11" fill="#666666" font-family="sans-serif">（LEFT_PADDING 4 + 缩进 + arrowGap 16）</text>
+
+  <line x1="300" y1="114" x2="314" y2="114" stroke="#E65100" stroke-width="1.5"/>
+  <text x="318" y="118" font-size="11" fill="#E65100" font-family="sans-serif">逐 Item 字体：font-size:16 粗体</text>
+  <text x="318" y="132" font-size="11" fill="#666666" font-family="sans-serif">槽高随文字高度变大（20），行高不变</text>
+
+  <!-- 文字起点标注（行0 文字列） -->
+  <line x1="300" y1="46" x2="314" y2="46" stroke="#D32F2F" stroke-width="1.5"/>
+  <text x="318" y="50" font-size="11" fill="#D32F2F" font-family="sans-serif">文字起点 = 槽右缘 + leadingGap（默认 6）</text>
+
+  <!-- ============ 底部说明（面板下方，无重叠） ============ -->
+  <line x1="8" y1="208" x2="24" y2="208" stroke="#1976D2" stroke-width="1.5" stroke-dasharray="2,3"/>
+  <text x="28" y="212" font-size="11" fill="#666666" font-family="sans-serif">蓝虚线 = 槽起点（无容器行文字也从该列开始 → 缩进一致）</text>
+  <text x="28" y="226" font-size="11" fill="#666666" font-family="sans-serif">交互：点击前置控件 → 选中该行 + 控件自身交互（CheckBox 勾选翻转）</text>
+  <text x="28" y="240" font-size="11" fill="#888888" font-family="sans-serif">前置控件默认不 focusable；行控件随滚动自动跟随；结构变更统一经 syncRowControls 挂/摘</text>
+  <text x="28" y="254" font-size="11" fill="#888888" font-family="sans-serif">图片宽高比优先取纹理自然尺寸，其次当前 rect，退化 1:1（CheckBox 正方形）</text>
+</svg>

@@ -20,7 +20,7 @@ struct TreeNode {
     bool expanded = false;
     std::vector<std::shared_ptr<TreeNode>> children;
     void* userData = nullptr;
-    // TreeView 增强：Item 前置控件容器 + 逐 Item 字体（见 design/TreeView_Enhancement_Analysis.md）
+    // TreeView 增强：Item 前置控件容器 + 逐 Item 字体（见 design/TreeView_Enhancement_Design.md）
     std::shared_ptr<Control> leadingControl;  // 前置控件（CheckBox/Actor/Image 等）；高度自适应行高
     float leadingGap = 6.0f;                  // 控件与文字之间的空隙（局部 px，可调）
     FontName fontName = FontName::HarmonyOS_Sans_SC_Regular;  // 与 TreeView 默认一致；仅 fontSize>0 时生效
@@ -56,7 +56,7 @@ inline std::shared_ptr<TreeNode> cloneNode(
     node->fontName = src->fontName;
     node->fontSize = src->fontSize;
     // leadingControl 必须置空：项目无控件深拷贝（共享实例会 getParent 冲突/双树串扰），
-    // 调用方按需对新树重新赋值（见 TreeView_Enhancement_Analysis.md 3.1）
+    // 调用方按需对新树重新赋值（见 TreeView_Enhancement_Design.md 4.1）
     return node;
 }
 
