@@ -201,6 +201,10 @@ typedef struct {
 
     // 后端能力位（UICORN_BACKEND_CAP_*），0 = 无声明能力
     uint32_t                 capabilities;
+
+    // --- 截图读回（可选，可为 NULL；声明 READBACK 能力位时须提供） ---
+    // 将屏幕坐标系 rect 读回为 RGBA8888（R,G,B,A，top-down 行序）到 buffer（调用方分配 w*h*4）
+    void (*readPixels)(UIRenderDeviceHandle dev, void* buffer, int left, int top, int width, int height);
 } UIBackendCallbacks;
 
 /* ============ 实例生命周期 ============ */
@@ -406,6 +410,25 @@ UICORNERSTONE_API void UICornerstone_GetRect(UIInstance instance, UIControlHandl
 UICORNERSTONE_API void UICornerstone_AddChildControl(UIInstance instance, UIControlHandle parent, UIControlHandle child);
 UICORNERSTONE_API void UICornerstone_DestroyControl(UIInstance instance, UIControlHandle ctl);
 UICORNERSTONE_API const char* UICornerstone_GetControlId(UIInstance instance, UIControlHandle ctl);
+
+/* ============ 截图（Capture_*，测试辅助） ============ */
+// 像素级测试辅助：截取渲染结果（RGBA8888，R,G,B,A 内存序，top-down 行序）。
+// 能力位 UICORN_BACKEND_CAP_READBACK 未声明时返回 0。
+// 需在 UICornerstone_Render 之后、下一次 Clear/Present 之前调用（帧内读回）；
+// Present 后调用行为未定义（读到旧帧）。坐标为屏幕像素（逻辑坐标由
+// GetViewportScale 换算）。rect 与视口求交集：部分越界裁剪，交集为空返回 0。
+// outPixels 由调用方分配 w*h*4 字节；outW/outH 可传 NULL。
+UICORNERSTONE_API int UICornerstone_CaptureRect(UIInstance instance,
+    float x, float y, float w, float h,
+    uint8_t* outPixels, int* outW, int* outH);
+UICORNERSTONE_API int UICornerstone_CaptureViewport(UIInstance instance, uint8_t* out, int* w, int* h);
+UICORNERSTONE_API int UICornerstone_CaptureBench(UIInstance instance, uint8_t* out, int* w, int* h);
+UICORNERSTONE_API int UICornerstone_CaptureControl(UIInstance instance, UIControlHandle ctl,
+    uint8_t* out, int* w, int* h);
+/* 将内存中的 RGBA8888 像素缓冲保存为文件（当前格式：BMP 32 位 BGRA，零依赖自编码）。
+   与后端无关，不需要 instance。 */
+UICORNERSTONE_API int UICornerstone_SavePixelsToFile(
+    const uint8_t* pixels, int w, int h, const char* filePath);
 
 /* ============ Dialog/Popup ============ */
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateDialog(UIInstance instance,

@@ -670,6 +670,7 @@ public:
     }
 
     void readPixels(void* buffer, const SRect& rect) override {
+        if (!m_frameActive) return;   // 帧内（BeginDrawing 后、SwapScreenBuffer 前）才可读
         if (!buffer) return;
         Image img = LoadImageFromScreen();
         if (!img.data) return;

@@ -188,6 +188,21 @@ UICornerstone_CreateImage(inst, "provider:cross-up", 20, 70, 0, 0);</code></pre>
 <tr><td><code>UICornerstone_Debug_SetMousePosition(inst, x, y) / Debug_ClearMousePosition(inst)</code></td><td>鼠标位置调试写入 / 清除（测试用）</td></tr>
 </table>
 
+<h2>8.10 截图（Capture_*，测试辅助）</h2>
+
+<p>帧内读回截图像素（正式 API，由后端 READBACK 能力位门控；配合自动化测试的像素级断言与截图落盘）。</p>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_CaptureRect(inst, x, y, w, h, out, &amp;outW, &amp;outH)</code></td><td>原语：截取屏幕坐标系 rect，返回 RGBA8888 像素；部分越界裁剪，与视口交集为空 / out 为空 / w·h≤0 → 0</td></tr>
+<tr><td><code>UICornerstone_CaptureViewport(inst, out, &amp;outW, &amp;outH)</code></td><td>整视口截图（宽度 == 窗口宽度）</td></tr>
+<tr><td><code>UICornerstone_CaptureBench(inst, out, &amp;outW, &amp;outH)</code></td><td>画布区截图（画布顶层 getDrawRect 范围）</td></tr>
+<tr><td><code>UICornerstone_CaptureControl(inst, ctl, out, &amp;outW, &amp;outH)</code></td><td>控件包围盒截图（getDrawRect 范围）</td></tr>
+<tr><td><code>UICornerstone_SavePixelsToFile(pixels, w, h, path)</code></td><td>RGBA8888 像素落盘 BMP（32 位 BGRA，bottom-up）</td></tr>
+</table>
+
+<div class="note">调用契约：Render 之后、Present 之前调用（帧内读回）；out 由调用方分配 w*h*4 字节；像素为 R,G,B,A 字节序、top-down 行序；坐标零换算（viewport 已含 anchor/scale）。默认布局下 bench 根容器背景覆盖视口背景色，截图像素以根容器/控件为准。</div>
+
 <div class="chapter-nav">
   <a href="properties.html">← 7 属性速查表</a>
   <a href="debugging.html">下一节：9 问题定位手段 →</a>

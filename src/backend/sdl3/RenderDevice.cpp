@@ -288,7 +288,9 @@ public:
         if (!surface) return;
         int w = static_cast<int>(rect.width);
         int h = static_cast<int>(rect.height);
-        SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
+        // SDL3 的 SDL_PIXELFORMAT_RGBA8888 在 little-endian 机器上内存字节序为 A,B,G,R；
+        // 统一约定 R,G,B,A 字节序需用 ABGR8888（LE 内存 = R,G,B,A）
+        SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
         if (rgba) {
             for (int y = 0; y < h; ++y) {
                 std::memcpy(static_cast<uint8_t*>(buffer) + static_cast<size_t>(y) * w * 4,

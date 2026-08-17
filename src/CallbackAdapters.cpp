@@ -187,7 +187,12 @@ void CallbackRenderDevice::drawTextureRotated(Texture* texture, const SRect* src
 }
 void CallbackRenderDevice::setRenderTarget(Texture*) {}
 void CallbackRenderDevice::resetRenderTarget() {}
-void CallbackRenderDevice::readPixels(void*, const SRect&) {}
+void CallbackRenderDevice::readPixels(void* buffer, const SRect& rect) {
+    if (m_cbs->readPixels)
+        m_cbs->readPixels(m_handle, buffer,
+            static_cast<int>(rect.left), static_cast<int>(rect.top),
+            static_cast<int>(rect.width), static_cast<int>(rect.height));
+}
 void CallbackRenderDevice::clear() {
     m_cbs->clear(m_handle, UIColor{0,0,0,255});
 }

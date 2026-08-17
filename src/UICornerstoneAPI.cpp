@@ -1338,6 +1338,95 @@ void UICornerstone_DestroyControl(UIInstance instance, UIControlHandle ctl) {
 }
 
 // ============================================================
+// 截图（Capture_*，测试辅助）
+// ============================================================
+static bool captureRectRaw(UIInstance instance, float x, float y, float w, float h,
+                           uint8_t* outPixels, int* outW, int* outH) {
+    if (!instance || !instance->initialized || instance->destroying) return false;
+    if (!instance->bench || !instance->renderDevice) return false;
+    if (!outPixels || w <= 0.0f || h <= 0.0f) return false;
+    if (!(instance->backendManager->capabilities() & UICORN_BACKEND_CAP_READBACK)) return false;
+    // 与视口求交集：部分越界裁剪；交集为空 → 失败
+    const SRect& vp = instance->viewport;
+    float ix = x > vp.left ? x : vp.left;
+    float iy = y > vp.top ? y : vp.top;
+    float ix2 = x + w < vp.left + vp.width ? x + w : vp.left + vp.width;
+    float iy2 = y + h < vp.top + vp.height ? y + h : vp.top + vp.height;
+    if (ix2 <= ix || iy2 <= iy) return false;
+    instance->renderDevice->readPixels(outPixels, SRect(ix, iy, ix2 - ix, iy2 - iy));
+    if (outW) *outW = static_cast<int>(ix2 - ix);
+    if (outH) *outH = static_cast<int>(iy2 - iy);
+    return true;
+}
+
+int UICornerstone_CaptureRect(UIInstance instance, float x, float y, float w, float h,
+                              uint8_t* outPixels, int* outW, int* outH) {
+    return captureRectRaw(instance, x, y, w, h, outPixels, outW, outH) ? 1 : 0;
+}
+
+int UICornerstone_CaptureViewport(UIInstance instance, uint8_t* out, int* w, int* h) {
+    if (!instance) return 0;
+    return UICornerstone_CaptureRect(instance, instance->viewport.left, instance->viewport.top,
+                                     instance->viewport.width, instance->viewport.height, out, w, h);
+}
+
+int UICornerstone_CaptureBench(UIInstance instance, uint8_t* out, int* w, int* h) {
+    if (!instance || !instance->bench) return 0;
+    SRect r = instance->bench->getDrawRect();
+    return UICornerstone_CaptureRect(instance, r.left, r.top, r.width, r.height, out, w, h);
+}
+
+int UICornerstone_CaptureControl(UIInstance instance, UIControlHandle ctl,
+                                 uint8_t* out, int* w, int* h) {
+    if (!instance || !ctl) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    SRect r = ctlV->getDrawRect();
+    return UICornerstone_CaptureRect(instance, r.left, r.top, r.width, r.height, out, w, h);
+}
+
+int UICornerstone_SavePixelsToFile(const uint8_t* pixels, int w, int h, const char* filePath) {
+    if (!pixels || !filePath || w <= 0 || h <= 0) return 0;
+    const int rowSize = w * 4;
+    const int dataSize = rowSize * h;
+    const int fileSize = 54 + dataSize;
+    FILE* fp = fopen(filePath, "wb");
+    if (!fp) return 0;
+    // BMP 32 位 BGRA：14 字节 BITMAPFILEHEADER + 40 字节 BITMAPINFOHEADER，
+    // 像素 bottom-up（内存 top-down 逐行倒序写入），每像素 B,G,R,A
+    uint8_t hdr[54] = {0};
+    hdr[0] = 'B'; hdr[1] = 'M';
+    hdr[2] = static_cast<uint8_t>(fileSize);         hdr[3] = static_cast<uint8_t>(fileSize >> 8);
+    hdr[4] = static_cast<uint8_t>(fileSize >> 16);   hdr[5] = static_cast<uint8_t>(fileSize >> 24);
+    hdr[10] = 54;                                    // bfOffBits
+    hdr[14] = 40;                                    // biSize
+    hdr[18] = static_cast<uint8_t>(w);               hdr[19] = static_cast<uint8_t>(w >> 8);
+    hdr[20] = static_cast<uint8_t>(w >> 16);         hdr[21] = static_cast<uint8_t>(w >> 24);
+    hdr[22] = static_cast<uint8_t>(h);               hdr[23] = static_cast<uint8_t>(h >> 8);
+    hdr[24] = static_cast<uint8_t>(h >> 16);         hdr[25] = static_cast<uint8_t>(h >> 24);
+    hdr[26] = 1;                                     // biPlanes
+    hdr[28] = 32;                                    // biBitCount
+    hdr[34] = static_cast<uint8_t>(dataSize);        hdr[35] = static_cast<uint8_t>(dataSize >> 8);
+    hdr[36] = static_cast<uint8_t>(dataSize >> 16);  hdr[37] = static_cast<uint8_t>(dataSize >> 24);
+    if (fwrite(hdr, 1, 54, fp) != 54) { fclose(fp); return 0; }
+    std::vector<uint8_t> row(static_cast<size_t>(rowSize));
+    for (int y = h - 1; y >= 0; --y) {
+        const uint8_t* src = pixels + static_cast<size_t>(y) * rowSize;
+        for (int x = 0; x < w; ++x) {
+            row[x * 4 + 0] = src[x * 4 + 2];   // B
+            row[x * 4 + 1] = src[x * 4 + 1];   // G
+            row[x * 4 + 2] = src[x * 4 + 0];   // R
+            row[x * 4 + 3] = src[x * 4 + 3];   // A
+        }
+        if (fwrite(row.data(), 1, static_cast<size_t>(rowSize), fp) != static_cast<size_t>(rowSize)) {
+            fclose(fp); return 0;
+        }
+    }
+    fclose(fp);
+    return 1;
+}
+
+// ============================================================
 // ColorPicker
 // ============================================================
 UIControlHandle UICornerstone_CreateColorPicker(UIInstance instance,

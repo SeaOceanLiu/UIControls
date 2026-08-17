@@ -613,9 +613,17 @@ public:
     void readPixels(void* buffer, const SRect& rect) override {
         flushBatches();
         if (!m_target || !buffer) return;
-        sf::RenderTexture rt(sf::Vector2u(m_target->getSize().x, m_target->getSize().y));
-        sf::Texture tex = rt.getTexture();
-        sf::Image img = tex.copyToImage();
+        sf::Image img;
+        if (m_target == m_window) {
+            // 窗口：Texture::update(window) 读 back buffer（内部自动 setActive；
+            // copyToImage 已处理 GL 翻转 → 输出 top-down）。须在 display() 前调用。
+            sf::Texture tex(sf::Vector2u(m_window->getSize().x, m_window->getSize().y));
+            tex.update(*m_window);
+            img = tex.copyToImage();
+        } else {
+            // render target：纹理内容直接读回
+            img = static_cast<sf::RenderTexture*>(m_target)->getTexture().copyToImage();
+        }
         int bw = static_cast<int>(rect.width);
         int bh = static_cast<int>(rect.height);
         for (int y = 0; y < bh; ++y) {

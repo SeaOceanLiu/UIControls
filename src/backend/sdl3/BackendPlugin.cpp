@@ -140,6 +140,9 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     cb.version = 1;
     cb.capabilities = UICORN_BACKEND_CAP_MULTI_WINDOW | UICORN_BACKEND_CAP_RENDER_TARGET
                     | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK;
+    cb.readPixels = [](UIRenderDeviceHandle dev, void* buffer, int l, int t, int w, int h) {
+        if (dev) static_cast<RenderDevice*>(dev)->readPixels(buffer, SRect((float)l, (float)t, (float)w, (float)h));
+    };
 
     // Window
     cb.createWindow         = plugin_createWindow;
