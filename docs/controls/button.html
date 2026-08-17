@@ -35,12 +35,12 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>caption</code></td><td>String</td><td>空</td><td>标题文本</td></tr>
-<tr><td><code>text-shadow-enable</code></td><td>Bool</td><td>false</td><td>文字阴影开关</td></tr>
 <tr><td><code>animation</code></td><td>String</td><td>—</td><td>LuotiAni 描述文件路径：加载并自动播放</td></tr>
-<tr><td><code>luotiAni</code>（JSON 布局键）</td><td>String / {file}</td><td>—</td><td>内嵌动画：挂树后自动延迟 prepare，默认<strong>不自动播放</strong>——<code>SetBool("playing")=1</code> 启动；JSON 可声明 <code>"playing": true</code> 挂树后自动播放（prepare 前设置的播放请求不丢失，<code>animation</code> 属性则立即播放）</td></tr>
-<tr><td><code>caption-size</code>（JSON 键 <code>captionSize</code>）</td><td>Float</td><td>16</td><td>标题字号（仅布局 JSON 生效）</td></tr>
 <tr><td><code>background</code> / <code>border</code> / <code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>主题</td><td>通用状态色（JSON 中支持 .hover/.pressed/.disabled 子键）</td></tr>
+<tr><td><code>caption</code></td><td>String</td><td>空</td><td>标题文本</td></tr>
+<tr><td><code>caption-size</code>（JSON 键 <code>captionSize</code>）</td><td>Float</td><td>16</td><td>标题字号（仅布局 JSON 生效）</td></tr>
+<tr><td><code>luotiAni</code>（JSON 布局键）</td><td>String / {file}</td><td>—</td><td>内嵌动画：挂树后自动延迟 prepare，默认<strong>不自动播放</strong>——<code>SetBool("playing")=1</code> 启动；JSON 可声明 <code>"playing": true</code> 挂树后自动播放（prepare 前设置的播放请求不丢失，<code>animation</code> 属性则立即播放）</td></tr>
+<tr><td><code>text-shadow-enable</code></td><td>Bool</td><td>false</td><td>文字阴影开关</td></tr>
 <tr><td><code>visible</code> / <code>enabled</code> / <code>transparent</code> / <code>border-visible</code></td><td>Bool</td><td>—</td><td>通用属性</td></tr>
 </table>
 
@@ -109,16 +109,17 @@ UICornerstone_DestroyControl(g_inst, btn);   // 不再需要时销毁</code></pr
 <summary>4.3.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setNormalStateActor / setHoverStateActor / setPressedStateActor / setDisabledStateActor(shared_ptr&lt;Actor&gt;)</code></td><td>四状态图片外观</td></tr>
-<tr><td><code>setTextStateColor / setTextShadowStateColor(StateColor)</code></td><td>文本色 / 阴影色（同步到内部 Label）</td></tr>
-<tr><td><code>setTextShadowEnable(bool)</code></td><td>文字阴影开关</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>setBoolProperty / setStringProperty</code>（override）</td><td>属性分发</td></tr>
 <tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>标题文本（自动创建内部 Label）</td></tr>
 <tr><td><code>setCaptionLabel(shared_ptr&lt;Label&gt;) / getCaptionLabel()</code></td><td>嵌入自定义 Label（布局解析器用）</td></tr>
 <tr><td><code>setCaptionSize(float) / getCaptionSize() / getCaptionRect()</code></td><td>标题字号 / 热区</td></tr>
 <tr><td><code>setLuotiAni(shared_ptr&lt;LuotiAni&gt;)</code></td><td>挂载洛蒂动画</td></tr>
+<tr><td><code>setNormalStateActor / setHoverStateActor / setPressedStateActor / setDisabledStateActor(shared_ptr&lt;Actor&gt;)</code></td><td>四状态图片外观</td></tr>
 <tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调 <code>void(shared_ptr&lt;Button&gt;)</code></td></tr>
-<tr><td><code>setBoolProperty / setStringProperty</code>（override）</td><td>属性分发</td></tr>
+<tr><td><code>setTextShadowEnable(bool)</code></td><td>文字阴影开关</td></tr>
+<tr><td><code>setTextStateColor / setTextShadowStateColor(StateColor)</code></td><td>文本色 / 阴影色（同步到内部 Label）</td></tr>
 </table>
 
 </details>

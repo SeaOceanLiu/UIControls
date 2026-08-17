@@ -43,15 +43,33 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
-<tr><td><code>indent-width</code></td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
-<tr><td><code>row-height</code></td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
+<tr><td><code>arrow-gap</code></td><td>Float</td><td>6</td><td>箭头与文本间距</td></tr>
+<tr><td><code>background</code> / <code>border</code> / <code>text</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
 <tr><td><code>cycle-navigation</code></td><td>Bool</td><td>true</td><td>Tab 环是否包含树节点</td></tr>
 <tr><td><code>default-expand</code></td><td>Bool</td><td>false</td><td>缺省展开全部节点</td></tr>
-<tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
 <tr><td><code>expand-all</code> / <code>collapse-all</code></td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
-<tr><td><code>background</code> / <code>border</code> / <code>text</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
+<tr><td><code>indent-width</code></td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
+<tr><td><code>line-spacing</code></td><td>Int</td><td>0</td><td>行距（0 = 继承字体行高）</td></tr>
+<tr><td><code>row-height</code></td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
 <tr><td><code>selected</code> / <code>hover</code></td><td>Color</td><td>主题</td><td>选中行 / 悬停行高亮色</td></tr>
+<tr><td><code>selected-id</code></td><td>String（只读）</td><td>—</td><td>当前选中节点 id</td></tr>
+<tr><td><code>selected-user-data</code></td><td>Ptr</td><td>—</td><td>选中节点 userData 读写（借用语义，生命周期调用方保证）</td></tr>
+<tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
+</table>
+
+<h3>4.21.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
+
+<p>TreeNode 不是 Control，item 级属性经 TreeView 按 <code>item-id</code> 定位目标节点后再读写
+（先 <code>SetString("item-id", id)</code>，随后 set/get 作用于该节点）：</p>
+
+<table>
+<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>item-font</code></td><td>Enum</td><td>继承 TreeView</td><td>逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
+<tr><td><code>item-font-size</code></td><td>Int</td><td>0</td><td>逐 Item 字号（0 = 继承 TreeView 级）</td></tr>
+<tr><td><code>item-id</code></td><td>String</td><td>—</td><td>定位目标节点（后续 item 级属性的作用对象）</td></tr>
+<tr><td><code>item-leading-control</code></td><td>Ptr</td><td>—</td><td>行前置控件容器句柄（<strong>借用语义</strong>，生命周期由调用方保证；类型经 <code>UICornerstone_GetControlType</code> / Binding <code>Control::GetType()</code> 查询，如 <code>"check-box"</code> / <code>"image"</code>，再经通用属性系统操作：<code>GetBool(ctl, "checked")</code> / <code>SetCallback(ctl, "check-changed", ...)</code>；C++ Binding 用 <code>ui-&gt;FromHandle(lc)</code> 包装代理）。<strong>运行时 SetPtr 立即挂树</strong>（结构变更之外无需等待重建），传 <code>NULL</code> 解除容器并摘树</td></tr>
+<tr><td><code>item-leading-gap</code></td><td>Float</td><td>6</td><td>行前置控件容器与文本之间的间隔（局部 px）</td></tr>
 </table>
 
 
@@ -59,10 +77,14 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onSelect</code>（C ABI 事件 <code>select</code>）</td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
-<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code>）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
 <tr><td><code>onCollapse</code>（C ABI 事件 <code>collapse</code>）</td><td>节点折叠</td><td>同上（nodeId）</td></tr>
+<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code>）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
+<tr><td><code>onSelect</code>（C ABI 事件 <code>select</code>）</td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
 </table>
+
+<p>行内前置控件的状态回调（如 CheckBox 的 <code>check-changed</code>）走该控件的通用回调通道：
+经 <code>item-leading-control</code> 取句柄后 <code>SetCallback(ctl, "check-changed", ...)</code>
+（负载 <code>UIEventData.data.intVal</code> 为新状态）。</p>
 
 
 <h2>4.21.4 JSON 语法</h2>
@@ -82,6 +104,28 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
               "onExpand": "onTreeExpand",
               "onCollapse": "onTreeCollapse" }
 }</code></pre>
+
+<h3>4.21.4.1 item 增强（行前置控件容器 + 逐 Item 字体）</h3>
+
+<pre><code>"items": [
+  { "id": "cb1", "label": "带勾选框的行",
+    "leadingControl": { "type": "check-box", "checkState": "checked", "id": "cb_n2" },
+    "leadingGap": 10 },
+  { "id": "img1", "label": "带图标的行",
+    "leadingControl": { "type": "image", "image": "assets/images/cross_down.png" },
+    "font": "harmonyos-sans-sc-bold", "size": 16 }
+]</code></pre>
+
+<ul>
+<li><code>leadingControl</code>：行前置控件容器（控件 JSON，复用 <code>type</code> + 控件属性，如
+check-box / image）。rect 由 TreeView 自适应（高 = 行内文字高度，宽按原始宽高比等比，
+行内垂直居中）；文字缩进 = 无容器时文本的缩进，文字被容器让位右移；有箭头行箭头在容器
+左侧不重叠。给容器指定 <code>id</code> 后可直接 <code>FindControl(inst, id)</code> 拿到句柄
+（通用属性系统操作任意控件）。</li>
+<li><code>leadingGap</code>：容器与文本之间的间隔（局部 px，默认 6）。</li>
+<li><code>font</code> / <code>size</code>：逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code>
+粗体）/ 字号（0 = 继承 TreeView 级）。</li>
+</ul>
 
 
 <h2>4.21.5 C++ Binding 样例</h2>
@@ -106,23 +150,45 @@ UICornerstone_SetString(g_inst, tree, "items",
 static void onSelect(UIControlHandle ctl, const UIEventData* ev, void* ud) {
     /* ev 负载含选中节点 id */
 }
-UICornerstone_SetCallback(g_inst, tree, "select", onSelect, NULL);</code></pre>
+UICornerstone_SetCallback(g_inst, tree, "select", onSelect, NULL);
+
+// item 级属性：item-id 定位 → 读写
+UICornerstone_SetString(g_inst, tree, "item-id", "img1");
+UICornerstone_SetFloat( g_inst, tree, "item-leading-gap", 10.0f);   // 容器与文本间隔
+UICornerstone_SetInt(   g_inst, tree, "item-font-size", 18);
+UICornerstone_SetEnum(  g_inst, tree, "item-font", "harmonyos-sans-sc-bold");  // 粗体
+float gap = 0;
+UICornerstone_GetFloat( g_inst, tree, "item-leading-gap", &amp;gap);
+
+// 读取行内 CheckBox 状态（经容器句柄 + 通用属性系统）
+void* lc = NULL;
+UICornerstone_SetString(g_inst, tree, "item-id", "cb1");
+UICornerstone_GetPtr(   g_inst, tree, "item-leading-control", &amp;lc);
+char ctype[64] = {0};
+UICornerstone_GetControlType(g_inst, lc, ctype, (int)sizeof(ctype));  // "check-box" / "image" ...
+int checked = 0;
+UICornerstone_GetBool(  g_inst, lc, "checked", &amp;checked);           // 1 = 勾选
+UICornerstone_SetBool(  g_inst, lc, "checked", 1);                   // 反向设置
+// 或 JSON 里容器带 id 时直接全局查找：
+void* cb = UICornerstone_FindControl(g_inst, "cb_n2");</code></pre>
 
 <details class="methods">
 <summary>4.21.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setItems(vector&lt;shared_ptr&lt;TreeNode&gt;&gt;) / getItems()</code></td><td>整树替换 / 根节点列表（<code>makeNode(id, label, expanded, children)</code> / <code>cloneNode</code> 辅助）</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addChild(parentId, node) / removeNode(id) / clearItems()</code></td><td>节点增删</td></tr>
-<tr><td><code>setNodeLabel(id, label) / setNodeUserData(id, void*) / findNodeById(id)</code></td><td>节点编辑 / 查找</td></tr>
 <tr><td><code>expandNode(id) / collapseNode(id) / expandAll() / collapseAll()</code></td><td>展开 / 折叠</td></tr>
+<tr><td><code>getScrollBar() / getHScrollBar() / getFlatRowCount() / getSelectedRow()</code></td><td>滚动条 / 展开后行数 / 选中行号</td></tr>
 <tr><td><code>selectNode(id) / getSelectedId()</code></td><td>选中 / 查询</td></tr>
-<tr><td><code>setIndentWidth / setRowHeight / setLineSpacing / setArrowGap</code></td><td>几何参数（行高不随字号）</td></tr>
 <tr><td><code>setCycleNavigation(bool) / setDefaultExpand(bool)</code></td><td>键盘环行 / 缺省展开</td></tr>
 <tr><td><code>setFont(FontName) / setFontSize(int) / getFontSize() / getFont()</code></td><td>字体（字号随复合缩放重建）</td></tr>
+<tr><td><code>setIndentWidth / setRowHeight / setLineSpacing / setArrowGap</code></td><td>几何参数（行高不随字号）</td></tr>
+<tr><td><code>setItems(vector&lt;shared_ptr&lt;TreeNode&gt;&gt;) / getItems()</code></td><td>整树替换 / 根节点列表（<code>makeNode(id, label, expanded, children)</code> / <code>cloneNode</code> 辅助）</td></tr>
+<tr><td><code>setNodeLabel(id, label) / setNodeUserData(id, void*) / findNodeById(id)</code></td><td>节点编辑 / 查找</td></tr>
 <tr><td><code>setOnSelect / setOnSelectData / setOnExpand / setOnCollapse / setOnClearNode</code></td><td>回调注册（SelectData 携带节点 userData）</td></tr>
-<tr><td><code>getScrollBar() / getHScrollBar() / getFlatRowCount() / getSelectedRow()</code></td><td>滚动条 / 展开后行数 / 选中行号</td></tr>
+<tr><td><code>TreeNode::leadingControl / leadingGap / fontName / fontSize</code></td><td>行前置控件容器（shared_ptr&lt;Control&gt;，行绘制时自适应 rect）+ 容器与文本间隔 + 逐 Item 字体（C++ 集成直接赋值；C ABI 走 <code>item-*</code> 属性，见 4.21.2.1）</td></tr>
 </table>
 
 </details>

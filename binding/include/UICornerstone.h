@@ -88,6 +88,9 @@ public:
     bool LoadLayout(const std::string& jsonContent);
     bool LoadLayoutFromFile(const std::string& filePath);
     Control FindControl(const std::string& id);
+    // 将裸句柄（如 GetPtr("item-leading-control") 返回值）包装为 Control 代理。
+    // 句柄须属于本实例；重复包装共享同一代理状态（生命周期/有效性追踪）。
+    Control FromHandle(UIControlHandle handle);
 
     // ── 控件工厂 ──
     Control CreateButton(const std::string& text, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);

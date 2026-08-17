@@ -17,7 +17,7 @@ Splitter::Splitter(Control* parent, const SRect& rect,
     , m_dragging(false)
     , m_dragWatcherRegistered(false)
     , m_dragStartRatio(0.5f)
-    , m_dragStartMousePos{0,0}
+, m_dragStartMousePos{0,0}
     , m_dragStartScreenPos(0.0f)
     , m_dragStartLocalPos(0.0f)
     , m_lastClickTime(0)
@@ -29,6 +29,7 @@ Splitter::Splitter(Control* parent, const SRect& rect,
     , m_lastRect()
     , m_onSplitterMoved(nullptr)
 {
+    m_ctlType = ControlType::Splitter;
     m_rect = rect;
     setFocusable(true);
 }

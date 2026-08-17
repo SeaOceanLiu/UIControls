@@ -57,6 +57,9 @@ public:
     void Destroy();
     std::string GetId() const;
 
+    // 控件运行时类型（"check-box" / "image" / "tree-view" ...，与 JSON "type" 值一致）
+    std::string GetType() const;
+
 private:
     std::shared_ptr<ControlState> m_state;
 

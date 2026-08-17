@@ -1102,6 +1102,12 @@ FontName（28 值）延续现有 `FontNameFromString` 函数，模式一致。
 > | Splitter    | `"first-linked"`        | 设置首个关联控件（与 second-linked 配套）     | ✅               | ❌ |
 > | Splitter    | `"second-linked"`       | 设置第二个关联控件                            | ✅               | ❌ |
 > | TreeView    | `"selected-user-data"`  | 读写当前选中节点的 `userData` 指针           | ✅               | ✅ |
+> | TreeView    | `"item-leading-control"`| 读写 `item-id` 定位节点的行前置控件容器句柄（借用语义，生命周期调用方保证） | ✅ | ✅ |
+
+> TreeView item 级属性（**item-id 定位模式**：先 `SetString("item-id", id)` 定位，随后读写作用于该节点）：
+> `"item-leading-gap"`（Float，容器与文本间隔，默认 6）、`"item-font-size"`（Int，0=继承）、
+> `"item-font"`（Enum，逐 Item 字体，如 `"harmonyos-sans-sc-bold"` 粗体）、
+> `"item-id"`（String，定位/查询当前目标）。对应 JSON 键：`leadingGap` / `size` / `font` / item 内 `leadingControl` 对象（复用控件 JSON）。
 
 ---
 
@@ -1287,6 +1293,18 @@ assert(ok == 1 && strcmp(buf, "hello") == 0);
 ### 8.1 新增通用属性
 
 修改 `ControlImpl::setColorProperty` / `setStateColorProperty` 加一行 `strcmp`。
+
+### 8.2 控件类型查询（UICornerstone_GetControlType）
+
+- **机制**：基类 `Control` 持有 `protected: ControlType m_ctlType = None`（`enum class ControlType`，
+  ControlBase.h，与 JSON `"type"` 值一一对应），**子类构造函数体内设置**（如
+  `m_ctlType = ControlType::Label;`），基类 `getControlType()` 直接返回——O(1)，零 dynamic_cast。
+- **字符串**：CABI `UICornerstone_GetControlType` 内 `switch` 枚举转 `PropertyNames::kControlType*`
+  常量（禁止字面量）；`None` 或未识别返回 0。
+- **注意**：子类若已有 `m_type` 私有成员（如 MenuItem 的 `MenuItemType`），基类成员用
+  `m_ctlType` 避免被派生成员阴影；新增控件只需在构造函数设置枚举 + switch 加一行。
+- **特殊类型**：image-button 本质为 button → 返回 `"button"`；`"menu-item"` / `"menu-panel"` /
+  `"handle-control"` 仅查询返回（JSON 无对应 type）。
 
 ### 8.2 新增控件特有属性
 

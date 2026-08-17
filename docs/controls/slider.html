@@ -44,19 +44,20 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0</td><td>当前值</td></tr>
-<tr><td><code>step</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
+<tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
+<tr><td><code>label-font</code></td><td>Enum</td><td>继承</td><td>数值标签字体（同通用字体枚举）</td></tr>
+<tr><td><code>label-format</code></td><td>String</td><td>—</td><td>标签格式（如 "%.0f px"）</td></tr>
+<tr><td><code>label-gap</code></td><td>Float</td><td>4</td><td>数值标签间距</td></tr>
 <tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
-<tr><td><code>track-thickness</code></td><td>Float</td><td>4</td><td>轨道厚度</td></tr>
+<tr><td><code>reverse</code></td><td>Bool</td><td>false</td><td>反向模式</td></tr>
+<tr><td><code>show-value-label</code></td><td>Bool</td><td>false</td><td>显示数值标签</td></tr>
+<tr><td><code>step</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
+<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code></td><td><code>horizontal</code> / <code>vertical</code></td></tr>
 <tr><td><code>thumb-size</code></td><td>Float</td><td>16</td><td>手柄尺寸</td></tr>
 <tr><td><code>tick-interval</code> / <code>tick-length</code></td><td>Float</td><td>0 / 8</td><td>刻度间隔 / 长度</td></tr>
-<tr><td><code>label-gap</code></td><td>Float</td><td>4</td><td>数值标签间距</td></tr>
-<tr><td><code>label-format</code></td><td>String</td><td>—</td><td>标签格式（如 "%.0f px"）</td></tr>
-<tr><td><code>show-value-label</code></td><td>Bool</td><td>false</td><td>显示数值标签</td></tr>
-<tr><td><code>reverse</code></td><td>Bool</td><td>false</td><td>反向模式</td></tr>
-<tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code></td><td><code>horizontal</code> / <code>vertical</code></td></tr>
 <tr><td><code>track</code> / <code>track-fill</code> / <code>thumb</code> / <code>thumb-border</code> / <code>thumb-hover</code> / <code>tick</code> / <code>label</code></td><td>Color</td><td>见右</td><td>track(60,60,60) / track-fill(0,120,255) / thumb 白 / thumb-border(0,120,255) / thumb-hover(200,200,200) / tick(100,100,100) / label 白</td></tr>
-<tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
+<tr><td><code>track-thickness</code></td><td>Float</td><td>4</td><td>轨道厚度</td></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td><td>当前值</td></tr>
 </table>
 
 
@@ -127,19 +128,20 @@ UICornerstone_SetCallback(g_inst, sl, "value-changed", onSlide, NULL);</code></p
 <summary>4.17.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>范围（默认 0~100）</td></tr>
-<tr><td><code>setStep(float)</code> / <code>getStep()</code></td><td>步长（松手吸附到 step）</td></tr>
-<tr><td><code>setValue(float)</code> / <code>getValue()</code> / <code>getPercent()</code></td><td>值 / 百分比</td></tr>
-<tr><td><code>setStyle(SliderStyle)</code> / <code>getStyle()</code></td><td>Horizontal / Vertical（默认 Horizontal）</td></tr>
-<tr><td><code>setReverse(bool)</code> / <code>getReverse()</code></td><td>反向（min 在右 / 底部）</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>isFocused()</code></td><td>焦点状态</td></tr>
-<tr><td><code>setTrackThickness(float)</code> / <code>getTrackThickness()</code>（默认 4）、<code>setThumbSize(float)</code> / <code>getThumbSize()</code>（默认 16）</td><td>轨道 / 手柄尺寸</td></tr>
-<tr><td><code>setTrackColor / setTrackFillColor / setThumbColor / setThumbBorderColor / setThumbHoverColor(SColor)</code>（+getter）</td><td>视觉颜色</td></tr>
-<tr><td><code>setTickInterval(float)</code> / <code>getTickInterval()</code>（默认 0=关闭）、<code>setTickLength(float)</code> / <code>getTickLength()</code>（默认 8）、<code>setTickColor(SColor)</code> / <code>getTickColor()</code></td><td>刻度标记</td></tr>
-<tr><td><code>setShowValueLabel(bool)</code> / <code>isShowValueLabel()</code> / <code>getValueLabel()</code></td><td>数值标签开关 / 获取</td></tr>
 <tr><td><code>setLabelFont(FontName)</code>、<code>setLabelFontSize(int)</code>、<code>setLabelColor(SColor)</code>、<code>setLabelFormat(string)</code>、<code>setLabelGap(float)</code>（默认 4）</td><td>标签字体 / 格式 / 间距</td></tr>
 <tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调（仅提交时触发）</td></tr>
+<tr><td><code>setRange(float min, float max)</code> / <code>getMinValue()</code> / <code>getMaxValue()</code></td><td>范围（默认 0~100）</td></tr>
+<tr><td><code>setReverse(bool)</code> / <code>getReverse()</code></td><td>反向（min 在右 / 底部）</td></tr>
+<tr><td><code>setShowValueLabel(bool)</code> / <code>isShowValueLabel()</code> / <code>getValueLabel()</code></td><td>数值标签开关 / 获取</td></tr>
+<tr><td><code>setStep(float)</code> / <code>getStep()</code></td><td>步长（松手吸附到 step）</td></tr>
+<tr><td><code>setStyle(SliderStyle)</code> / <code>getStyle()</code></td><td>Horizontal / Vertical（默认 Horizontal）</td></tr>
+<tr><td><code>setTickInterval(float)</code> / <code>getTickInterval()</code>（默认 0=关闭）、<code>setTickLength(float)</code> / <code>getTickLength()</code>（默认 8）、<code>setTickColor(SColor)</code> / <code>getTickColor()</code></td><td>刻度标记</td></tr>
+<tr><td><code>setTrackColor / setTrackFillColor / setThumbColor / setThumbBorderColor / setThumbHoverColor(SColor)</code>（+getter）</td><td>视觉颜色</td></tr>
+<tr><td><code>setTrackThickness(float)</code> / <code>getTrackThickness()</code>（默认 4）、<code>setThumbSize(float)</code> / <code>getThumbSize()</code>（默认 16）</td><td>轨道 / 手柄尺寸</td></tr>
+<tr><td><code>setValue(float)</code> / <code>getValue()</code> / <code>getPercent()</code></td><td>值 / 百分比</td></tr>
 </table>
 
 </details>

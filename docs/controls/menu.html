@@ -47,10 +47,11 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>caption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
 <tr><td><code>checked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
-<tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
 <tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
-<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
+<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>hovered-index</code></td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
+<tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
 </table>
 
 
@@ -137,25 +138,25 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 <h3>MenuItem</h3>
 <table>
 <tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>菜单项文字</td></tr>
-<tr><td><code>setShortcut(string)</code> / <code>getShortcut()</code></td><td>快捷键文本（如 "Ctrl+N"）</td></tr>
-<tr><td><code>setChecked(bool)</code> / <code>getChecked()</code></td><td>勾选状态</td></tr>
-<tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调</td></tr>
-<tr><td><code>setSubMenu(shared_ptr&lt;MenuPanel&gt;)</code> / <code>getSubMenu()</code> / <code>hasSubMenu()</code></td><td>子菜单</td></tr>
-<tr><td><code>getType()</code></td><td>项类型（Normal / Separator / SubMenu）</td></tr>
-<tr><td><code>setMenuFont(SharedFont, float)</code> / <code>getFont()</code> / <code>getFontSize()</code></td><td>面板注入共享字体</td></tr>
 <tr><td><code>closeMenuChain()</code></td><td>关闭整个菜单链</td></tr>
+<tr><td><code>getType()</code></td><td>项类型（Normal / Separator / SubMenu）</td></tr>
+<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>菜单项文字</td></tr>
+<tr><td><code>setChecked(bool)</code> / <code>getChecked()</code></td><td>勾选状态</td></tr>
+<tr><td><code>setMenuFont(SharedFont, float)</code> / <code>getFont()</code> / <code>getFontSize()</code></td><td>面板注入共享字体</td></tr>
+<tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调</td></tr>
+<tr><td><code>setShortcut(string)</code> / <code>getShortcut()</code></td><td>快捷键文本（如 "Ctrl+N"）</td></tr>
+<tr><td><code>setSubMenu(shared_ptr&lt;MenuPanel&gt;)</code> / <code>getSubMenu()</code> / <code>hasSubMenu()</code></td><td>子菜单</td></tr>
 </table>
 
 <h3>MenuPanel</h3>
 <table>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addItem(shared_ptr&lt;MenuItem&gt;)</code> / <code>addSeparator()</code> / <code>removeItem(...)</code></td><td>菜单项管理</td></tr>
-<tr><td><code>show()</code> / <code>hide()</code> / <code>isVisible()</code> / <code>setPosition(x, y)</code></td><td>显隐与定位</td></tr>
-<tr><td><code>getItemAt(x, y)</code></td><td>命中测试</td></tr>
 <tr><td><code>closeWithChildren()</code> / <code>recalculateSize()</code></td><td>关闭 / 重算尺寸</td></tr>
+<tr><td><code>getItemAt(x, y)</code></td><td>命中测试</td></tr>
 <tr><td><code>getOpenSubMenu()</code> / <code>setOpenSubMenu(panel)</code>、<code>getHoveredIndex()</code> / <code>setHoveredIndex(int)</code></td><td>子菜单 / 悬停状态</td></tr>
 <tr><td><code>setFontSize(float)</code> / <code>getFontSize()</code>、<code>setItemHeightRatio(float)</code> / <code>getItemHeightRatio()</code>（1.0~3.0，默认 1.6）、<code>setFontName(FontName)</code></td><td>字体 / 行高比 / 字体名（即时生效）</td></tr>
+<tr><td><code>show()</code> / <code>hide()</code> / <code>isVisible()</code> / <code>setPosition(x, y)</code></td><td>显隐与定位</td></tr>
 </table>
 
 <h3>MenuBar</h3>
@@ -163,9 +164,9 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addMenu(caption, panel)</code> / <code>removeMenu(caption)</code></td><td>顶级菜单管理</td></tr>
 <tr><td><code>closeAllMenus()</code></td><td>关闭全部下拉</td></tr>
+<tr><td><code>isInMenuMode()</code> / <code>enterMenuMode(int index)</code> / <code>exitMenuMode()</code></td><td>菜单模式（点击展开后鼠标移动自动切换）</td></tr>
 <tr><td><code>setBarHeight(float)</code> / <code>getBarHeight()</code></td><td>菜单栏高度</td></tr>
 <tr><td><code>setItemHeightRatio(float)</code> / <code>getItemHeightRatio()</code>、<code>setFontSize(float)</code> / <code>getFontSize()</code></td><td>尺寸 / 字号（默认 20）</td></tr>
-<tr><td><code>isInMenuMode()</code> / <code>enterMenuMode(int index)</code> / <code>exitMenuMode()</code></td><td>菜单模式（点击展开后鼠标移动自动切换）</td></tr>
 </table>
 
 </details>

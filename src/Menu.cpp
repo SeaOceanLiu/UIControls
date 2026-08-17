@@ -81,6 +81,7 @@ MenuItem::MenuItem(Control *parent, MenuItemType type, float xScale, float yScal
     , m_font(nullptr)
     , m_fontSize(MenuColors::DEFAULT_TEXT_SIZE)
 {
+    m_ctlType = ControlType::MenuItem;
     setRect(SRect(0, 0, 0, 0));
 }
 
@@ -235,6 +236,7 @@ MenuPanel::MenuPanel(Control *parent, float xScale, float yScale)
     , m_separatorColor(MenuColors::SEPARATOR)
     , m_shadowRadius(MenuColors::PANEL_SHADOW_BLUR)
 {
+    m_ctlType = ControlType::MenuPanel;
     setRect(SRect(0, 0, 0, 0));
     setBorderVisible(true);
 }
@@ -655,6 +657,7 @@ MenuBar::MenuBar(Control *parent, float xScale, float yScale)
     , m_font(nullptr)
     , m_fontName(MenuColors::MENU_FONT)
 {
+    m_ctlType = ControlType::MenuBar;
     setRect(SRect(0, 0, 0, m_barHeight));
     setBorderVisible(false);
 }

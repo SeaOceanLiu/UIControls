@@ -42,15 +42,15 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0</td><td>当前值（SetFloat/GetFloat）</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
-<tr><td><code>step</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
-<tr><td><code>page-step</code></td><td>Float</td><td>10.0</td><td>页步长</td></tr>
-<tr><td><code>decimals</code></td><td>Int</td><td>0</td><td>小数精度（唯一 int 属性）</td></tr>
-<tr><td><code>read-only</code></td><td>Bool</td><td>false</td><td>只读模式</td></tr>
-<tr><td><code>button-width</code></td><td>Float</td><td>28</td><td>箭头区宽度</td></tr>
 <tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>arrow-pressed</code></td><td>Color</td><td>(180,180,180) / (255,255,255) / (220,220,220)</td><td>箭头三态颜色</td></tr>
 <tr><td><code>background</code> / <code>border</code> / <code>text</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
+<tr><td><code>button-width</code></td><td>Float</td><td>28</td><td>箭头区宽度</td></tr>
+<tr><td><code>decimals</code></td><td>Int</td><td>0</td><td>小数精度（唯一 int 属性）</td></tr>
+<tr><td><code>page-step</code></td><td>Float</td><td>10.0</td><td>页步长</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
+<tr><td><code>read-only</code></td><td>Bool</td><td>false</td><td>只读模式</td></tr>
+<tr><td><code>step</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td><td>当前值（SetFloat/GetFloat）</td></tr>
 </table>
 
 
@@ -117,16 +117,17 @@ UICornerstone_SetCallback(g_inst, nud, "value-changed", onValueChanged, NULL);</
 <summary>4.13.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setValue(double)</code> / <code>getValue()</code></td><td>当前值（自动钳位 + 吸附到步长）</td></tr>
-<tr><td><code>setRange(double min, double max)</code> / <code>getRange()</code></td><td>范围（默认 0~100）</td></tr>
-<tr><td><code>setStep(double)</code> / <code>getStep()</code></td><td>步长（默认 1.0，负值取绝对值）</td></tr>
-<tr><td><code>setPageStep(double)</code> / <code>getPageStep()</code></td><td>PageUp/Down 步长（默认 10.0）</td></tr>
-<tr><td><code>setDecimals(int)</code> / <code>getDecimals()</code></td><td>小数位（0~6，默认 0）</td></tr>
-<tr><td><code>setReadOnly(bool)</code> / <code>isReadOnly()</code></td><td>只读（禁输入，按钮仍可用，默认 false）</td></tr>
-<tr><td><code>setButtonWidth(float)</code> / <code>getButtonWidth()</code></td><td>箭头区宽度（默认 28）</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>setArrowColor(normal, hover, press)</code> / <code>getArrowColor()</code></td><td>箭头三态颜色</td></tr>
+<tr><td><code>setButtonWidth(float)</code> / <code>getButtonWidth()</code></td><td>箭头区宽度（默认 28）</td></tr>
+<tr><td><code>setDecimals(int)</code> / <code>getDecimals()</code></td><td>小数位（0~6，默认 0）</td></tr>
 <tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调 <code>void(shared_ptr&lt;NumericUpDown&gt;, double)</code></td></tr>
+<tr><td><code>setPageStep(double)</code> / <code>getPageStep()</code></td><td>PageUp/Down 步长（默认 10.0）</td></tr>
+<tr><td><code>setRange(double min, double max)</code> / <code>getRange()</code></td><td>范围（默认 0~100）</td></tr>
+<tr><td><code>setReadOnly(bool)</code> / <code>isReadOnly()</code></td><td>只读（禁输入，按钮仍可用，默认 false）</td></tr>
+<tr><td><code>setStep(double)</code> / <code>getStep()</code></td><td>步长（默认 1.0，负值取绝对值）</td></tr>
+<tr><td><code>setValue(double)</code> / <code>getValue()</code></td><td>当前值（自动钳位 + 吸附到步长）</td></tr>
 <tr><td><code>stepValue(int dir)</code></td><td>以 step 步进（+1/-1）</td></tr>
 </table>
 

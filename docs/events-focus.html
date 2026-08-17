@@ -42,17 +42,17 @@ UI_EVENT_WINDOW_RESIZE, UI_EVENT_WINDOW_CLOSE, UI_EVENT_FOCUS_GAINED, UI_EVENT_F
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>Binding 具名访问器</th></tr>
-<tr><td><code>click</code></td><td>按钮/标签点击，焦点态 Enter/Space</td><td>—</td></tr>
-<tr><td><code>enter</code></td><td>输入框回车</td><td>—</td></tr>
-<tr><td><code>text-changed</code></td><td>文本变化</td><td><code>GetTextChanged()</code></td></tr>
 <tr><td><code>check-changed</code></td><td>复选框状态变化</td><td><code>GetCheckState()</code>（0/1/2）</td></tr>
-<tr><td><code>value-changed</code></td><td>滑块/进度条/数值框值变化</td><td><code>GetValueChanged()</code></td></tr>
-<tr><td><code>selection-changed</code></td><td>下拉框选中变化</td><td><code>GetSelectedIndex()</code> / <code>GetSelectedValue()</code></td></tr>
+<tr><td><code>click</code></td><td>按钮/标签点击，焦点态 Enter/Space</td><td>—</td></tr>
 <tr><td><code>color-changed</code></td><td>取色器提交颜色</td><td>颜色负载</td></tr>
-<tr><td><code>position-changed</code></td><td>滚动条位置变化</td><td><code>GetPositionChanged()</code></td></tr>
-<tr><td><code>moved</code></td><td>分割条拖拽结束</td><td><code>GetMovedPosition()</code></td></tr>
 <tr><td><code>confirm</code> / <code>cancel</code> / <code>close</code></td><td>弹窗确认/取消/关闭</td><td><code>GetCloseResult()</code></td></tr>
+<tr><td><code>enter</code></td><td>输入框回车</td><td>—</td></tr>
+<tr><td><code>moved</code></td><td>分割条拖拽结束</td><td><code>GetMovedPosition()</code></td></tr>
+<tr><td><code>position-changed</code></td><td>滚动条位置变化</td><td><code>GetPositionChanged()</code></td></tr>
 <tr><td><code>select</code> / <code>expand</code> / <code>collapse</code></td><td>树视图选中/展开/折叠</td><td><code>GetNodeId()</code> / <code>GetNodeUserData()</code></td></tr>
+<tr><td><code>selection-changed</code></td><td>下拉框选中变化</td><td><code>GetSelectedIndex()</code> / <code>GetSelectedValue()</code></td></tr>
+<tr><td><code>text-changed</code></td><td>文本变化</td><td><code>GetTextChanged()</code></td></tr>
+<tr><td><code>value-changed</code></td><td>滑块/进度条/数值框值变化</td><td><code>GetValueChanged()</code></td></tr>
 </table>
 
 <h2>3.5.4 Event 类通用访问器</h2>

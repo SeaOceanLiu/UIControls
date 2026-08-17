@@ -5,6 +5,7 @@
 HandleControl::HandleControl()
     : ControlImpl(nullptr)
 {
+    m_ctlType = ControlType::HandleControl;
     m_visible = true;
 }
 

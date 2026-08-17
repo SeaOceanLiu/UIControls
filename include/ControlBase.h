@@ -134,6 +134,16 @@ public:
     }
 };
 
+// 控件类型枚举：子类构造函数设置 m_type，基类 getControlType() 返回。
+// 与 JSON "type" 值一一对应（小写 kebab-case），需字符串时经枚举转常量。
+enum class ControlType {
+    None,
+    Label, Button, EditBox, ComboBox, TextArea, CheckBox,
+    ProgressBar, Slider, ScrollBar, Panel, WinFrame, ColorPicker,
+    Splitter, TreeView, NumericUpDown, Popup, ConfirmPopup, Dialog,
+    MenuItem, MenuPanel, MenuBar, Image, Animation, HandleControl
+};
+
 class Control{
 protected:
     // 事件队列
@@ -283,6 +293,13 @@ public:
     virtual int getEnumProperty(const char* prop, const char*& out) { return 0; }
     virtual int getPtrProperty(const char* prop, void*& out) { return 0; }
 
+    // ── 控件类型（枚举，构造时由子类设置；需字符串时经枚举转常量）──
+    ControlType getControlType() const { return m_ctlType; }
+
+protected:
+    ControlType m_ctlType = ControlType::None;
+
+public:
     // ── Callback system ──
     // event: event name (e.g. "click", "value-changed"), not "on" prefixed
     virtual int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) { return 0; }

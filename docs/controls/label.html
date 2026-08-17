@@ -42,17 +42,17 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>shadow</code></td><td>Bool</td><td>false</td><td>阴影开关</td></tr>
-<tr><td><code>expand</code></td><td>Bool</td><td>false</td><td>自动扩展尺寸</td></tr>
-<tr><td><code>clickable</code></td><td>Bool</td><td>false</td><td>可点击命中</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>16</td><td>字号</td></tr>
-<tr><td><code>line-height</code></td><td>Int</td><td>字体默认行高</td><td>行高</td></tr>
-<tr><td><code>line-spacing-ratio</code></td><td>Float</td><td>默认行距比例</td><td>行距比例</td></tr>
-<tr><td><code>caption</code></td><td>String</td><td>空</td><td>文本内容</td></tr>
 <tr><td><code>align</code></td><td>Enum</td><td><code>mid-left</code></td><td>9 值同 EditBox</td></tr>
+<tr><td><code>caption</code></td><td>String</td><td>空</td><td>文本内容</td></tr>
+<tr><td><code>clickable</code></td><td>Bool</td><td>false</td><td>可点击命中</td></tr>
+<tr><td><code>expand</code></td><td>Bool</td><td>false</td><td>自动扩展尺寸</td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td><td>字体名（内置 28 种，见 ConstDef::fontFiles）</td></tr>
 <tr><td><code>font-file</code></td><td>String</td><td>空</td><td>任意字体文件路径（相对 resourceRoot，支持 <code>provider:</code> 前缀）</td></tr>
 <tr><td><code>font-resource</code></td><td>String</td><td>空</td><td>内存注册的字体资源 ID（MemoryResourceProvider）</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td><td>字号</td></tr>
+<tr><td><code>line-height</code></td><td>Int</td><td>字体默认行高</td><td>行高</td></tr>
+<tr><td><code>line-spacing-ratio</code></td><td>Float</td><td>默认行距比例</td><td>行距比例</td></tr>
+<tr><td><code>shadow</code></td><td>Bool</td><td>false</td><td>阴影开关</td></tr>
 </table>
 
 <p>通用：<code>text / text-shadow</code>（StateColor，可带 .hover/.pressed/.disabled）、<code>visible / enabled / transparent / border-visible</code>。</p>
@@ -118,20 +118,21 @@ UICornerstone_SetString(g_inst, lbl, "font-resource", "maple-font");     // 内�
 <summary>4.10.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>getHotRect()</code></td><td>文本热区（未缩放）</td></tr>
-<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>文本内容</td></tr>
-<tr><td><code>setFont(FontName)</code> / <code>getFont()</code></td><td>字体（枚举内置 28 种；任意字体见 <code>font-file</code> / <code>font-resource</code> 属性）</td></tr>
 <tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>任意字体文件 / 内存资源加载</td></tr>
 <tr><td><code>setAlignmentMode(AlignmentMode)</code> / <code>getAlignmentMode()</code></td><td>对齐（默认 AM_MID_LEFT）</td></tr>
-<tr><td><code>setMargin(Margin)</code> / <code>setFontSize(int)</code> / <code>getFontSize()</code></td><td>边距 / 字号（默认 16）</td></tr>
-<tr><td><code>setShadow(bool)</code> / <code>setShadowOffset(SPoint)</code></td><td>阴影与偏移</td></tr>
-<tr><td><code>setOnClick(OnClickHandler)</code> / <code>setOnPropertyChanged(OnPropertyChangedHandler)</code></td><td>点击（需 clickable）/ 属性变化回调</td></tr>
-<tr><td><code>setLineHeight(int)</code> / <code>getLineHeight()</code> / <code>setLineSpacingRatio(float)</code> / <code>getLineSpacingRatio()</code></td><td>行高 / 行距比例</td></tr>
+<tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>文本内容</td></tr>
+<tr><td><code>setClickable(bool)</code></td><td>可点击（事件命中）开关</td></tr>
 <tr><td><code>setDebugDraw(bool)</code> / <code>getDebugDraw()</code></td><td>调试热区绘制</td></tr>
 <tr><td><code>setEnableExpand(bool)</code> / <code>getEnableExpand()</code></td><td>自动扩展尺寸</td></tr>
-<tr><td><code>setClickable(bool)</code></td><td>可点击（事件命中）开关</td></tr>
+<tr><td><code>setFont(FontName)</code> / <code>getFont()</code></td><td>字体（枚举内置 28 种；任意字体见 <code>font-file</code> / <code>font-resource</code> 属性）</td></tr>
 <tr><td><code>SetFontStyle(int)</code></td><td>字体样式（normal/bold/italic/underline/strikethrough）</td></tr>
+<tr><td><code>setLineHeight(int)</code> / <code>getLineHeight()</code> / <code>setLineSpacingRatio(float)</code> / <code>getLineSpacingRatio()</code></td><td>行高 / 行距比例</td></tr>
+<tr><td><code>setMargin(Margin)</code> / <code>setFontSize(int)</code> / <code>getFontSize()</code></td><td>边距 / 字号（默认 16）</td></tr>
+<tr><td><code>setOnClick(OnClickHandler)</code> / <code>setOnPropertyChanged(OnPropertyChangedHandler)</code></td><td>点击（需 clickable）/ 属性变化回调</td></tr>
+<tr><td><code>setShadow(bool)</code> / <code>setShadowOffset(SPoint)</code></td><td>阴影与偏移</td></tr>
 <tr><td><code>setXxxProperty / getXxxProperty</code>、<code>setCallbackProperty</code></td><td>属性分发</td></tr>
 </table>
 

@@ -84,18 +84,19 @@ UICornerstone_SetRect(g_inst, hc, 20, 20, 200, 100);</code></pre>
 <summary>4.9.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setTarget(shared_ptr&lt;Control&gt;)</code> / <code>setTarget(Control*)</code></td><td>附加到目标（shared_ptr 版本监控生命周期并自动加入目标父容器；裸指针版本专为 C ABI，生命周期由调用方保证）</td></tr>
-<tr><td><code>getTarget()</code></td><td>查询目标（原始指针）</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>detach()</code></td><td>分离：清状态、取消置顶、从父容器移除</td></tr>
+<tr><td><code>draw()</code> / <code>handleEvent(Event)</code></td><td>每帧校正自身 rect 跟随目标、重建手柄缓存、命中检测与拖拽</td></tr>
+<tr><td><code>getTarget()</code></td><td>查询目标（原始指针）</td></tr>
+<tr><td><code>isContainsPoint(x, y)</code></td><td>恒返回 false（事件穿透的关键）</td></tr>
+<tr><td><code>setActiveColor(SColor)</code> / <code>activeColor()</code></td><td>拖拽高亮色（默认蓝）</td></tr>
+<tr><td><code>setCornerHandlesVisible(bool)</code> / <code>setEdgeHandlesVisible(bool)</code> / <code>setMoveHandleVisible(bool)</code> / <code>setSelectionBoxVisible(bool)</code></td><td>四角手柄 / 四边手柄 / 移动手柄 / 选择框显隐（均默认 true）</td></tr>
+<tr><td><code>setHandleColor(SColor fill, SColor border)</code> / <code>handleFillColor()</code> / <code>handleBorderColor()</code></td><td>手柄填充 + 边框色（默认白填充 / 蓝边框）</td></tr>
 <tr><td><code>setHandleSize(float)</code> / <code>handleSize()</code></td><td>手柄方块大小（默认 8.0）</td></tr>
 <tr><td><code>setMinSize(float w, float h)</code> / <code>minSize()</code></td><td>目标最小尺寸约束（默认 20×20）</td></tr>
-<tr><td><code>setHandleColor(SColor fill, SColor border)</code> / <code>handleFillColor()</code> / <code>handleBorderColor()</code></td><td>手柄填充 + 边框色（默认白填充 / 蓝边框）</td></tr>
-<tr><td><code>setActiveColor(SColor)</code> / <code>activeColor()</code></td><td>拖拽高亮色（默认蓝）</td></tr>
 <tr><td><code>setSelectionColor(SColor)</code> / <code>selectionColor()</code></td><td>虚线选择框颜色（默认蓝）</td></tr>
-<tr><td><code>setCornerHandlesVisible(bool)</code> / <code>setEdgeHandlesVisible(bool)</code> / <code>setMoveHandleVisible(bool)</code> / <code>setSelectionBoxVisible(bool)</code></td><td>四角手柄 / 四边手柄 / 移动手柄 / 选择框显隐（均默认 true）</td></tr>
-<tr><td><code>draw()</code> / <code>handleEvent(Event)</code></td><td>每帧校正自身 rect 跟随目标、重建手柄缓存、命中检测与拖拽</td></tr>
-<tr><td><code>isContainsPoint(x, y)</code></td><td>恒返回 false（事件穿透的关键）</td></tr>
+<tr><td><code>setTarget(shared_ptr&lt;Control&gt;)</code> / <code>setTarget(Control*)</code></td><td>附加到目标（shared_ptr 版本监控生命周期并自动加入目标父容器；裸指针版本专为 C ABI，生命周期由调用方保证）</td></tr>
 </table>
 
 </details>

@@ -28,6 +28,7 @@ ComboBox::ComboBox(Control* parent, SRect rect, float xScale, float yScale)
     , m_listBorderColor(ConstDef::COMBOBOX_DEFAULT_LIST_BORDER_COLOR)
     , m_dropdownOffset(ConstDef::COMBOBOX_DROPDOWN_OFFSET)
 {
+    m_ctlType = ControlType::ComboBox;
     setPasswordMode(false);
     m_fontSize = ConstDef::COMBOBOX_DEFAULT_FONT_SIZE;
     m_margin.right += m_arrowWidth;

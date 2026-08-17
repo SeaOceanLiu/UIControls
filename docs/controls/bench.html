@@ -42,8 +42,8 @@ BENCH->setOnInitial(callback);     // 资源加载完成回调</code></pre>
 
 <table>
 <tr><th>回调</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>setOnInitial(handler)</code></td><td>资源加载完成（initial() 内）</td><td><code>void(shared_ptr&lt;Bench&gt;)</code></td></tr>
 <tr><td>C ABI 事件 <code>"initial"</code></td><td>同上</td><td>无负载</td></tr>
+<tr><td><code>setOnInitial(handler)</code></td><td>资源加载完成（initial() 内）</td><td><code>void(shared_ptr&lt;Bench&gt;)</code></td></tr>
 </table>
 
 
@@ -69,18 +69,19 @@ if (UICornerstone_LoadLayout(g_inst, layoutJson)) {
 <summary>4.2.6 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加控件后解析子百分比尺寸并 reflow</td></tr>
+<tr><td><code>handleEvent(Event)</code></td><td>拦截 Tab/Ctrl+Tab 做焦点切换，其余转 Panel 分派</td></tr>
 <tr><td><code>initial()</code></td><td>资源加载完成后的初始化：置标志、触发 <code>onInitial</code> 回调并 fire C ABI 事件 <code>"initial"</code></td></tr>
 <tr><td><code>inputControl(shared_ptr&lt;Event&gt;)</code></td><td>向控件树注入一条事件（<code>triggerEvent</code> 入队）</td></tr>
-<tr><td><code>repeatTrigger()</code></td><td>按住鼠标/触摸时的自动重复触发（DEFAULT_BTN_MS_REPEAT 间隔）</td></tr>
-<tr><td><code>update() / draw() / resized(SRect)</code></td><td>生命周期（未初始化先 initial()；转发 Panel 实现）</td></tr>
-<tr><td><code>handleEvent(Event)</code></td><td>拦截 Tab/Ctrl+Tab 做焦点切换，其余转 Panel 分派</td></tr>
 <tr><td><code>isExiting()</code></td><td>退出标志查询</td></tr>
-<tr><td><code>setOnInitial(OnInitialHandler)</code></td><td>设置初始化回调；已初始化则立即调用</td></tr>
-<tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加控件后解析子百分比尺寸并 reflow</td></tr>
-<tr><td><code>setViewportScaleMode(ViewportScaleMode)</code> / <code>getViewportScaleMode()</code></td><td>视口缩放模式切换 / 查询（off / fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6</a>）</td></tr>
-<tr><td><code>setViewportAnchor(float ax, float ay)</code></td><td>手动锚点偏移（增量叠加）</td></tr>
 <tr><td><code>recomputeViewportTransform()</code></td><td>窗口尺寸 / 模式 / 锚点变化后重算根变换</td></tr>
+<tr><td><code>repeatTrigger()</code></td><td>按住鼠标/触摸时的自动重复触发（DEFAULT_BTN_MS_REPEAT 间隔）</td></tr>
+<tr><td><code>setOnInitial(OnInitialHandler)</code></td><td>设置初始化回调；已初始化则立即调用</td></tr>
+<tr><td><code>setViewportAnchor(float ax, float ay)</code></td><td>手动锚点偏移（增量叠加）</td></tr>
+<tr><td><code>setViewportScaleMode(ViewportScaleMode)</code> / <code>getViewportScaleMode()</code></td><td>视口缩放模式切换 / 查询（off / fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6</a>）</td></tr>
+<tr><td><code>update() / draw() / resized(SRect)</code></td><td>生命周期（未初始化先 initial()；转发 Panel 实现）</td></tr>
 </table>
 
 </details>

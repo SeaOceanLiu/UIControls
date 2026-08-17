@@ -4,6 +4,7 @@
 Panel::Panel(Control *parent, SRect rect, float xScale, float yScale):
     ControlImpl(parent, xScale, yScale)
 {
+    m_ctlType = ControlType::Panel;
     m_rect = rect;
 }
 

@@ -116,6 +116,7 @@ struct Api {
     int (*fnGetString)(UIInstance, UIControlHandle, const char*, char*, int) = nullptr;
     int (*fnGetEnum)(UIInstance, UIControlHandle, const char*, char*, int) = nullptr;
     int (*fnGetPtr)(UIInstance, UIControlHandle, const char*, void**) = nullptr;
+    int (*fnGetControlType)(UIInstance, UIControlHandle, char*, int) = nullptr;
 
     // 回调
     int (*fnSetCallback)(UIInstance, UIControlHandle, const char*, UIEventCallback, void*) = nullptr;

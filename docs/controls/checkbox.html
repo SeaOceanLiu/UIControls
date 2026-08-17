@@ -38,16 +38,16 @@ UIControlHandle cb = UICornerstone_CreateCheckBox(g_inst, "Accept", 50, 50, 100,
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>box-border</code></td><td>Color</td><td>RGB(83,83,90)</td><td>复选框边框颜色</td></tr>
 <tr><td><code>check</code></td><td>Color</td><td>RGB(76,175,80)</td><td>勾选符号颜色</td></tr>
+<tr><td><code>check-state</code></td><td>Enum</td><td><code>unchecked</code></td><td><code>unchecked</code> / <code>checked</code> / <code>indeterminate</code></td></tr>
+<tr><td><code>checked</code></td><td>Bool</td><td>false</td><td>true→Checked，false→Unchecked</td></tr>
 <tr><td><code>cross</code></td><td>Color</td><td>RGB(244,67,54)</td><td>叉号颜色</td></tr>
 <tr><td><code>indeterminate</code></td><td>Color</td><td>RGB(158,158,158)</td><td>半选横线颜色</td></tr>
-<tr><td><code>box-border</code></td><td>Color</td><td>RGB(83,83,90)</td><td>复选框边框颜色</td></tr>
-<tr><td><code>tri-state</code></td><td>Bool</td><td>true</td><td>三态模式开关</td></tr>
-<tr><td><code>checked</code></td><td>Bool</td><td>false</td><td>true→Checked，false→Unchecked</td></tr>
+<tr><td><code>layout</code></td><td>Enum</td><td><code>text-right</code></td><td><code>text-right</code> / <code>text-left</code></td></tr>
 <tr><td><code>size-ratio</code></td><td>Float</td><td>1.0</td><td>复选框尺寸倍率</td></tr>
 <tr><td><code>style</code></td><td>Enum</td><td><code>classic</code></td><td><code>classic</code> / <code>cross</code> / <code>circle</code></td></tr>
-<tr><td><code>check-state</code></td><td>Enum</td><td><code>unchecked</code></td><td><code>unchecked</code> / <code>checked</code> / <code>indeterminate</code></td></tr>
-<tr><td><code>layout</code></td><td>Enum</td><td><code>text-right</code></td><td><code>text-right</code> / <code>text-left</code></td></tr>
+<tr><td><code>tri-state</code></td><td>Bool</td><td>true</td><td>三态模式开关</td></tr>
 <tr><td><code>vertical-align</code></td><td>Enum</td><td><code>center</code></td><td><code>center</code> / <code>top</code> / <code>bottom</code></td></tr>
 </table>
 
@@ -102,16 +102,17 @@ UICornerstone_SetCallback(g_inst, cb, "check-changed", onCheckChanged, NULL);</c
 <summary>4.4.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setCheckState(CheckState)</code> / <code>getCheckState()</code></td><td>状态：Unchecked / Checked / Indeterminate</td></tr>
-<tr><td><code>setStyle(CheckBoxStyle)</code> / <code>getStyle()</code></td><td>符号样式：Classic / Cross / Circle</td></tr>
-<tr><td><code>setLayout(CheckBoxLayout)</code> / <code>getLayout()</code></td><td>文字排布：TextRight / TextLeft</td></tr>
-<tr><td><code>setVerticalAlign(CheckBoxVerticalAlign)</code> / <code>getVerticalAlign()</code></td><td>垂直对齐：Center / Top / Bottom</td></tr>
-<tr><td><code>setSizeRatio(float)</code> / <code>getSizeRatio()</code></td><td>复选框尺寸倍率（默认 1.0，按行高缩放）</td></tr>
-<tr><td><code>setTriStateEnabled(bool)</code> / <code>isTriStateEnabled()</code></td><td>三态开关（默认开；关闭后点击仅在 勾选/未勾选 间循环）</td></tr>
-<tr><td><code>setOnCheckChanged(OnCheckChangedHandler)</code></td><td>回调 <code>void(shared_ptr&lt;CheckBox&gt;, CheckState old, CheckState new)</code></td></tr>
-<tr><td><code>setCheckColor / setCrossColor / setIndeterminateColor / setBoxBorderColor(SColor)</code>（+getter）</td><td>勾 / 叉 / 半选横线 / 边框颜色</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>releaseCaption / createCaption / getCaption()</code></td><td>内部 Label 生命周期与访问（可直接改样式）</td></tr>
+<tr><td><code>setCheckColor / setCrossColor / setIndeterminateColor / setBoxBorderColor(SColor)</code>（+getter）</td><td>勾 / 叉 / 半选横线 / 边框颜色</td></tr>
+<tr><td><code>setCheckState(CheckState)</code> / <code>getCheckState()</code></td><td>状态：Unchecked / Checked / Indeterminate</td></tr>
+<tr><td><code>setLayout(CheckBoxLayout)</code> / <code>getLayout()</code></td><td>文字排布：TextRight / TextLeft</td></tr>
+<tr><td><code>setOnCheckChanged(OnCheckChangedHandler)</code></td><td>回调 <code>void(shared_ptr&lt;CheckBox&gt;, CheckState old, CheckState new)</code></td></tr>
+<tr><td><code>setSizeRatio(float)</code> / <code>getSizeRatio()</code></td><td>复选框尺寸倍率（默认 1.0，按行高缩放）</td></tr>
+<tr><td><code>setStyle(CheckBoxStyle)</code> / <code>getStyle()</code></td><td>符号样式：Classic / Cross / Circle</td></tr>
+<tr><td><code>setTriStateEnabled(bool)</code> / <code>isTriStateEnabled()</code></td><td>三态开关（默认开；关闭后点击仅在 勾选/未勾选 间循环）</td></tr>
+<tr><td><code>setVerticalAlign(CheckBoxVerticalAlign)</code> / <code>getVerticalAlign()</code></td><td>垂直对齐：Center / Top / Bottom</td></tr>
 <tr><td><code>setXxxProperty / getXxxProperty</code>（override）</td><td>属性分发</td></tr>
 </table>
 

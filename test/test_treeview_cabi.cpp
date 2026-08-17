@@ -32,6 +32,12 @@ typedef void  (*UIRegisterActionFn)(UIInstance, const char*, void(*)(void*,void*
 typedef int   (*UISetStringFn)(UIInstance, void*, const char*, const char*);
 typedef int   (*UIGetStringFn)(UIInstance, void*, const char*, char*, int);
 typedef int   (*UIGetPtrFn)(UIInstance, void*, const char*, void**);
+typedef int   (*UISetFloatFn)(UIInstance, void*, const char*, float);
+typedef int   (*UIGetFloatFn)(UIInstance, void*, const char*, float*);
+typedef int   (*UISetIntFn)(UIInstance, void*, const char*, int);
+typedef int   (*UIGetIntFn)(UIInstance, void*, const char*, int*);
+typedef int   (*UISetBoolFn)(UIInstance, void*, const char*, int);
+typedef int   (*UIGetEnumFn)(UIInstance, void*, const char*, char*, int);
 
 static UICreateInstanceFn      uiCreateInstance       = nullptr;
 static UISetViewportFn         uiSetViewport          = nullptr;
@@ -49,6 +55,12 @@ static UIRegisterActionFn     uiRegisterAction     = nullptr;
 static UISetStringFn          uiSetString          = nullptr;
 static UIGetStringFn          uiGetString          = nullptr;
 static UIGetPtrFn             uiGetPtr             = nullptr;
+static UISetFloatFn           uiSetFloat           = nullptr;
+static UIGetFloatFn           uiGetFloat           = nullptr;
+static UISetIntFn             uiSetInt             = nullptr;
+static UIGetIntFn             uiGetInt             = nullptr;
+static UISetBoolFn            uiSetBool            = nullptr;
+static UIGetEnumFn            uiGetEnum            = nullptr;
 static void*                  g_labelHandle        = nullptr;
 static void*                  g_treeHandle         = nullptr;
 
@@ -88,10 +100,12 @@ static const char* LAYOUT_JSON =
     "            ]},"
     "            { \"id\": \"n1b\", \"label\": \"DDD - Another level 2 item with long name for scroll\", \"userData\": \"lvl2b data\" }"
     "          ]},"
-    "          { \"id\": \"n2\",  \"label\": \"EEE - Root level 2\",            \"expanded\": true,  \"userData\": \"root2 data\" },"
-    "          { \"id\": \"n3\",  \"label\": \"FFF - Root level 3\",            \"expanded\": false, \"userData\": \"root3 data\",  \"children\": ["
-    "            { \"id\": \"n3a\", \"label\": \"GGG - collapsed child\" }"
-    "          ]},"
+"          { \"id\": \"n2\",  \"label\": \"EEE - Root level 2\",            \"expanded\": true,  \"userData\": \"root2 data\"," 
+            "          \"leadingControl\": { \"type\": \"check-box\", \"checkState\": \"checked\" } },"
+            "          { \"id\": \"n3\",  \"label\": \"FFF - Root level 3\",            \"expanded\": false, \"userData\": \"root3 data\"," 
+            "          \"font\": \"harmonyos-sans-sc-bold\", \"size\": 18, \"leadingGap\": 8,  \"children\": ["
+            "            { \"id\": \"n3a\", \"label\": \"GGG - collapsed child\" }"
+            "          ]},"
     "          { \"id\": \"n4\",  \"label\": \"HHH - More items for vertical scroll testing\", \"expanded\": true, \"userData\": \"scroll test\", \"children\": ["
     "            { \"id\": \"n4a\", \"label\": \"III - Sub item A\" },"
     "            { \"id\": \"n4b\", \"label\": \"JJJ - Sub item B\" },"
@@ -103,7 +117,7 @@ static const char* LAYOUT_JSON =
     "            { \"id\": \"n5b\", \"label\": \"OOO - Sub 5B\" },"
     "            { \"id\": \"n5c\", \"label\": \"PPP - Sub 5C\" }"
     "          ]},"
-    "          { \"id\": \"n6\",  \"label\": \"QQQ - Root level 6\" },"
+    "          { \"id\": \"n6\",  \"label\": \"QQQ - Root level 6\", \"leadingGap\": 12 },"
     "          { \"id\": \"n7\",  \"label\": \"RRR - Root level 7\" },"
     "          { \"id\": \"n8\",  \"label\": \"SSS - Root level 8\" },"
     "          { \"id\": \"n9\",  \"label\": \"TTT - Root level 9\" },"
@@ -169,6 +183,13 @@ static void loadFunctions() {
     uiSetString      = (UISetStringFn)        GetProcAddress(g_uiDll, "UICornerstone_SetString");
     uiGetString      = (UIGetStringFn)        GetProcAddress(g_uiDll, "UICornerstone_GetString");
     uiGetPtr         = (UIGetPtrFn)           GetProcAddress(g_uiDll, "UICornerstone_GetPtr");
+    uiSetFloat       = (UISetFloatFn)         GetProcAddress(g_uiDll, "UICornerstone_SetFloat");
+    uiGetFloat       = (UIGetFloatFn)         GetProcAddress(g_uiDll, "UICornerstone_GetFloat");
+    uiSetInt         = (UISetIntFn)           GetProcAddress(g_uiDll, "UICornerstone_SetInt");
+    uiGetInt         = (UIGetIntFn)           GetProcAddress(g_uiDll, "UICornerstone_GetInt");
+    uiSetBool        = (UISetBoolFn)          GetProcAddress(g_uiDll, "UICornerstone_SetBool");
+    uiGetEnum        = (UIGetEnumFn)          GetProcAddress(g_uiDll, "UICornerstone_GetEnum");
+    uiGetPtr         = (UIGetPtrFn)           GetProcAddress(g_uiDll, "UICornerstone_GetPtr");
 }
 
 int main(int argc, char* argv[]) {
@@ -212,6 +233,59 @@ int main(int argc, char* argv[]) {
     g_labelHandle = uiFindControl(g_inst, "lblSelection");
     if (!g_labelHandle) { printf("FAIL: FindControl(lblSelection)\n"); uiDestroyInstance(g_inst); FreeLibrary(g_uiDll); return 1; }
     printf("FindControl(lblSelection) OK\n");
+
+    // ---- TreeView 增强：item 级 CABI（item-id 定位 + leadingGap/font/size/leadingControl）----
+    // 1. 既有 CABI：indent-width（相对上一级的缩进宽度）
+    float indent = 0;
+    if (!uiGetFloat || !uiGetFloat(g_inst, g_treeHandle, "indent-width", &indent) || indent != 16.0f) {
+        printf("FAIL: GetFloat(indent-width)\n"); return 1;
+    }
+    printf("GetFloat(indent-width)=%.0f OK\n", indent);
+
+    // 2. item-id 定位 + item-leading-gap（JSON 默认 12 → CABI 改 10）
+    if (!uiSetString || !uiSetString(g_inst, g_treeHandle, "item-id", "n6")) { printf("FAIL: SetString(item-id)\n"); return 1; }
+    float gap = 0;
+    if (!uiGetFloat(g_inst, g_treeHandle, "item-leading-gap", &gap) || gap != 12.0f) { printf("FAIL: GetFloat(item-leading-gap) default\n"); return 1; }
+    if (!uiSetFloat(g_inst, g_treeHandle, "item-leading-gap", 10.0f) ||
+        !uiGetFloat(g_inst, g_treeHandle, "item-leading-gap", &gap) || gap != 10.0f) { printf("FAIL: SetFloat(item-leading-gap)\n"); return 1; }
+    printf("item-leading-gap 12->10 OK\n");
+
+    // 3. item-font / item-font-size（JSON: n3 粗体 18 → CABI 改 20）
+    if (!uiSetString(g_inst, g_treeHandle, "item-id", "n3")) { printf("FAIL: SetString(item-id n3)\n"); return 1; }
+    char fbuf[64] = {0};
+    if (!uiGetEnum || !uiGetEnum(g_inst, g_treeHandle, "item-font", fbuf, (int)sizeof(fbuf)) ||
+        strcmp(fbuf, "harmonyos-sans-sc-bold") != 0) { printf("FAIL: GetEnum(item-font)\n"); return 1; }
+    int fs = 0;
+    if (!uiGetInt || !uiGetInt(g_inst, g_treeHandle, "item-font-size", &fs) || fs != 18) { printf("FAIL: GetInt(item-font-size)\n"); return 1; }
+    if (!uiSetInt(g_inst, g_treeHandle, "item-font-size", 20) ||
+        !uiGetInt(g_inst, g_treeHandle, "item-font-size", &fs) || fs != 20) { printf("FAIL: SetInt(item-font-size)\n"); return 1; }
+    printf("item-font=bold, item-font-size 18->20 OK\n");
+
+    // 4. item-leading-control：JSON 挂的 CheckBox 借用手柄，C 侧直接操作
+    void* lc = NULL;
+    if (!uiSetString(g_inst, g_treeHandle, "item-id", "n2") || !uiGetPtr(g_inst, g_treeHandle, "item-leading-control", &lc) || !lc) {
+        printf("FAIL: GetPtr(item-leading-control)\n"); return 1;
+    }
+    if (!uiSetBool || uiSetBool(g_inst, lc, "checked", 1) != 1) { printf("FAIL: SetBool(leading checkbox, checked)\n"); return 1; }
+    printf("item-leading-control (checkbox) borrowed & toggled OK\n");
+
+    // 5. GetControlType：容器控件运行时类型查询
+    typedef int (*UIGetControlTypeFn)(UIInstance, void*, char*, int);
+    static UIGetControlTypeFn uiGetControlType = nullptr;
+    if (!uiGetControlType) {
+        uiGetControlType = (UIGetControlTypeFn)GetProcAddress(g_uiDll, "UICornerstone_GetControlType");
+        if (!uiGetControlType) { printf("FAIL: GetProcAddress(GetControlType)\n"); return 1; }
+    }
+    char typeBuf[64] = {0};
+    if (!uiGetControlType(g_inst, lc, typeBuf, (int)sizeof(typeBuf)) || strcmp(typeBuf, "check-box") != 0) {
+        printf("FAIL: GetControlType(leading checkbox) got \"%s\"\n", typeBuf); return 1;
+    }
+    if (!uiGetControlType(g_inst, g_treeHandle, typeBuf, (int)sizeof(typeBuf)) || strcmp(typeBuf, "tree-view") != 0) {
+        printf("FAIL: GetControlType(treeview) got \"%s\"\n", typeBuf); return 1;
+    }
+    printf("GetControlType: check-box / tree-view OK\n");
+
+    printf("TreeView item CABI assertions PASSED\n");
 
     printf("Frame loop running - click nodes in the TreeView, close window to exit\n");
     ULONGLONG autoT0 = GetTickCount64();

@@ -20,6 +20,11 @@ struct TreeNode {
     bool expanded = false;
     std::vector<std::shared_ptr<TreeNode>> children;
     void* userData = nullptr;
+    // TreeView 增强：Item 前置控件容器 + 逐 Item 字体（见 design/TreeView_Enhancement_Analysis.md）
+    std::shared_ptr<Control> leadingControl;  // 前置控件（CheckBox/Actor/Image 等）；高度自适应行高
+    float leadingGap = 6.0f;                  // 控件与文字之间的空隙（局部 px，可调）
+    FontName fontName = FontName::HarmonyOS_Sans_SC_Regular;  // 与 TreeView 默认一致；仅 fontSize>0 时生效
+    int fontSize = 0;                         // 0 = 继承 TreeView 级字号
 };
 
 inline std::shared_ptr<TreeNode> makeNode(
@@ -48,6 +53,10 @@ inline std::shared_ptr<TreeNode> cloneNode(
     node->expanded = src->expanded;
     node->children = std::move(clonedChildren);
     node->userData = src->userData;
+    node->fontName = src->fontName;
+    node->fontSize = src->fontSize;
+    // leadingControl 必须置空：项目无控件深拷贝（共享实例会 getParent 冲突/双树串扰），
+    // 调用方按需对新树重新赋值（见 TreeView_Enhancement_Analysis.md 3.1）
     return node;
 }
 
@@ -71,6 +80,7 @@ private:
     std::vector<FlatRow> m_flatRows;
 
     std::string m_selectedId;
+    std::string m_itemTargetId;   // CABI "item-id" 定位：item 级属性（leadingGap/font/size/leadingControl）的作用目标
     int m_selectedRow = -1;
     int m_hoveredRow = -1;
 
@@ -91,6 +101,10 @@ private:
     int m_fontSize;
     SharedFont m_font;
 
+    // TreeView 增强：行控件登记与逐节点字体缓存（生命周期与节点一致）
+    std::vector<std::shared_ptr<Control>> m_rowControls;               // 行控件集合（绘制排除 + 挂摘同步）
+    std::unordered_map<const TreeNode*, SharedFont> m_nodeFonts;       // 逐节点字体缓存（节点销毁时同点清理）
+
     SColor m_bgColor = ConstDef::TREEVIEW_BG_COLOR;
     SColor m_borderColor = ConstDef::TREEVIEW_BORDER_COLOR;
     SColor m_hoverColor = ConstDef::TREEVIEW_HOVER_COLOR;
@@ -104,6 +118,8 @@ private:
     OnClearNodeHandler m_onClearNode;
 
     void ensureFont();
+    SharedFont getNodeFont(const std::shared_ptr<TreeNode>& node);  // 逐节点字体（fontSize>0 生效，否则 m_font）
+    void syncRowControls();                                         // rebuildFlatRows 内调用：行控件挂/摘 + 登记
     bool toggleExpand(const string& id);
     void rebuildFlatRows();
     int hitTestRow(float mx, float my);

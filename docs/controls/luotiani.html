@@ -38,9 +38,9 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>animation</code></td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
-<tr><td><code>playing</code></td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 记录请求并返回 1，prepare 完成后自动播放</td></tr>
-<tr><td><code>loop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
 <tr><td><code>frame</code></td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
+<tr><td><code>loop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
+<tr><td><code>playing</code></td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 记录请求并返回 1，prepare 完成后自动播放</td></tr>
 </table>
 
 
@@ -75,12 +75,12 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 
 <table>
 <tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>easing</code></td><td><code>linear</code>（默认）/ <code>ease-in</code> / <code>ease-out</code> / <code>ease-in-out</code> / <code>quad</code> / <code>sine</code> / <code>cubic</code> / <code>cubic-bezier(x1,y1,x2,y2)</code></td></tr>
+<tr><td><code>keyFrames[].frame</code></td><td>帧号，第 0 帧关键帧必须存在</td></tr>
+<tr><td><code>layer.blendMode</code></td><td><code>normal / additive / additivePremultiplied / modulate / blend / blendPremultiplied / multiply</code>，未知回退 normal</td></tr>
 <tr><td><code>layer.type</code></td><td><code>image</code> 完整支持；shape/text 解析支持但烘焙跳过</td></tr>
 <tr><td><code>layer.width/height</code></td><td>显式拉伸，缺省用贴图原始尺寸</td></tr>
-<tr><td><code>layer.blendMode</code></td><td><code>normal / additive / additivePremultiplied / modulate / blend / blendPremultiplied / multiply</code>，未知回退 normal</td></tr>
-<tr><td><code>keyFrames[].frame</code></td><td>帧号，第 0 帧关键帧必须存在</td></tr>
 <tr><td><code>operation.type</code></td><td><code>translate</code>（tx,ty 增量累加）/ <code>scale</code>（sx,sy 累乘）/ <code>rotate</code>（angle 累加, cx,cy 旋转中心）/ <code>opacity</code>（0~100 百分比覆盖）/ <code>visible</code></td></tr>
-<tr><td><code>easing</code></td><td><code>linear</code>（默认）/ <code>ease-in</code> / <code>ease-out</code> / <code>ease-in-out</code> / <code>quad</code> / <code>sine</code> / <code>cubic</code> / <code>cubic-bezier(x1,y1,x2,y2)</code></td></tr>
 <tr><td><code>path</code></td><td>仅 translate 的段内轨迹：<code>bezier</code>{c1x,c1y,c2x,c2y} / <code>parabola</code>{vx,vy} / <code>catmull-rom</code>{points[{x,y}]}</td></tr>
 </table>
 
@@ -113,23 +113,24 @@ Control aniBtn = ui-&gt;CreateAnimatedButton("animations/breath/breath.jsonc", 4
 <summary>4.11.6 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>加载（委托 loadAniDesc）</td></tr>
-<tr><td><code>loadAniDesc(fs::path)</code> / <code>loadAniDesc(string)</code></td><td>加载 JSON 描述（相对路径拼资源根；失败 throw）</td></tr>
-<tr><td><code>parseJsonDesc()</code></td><td>解析 JSON（换动画时重置状态）</td></tr>
-<tr><td><code>update()</code></td><td>按毫秒推进帧（绝对墙钟，与帧率无关）；非循环结束复位到帧 0 并触发 AnimationEnded 事件</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>draw(x, y, alpha)</code> / <code>draw(frameNo, x, y, alpha)</code></td><td>绘制当前帧 / 指定帧</td></tr>
-<tr><td><code>setRect(SRect)</code></td><td>同步所有帧 Actor 矩形</td></tr>
+<tr><td><code>getFrameActor(uint32_t)</code></td><td>帧 Actor 调试 / 断言访问</td></tr>
+<tr><td><code>getFrameDuration()</code> / <code>getTotalFrames()</code> / <code>getCurrentFrame()</code></td><td>帧时长(ms) / 总帧数 / 当前帧</td></tr>
+<tr><td><code>getFrameOpData(layer, frame)</code> / <code>getFrameCanvas(frame)</code></td><td>调试：层/帧插值结果 / 烘焙画布</td></tr>
+<tr><td><code>isLoop()</code> / <code>setLoop(bool)</code></td><td>循环开关</td></tr>
+<tr><td><code>isPlaying()</code> / <code>isPrepared()</code> / <code>isLoaded()</code></td><td>状态查询</td></tr>
+<tr><td><code>loadAniDesc(fs::path)</code> / <code>loadAniDesc(string)</code></td><td>加载 JSON 描述（相对路径拼资源根；失败 throw）</td></tr>
+<tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>加载（委托 loadAniDesc）</td></tr>
+<tr><td><code>parseJsonDesc()</code></td><td>解析 JSON（换动画时重置状态）</td></tr>
+<tr><td><code>pause()</code> / <code>resume()</code></td><td>暂停 / 从暂停处继续（resume 未 prepare 抛异常）</td></tr>
 <tr><td><code>play()</code></td><td>帧复位到 0 重播（未 prepare 抛异常）</td></tr>
 <tr><td><code>prepare(uint32_t startFrame = 0)</code></td><td>烘焙全部帧贴图（未加载抛异常）</td></tr>
-<tr><td><code>pause()</code> / <code>resume()</code></td><td>暂停 / 从暂停处继续（resume 未 prepare 抛异常）</td></tr>
 <tr><td><code>setFrame(uint32_t)</code></td><td>跳帧（仅已 prepare 且帧号合法生效，同时复位时间戳防跳变）</td></tr>
-<tr><td><code>getFrameActor(uint32_t)</code></td><td>帧 Actor 调试 / 断言访问</td></tr>
-<tr><td><code>isPlaying()</code> / <code>isPrepared()</code> / <code>isLoaded()</code></td><td>状态查询</td></tr>
-<tr><td><code>getFrameDuration()</code> / <code>getTotalFrames()</code> / <code>getCurrentFrame()</code></td><td>帧时长(ms) / 总帧数 / 当前帧</td></tr>
-<tr><td><code>isLoop()</code> / <code>setLoop(bool)</code></td><td>循环开关</td></tr>
-<tr><td><code>getFrameOpData(layer, frame)</code> / <code>getFrameCanvas(frame)</code></td><td>调试：层/帧插值结果 / 烘焙画布</td></tr>
 <tr><td><code>setFrameFilter(bool)</code></td><td>帧位图采样过滤：true=双线性（平滑，画布缩放后推荐）、false=最近邻（像素风）；经 <code>RenderDevice::setTextureFilter</code> 落三后端</td></tr>
+<tr><td><code>setRect(SRect)</code></td><td>同步所有帧 Actor 矩形</td></tr>
+<tr><td><code>update()</code></td><td>按毫秒推进帧（绝对墙钟，与帧率无关）；非循环结束复位到帧 0 并触发 AnimationEnded 事件</td></tr>
 </table>
 
 </details>

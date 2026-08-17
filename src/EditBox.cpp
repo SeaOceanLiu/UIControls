@@ -31,6 +31,7 @@ EditBox::EditBox(Control *parent, SRect rect, float xScale, float yScale)
     , m_AlignmentMode(AlignmentMode::AM_MID_LEFT)
     , m_fontScaleDirty(false)
 {
+    m_ctlType = ControlType::EditBox;
     m_id = 0;
     m_visible = true;
     m_enable = true;

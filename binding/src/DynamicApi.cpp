@@ -125,6 +125,7 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(GetString);
     RESOLVE(GetEnum);
     RESOLVE(GetPtr);
+    RESOLVE(GetControlType);
 
     RESOLVE(SetCallback);
 #else

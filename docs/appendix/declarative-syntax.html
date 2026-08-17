@@ -31,26 +31,81 @@
 （先于控件树解析，应用于当前实例的视口缩放状态）。</p>
 <table>
 <tr><th>键</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>width</code> / <code>height</code></td><td>number</td><td>基准画布尺寸（px）。缺省 = 跟随窗口（viewport）；仅记录于 off 模式，作为 fit/stretch 的适配基准</td></tr>
 <tr><td><code>scale-mode</code></td><td>string</td><td><code>off</code>（缺省，画布跟随窗口）/ <code>fit</code>（等比居中）/ <code>stretch</code>（拉伸铺满）</td></tr>
+<tr><td><code>width</code> / <code>height</code></td><td>number</td><td>基准画布尺寸（px）。缺省 = 跟随窗口（viewport）；仅记录于 off 模式，作为 fit/stretch 的适配基准</td></tr>
 </table>
 
 <h2>6.2 控件通用键</h2>
 
 <table>
 <tr><th>键</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 22 种：<code>label / button / image / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view</code></td></tr>
-<tr><td><code>id</code></td><td>string</td><td>全局唯一，FindControl 用</td></tr>
-<tr><td><code>rect</code></td><td>object</td><td><code>{"x","y","w","h"}</code>；支持百分比字符串 <code>"50%"</code></td></tr>
-<tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code>；内容按系数缩放，布局矩形不变</td></tr>
-<tr><td><code>visible</code> / <code>enabled</code></td><td>bool</td><td>可见 / 启用</td></tr>
-<tr><td><code>margin</code></td><td>object</td><td><code>{"left","top","right","bottom"}</code></td></tr>
+<tr><td><code>children</code></td><td>array</td><td>子控件（容器类型）</td></tr>
 <tr><td><code>colors</code></td><td>object</td><td>状态色：<code>{"background":{"normal","hover","pressed","disabled"}}</code>；键含 background/border/text/textShadow/控件特有（progressColor、titleBar 等）</td></tr>
 <tr><td><code>events</code></td><td>object</td><td><code>{"onClick":"handlerName"}</code>，见 6.7</td></tr>
-<tr><td><code>children</code></td><td>array</td><td>子控件（容器类型）</td></tr>
+<tr><td><code>id</code></td><td>string</td><td>全局唯一，FindControl 用</td></tr>
+<tr><td><code>margin</code></td><td>object</td><td><code>{"left","top","right","bottom"}</code></td></tr>
+<tr><td><code>rect</code></td><td>object</td><td><code>{"x","y","w","h"}</code>；支持百分比字符串 <code>"50%"</code></td></tr>
+<tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code>；内容按系数缩放，布局矩形不变</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 22 种：<code>label / button / image / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view</code></td></tr>
+<tr><td><code>visible</code> / <code>enabled</code></td><td>bool</td><td>可见 / 启用</td></tr>
 </table>
 
 <h2>6.3 各控件专用键（全部 22 种）</h2>
+
+<h3>animation（LuotiAni 动画控件）</h3>
+<pre><code>{ "type":"animation", "id":"ani1x", "rect":{"x":1100,"y":80,"w":256,"h":256},
+  "path":"assets/animations/rotateBtn/rotateBtn.jsonc",     // 相对 exe 目录；w/h=0 → 画布尺寸
+  "scale":{"x":1,"y":1},                                    // 挂树后延迟 prepare，SetBool("playing") 启动
+  "playing":true }                                          // "playing":true 挂树后自动播放</code></pre>
+
+<h3>button / image-button</h3>
+<pre><code>{ "type":"button", "id":"submit",
+  "rect":{"x":280,"y":140,"w":100,"h":35}, "caption":"Submit", "captionSize":16,
+  "enableTextShadow":false,
+  "colors":{"background":{"normal":"#4060A0FF","hover":"#5080C0FF","pressed":"#305090FF"},
+            "border":{"normal":"#6080C0FF"},"text":{"normal":"#FFFFFFFF"}},
+  "actors":{                                               // 状态图（image-button 必填）
+    "matchParentRect":true,
+    "normal":"assets/images/normal.png",                   // 或 {"file":..., "scaleType":"fit-center"}
+    "hover":"assets/images/hover.png", "pressed":"assets/images/pressed.png" },
+  "luotiAni":"assets/animations/rotateBtn/rotateBtn.jsonc", // 内嵌动画：延迟 prepare；"playing":true 挂树后自动播放，缺省 SetBool("playing") 启动
+  "playing":true,
+  "events":{"onClick":"onSubmit"} }</code></pre>
+
+<h3>check-box</h3>
+<pre><code>{ "type":"check-box", "id":"agree",
+  "rect":{"x":240,"y":432,"w":180,"h":30}, "caption":"I agree", "captionSize":14,
+  "checkState":"unchecked",                                 // unchecked/checked/indeterminate
+  "style":"classic",                                        // classic/cross/circle
+  "layout":"text-right",                                    // text-right/text-left
+  "triState":true, "sizeRatio":1.0,
+  "colors":{"check":{"normal":"#66BB6AFF"},"cross":{"normal":"#FF5722FF"},"boxBorder":{"normal":"#53535AFF"}},
+  "events":{"onCheckChanged":"onAgreeChanged"} }</code></pre>
+
+<h3>color-picker</h3>
+<pre><code>{ "type":"color-picker", "id":"cp",
+  "rect":{"x":240,"y":498,"w":96,"h":24}, "color":"#FF6600",
+  "presets":["#FF0000","#00FF00","#0000FF","#FFFF00","#FF00FF"],
+  "presetLayout":{"cols":5,"rows":1}, "swatchSize":16.0,
+  "closedFontSize":12, "closedTextColor":"#DBDBDB",
+  "popupBGColor":"#3C3C41",
+  "events":{"onColorChanged":"onColor"} }</code></pre>
+
+<h3>combo-box</h3>
+<pre><code>{ "type":"combo-box", "id":"comboMain",
+  "rect":{"x":20,"y":56,"w":300,"h":32}, "fontSize":16, "editable":false,
+  "placeholder":"Select a city...", "selectedIndex":0,
+  "arrowWidth":20, "itemHeight":24, "maxVisibleItems":6, "cycleEnabled":true,
+  "items":[ { "label":"Beijing","value":"beijing" },
+            { "label":"Wuhan","value":"wuhan","disabled":true } ] }</code></pre>
+
+<h3>edit-box</h3>
+<pre><code>{ "type":"edit-box", "id":"nameEdit",
+  "rect":{"x":110,"y":20,"w":250,"h":30},
+  "placeholder":"Please input your name", "text":"", "editable":true,
+  "passwordMode":false, "passwordChar":"●",
+  "font":{"size":16},
+  "events":{"onTextChanged":"onNameChanged","onEnter":"onNameEnter"} }</code></pre>
 
 <h3>image（独立 Actor 图片控件）</h3>
 <pre><code>{ "type":"image", "id":"hero", "rect":{"x":20,"y":20,"w":128,"h":128},
@@ -68,115 +123,6 @@
   "clickable":false,                                        // 可点击（onClick）
   "lineHeight":28, "lineSpacingRatio":1.2 }</code></pre>
 
-<h3>button / image-button</h3>
-<pre><code>{ "type":"button", "id":"submit",
-  "rect":{"x":280,"y":140,"w":100,"h":35}, "caption":"Submit", "captionSize":16,
-  "enableTextShadow":false,
-  "colors":{"background":{"normal":"#4060A0FF","hover":"#5080C0FF","pressed":"#305090FF"},
-            "border":{"normal":"#6080C0FF"},"text":{"normal":"#FFFFFFFF"}},
-  "actors":{                                               // 状态图（image-button 必填）
-    "matchParentRect":true,
-    "normal":"assets/images/normal.png",                   // 或 {"file":..., "scaleType":"fit-center"}
-    "hover":"assets/images/hover.png", "pressed":"assets/images/pressed.png" },
-  "luotiAni":"assets/animations/rotateBtn/rotateBtn.jsonc", // 内嵌动画：延迟 prepare；"playing":true 挂树后自动播放，缺省 SetBool("playing") 启动
-  "playing":true,
-  "events":{"onClick":"onSubmit"} }</code></pre>
-
-<h3>animation（LuotiAni 动画控件）</h3>
-<pre><code>{ "type":"animation", "id":"ani1x", "rect":{"x":1100,"y":80,"w":256,"h":256},
-  "path":"assets/animations/rotateBtn/rotateBtn.jsonc",     // 相对 exe 目录；w/h=0 → 画布尺寸
-  "scale":{"x":1,"y":1},                                    // 挂树后延迟 prepare，SetBool("playing") 启动
-  "playing":true }                                          // "playing":true 挂树后自动播放</code></pre>
-
-<h3>edit-box</h3>
-<pre><code>{ "type":"edit-box", "id":"nameEdit",
-  "rect":{"x":110,"y":20,"w":250,"h":30},
-  "placeholder":"Please input your name", "text":"", "editable":true,
-  "passwordMode":false, "passwordChar":"●",
-  "font":{"size":16},
-  "events":{"onTextChanged":"onNameChanged","onEnter":"onNameEnter"} }</code></pre>
-
-<h3>combo-box</h3>
-<pre><code>{ "type":"combo-box", "id":"comboMain",
-  "rect":{"x":20,"y":56,"w":300,"h":32}, "fontSize":16, "editable":false,
-  "placeholder":"Select a city...", "selectedIndex":0,
-  "arrowWidth":20, "itemHeight":24, "maxVisibleItems":6, "cycleEnabled":true,
-  "items":[ { "label":"Beijing","value":"beijing" },
-            { "label":"Wuhan","value":"wuhan","disabled":true } ] }</code></pre>
-
-<h3>text-area</h3>
-<pre><code>{ "type":"text-area", "id":"notes",
-  "rect":{"x":20,"y":432,"w":200,"h":80},
-  "placeholder":"Multi-line...", "text":"", "wordWrap":true,
-  "font":{"size":12},
-  "events":{"onTextChanged":"onNotesChanged"} }</code></pre>
-
-<h3>check-box</h3>
-<pre><code>{ "type":"check-box", "id":"agree",
-  "rect":{"x":240,"y":432,"w":180,"h":30}, "caption":"I agree", "captionSize":14,
-  "checkState":"unchecked",                                 // unchecked/checked/indeterminate
-  "style":"classic",                                        // classic/cross/circle
-  "layout":"text-right",                                    // text-right/text-left
-  "triState":true, "sizeRatio":1.0,
-  "colors":{"check":{"normal":"#66BB6AFF"},"cross":{"normal":"#FF5722FF"},"boxBorder":{"normal":"#53535AFF"}},
-  "events":{"onCheckChanged":"onAgreeChanged"} }</code></pre>
-
-<h3>progress-bar</h3>
-<pre><code>{ "type":"progress-bar", "id":"load",
-  "rect":{"x":440,"y":432,"w":200,"h":25},
-  "value":65, "range":{"min":0,"max":100},
-  "style":"horizontal",                                    // horizontal/vertical
-  "textMode":"percent",                                    // none/percent/custom
-  "animationSpeed":0.1,
-  "colors":{"progressColor":{"normal":"#4080C0FF"},"backgroundColor":{"normal":"#303030FF"}} }</code></pre>
-
-<h3>slider</h3>
-<pre><code>{ "type":"slider", "id":"rSlider",
-  "rect":{"x":29,"y":224,"w":257,"h":20},
-  "range":{"min":0,"max":255}, "value":255, "step":1,
-  "style":"Horizontal",                                    // Horizontal/Vertical
-  "reverse":false, "showValueLabel":true,
-  "colors":{"track":{"normal":"#3C3C3CFF"},"thumb":{"normal":"#888888FF"}} }</code></pre>
-
-<h3>scroll-bar</h3>
-<pre><code>{ "type":"scroll-bar", "id":"hScroll",
-  "rect":{"x":440,"y":472,"w":200,"h":16},
-  "orientation":"horizontal",                              // horizontal/vertical
-  "value":30, "range":{"min":0,"max":100},
-  "pageSize":20, "stepSize":5, "thickness":16 }</code></pre>
-
-<h3>panel（容器 + 布局引擎）</h3>
-<pre><code>{ "type":"panel", "id":"formPanel",
-  "rect":{"x":50,"y":112,"w":400,"h":200},
-  "layout":{"type":"h-flow","gap":4,"padding":{"left":4,"top":4,"right":4,"bottom":4}},  // h-flow/v-flow/anchor/grid，见 6.5
-  "colors":{"border":{"normal":"#808080FF"}},
-  "children":[ { "type":"edit-box","id":"nameEdit","flowWeight":1,"rect":{"w":0,"h":30} },
-               { "type":"button","id":"submitBtn","caption":"OK","rect":{"w":100,"h":35} } ] }</code></pre>
-
-<h3>win-frame</h3>
-<pre><code>{ "type":"win-frame", "id":"win",
-  "rect":{"x":200,"y":100,"w":400,"h":300}, "title":"Submitted",
-  "edgeMargin":4.0, "resizable":true,
-  "colors":{"titleBar":{"bg":{"normal":"#2A2A50FF"}},"titleText":{"normal":"#FFFFFFFF"}},
-  "children":[ { "type":"label","caption":"Form submitted!" } ] }</code></pre>
-
-<h3>color-picker</h3>
-<pre><code>{ "type":"color-picker", "id":"cp",
-  "rect":{"x":240,"y":498,"w":96,"h":24}, "color":"#FF6600",
-  "presets":["#FF0000","#00FF00","#0000FF","#FFFF00","#FF00FF"],
-  "presetLayout":{"cols":5,"rows":1}, "swatchSize":16.0,
-  "closedFontSize":12, "closedTextColor":"#DBDBDB",
-  "popupBGColor":"#3C3C41",
-  "events":{"onColorChanged":"onColor"} }</code></pre>
-
-<h3>popup / confirm-popup / dialog（弹窗族）</h3>
-<pre><code>{ "type":"dialog", "id":"colorDlg",
-  "centered":true,                                        // 居中；rect 相对窗口/父容器
-  "rect":{"x":0,"y":0,"w":296,"h":440},
-  "confirmButton":{"text":"OK"},                          // 确认按钮文字
-  "cancelButton":{"text":"Cancel"},                       // 取消按钮文字（confirm-popup/dialog）
-  "events":{"onConfirm":"onDlgConfirm","onCancel":"onDlgCancel","onClose":"onDlgClose"} }</code></pre>
-
 <h3>menu-bar（不挂控件树，顶层独立）</h3>
 <pre><code>{ "type":"menu-bar", "id":"mainMenu",
   "font":{"size":16}, "barHeight":32,
@@ -192,6 +138,46 @@
   "value":50, "range":{"min":0,"max":100}, "step":1, "pageStep":10, "decimals":0,
   "placeholder":"0", "readOnly":false }</code></pre>
 
+<h3>panel（容器 + 布局引擎）</h3>
+<pre><code>{ "type":"panel", "id":"formPanel",
+  "rect":{"x":50,"y":112,"w":400,"h":200},
+  "layout":{"type":"h-flow","gap":4,"padding":{"left":4,"top":4,"right":4,"bottom":4}},  // h-flow/v-flow/anchor/grid，见 6.5
+  "colors":{"border":{"normal":"#808080FF"}},
+  "children":[ { "type":"edit-box","id":"nameEdit","flowWeight":1,"rect":{"w":0,"h":30} },
+               { "type":"button","id":"submitBtn","caption":"OK","rect":{"w":100,"h":35} } ] }</code></pre>
+
+<h3>popup / confirm-popup / dialog（弹窗族）</h3>
+<pre><code>{ "type":"dialog", "id":"colorDlg",
+  "centered":true,                                        // 居中；rect 相对窗口/父容器
+  "rect":{"x":0,"y":0,"w":296,"h":440},
+  "confirmButton":{"text":"OK"},                          // 确认按钮文字
+  "cancelButton":{"text":"Cancel"},                       // 取消按钮文字（confirm-popup/dialog）
+  "events":{"onConfirm":"onDlgConfirm","onCancel":"onDlgCancel","onClose":"onDlgClose"} }</code></pre>
+
+<h3>progress-bar</h3>
+<pre><code>{ "type":"progress-bar", "id":"load",
+  "rect":{"x":440,"y":432,"w":200,"h":25},
+  "value":65, "range":{"min":0,"max":100},
+  "style":"horizontal",                                    // horizontal/vertical
+  "textMode":"percent",                                    // none/percent/custom
+  "animationSpeed":0.1,
+  "colors":{"progressColor":{"normal":"#4080C0FF"},"backgroundColor":{"normal":"#303030FF"}} }</code></pre>
+
+<h3>scroll-bar</h3>
+<pre><code>{ "type":"scroll-bar", "id":"hScroll",
+  "rect":{"x":440,"y":472,"w":200,"h":16},
+  "orientation":"horizontal",                              // horizontal/vertical
+  "value":30, "range":{"min":0,"max":100},
+  "pageSize":20, "stepSize":5, "thickness":16 }</code></pre>
+
+<h3>slider</h3>
+<pre><code>{ "type":"slider", "id":"rSlider",
+  "rect":{"x":29,"y":224,"w":257,"h":20},
+  "range":{"min":0,"max":255}, "value":255, "step":1,
+  "style":"Horizontal",                                    // Horizontal/Vertical
+  "reverse":false, "showValueLabel":true,
+  "colors":{"track":{"normal":"#3C3C3CFF"},"thumb":{"normal":"#888888FF"}} }</code></pre>
+
 <h3>splitter</h3>
 <pre><code>{ "type":"splitter", "id":"spl",
   "rect":{"x":244,"y":60,"w":6,"h":200},
@@ -200,6 +186,13 @@
   "thickness":6, "ratio":0.4, "minFirst":50, "minSecond":50,
   "colors":{"line":{"normal":"#808080FF"}} }</code></pre>
 
+<h3>text-area</h3>
+<pre><code>{ "type":"text-area", "id":"notes",
+  "rect":{"x":20,"y":432,"w":200,"h":80},
+  "placeholder":"Multi-line...", "text":"", "wordWrap":true,
+  "font":{"size":12},
+  "events":{"onTextChanged":"onNotesChanged"} }</code></pre>
+
 <h3>tree-view</h3>
 <pre><code>{ "type":"tree-view", "id":"tree",
   "rect":{"x":20,"y":20,"w":240,"h":300},
@@ -207,6 +200,33 @@
   "items":[ { "id":"root","label":"Root","expanded":true,"userData":"extra",
               "children":[ { "id":"child1","label":"Child 1" } ] } ],
   "events":{"onSelect":"onTreeSelect","onExpand":"onTreeExpand","onCollapse":"onTreeCollapse"} }</code></pre>
+
+<h4>tree-view item 增强（二期）</h4>
+<pre><code>"items":[ {
+  "id":"cb1","label":"带勾选框的行",
+  "leadingControl":{ "type":"check-box", "checkState":"checked" },
+  "leadingGap":10
+}, {
+  "id":"img1","label":"带图标的行",
+  "leadingControl":{ "type":"image", "image":"assets/images/cross_down.png" },
+  "font":"harmonyos-sans-sc-bold", "size":16
+} ]</code></pre>
+<ul>
+<li><code>leadingControl</code>：行前置控件容器（控件 JSON，复用 <code>type</code> + 控件属性，
+支持 check-box / image 等）。rect 由 TreeView 自适应（高 = 行内文字高度，宽按原始宽高比等比），
+文字缩进 = 无容器时文本缩进，文字被容器让位右移。</li>
+<li><code>leadingGap</code>：控件容器与文本之间的间隔（局部 px，默认 6）。</li>
+<li><code>font</code>：逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体），
+<code>size</code>：逐 Item 字号（0 = 继承 TreeView 级）。</li>
+</ul>
+<p>item 级属性的编程式操作（item-id 定位模式）见 <a href="capi.html#treeview-item">8.4.1</a>。</p>
+
+<h3>win-frame</h3>
+<pre><code>{ "type":"win-frame", "id":"win",
+  "rect":{"x":200,"y":100,"w":400,"h":300}, "title":"Submitted",
+  "edgeMargin":4.0, "resizable":true,
+  "colors":{"titleBar":{"bg":{"normal":"#2A2A50FF"}},"titleText":{"normal":"#FFFFFFFF"}},
+  "children":[ { "type":"label","caption":"Form submitted!" } ] }</code></pre>
 
 <h2>6.4 颜色格式</h2>
 
@@ -250,15 +270,15 @@ parser.registerHandler("handleSubmit", [](shared_ptr&lt;Control&gt; ctl){ /* ...
 
 <table>
 <tr><th>JSON 事件键</th><th>适用控件</th></tr>
-<tr><td><code>onClick</code></td><td>Button / Label（clickable）/ MenuItem</td></tr>
-<tr><td><code>onTextChanged</code> / <code>onEnter</code></td><td>EditBox / TextArea</td></tr>
 <tr><td><code>onCheckChanged</code></td><td>CheckBox</td></tr>
-<tr><td><code>onValueChanged</code></td><td>ProgressBar / Slider / NumericUpDown</td></tr>
+<tr><td><code>onClick</code></td><td>Button / Label（clickable）/ MenuItem</td></tr>
+<tr><td><code>onClose</code> / <code>onConfirm</code> / <code>onCancel</code></td><td>WinFrame / Dialog</td></tr>
+<tr><td><code>onColorChanged</code></td><td>ColorPicker</td></tr>
 <tr><td><code>onPositionChanged</code></td><td>ScrollBar</td></tr>
 <tr><td><code>onSelectionChanged</code></td><td>ComboBox</td></tr>
-<tr><td><code>onColorChanged</code></td><td>ColorPicker</td></tr>
-<tr><td><code>onClose</code> / <code>onConfirm</code> / <code>onCancel</code></td><td>WinFrame / Dialog</td></tr>
 <tr><td><code>onSplitterMoved</code></td><td>Splitter</td></tr>
+<tr><td><code>onTextChanged</code> / <code>onEnter</code></td><td>EditBox / TextArea</td></tr>
+<tr><td><code>onValueChanged</code></td><td>ProgressBar / Slider / NumericUpDown</td></tr>
 </table>
 
 <h2>6.8 主题</h2>

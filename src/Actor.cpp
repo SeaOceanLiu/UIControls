@@ -9,6 +9,7 @@ Actor::Actor(Control *parent, float xScale, float yScale):
     m_matchParentRect(false),
     m_scaleType(ScaleType::STRETCH)
 {
+    m_ctlType = ControlType::Image;
     setParent(parent);
 }
 
@@ -17,6 +18,7 @@ Actor::Actor(Control *parent, bool matchParentRect, float xScale, float yScale):
     m_matchParentRect(matchParentRect),
     m_scaleType(ScaleType::STRETCH)
 {
+    m_ctlType = ControlType::Image;
     // setParent(parent);
 }
 
@@ -25,6 +27,7 @@ Actor::Actor(Control *parent, fs::path filePath, bool matchParentRect, float xSc
     m_matchParentRect(matchParentRect),
     m_scaleType(ScaleType::STRETCH)
 {
+    m_ctlType = ControlType::Image;
     setParent(parent);
     loadFromFile(filePath);
 }
@@ -34,6 +37,7 @@ Actor::Actor(Control *parent, string resourceId, bool matchParentRect, float xSc
     m_matchParentRect(matchParentRect),
     m_scaleType(ScaleType::STRETCH)
 {
+    m_ctlType = ControlType::Image;
     setParent(parent);
     loadFromResource(resourceId);
 }
@@ -44,6 +48,7 @@ Actor::Actor(const Actor& other):
     m_scaleType(other.m_scaleType),
     m_explicitSize(other.m_explicitSize)
 {
+    m_ctlType = ControlType::Image;
 }
 
 Actor& Actor::operator=(const Actor& other) {

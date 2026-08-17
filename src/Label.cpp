@@ -28,6 +28,7 @@ Label::Label(Control *parent, SRect rect, float xScale, float yScale):
     , m_lineSpacing(0)
     , m_reentryCounter(0)
 {
+    m_ctlType = ControlType::Label;
     m_rect = rect;
     m_margin = ConstDef::LABEL_CAPTION_MARGIN;
     setVisible(false);

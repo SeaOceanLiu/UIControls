@@ -26,8 +26,8 @@
 <tr><td>多窗口</td><td>✓</td><td>✓</td><td><strong>✗</strong>（单窗口）</td></tr>
 <tr><td>部署</td><td>需 3 个 DLL（SDL3/SDL3_ttf/SDL3_image）</td><td>SFML DLL 组</td><td>单 DLL，最简</td></tr>
 <tr><td>中文</td><td>✓</td><td>✓</td><td>需码点扩展</td></tr>
-<tr><td>vsync 配置</td><td><code>vsync</code> + <code>swap-ratio</code></td><td><code>vsync</code></td><td><code>vsync</code>（创建期全局）</td></tr>
 <tr><td>能力位</td><td>四能力全有</td><td>四能力全有</td><td>无 MULTI_WINDOW</td></tr>
+<tr><td>vsync 配置</td><td><code>vsync</code> + <code>swap-ratio</code></td><td><code>vsync</code></td><td><code>vsync</code>（创建期全局）</td></tr>
 </table>
 
 <h2>5.7.2 编译时选择后端</h2>
@@ -78,9 +78,9 @@ UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</co
 
 <table>
 <tr><th>key</th><th>类型</th><th>sdl3</th><th>sfml</th><th>raylib</th><th>说明</th></tr>
-<tr><td><code>vsync</code></td><td>bool/int/string</td><td>✓</td><td>✓</td><td>✓*</td><td>0/1；raylib 创建期 FLAG_VSYNC_HINT</td></tr>
-<tr><td><code>swap-ratio</code></td><td>int</td><td>✓</td><td>✗</td><td>✗</td><td>SDL3 SDL_SetRenderVSync（0/1/-1）</td></tr>
 <tr><td><code>renderer-name</code></td><td>string 只读</td><td>✓</td><td>✗</td><td>✗</td><td>能力探测</td></tr>
+<tr><td><code>swap-ratio</code></td><td>int</td><td>✓</td><td>✗</td><td>✗</td><td>SDL3 SDL_SetRenderVSync（0/1/-1）</td></tr>
+<tr><td><code>vsync</code></td><td>bool/int/string</td><td>✓</td><td>✓</td><td>✓*</td><td>0/1；raylib 创建期 FLAG_VSYNC_HINT</td></tr>
 </table>
 
 <div class="chapter-nav">

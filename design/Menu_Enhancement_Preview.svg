@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300">
+  <defs>
+    <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#D32F2F"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+      <path d="M8,0 L0,3 L8,6 Z" fill="#2E7D32"/>
+    </marker>
+  </defs>
+
+  <!-- ============ MenuBar ============ -->
+  <rect x="0" y="0" width="270" height="32" fill="#3C3C3C"/>
+  <text x="45" y="21" font-size="15" fill="#CCCCCC" font-family="sans-serif" text-anchor="middle">文件</text>
+  <text x="135" y="21" font-size="15" fill="#CCCCCC" font-family="sans-serif" text-anchor="middle">编辑</text>
+  <text x="225" y="21" font-size="15" fill="#CCCCCC" font-family="sans-serif" text-anchor="middle">视图</text>
+  <line x1="0" y1="31" x2="270" y2="31" stroke="#454545" stroke-width="1"/>
+
+  <!-- ============ 下拉面板（left20 + icon区24 + gap8 + caption + shortcut + 20） ============ -->
+  <rect x="0" y="32" width="228" height="187.4" rx="5" fill="#252526" stroke="#454545"/>
+
+  <!-- 文字左对齐基准线 x=52（icon区右缘44 + gap8） -->
+  <line x1="52" y1="32" x2="52" y2="219.4" stroke="#1976D2" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>
+
+  <!-- 项1 打开(O)：行高32，文件夹容器20×20 于 icon 区 [20,44] 内居中 [22,42] -->
+  <rect x="22" y="42" width="20" height="20" fill="none" stroke="#1976D2" stroke-width="1" stroke-dasharray="4,3"/>
+  <path d="M26,47 h4 l2,3 h5 a2,2 0 0 1 2,2 v4 a2,2 0 0 1 -2,2 h-11 a2,2 0 0 1 -2,-2 v-7 a2,2 0 0 1 2,-2 z"
+        fill="#FFB300" stroke="#B28704" stroke-width="1"/>
+  <text x="52" y="52" font-size="15" fill="#CCCCCC" font-family="sans-serif">打开(O)</text>
+
+  <!-- 项2 保存(S)：CheckBox 容器（勾选态） -->
+  <rect x="22" y="74" width="20" height="20" fill="none" stroke="#1976D2" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="22" y="74" width="20" height="20" rx="3" fill="#3C3C3C" stroke="#CCCCCC" stroke-width="1.5"/>
+  <path d="M27,84 l4,4 l6,-7" fill="none" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="52" y="84" font-size="15" fill="#CCCCCC" font-family="sans-serif">保存(S)</text>
+
+  <!-- 项3 复制(C)：无容器，icon 区中心 (32,112) 画勾选标记；文字起点仍 x=52（左对齐） -->
+  <path d="M28,112 L31,115 L36,109" fill="none" stroke="#CCCCCC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="52" y="116" font-size="15" fill="#CCCCCC" font-family="sans-serif">复制(C)</text>
+
+  <!-- 分隔线（128..149，线居中 y=138） -->
+  <line x1="10" y1="138" x2="218" y2="138" stroke="#454545" stroke-width="1"/>
+
+  <!-- 项4 打印(P)…：字号24粗体，行高38.4（变行高），容器22×22 于 icon 区居中 -->
+  <rect x="21" y="157" width="22" height="22" fill="none" stroke="#1976D2" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="21" y="157" width="22" height="22" rx="3" fill="#3C3C3C" stroke="#CCCCCC" stroke-width="1.5"/>
+  <text x="52" y="175" font-size="18" font-weight="bold" fill="#CCCCCC" font-family="sans-serif">打印(P)…</text>
+  <text x="148" y="175" font-size="14" fill="#858585" font-family="sans-serif">Ctrl+P</text>
+
+  <!-- ============ 标注：icon 区左 padding（面板左缘 → 容器区） ============ -->
+  <line x1="0" y1="38" x2="20" y2="38" stroke="#D32F2F" stroke-width="1.5" marker-start="url(#arrowRed)"/>
+  <text x="2" y="34" font-size="11" fill="#D32F2F" font-family="sans-serif">left=20</text>
+
+  <!-- ============ 标注：leadingGap（icon区右缘 → 文字） ============ -->
+  <line x1="44" y1="70" x2="52" y2="70" stroke="#D32F2F" stroke-width="1.5" marker-start="url(#arrowRed)"/>
+  <text x="46" y="66" font-size="11" fill="#D32F2F" font-family="sans-serif">gap=8</text>
+
+  <!-- ============ 标注：文字左对齐 ============ -->
+  <line x1="52" y1="224" x2="52" y2="246" stroke="#1976D2" stroke-width="1.5" marker-start="url(#arrowRed)"/>
+  <text x="58" y="240" font-size="12" fill="#1976D2" font-family="sans-serif">所有行文字起点统一（左对齐）</text>
+
+  <!-- ============ 标注：行高（变行高） ============ -->
+  <line x1="228" y1="48" x2="266" y2="48" stroke="#2E7D32" stroke-width="1.5" marker-start="url(#arrowGreen)"/>
+  <line x1="266" y1="48" x2="266" y2="64" stroke="#2E7D32" stroke-width="1"/>
+  <line x1="266" y1="64" x2="228" y2="64" stroke="#2E7D32" stroke-width="1.5"/>
+  <text x="270" y="44" font-size="11" fill="#2E7D32" font-family="sans-serif">行高 32</text>
+  <text x="270" y="57" font-size="11" fill="#2E7D32" font-family="sans-serif">(字号20×1.6)</text>
+
+  <line x1="228" y1="168" x2="266" y2="168" stroke="#2E7D32" stroke-width="1.5" marker-start="url(#arrowGreen)"/>
+  <line x1="266" y1="168" x2="266" y2="187.4" stroke="#2E7D32" stroke-width="1"/>
+  <line x1="266" y1="187.4" x2="228" y2="187.4" stroke="#2E7D32" stroke-width="1.5"/>
+  <text x="270" y="164" font-size="11" fill="#2E7D32" font-family="sans-serif">行高 38.4</text>
+  <text x="270" y="177" font-size="11" fill="#2E7D32" font-family="sans-serif">(字号24×1.6)</text>
+
+  <!-- ============ 说明文字 ============ -->
+  <text x="300" y="220" font-size="11" fill="#666666" font-family="sans-serif">icon 区 = 控件容器，边长 = 字体高度（正方形）</text>
+  <text x="300" y="235" font-size="11" fill="#666666" font-family="sans-serif">无容器行在 icon 区中心画勾选标记，文字起点不变</text>
+  <text x="300" y="250" font-size="11" fill="#666666" font-family="sans-serif">面板宽 = 20 + icon区 + gap + caption</text>
+  <text x="300" y="263" font-size="11" fill="#666666" font-family="sans-serif">        + shortcut(≥60) + arrow + 20</text>
+  <text x="300" y="276" font-size="11" fill="#666666" font-family="sans-serif">icon 区宽 = max(各行字体高度, 20)</text>
+
+  <!-- ============ 顶部图例 ============ -->
+  <text x="280" y="21" font-size="12" fill="#1976D2" font-family="sans-serif">图例：</text>
+  <rect x="326" y="12" width="12" height="12" fill="none" stroke="#1976D2" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="342" y="22" font-size="11" fill="#666666" font-family="sans-serif">icon 区（容器）</text>
+  <line x1="410" y1="18" x2="420" y2="18" stroke="#D32F2F" stroke-width="2"/>
+  <text x="424" y="22" font-size="11" fill="#666666" font-family="sans-serif">gap</text>
+</svg>

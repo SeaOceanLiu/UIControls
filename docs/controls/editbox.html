@@ -40,12 +40,12 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>password-mode</code></td><td>Bool</td><td>false</td><td>密码模式开关</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>16</td><td>字号</td></tr>
-<tr><td><code>text</code></td><td>String</td><td>空</td><td>文本内容</td></tr>
-<tr><td><code>placeholder</code></td><td>String</td><td>空</td><td>占位符</td></tr>
 <tr><td><code>align</code></td><td>Enum</td><td><code>mid-left</code></td><td>9 值：<code>top-left / mid-left / bottom-left / top-right / mid-right / bottom-right / top-center / center / bottom-center</code></td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td><td>字体名（如 <code>harmonyos-sans-sc-regular</code>）</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td><td>字号</td></tr>
+<tr><td><code>password-mode</code></td><td>Bool</td><td>false</td><td>密码模式开关</td></tr>
+<tr><td><code>placeholder</code></td><td>String</td><td>空</td><td>占位符</td></tr>
+<tr><td><code>text</code></td><td>String</td><td>空</td><td>文本内容</td></tr>
 </table>
 
 <p>通用：<code>background / border / text</code>（StateColor）、<code>visible / enabled / transparent / border-visible</code>。</p>
@@ -55,8 +55,8 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>text-changed</code>（<code>kEventTextChanged</code>）</td><td>setText 或每次输入插入 / 删除文本后</td><td>String（strVal 指向全文）</td></tr>
 <tr><td><code>enter</code>（<code>kEventEnter</code>）</td><td>焦点态按 Enter</td><td>无</td></tr>
+<tr><td><code>text-changed</code>（<code>kEventTextChanged</code>）</td><td>setText 或每次输入插入 / 删除文本后</td><td>String（strVal 指向全文）</td></tr>
 </table>
 
 
@@ -102,18 +102,19 @@ UICornerstone_SetCallback(g_inst, box, "text-changed", onTextChanged, NULL);</co
 <summary>4.8.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setText(string)</code> / <code>getText()</code> / <code>getCursorPosition()</code></td><td>文本与光标位置</td></tr>
-<tr><td><code>setPlaceholder(string)</code> / <code>getPlaceholder()</code></td><td>占位符文本</td></tr>
-<tr><td><code>setPasswordMode(bool)</code> / <code>isPasswordMode()</code> / <code>setPasswordChar(char)</code></td><td>密码模式（默认掩码字符 <code>*</code>）</td></tr>
-<tr><td><code>selectAll()</code> / <code>setSelection(int,int)</code> / <code>clearSelection()</code> / <code>getSelectedText()</code> / <code>hasSelection()</code></td><td>选区操作</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>copy()</code> / <code>cut()</code> / <code>paste()</code> / <code>deleteSelectedText()</code></td><td>剪贴板（Ctrl+C / X / V）</td></tr>
-<tr><td><code>setFont(FontName)</code> / <code>setFontSize(int)</code> / <code>getFont()</code></td><td>字体（默认字号 16）</td></tr>
+<tr><td><code>selectAll()</code> / <code>setSelection(int,int)</code> / <code>clearSelection()</code> / <code>getSelectedText()</code> / <code>hasSelection()</code></td><td>选区操作</td></tr>
 <tr><td><code>setAlignmentMode(AlignmentMode)</code> / <code>getAlignmentMode()</code></td><td>对齐（默认 AM_MID_LEFT）</td></tr>
-<tr><td><code>setOnTextChanged(OnTextChangedHandler)</code> / <code>setOnEnter(OnEnterHandler)</code></td><td>文本变化 / 回车回调</td></tr>
-<tr><td><code>setFocused(bool, bool)</code> / <code>onFocusGained(bool)</code> / <code>onFocusLost()</code> / <code>isFocused()</code></td><td>焦点管理</td></tr>
-<tr><td><code>setMargin(Margin)</code> / <code>getMargin()</code></td><td>内边距</td></tr>
 <tr><td><code>setBoolProperty / setIntProperty / setStringProperty / setEnumProperty</code>（+getter）、<code>setCallbackProperty</code></td><td>属性分发</td></tr>
+<tr><td><code>setFocused(bool, bool)</code> / <code>onFocusGained(bool)</code> / <code>onFocusLost()</code> / <code>isFocused()</code></td><td>焦点管理</td></tr>
+<tr><td><code>setFont(FontName)</code> / <code>setFontSize(int)</code> / <code>getFont()</code></td><td>字体（默认字号 16）</td></tr>
+<tr><td><code>setMargin(Margin)</code> / <code>getMargin()</code></td><td>内边距</td></tr>
+<tr><td><code>setOnTextChanged(OnTextChangedHandler)</code> / <code>setOnEnter(OnEnterHandler)</code></td><td>文本变化 / 回车回调</td></tr>
+<tr><td><code>setPasswordMode(bool)</code> / <code>isPasswordMode()</code> / <code>setPasswordChar(char)</code></td><td>密码模式（默认掩码字符 <code>*</code>）</td></tr>
+<tr><td><code>setPlaceholder(string)</code> / <code>getPlaceholder()</code></td><td>占位符文本</td></tr>
+<tr><td><code>setText(string)</code> / <code>getText()</code> / <code>getCursorPosition()</code></td><td>文本与光标位置</td></tr>
 </table>
 
 </details>

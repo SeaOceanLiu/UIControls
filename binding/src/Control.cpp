@@ -146,3 +146,11 @@ std::string Control::GetId() const {
     const char* id = UICornerstone::Dyn::API().fnGetControlId(m_state->instance, m_state->handle);
     return id ? std::string(id) : std::string();
 }
+
+std::string Control::GetType() const {
+    if (!IsValid()) return std::string();
+    char buf[64] = {0};
+    if (!UICornerstone::Dyn::API().fnGetControlType(m_state->instance, m_state->handle, buf, (int)sizeof(buf)))
+        return std::string();
+    return std::string(buf);
+}

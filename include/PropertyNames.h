@@ -183,6 +183,12 @@ PROP_CONSTEXPR const char* kTreeExpand          = "expand";
 PROP_CONSTEXPR const char* kTreeCollapse        = "collapse";
 PROP_CONSTEXPR const char* kSelectedId          = "selected-id";
 PROP_CONSTEXPR const char* kSelectedUserData    = "selected-user-data";
+// TreeView item 级属性：先以字符串属性 "item-id" 定位目标节点，再用下列属性作用于该节点
+PROP_CONSTEXPR const char* kTreeItemId             = "item-id";
+PROP_CONSTEXPR const char* kTreeItemLeadingGap     = "item-leading-gap";
+PROP_CONSTEXPR const char* kTreeItemFontSize       = "item-font-size";
+PROP_CONSTEXPR const char* kTreeItemFont           = "item-font";
+PROP_CONSTEXPR const char* kTreeItemLeadingControl = "item-leading-control";
 
 // -- Image --
 PROP_CONSTEXPR const char* kImage             = "image";              // 文件路径（只写不读）
@@ -511,6 +517,11 @@ PROP_CONSTEXPR const char* kJsonCycleNavigation     = "cycleNavigation";
 PROP_CONSTEXPR const char* kJsonDefaultExpand       = "defaultExpand";
 PROP_CONSTEXPR const char* kJsonExpanded            = "expanded";
 PROP_CONSTEXPR const char* kJsonUserData            = "userData";
+// TreeView item 级增强（二期）：前置控件容器 + 逐 Item 字体/间隔
+PROP_CONSTEXPR const char* kJsonLeadingControl      = "leadingControl";   // 前置控件描述（复用控件 JSON：type/checked/image 等）
+PROP_CONSTEXPR const char* kJsonLeadingGap          = "leadingGap";       // 控件容器与文本之间的间隔（局部 px）
+PROP_CONSTEXPR const char* kJsonItemFont            = "font";             // 逐 Item 字体枚举（如 "harmonyos-sans-sc-bold"）
+PROP_CONSTEXPR const char* kJsonItemFontSize        = "size";             // 逐 Item 字号（0 = 继承 TreeView 级）
 PROP_CONSTEXPR const char* kJsonPageSize            = "pageSize";
 PROP_CONSTEXPR const char* kJsonStepSize            = "stepSize";
 PROP_CONSTEXPR const char* kJsonCentered            = "centered";
@@ -565,6 +576,9 @@ PROP_CONSTEXPR const char* kControlTypeTreeView = "tree-view";
 PROP_CONSTEXPR const char* kControlTypeImageButton = "image-button";
 PROP_CONSTEXPR const char* kControlTypeImage       = "image";
 PROP_CONSTEXPR const char* kControlTypeAnimation = "animation";
+PROP_CONSTEXPR const char* kControlTypeHandleControl = "handle-control";   // 仅 C ABI GetControlType 返回（JSON 无此类型）
+PROP_CONSTEXPR const char* kControlTypeMenuItem = "menu-item";              // 同上（menu-bar 内部项）
+PROP_CONSTEXPR const char* kControlTypeMenuPanel = "menu-panel";            // 同上（menu-bar 内部面板）
 
 // ============================================================
 // -- LuotiAni 枚举值 --

@@ -45,13 +45,13 @@ UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>color-hex</code></td><td>String</td><td>—</td><td>读当前颜色（"#RRGGBB"，经 GetString）</td></tr>
-<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td><td>预设网格列 / 行</td></tr>
-<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td><td>闭合态色块大小</td></tr>
-<tr><td><code>closed-font-size</code></td><td>Int</td><td>12</td><td>闭合态 Hex 字号</td></tr>
-<tr><td><code>closed-text-color</code></td><td>String</td><td>#DBDBDB</td><td>闭合态文本色</td></tr>
-<tr><td><code>popup-bg-color</code></td><td>String</td><td>#3C3C41</td><td>弹窗背景色</td></tr>
 <tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
+<tr><td><code>closed-font-size</code></td><td>Int</td><td>12</td><td>闭合态 Hex 字号</td></tr>
+<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td><td>闭合态色块大小</td></tr>
+<tr><td><code>closed-text</code></td><td>Color</td><td>#DBDBDB</td><td>闭合态文本色（C ABI <code>SetColor(ctl, "closed-text", ...)</code>）</td></tr>
+<tr><td><code>color</code></td><td>String</td><td>—</td><td>当前颜色 hex（读写，如 <code>"#FF6600"</code>，经 Get/SetString）</td></tr>
+<tr><td><code>popup-bg</code></td><td>Color</td><td>#3C3C41</td><td>弹窗背景色（C ABI <code>SetColor(ctl, "popup-bg", ...)</code>）</td></tr>
+<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td><td>预设网格列 / 行</td></tr>
 </table>
 
 
@@ -84,7 +84,7 @@ UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "
 
 <pre><code>// Binding 工厂
 Control cp = ui->CreateColorPicker(240, 498, 96, 24, "#FF6600");
-cp.SetString("closed-text-color", "#DDDDDD");
+cp.SetColor("closed-text", UIColor{0xDD, 0xDD, 0xDD, 0xFF});
 cp.SetCallback(PropertyNames::kEventColorChanged, [](const Event& e) {
     // 颜色负载读取
 });
@@ -105,7 +105,7 @@ BENCH->addControl(cp2);</code></pre>
 <pre><code>// 初始颜色以 "#RRGGBB" 字符串传入
 UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 20, 20, 120, 28, "#4A90D9", 1.0f, 1.0f);
 
-UICornerstone_SetString(g_inst, cp, "color-hex", "#3A80C9");
+UICornerstone_SetString(g_inst, cp, "color", "#3A80C9");
 UICornerstone_SetInt(g_inst, cp, "preset-rows", 4);
 
 static void onColorChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) {
@@ -116,17 +116,18 @@ UICornerstone_SetCallback(g_inst, cp, "color-changed", onColorChanged, NULL);</c
 <summary>4.5.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>setColor(const SColor&amp;)</code> / <code>setColor(const string&amp; hex)</code></td><td>设置颜色（支持 "#RRGGBB" / "#RRGGBBAA"）</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>getColor()</code> / <code>getColorHex()</code></td><td>获取当前颜色 / "#RRGGBB" 文本</td></tr>
+<tr><td><code>isPopupVisible()</code></td><td>弹窗是否打开</td></tr>
+<tr><td><code>setCallbackProperty(event, cb, userData)</code></td><td>回调属性注册</td></tr>
+<tr><td><code>setClosedSwatchSize(float)</code> / <code>setClosedFontSize(int)</code> / <code>setClosedTextColor(SColor)</code></td><td>闭合态色块大小（16）/ Hex 字号（12）/ 文本色（#DBDBDB）</td></tr>
+<tr><td><code>setColor(const SColor&amp;)</code> / <code>setColor(const string&amp; hex)</code></td><td>设置颜色（支持 "#RRGGBB" / "#RRGGBBAA"）</td></tr>
+<tr><td><code>setColorProperty / setIntProperty / setFloatProperty / setStringProperty</code>（+getter）</td><td>属性系统分发</td></tr>
+<tr><td><code>setOnColorChanged(OnColorChangedHandler)</code></td><td>颜色变化回调</td></tr>
+<tr><td><code>setPopupBGColor(SColor)</code></td><td>弹窗背景色（默认 #3C3C41）</td></tr>
 <tr><td><code>setPresetColors(const vector&lt;SColor&gt;&amp;)</code></td><td>设置预设色列表</td></tr>
 <tr><td><code>setPresetLayout(int cols, int rows)</code> / <code>getPresetCols() / getPresetRows()</code></td><td>预设色网格列 / 行数</td></tr>
-<tr><td><code>isPopupVisible()</code></td><td>弹窗是否打开</td></tr>
-<tr><td><code>setOnColorChanged(OnColorChangedHandler)</code></td><td>颜色变化回调</td></tr>
-<tr><td><code>setClosedSwatchSize(float)</code> / <code>setClosedFontSize(int)</code> / <code>setClosedTextColor(SColor)</code></td><td>闭合态色块大小（16）/ Hex 字号（12）/ 文本色（#DBDBDB）</td></tr>
-<tr><td><code>setPopupBGColor(SColor)</code></td><td>弹窗背景色（默认 #3C3C41）</td></tr>
-<tr><td><code>setColorProperty / setIntProperty / setFloatProperty / setStringProperty</code>（+getter）</td><td>属性系统分发</td></tr>
-<tr><td><code>setCallbackProperty(event, cb, userData)</code></td><td>回调属性注册</td></tr>
 </table>
 
 </details>

@@ -30,6 +30,7 @@ WinFrame::WinFrame(Control* parent, SRect rect, float xScale, float yScale):
     m_cursorSizeNWSE(Cursor::createSystem(SystemCursorType::NWSE_Resize)),
     m_cursorSizeNESW(Cursor::createSystem(SystemCursorType::NESW_Resize))
 {
+    m_ctlType = ControlType::WinFrame;
     if (m_rect.width < MIN_WIDTH)  m_rect.width = MIN_WIDTH;
     if (m_rect.height < MIN_HEIGHT) m_rect.height = MIN_HEIGHT;
 

@@ -18,6 +18,7 @@ TextArea::TextArea(Control *parent, SRect rect, float xScale, float yScale)
     , m_lineHeightCustom(false)
     , m_lastFontForLineHeight(nullptr)
 {
+    m_ctlType = ControlType::TextArea;
     m_lines.push_back("");
 
     SRect vScrollBarRect = SRect(

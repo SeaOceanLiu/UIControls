@@ -317,6 +317,7 @@ public:
         m_frameBilinearFilter(false),
         m_id(-1)
     {
+        m_ctlType = ControlType::Animation;
     }
     ~LuotiAni(){
         m_frameSurfaces.clear();

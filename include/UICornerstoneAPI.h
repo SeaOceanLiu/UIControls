@@ -453,6 +453,12 @@ UICORNERSTONE_API int UICornerstone_GetEnum(    UIInstance instance, UIControlHa
 // 读取指针属性。out 返回属性值。返回 1 成功，0 属性不识别
 UICORNERSTONE_API int UICornerstone_GetPtr(     UIInstance instance, UIControlHandle ctl, const char* prop, void**        out);
 
+// 查询控件运行时类型（如 "check-box" / "image" / "tree-view"，与 JSON "type" 值一致，
+// 全部 22 种见 PropertyNames::kControlType*）。out 写入小写 kebab-case 类型名。
+// 返回 1 成功，0 未知类型或参数无效。image-button 本质为 button，返回 "button"。
+// 典型用法：GetPtr(item-leading-control) 后经本函数判断容器控件类型再走对应属性。
+UICORNERSTONE_API int UICornerstone_GetControlType(UIInstance instance, UIControlHandle ctl, char* out, int maxLen);
+
 /* ── Callback ── */
 typedef struct {
     const char* eventName;

@@ -1,5 +1,25 @@
 ﻿## Session History
 
+### 2026-08-17: TreeView 行前置控件容器 + 逐 Item 字体 + GetControlType 机制重构（Complete）
+
+**背景**：TreeView 增强设计（v7）实施收尾：Item 行前置控件容器（图片/CheckBox 等）、逐 Item 字体（JSON + CABI），并重构控件类型查询机制。
+
+**1. 行控件布局迭代（v4→v6，用户逐轮拍板）**：槽起点 = 原文本起点 labelX（= arrowX + arrowGap，局部 20）；槽高 = 行内文字高度 fontH（无字体回退 rowH），行内垂直居中；槽宽 = slotH × ratio（优先纹理宽高比，退化 1:1）；文字 = 槽右缘 + leadingGap。局部坐标 `localX=(slotStartX-cr.left)/scaleX`、`localY=(y+(scaledRowH-slotH*scaleY)/2-cr.top)/scaleY`（禁止 setRect 绝对坐标，双重偏移同款）。test_treeview 14/14 断言三后端通过。
+
+**2. JSON item 增强**：`leadingControl`（复用 parseControl type 分发，parent=nullptr，缺 rect 自动补 `{0,0,0,0}` 占位）/ `leadingGap` / `font`（枚举）/ `size`（int，0=继承）；ENH_JSON 用例 16/16 断言三后端通过。图片纹理加载根因：测试传 `string` 精确匹配 Actor 资源 ID 重载（loadFromResource），文件路径须 `fs::path`（loadFromFile）——框架无 bug。
+
+**3. CABI item 级属性（item-id 定位模式）**：`SetString("item-id")` 定位 → Set/Get Float/Int/Enum/Ptr；test_treeview_cabi LAYOUT_JSON 增强（n2 check-box / n3 粗体 18 / n6 leadingGap 12）4 组断言 DLL 全过。**运行时挂树修复**：create() 之后 `SetPtr("item-leading-control")` 原本不挂树（syncRowControls 只在 rebuildFlatRows 调用），现 SetPtr 成功后立即 syncRowControls（addControl 幂等安全重入），**传 NULL 解除容器并摘树**。
+
+**4. GetControlType 机制重构（用户决策）**：dynamic_cast 链（22 级，每次查询全链 RTTI）→ **基类 `m_ctlType` 枚举成员方案**——`enum class ControlType`（25 值，与 JSON type 一一对应）+ 子类构造函数体内 `m_ctlType = ControlType::X`（Actor 5 构造含拷贝构造、LuotiAni 内联构造均覆盖）+ 基类 `getControlType()` 直接返回（O(1)）；CABI 内 switch 枚举→`PropertyNames::kControlType*` 常量（**禁止字面量**）。新增 `kControlTypeMenuItem`/`kControlTypeMenuPanel` 常量（仅查询返回，JSON 无）。坑：MenuItem 私有 `MenuItemType m_type` 阴影基类成员 → 基类成员命名 `m_ctlType`；Splitter 初始化列表裸聚合 `{0,0}` 被脚本误当函数体（手工修正）。
+
+**5. C++ Binding**：`Control::GetType()`（经 CABI）+ `UICornerstone::FromHandle()`（裸句柄包装代理，此前无法包装）；item 属性走通用 Set*/Get* 通道。
+
+**6. 文档**：docs/controls/treeview.html（item 属性表 + item-leading-control 运行时挂载/解除 + 4.21.6 样例）、docs/appendix/properties.html、docs/appendix/declarative-syntax.html（6.3 排序 19 块 + item 增强 + SetPtr 运行时挂载）、docs/appendix/binding.html（11.5.1 + FromHandle/GetType）、design/TreeView_Enhancement_Analysis.md（v7）、design/CABI_Property_Design.md（§8.2 类型查询机制 + Ptr 表）、本条目。
+
+**验证**：test_treeview 30/30 PASS（14 增强 + 16 json enh）、test_treeview_cabi 全过（含 GetControlType: check-box / tree-view）、静态库/DLL/binding 编译零错误零警告。
+
+**相关文件**：include/ControlBase.h（ControlType 枚举 + m_ctlType + getControlType）、include/TreeView.h、src/TreeView.cpp（布局 v6 + item 属性 + syncRowControls 运行时挂载）、src/LayoutParser.cpp（parseItems 四键）、include/PropertyNames.h（item 常量 + JSON 键 + 类型常量）、src/UICornerstoneAPI.cpp（GetControlType switch）、24 控件构造函数（m_ctlType 设置）、binding/（GetType/FromHandle/DynamicApi）、test/test_treeview.cpp、test/test_treeview_cabi.cpp。
+
 ### 2026-08-14: ResourceProvider 全链路实施 + Label 任意字体（Complete）
 
 **背景**：设计定稿（commit 42e19b4，含 AGENTS.md 提交/推送规则）后按 §7 实施清单逐项落地：内存资源加载（初始化前堆内存 → C ABI 注册 → 挂载实例）+ JSON 集中配置（顶层 resourceProviders 挂载点 + provider: 引用分流），并扩展 Label 任意字体加载。

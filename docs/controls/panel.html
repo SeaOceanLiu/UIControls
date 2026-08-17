@@ -98,18 +98,19 @@ UICornerstone_SetBool(g_inst, panel, "transparent", 1);</code></pre>
 <summary>4.14.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>update()</code> / <code>draw()</code></td><td>更新 / 绘制（背景 + 边框 + 子控件）</td></tr>
-<tr><td><code>handleEvent(Event)</code></td><td>逆向遍历子控件分发事件</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加子控件</td></tr>
-<tr><td><code>removeAllControls()</code></td><td>移除全部子控件</td></tr>
-<tr><td><code>setLayoutEngine(shared_ptr&lt;LayoutEngine&gt;)</code> / <code>getLayoutEngine()</code></td><td>挂载 / 获取布局引擎（HFlow / VFlow / Anchor / Grid）</td></tr>
-<tr><td><code>setChildFlowProps(Control*, FlowItemProps)</code></td><td>子控件流式布局属性（flowWeight 等）</td></tr>
-<tr><td><code>setChildAnchorProps(Control*, AnchorInfo)</code></td><td>子控件锚点布局属性</td></tr>
-<tr><td><code>setChildGridProps(Control*, GridItemProps)</code></td><td>子控件网格布局属性</td></tr>
+<tr><td><code>handleEvent(Event)</code></td><td>逆向遍历子控件分发事件</td></tr>
 <tr><td><code>reflowChildren()</code></td><td>按布局引擎重新计算全部子控件位置 / 尺寸</td></tr>
+<tr><td><code>removeAllControls()</code></td><td>移除全部子控件</td></tr>
 <tr><td><code>resolveChildPercentages()</code></td><td>解析子控件百分比尺寸（"50%" 形式）</td></tr>
+<tr><td><code>setChildAnchorProps(Control*, AnchorInfo)</code></td><td>子控件锚点布局属性</td></tr>
+<tr><td><code>setChildFlowProps(Control*, FlowItemProps)</code></td><td>子控件流式布局属性（flowWeight 等）</td></tr>
+<tr><td><code>setChildGridProps(Control*, GridItemProps)</code></td><td>子控件网格布局属性</td></tr>
+<tr><td><code>setLayoutEngine(shared_ptr&lt;LayoutEngine&gt;)</code> / <code>getLayoutEngine()</code></td><td>挂载 / 获取布局引擎（HFlow / VFlow / Anchor / Grid）</td></tr>
 <tr><td><code>setRect(SRect)</code> / <code>resized(SRect)</code></td><td>尺寸变更（resized 触发 reflow）</td></tr>
+<tr><td><code>update()</code> / <code>draw()</code></td><td>更新 / 绘制（背景 + 边框 + 子控件）</td></tr>
 </table>
 
 </details>

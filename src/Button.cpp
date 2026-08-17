@@ -13,6 +13,7 @@ Button::Button(Control *parent, SRect rect, float xScale, float yScale):
     m_luotiAni(nullptr),
     m_captionSize(ConstDef::BUTTON_CAPTION_SIZE)
 {
+    m_ctlType = ControlType::Button;
     m_rect = rect;
     setFocusable(true);
 }

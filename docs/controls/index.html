@@ -68,12 +68,12 @@ struct SColor { uint8_t r, g, b, a; };</code></pre>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>visible</code></td><td>Bool</td><td>可见性</td></tr>
-<tr><td><code>enabled</code></td><td>Bool</td><td>是否响应交互</td></tr>
-<tr><td><code>transparent</code></td><td>Bool</td><td>背景透明（不绘制背景）</td></tr>
-<tr><td><code>border-visible</code></td><td>Bool</td><td>边框可见</td></tr>
 <tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
+<tr><td><code>border-visible</code></td><td>Bool</td><td>边框可见</td></tr>
+<tr><td><code>enabled</code></td><td>Bool</td><td>是否响应交互</td></tr>
 <tr><td><code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>文本色 / 文本阴影色（含文本的控件）</td></tr>
+<tr><td><code>transparent</code></td><td>Bool</td><td>背景透明（不绘制背景）</td></tr>
+<tr><td><code>visible</code></td><td>Bool</td><td>可见性</td></tr>
 </table>
 
 <h3>三种创建方式</h3>
@@ -115,11 +115,11 @@ std::string s = c.GetString("caption");</code></pre>
 
 <table>
 <tr><th>能力</th><th>核心 C++ 类</th><th>C ABI（UICornerstoneAPI.h）</th><th>C++ Binding（Control.h）</th></tr>
+<tr><td>树操作</td><td><code>addControl(...)</code> / <code>removeControl(...)</code></td><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td><code>Control.AddChild(child)</code></td></tr>
 <tr><td>设置文本 / 数值 / 开关</td><td><code>setCaption(...)</code> 等</td><td><code>UICornerstone_SetString / SetInt / SetFloat / SetBool(inst, ctl, 属性名, ...)</code></td><td><code>Control.SetString / SetInt / SetFloat / SetBool(属性名, ...)</code></td></tr>
 <tr><td>设置颜色</td><td><code>setColor(...)</code> 等</td><td><code>UICornerstone_SetColor / SetStateColor(inst, ctl, 属性名, ...)</code></td><td><code>Control.SetColor / SetStateColor(属性名, ...)</code></td></tr>
 <tr><td>绑定事件</td><td><code>setOnClick(...)</code> 等</td><td><code>UICornerstone_SetCallback(inst, ctl, 事件名, cb, ud)</code></td><td><code>Control.SetCallback(事件名, lambda)</code></td></tr>
 <tr><td>位置尺寸</td><td><code>setRect(...)</code></td><td><code>UICornerstone_SetRect(inst, ctl, x, y, w, h)</code></td><td><code>Control.SetRect(x, y, w, h)</code></td></tr>
-<tr><td>树操作</td><td><code>addControl(...)</code> / <code>removeControl(...)</code></td><td><code>UICornerstone_AddChildControl(inst, parent, child)</code></td><td><code>Control.AddChild(child)</code></td></tr>
 <tr><td>销毁</td><td>—（引用计数释放）</td><td><code>UICornerstone_DestroyControl(inst, ctl)</code></td><td><code>Control.Destroy()</code></td></tr>
 </table>
 

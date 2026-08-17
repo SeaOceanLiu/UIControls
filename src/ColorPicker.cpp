@@ -70,6 +70,7 @@ ColorPicker::ColorPicker(Control* parent, SRect rect,
     m_popupWidth(ConstDef::COLORPICKER_POPUP_WIDTH),
     m_popupHeight(ConstDef::COLORPICKER_POPUP_HEIGHT)
 {
+    m_ctlType = ControlType::ColorPicker;
     setFocusable(true);
     setTransparent(true);
     setBorderVisible(false);

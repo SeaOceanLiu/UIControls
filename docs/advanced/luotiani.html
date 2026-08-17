@@ -56,10 +56,10 @@
 
 <table>
 <tr><th>操作类型</th><th>字段</th><th>语义</th></tr>
-<tr><td><code>translate</code></td><td>tx, ty</td><td>相对上一关键帧<strong>增量累加</strong></td></tr>
-<tr><td><code>scale</code></td><td>sx, sy</td><td>相对上一关键帧<strong>累乘</strong></td></tr>
-<tr><td><code>rotate</code></td><td>angle, cx, cy</td><td>角度累加，绕 (cx, cy) 旋转中心</td></tr>
 <tr><td><code>opacity</code></td><td>opacity（0~100）</td><td>百分比<strong>覆盖</strong>（内部转 0~255）</td></tr>
+<tr><td><code>rotate</code></td><td>angle, cx, cy</td><td>角度累加，绕 (cx, cy) 旋转中心</td></tr>
+<tr><td><code>scale</code></td><td>sx, sy</td><td>相对上一关键帧<strong>累乘</strong></td></tr>
+<tr><td><code>translate</code></td><td>tx, ty</td><td>相对上一关键帧<strong>增量累加</strong></td></tr>
 <tr><td><code>visible</code></td><td>visible</td><td>可见性覆盖</td></tr>
 </table>
 
@@ -98,17 +98,17 @@
 
 <table>
 <tr><th>easing 值</th><th>说明</th></tr>
-<tr><td><code>linear</code>（缺省）</td><td>线性插值</td></tr>
-<tr><td><code>ease-in / ease-out / ease-in-out</code></td><td>三次缓入 / 缓出 / 缓入缓出</td></tr>
-<tr><td><code>quad / sine / cubic</code></td><td>二次 / 正弦 / 三次多项式曲线</td></tr>
 <tr><td><code>cubic-bezier(x1,y1,x2,y2)</code></td><td>自定义贝塞尔（x 须在 [0,1]）；未知值回退 linear</td></tr>
+<tr><td><code>ease-in / ease-out / ease-in-out</code></td><td>三次缓入 / 缓出 / 缓入缓出</td></tr>
+<tr><td><code>linear</code>（缺省）</td><td>线性插值</td></tr>
+<tr><td><code>quad / sine / cubic</code></td><td>二次 / 正弦 / 三次多项式曲线</td></tr>
 </table>
 
 <table>
 <tr><th>path 类型</th><th>字段</th><th>说明</th></tr>
 <tr><td><code>bezier</code></td><td>c1x/c1y（二次）、c2x/c2y（三次）</td><td>控制点相对段起点</td></tr>
-<tr><td><code>parabola</code></td><td>vx, vy</td><td>初速物理轨迹，重力由终点反解，t=1 精确到达终点</td></tr>
 <tr><td><code>catmull-rom</code></td><td>points</td><td>多点平滑过点曲线</td></tr>
+<tr><td><code>parabola</code></td><td>vx, vy</td><td>初速物理轨迹，重力由终点反解，t=1 精确到达终点</td></tr>
 </table>
 
 <h2>5.1.3 C++ 完整用法</h2>

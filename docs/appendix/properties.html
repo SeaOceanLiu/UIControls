@@ -21,12 +21,12 @@
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>visible</code></td><td>Bool</td><td>可见性</td></tr>
-<tr><td><code>enabled</code></td><td>Bool</td><td>响应交互</td></tr>
-<tr><td><code>transparent</code></td><td>Bool</td><td>背景透明</td></tr>
-<tr><td><code>border-visible</code></td><td>Bool</td><td>边框可见</td></tr>
 <tr><td><code>background</code> / <code>border</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
+<tr><td><code>border-visible</code></td><td>Bool</td><td>边框可见</td></tr>
+<tr><td><code>enabled</code></td><td>Bool</td><td>响应交互</td></tr>
 <tr><td><code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
+<tr><td><code>transparent</code></td><td>Bool</td><td>背景透明</td></tr>
+<tr><td><code>visible</code></td><td>Bool</td><td>可见性</td></tr>
 </table>
 
 <h2>7.2 按控件速查（字母序）</h2>
@@ -34,87 +34,87 @@
 <h3>Actor（Image，类型 <code>image</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>alpha</code></td><td>Int</td><td>255</td></tr>
+<tr><td><code>anchor</code></td><td>Enum</td><td><code>top-left</code> … <code>center</code> …（9 值）</td></tr>
 <tr><td><code>image</code> / <code>image-resource</code></td><td>String（只写）</td><td>—</td></tr>
 <tr><td><code>match-parent-rect</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>alpha</code></td><td>Int</td><td>255</td></tr>
 <tr><td><code>scale-type</code></td><td>Enum</td><td><code>stretch</code> / <code>fit-center</code> / <code>center-crop</code> / <code>none</code></td></tr>
-<tr><td><code>anchor</code></td><td>Enum</td><td><code>top-left</code> … <code>center</code> …（9 值）</td></tr>
 </table>
 
 <h3>Bench（控件树根，无 JSON type / C ABI 句柄）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>viewport-scale-mode</code></td><td>Enum</td><td><code>off</code> / <code>fit</code> / <code>stretch</code>（视口缩放三态，核心引擎 <code>setEnumProperty</code>；C ABI / Binding 用实例级 <code>SetViewportScaleMode</code>，见 5.6）</td></tr>
 <tr><td><code>background</code> / <code>border</code> / <code>visible</code> / <code>enabled</code> / <code>transparent</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
+<tr><td><code>viewport-scale-mode</code></td><td>Enum</td><td><code>off</code> / <code>fit</code> / <code>stretch</code>（视口缩放三态，核心引擎 <code>setEnumProperty</code>；C ABI / Binding 用实例级 <code>SetViewportScaleMode</code>，见 5.6）</td></tr>
 </table>
 
 <h3>Button（类型 <code>button</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>text-shadow-enable</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>animation</code></td><td>String</td><td>—（LuotiAni 路径，加载即播放）</td></tr>
-<tr><td><code>normal-image</code> / <code>hover-image</code> / <code>pressed-image</code></td><td>String（只写）</td><td>—（状态 Actor，跟随时设边框）</td></tr>
+<tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>caption-size</code></td><td>Float</td><td>16（JSON 键 captionSize）</td></tr>
+<tr><td><code>normal-image</code> / <code>hover-image</code> / <code>pressed-image</code> / <code>disabled-image</code></td><td>String（只写）</td><td>—（状态 Actor，跟随时设边框）</td></tr>
+<tr><td><code>text-shadow-enable</code></td><td>Bool</td><td>false</td></tr>
 </table>
 
 <h3>CheckBox（类型 <code>check-box</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>check</code> / <code>cross</code> / <code>indeterminate</code> / <code>box-border</code></td><td>Color</td><td>绿 / 红 / 灰 / 深灰</td></tr>
-<tr><td><code>tri-state</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>check-state</code></td><td>Enum</td><td><code>unchecked</code> / <code>checked</code> / <code>indeterminate</code></td></tr>
 <tr><td><code>checked</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>layout</code></td><td>Enum</td><td><code>text-right</code> / <code>text-left</code></td></tr>
 <tr><td><code>size-ratio</code></td><td>Float</td><td>1.0</td></tr>
 <tr><td><code>style</code></td><td>Enum</td><td><code>classic</code> / <code>cross</code> / <code>circle</code></td></tr>
-<tr><td><code>check-state</code></td><td>Enum</td><td><code>unchecked</code> / <code>checked</code> / <code>indeterminate</code></td></tr>
-<tr><td><code>layout</code></td><td>Enum</td><td><code>text-right</code> / <code>text-left</code></td></tr>
+<tr><td><code>tri-state</code></td><td>Bool</td><td>true</td></tr>
 <tr><td><code>vertical-align</code></td><td>Enum</td><td><code>center</code> / <code>top</code> / <code>bottom</code></td></tr>
 </table>
 
 <h3>ColorPicker（类型 <code>color-picker</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>color-hex</code></td><td>String</td><td>—（读）</td></tr>
-<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td></tr>
-<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td></tr>
 <tr><td><code>closed-font-size</code></td><td>Int</td><td>12</td></tr>
-<tr><td><code>closed-text-color</code> / <code>popup-bg-color</code></td><td>String</td><td>#DBDBDB / #3C3C41</td></tr>
+<tr><td><code>closed-swatch-size</code></td><td>Float</td><td>16</td></tr>
+<tr><td><code>closed-text</code> / <code>popup-bg</code></td><td>Color</td><td>#DBDBDB / #3C3C41</td></tr>
+<tr><td><code>color</code></td><td>String</td><td>—（当前颜色 hex，读写）</td></tr>
+<tr><td><code>preset-cols</code> / <code>preset-rows</code></td><td>Int</td><td>5 / 4</td></tr>
 </table>
 
 <h3>ComboBox（类型 <code>combo-box</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>editable</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>text</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>selected-value</code> / <code>selected-index</code></td><td>String / Int</td><td>— / -1</td></tr>
-<tr><td><code>max-visible-items</code></td><td>Int</td><td>6</td></tr>
-<tr><td><code>item-height</code> / <code>arrow-width</code></td><td>Float</td><td>24 / 20</td></tr>
-<tr><td><code>cycle-enabled</code></td><td>Bool</td><td>true</td></tr>
-<tr><td><code>items</code></td><td>String(JSON)</td><td>—</td></tr>
 <tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>item-selected</code> / <code>item-hover</code> / <code>item-disabled</code> / <code>list-bg</code> / <code>list-border</code></td><td>Color</td><td>见 4.6 属性表</td></tr>
+<tr><td><code>cycle-enabled</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>editable</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>item-height</code> / <code>arrow-width</code></td><td>Float</td><td>24 / 20</td></tr>
+<tr><td><code>items</code></td><td>String(JSON)</td><td>—</td></tr>
+<tr><td><code>max-visible-items</code></td><td>Int</td><td>6</td></tr>
+<tr><td><code>selected-value</code> / <code>selected-index</code></td><td>String / Int</td><td>— / -1</td></tr>
+<tr><td><code>text</code></td><td>String</td><td>空</td></tr>
 </table>
 
 <h3>Dialog / Popup / ConfirmPopup（类型 <code>dialog</code> / <code>popup</code> / <code>confirm-popup</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>visible</code></td><td>Bool</td><td>0（置 1=open，置 0=close）</td></tr>
-<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code></td><td>Bool</td><td>1 / 1</td></tr>
-<tr><td><code>content</code></td><td>Ptr</td><td>null</td></tr>
-<tr><td><code>centered-mode</code></td><td>Enum</td><td><code>"centered"</code></td></tr>
-<tr><td><code>confirm-visible</code></td><td>Bool</td><td>1</td></tr>
-<tr><td><code>confirm-text</code> / <code>cancel-text</code></td><td>String</td><td>"确定" / "取消"</td></tr>
 <tr><td><code>button-height</code> / <code>button-gap</code> / <code>padding</code></td><td>Float</td><td>28 / 8 / 10</td></tr>
+<tr><td><code>centered-mode</code></td><td>Enum</td><td><code>"centered"</code></td></tr>
+<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code></td><td>Bool</td><td>1 / 1</td></tr>
+<tr><td><code>confirm-text</code> / <code>cancel-text</code></td><td>String</td><td>"确定" / "取消"</td></tr>
+<tr><td><code>confirm-visible</code></td><td>Bool</td><td>1</td></tr>
+<tr><td><code>content</code></td><td>Ptr</td><td>null</td></tr>
+<tr><td><code>visible</code></td><td>Bool</td><td>0（置 1=open，置 0=close）</td></tr>
 </table>
 
 <h3>EditBox（类型 <code>edit-box</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>password-mode</code> / <code>password-char</code></td><td>Bool / String</td><td>false / "●"</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
-<tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td></tr>
 <tr><td><code>align</code></td><td>Enum</td><td><code>mid-left</code>（9 值）</td></tr>
 <tr><td><code>editable</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>font</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
+<tr><td><code>password-mode</code> / <code>password-char</code></td><td>Bool / String</td><td>false / "●"</td></tr>
+<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
 </table>
 
 <h3>HandleControl（无 JSON 类型）</h3>
@@ -127,23 +127,23 @@
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>caption</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
+<tr><td><code>clickable</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>expand</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>font</code> / <code>align</code></td><td>Enum</td><td>HarmonyOS / <code>mid-left</code></td></tr>
 <tr><td><code>font-file</code></td><td>String（只写）</td><td>任意字体文件路径（相对 resourceRoot，可 <code>provider:</code> 前缀引用内存）；覆盖 <code>font</code> 枚举</td></tr>
 <tr><td><code>font-resource</code></td><td>String（只写）</td><td>内存字体资源 ID（MemoryResourceProvider 注册名）；优先级低于 font-file</td></tr>
-<tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>expand</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>clickable</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
 <tr><td><code>line-height</code> / <code>line-spacing-ratio</code></td><td>Int / Float</td><td>字体默认</td></tr>
+<tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
 </table>
 
 <h3>LuotiAni（类型 <code>animation</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>animation</code></td><td>String</td><td>JSONC 路径（只写）</td></tr>
-<tr><td><code>playing</code></td><td>Bool</td><td>命令式（置 1=play 重播，置 0=pause；未 prepare 置 1 记录请求，prepare 后自动播放）</td></tr>
-<tr><td><code>loop</code></td><td>Bool</td><td>循环</td></tr>
 <tr><td><code>frame</code></td><td>Int</td><td>跳帧</td></tr>
+<tr><td><code>loop</code></td><td>Bool</td><td>循环</td></tr>
+<tr><td><code>playing</code></td><td>Bool</td><td>命令式（置 1=play 重播，置 0=pause；未 prepare 置 1 记录请求，prepare 后自动播放）</td></tr>
 </table>
 
 <h3>Menu（类型 <code>menu-bar</code>）</h3>
@@ -152,20 +152,21 @@
 <tr><td><code>caption</code> / <code>shortcut</code></td><td>String</td><td>MenuItem 文字 / 快捷键</td></tr>
 <tr><td><code>checked</code></td><td>Bool</td><td>MenuItem 勾选</td></tr>
 <tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击</td></tr>
-<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸</td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>菜单字体（默认 MapleMono_NF_CN_Regular）</td></tr>
+<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸</td></tr>
+<tr><td><code>hovered-index</code></td><td>Int</td><td>MenuPanel 悬停项索引（读写）</td></tr>
 </table>
 
 <h3>NumericUpDown（类型 <code>numeric-up-down</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
-<tr><td><code>step</code> / <code>page-step</code></td><td>Float</td><td>1.0 / 10.0</td></tr>
-<tr><td><code>decimals</code></td><td>Int</td><td>0</td></tr>
-<tr><td><code>read-only</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>button-width</code></td><td>Float</td><td>28</td></tr>
 <tr><td><code>arrow</code> / <code>arrow-hover</code> / <code>arrow-pressed</code></td><td>Color</td><td>见 4.13 属性表</td></tr>
+<tr><td><code>button-width</code></td><td>Float</td><td>28</td></tr>
+<tr><td><code>decimals</code></td><td>Int</td><td>0</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
+<tr><td><code>read-only</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>step</code> / <code>page-step</code></td><td>Float</td><td>1.0 / 10.0</td></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
 </table>
 
 <h3>Panel（类型 <code>panel</code>）</h3>
@@ -174,83 +175,94 @@
 <h3>ProgressBar（类型 <code>progress-bar</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0.0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0.0 / 100.0</td></tr>
-<tr><td><code>progress</code> / <code>background</code> / <code>text</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
 <tr><td><code>animation-speed</code></td><td>Float</td><td>0.1</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>14</td></tr>
 <tr><td><code>custom-text</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>14</td></tr>
+<tr><td><code>progress</code> / <code>background</code> / <code>text</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0.0 / 100.0</td></tr>
 <tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
 <tr><td><code>text-mode</code></td><td>Enum</td><td><code>none</code> / <code>percent</code> / <code>custom</code></td></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0.0</td></tr>
 </table>
 
 <h3>ScrollBar（类型 <code>scroll-bar</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
-<tr><td><code>page-size</code> / <code>step-size</code></td><td>Float</td><td>—</td></tr>
-<tr><td><code>thickness</code></td><td>Float</td><td>16</td></tr>
 <tr><td><code>orientation</code></td><td>Enum</td><td><code>vertical</code> / <code>horizontal</code></td></tr>
+<tr><td><code>page-size</code> / <code>step-size</code></td><td>Float</td><td>—</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
+<tr><td><code>thickness</code></td><td>Float</td><td>16</td></tr>
 <tr><td><code>track</code> / <code>thumb</code> / <code>thumb-hover</code> / <code>thumb-pressed</code></td><td>Color</td><td>见 4.16 属性表</td></tr>
+<tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
 </table>
 
 <h3>Slider（类型 <code>slider</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>value</code> / <code>step</code></td><td>Float</td><td>0 / 1.0</td></tr>
-<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
-<tr><td><code>track-thickness</code> / <code>thumb-size</code></td><td>Float</td><td>4 / 16</td></tr>
-<tr><td><code>tick-interval</code> / <code>tick-length</code></td><td>Float</td><td>0 / 8</td></tr>
+<tr><td><code>label-font</code></td><td>Enum</td><td>数值标签字体（同通用字体枚举）</td></tr>
 <tr><td><code>label-gap</code> / <code>label-format</code></td><td>Float / String</td><td>4 / —</td></tr>
+<tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
 <tr><td><code>show-value-label</code> / <code>reverse</code></td><td>Bool</td><td>false / false</td></tr>
 <tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
+<tr><td><code>tick-interval</code> / <code>tick-length</code></td><td>Float</td><td>0 / 8</td></tr>
 <tr><td><code>track</code> / <code>track-fill</code> / <code>thumb</code> / <code>thumb-border</code> / <code>thumb-hover</code> / <code>tick</code> / <code>label</code></td><td>Color</td><td>见 4.17 属性表</td></tr>
+<tr><td><code>track-thickness</code> / <code>thumb-size</code></td><td>Float</td><td>4 / 16</td></tr>
+<tr><td><code>value</code> / <code>step</code></td><td>Float</td><td>0 / 1.0</td></tr>
 </table>
 
 <h3>Splitter（类型 <code>splitter</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>ratio</code>（别名 <code>value</code>）</td><td>Float</td><td>0.5</td></tr>
-<tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td></tr>
-<tr><td><code>first-min</code> / <code>second-min</code>（别名 <code>range-min</code>/<code>range-max</code>）</td><td>Float</td><td>20</td></tr>
 <tr><td><code>edge-margin</code></td><td>Float</td><td>—（同时设两侧 min）</td></tr>
+<tr><td><code>first-linked</code> / <code>second-linked</code></td><td>Ptr</td><td>null</td></tr>
+<tr><td><code>first-min</code> / <code>second-min</code>（别名 <code>range-min</code>/<code>range-max</code>）</td><td>Float</td><td>20</td></tr>
 <tr><td><code>horizontal</code></td><td>Bool</td><td>—</td></tr>
 <tr><td><code>line</code> / <code>line-hover</code> / <code>line-drag</code></td><td>Color</td><td>灰 / 蓝 / 深蓝</td></tr>
-<tr><td><code>first-linked</code> / <code>second-linked</code></td><td>Ptr</td><td>null</td></tr>
+<tr><td><code>ratio</code>（别名 <code>value</code>）</td><td>Float</td><td>0.5</td></tr>
+<tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td></tr>
 </table>
 
 <h3>TextArea（类型 <code>text-area</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>font-size</code> / <code>font</code> / <code>align</code></td><td>Int / Enum / Enum</td><td>16 / HarmonyOS / mid-left</td></tr>
-<tr><td><code>word-wrap</code></td><td>Bool</td><td>—</td></tr>
 <tr><td><code>line-height</code></td><td>Int</td><td>—</td></tr>
 <tr><td><code>scroll-x</code> / <code>scroll-y</code></td><td>Int</td><td>0</td></tr>
 <tr><td><code>scrollbar-thickness</code></td><td>Float</td><td>16</td></tr>
+<tr><td><code>text</code> / <code>placeholder</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>word-wrap</code></td><td>Bool</td><td>—</td></tr>
 </table>
 
 <h3>TreeView（类型 <code>tree-view</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>indent-width</code></td><td>Float</td><td>子节点缩进宽度</td></tr>
-<tr><td><code>row-height</code></td><td>Float</td><td>行高</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>节点文本字号（默认 14）</td></tr>
+<tr><td><code>arrow-gap</code></td><td>Float</td><td>箭头与文本间距（默认 6）</td></tr>
 <tr><td><code>cycle-navigation</code></td><td>Bool</td><td>Tab 环是否包含树节点</td></tr>
 <tr><td><code>default-expand</code></td><td>Bool</td><td>缺省展开全部节点</td></tr>
+<tr><td><code>font-size</code></td><td>Int</td><td>节点文本字号（默认 14）</td></tr>
+<tr><td><code>indent-width</code></td><td>Float</td><td>子节点缩进宽度</td></tr>
+<tr><td><code>item-font</code></td><td>Enum</td><td>逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
+<tr><td><code>item-font-size</code></td><td>Int</td><td>逐 Item 字号（0 = 继承 TreeView 级）</td></tr>
+<tr><td><code>item-id</code></td><td>String</td><td>定位目标节点（item 级属性的作用对象）</td></tr>
+<tr><td><code>item-leading-control</code></td><td>Ptr</td><td>行前置控件容器句柄（借用语义，可再经通用属性系统操作；运行时 SetPtr 立即挂树，传 NULL 解除并摘树）</td></tr>
+<tr><td><code>item-leading-gap</code></td><td>Float</td><td>行前置控件容器与文本间隔（默认 6）</td></tr>
+<tr><td><code>line-spacing</code></td><td>Int</td><td>行距（默认 0 = 继承字体行高）</td></tr>
+<tr><td><code>row-height</code></td><td>Float</td><td>行高</td></tr>
+<tr><td><code>selected-id</code></td><td>String（只读）</td><td>当前选中节点 id</td></tr>
+<tr><td><code>selected-user-data</code></td><td>Ptr</td><td>选中节点 userData 读写（借用语义）</td></tr>
 <tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>按节点 id 展开 / 折叠</td></tr>
 </table>
-<p>节点数据经布局 JSON <code>"items": [{"id","label","expanded","userData","children":[...]}]</code> 声明（见 6.3 tree-view）；编程式用 C ABI <code>CreateTreeView</code> + 核心 TreeView API。</p>
+<p>节点数据经布局 JSON <code>"items": [{"id","label","expanded","userData","children":[...]}]</code> 声明（见 6.3 tree-view）；编程式用 C ABI <code>CreateTreeView</code> + 核心 TreeView API。
+item 增强：<code>leadingControl</code>（行前置控件容器，复用控件 JSON）/ <code>leadingGap</code> / <code>font</code>（逐 Item 字体）/ <code>size</code>（逐 Item 字号），见 4.21.4.1 与 4.21.2.1。</p>
 
 <h3>WinFrame（类型 <code>win-frame</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code> / <code>confirm-visible</code></td><td>Bool</td><td>—</td></tr>
+<tr><td><code>edge-margin</code></td><td>Float</td><td>4.0</td></tr>
+<tr><td><code>resizable</code></td><td>Bool</td><td>true</td></tr>
 <tr><td><code>title</code></td><td>String</td><td>"WinFrame"</td></tr>
 <tr><td><code>win-frame-bg</code> / <code>win-frame-border</code> / <code>title-bar-bg</code> / <code>title-text</code> / <code>closed-text</code></td><td>Color</td><td>见 4.20 属性表</td></tr>
-<tr><td><code>resizable</code></td><td>Bool</td><td>true</td></tr>
-<tr><td><code>edge-margin</code></td><td>Float</td><td>4.0</td></tr>
-<tr><td><code>close-on-click-outside</code> / <code>close-on-esc</code> / <code>confirm-visible</code></td><td>Bool</td><td>—</td></tr>
 </table>
 
 <div class="chapter-nav">

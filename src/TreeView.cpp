@@ -1,5 +1,7 @@
 ﻿#define NOMINMAX
 #include "TreeView.h"
+#include "Actor.h"
+#include "Texture.h"
 #include "PropertyNames.h"
 #include "PlatformUtils.h"
 #include "EventQueue.h"
@@ -16,6 +18,7 @@ TreeView::TreeView(Control* parent, const SRect& rect,
     , m_fontSize(14)
     , m_font()
 {
+    m_ctlType = ControlType::TreeView;
     m_rect = rect;
     setFocusable(true);
     setBorderVisible(true);
@@ -93,10 +96,59 @@ void TreeView::ensureFont() {
         data->data(), data->size(), scaledSize, "W");
 }
 
+// 逐节点字体：fontSize>0 且与 TreeView 级不同 → 按节点 fontName/fontSize 创建并缓存；
+// 否则（未设置/与级相同/加载失败）回退 m_font。节点销毁时缓存由 clearItems/setItems/removeNode 清理
+SharedFont TreeView::getNodeFont(const shared_ptr<TreeNode>& node) {
+    if (!node || node->fontSize <= 0) return m_font;
+    if (node->fontName == m_fontName && node->fontSize == m_fontSize) return m_font;
+    auto it = m_nodeFonts.find(node.get());
+    if (it != m_nodeFonts.end()) return it->second;
+
+    TextRenderer* renderer = getTextRenderer();
+    ResourceProvider* provider = getResourceProvider();
+    if (!renderer || !provider) return m_font;
+    auto fit = ConstDef::fontFiles.find(node->fontName);
+    if (fit == ConstDef::fontFiles.end()) return m_font;
+    string fontPath = ConstDef::pathPrefix.string() + "/" + fit->second;
+    auto data = provider->readFile(fontPath);
+    if (!data || data->empty()) return m_font;
+
+    int scaledSize = static_cast<int>(node->fontSize * getScaleXX());
+    SharedFont f = renderer->loadFontFromMemoryWithText(
+        data->data(), data->size(), scaledSize, "W");
+    m_nodeFonts[node.get()] = f;
+    return f;
+}
+
+// 行控件挂/摘同步（rebuildFlatRows 内调用）：遍历当前 flatRows 收集 leadingControl
+// 挂树并登记；对已摘除节点（收起/删除/替换）的控件 removeControl 并移出登记
+void TreeView::syncRowControls() {
+    vector<shared_ptr<Control>> keep;
+    keep.reserve(m_flatRows.size());
+    for (auto& row : m_flatRows)
+        if (row.node->leadingControl)
+            keep.push_back(row.node->leadingControl);
+
+    for (auto& c : m_rowControls) {
+        bool still = false;
+        for (auto& k : keep)
+            if (k.get() == c.get()) { still = true; break; }
+        if (!still) removeControl(c);
+    }
+    for (auto& k : keep) {
+        bool exists = false;
+        for (auto& c : m_rowControls)
+            if (c.get() == k.get()) { exists = true; break; }
+        if (!exists) addControl(k);
+    }
+    m_rowControls = std::move(keep);
+}
+
 void TreeView::setFont(FontName fontName) {
     if (m_fontName == fontName && m_font) return;
     m_fontName = fontName;
     m_font.reset();
+    m_nodeFonts.clear();  // 逐节点字体缓存随级字体失效
     if (m_isCreated) ensureFont();
 }
 
@@ -104,6 +156,7 @@ void TreeView::setFontSize(int size) {
     if (m_fontSize == size) return;
     m_fontSize = size;
     m_font.reset();
+    m_nodeFonts.clear();  // 逐节点字体缓存随级字体失效
     if (m_isCreated) ensureFont();
 }
 
@@ -114,6 +167,7 @@ void TreeView::refreshScaleWith(float parentXX, float parentYY){
     ControlImpl::refreshScaleWith(parentXX, parentYY);
     if (oldScaleX != getScaleXX() || oldScaleY != getScaleYY()) {
         m_font.reset();
+        m_nodeFonts.clear();  // 逐节点字体缓存随缩放失效
         if (m_isCreated) ensureFont();
     }
 }
@@ -181,10 +235,48 @@ void TreeView::draw() {
             if (!m_flatRows[i].node->children.empty())
                 drawArrow(dev, arrowX, y, m_flatRows[i].node->expanded);
 
-            if (renderer && m_font) {
-                float textY = y + (scaledRowH - fontHeight) / 2;
-                renderer->drawText(m_font.get(), m_flatRows[i].node->label,
-                                   labelX, textY, m_textColor);
+            SharedFont nodeFont = getNodeFont(m_flatRows[i].node);
+            int fontH = (renderer && nodeFont) ? renderer->getFontHeight(nodeFont.get()) : 0;
+
+            // 行前置控件（TreeView 增强）：高自适应行高，宽按原始宽高比等比缩放；
+            // rect 必须为局部坐标（绝对坐标会经 getDrawRect 二次叠加父偏移 = 双重偏移）
+            float textX = labelX;
+            if (m_flatRows[i].node->leadingControl) {
+                auto& lc = m_flatRows[i].node->leadingControl;
+                // 宽高比优先取纹理自然尺寸（Actor 等 rect 初始为 0 时仍可等比），
+                // 其次取当前 rect，最后退化 1:1（CheckBox 16x16 → 正方形）
+                float ratio = 1.0f;
+                if (auto* actor = dynamic_cast<Actor*>(lc.get())) {
+                    Texture* tex = actor->getTexture();
+                    if (tex && tex->height() > 0)
+                        ratio = (float)tex->width() / tex->height();
+                }
+                if (ratio == 1.0f) {
+                    float ow = lc->getRect().width;
+                    float oh = lc->getRect().height;
+                    if (oh > 0 && ow > 0) ratio = ow / oh;
+                }
+                // 槽高 = 文字高度（行内垂直居中，行间留空隙）；无字体时回退行高
+                float slotH = (fontH > 0) ? (float)fontH : m_rowHeight;
+                float slotW = slotH * ratio;
+                // 槽起点 = 原文本起点（labelX = arrowX + arrowGap）：
+                // 图片缩进与无容器时文本缩进一致，有箭头行箭头在图片左侧不重叠
+                float slotStartX = labelX;
+                float slotWpx = slotW * scaleX;
+                textX = slotStartX + slotWpx + m_flatRows[i].node->leadingGap * scaleX;
+                SRect r;
+                r.left = (slotStartX - cr.left) / scaleX;
+                r.top = (y + (scaledRowH - slotH * scaleY) / 2 - cr.top) / scaleY;
+                r.width = slotW;
+                r.height = slotH;
+                lc->setRect(r);
+                lc->draw();
+            }
+
+            if (renderer && nodeFont) {
+                float textY = y + (scaledRowH - fontH) / 2;
+                renderer->drawText(nodeFont.get(), m_flatRows[i].node->label,
+                                   textX, textY, m_textColor);
             }
         }
     }
@@ -192,6 +284,11 @@ void TreeView::draw() {
     dev->popClipRect();
 
     for (auto& child : m_children) {
+        // 行控件已在行循环内（clip 区内）绘制，此处跳过防同帧重复绘制
+        bool isRowControl = false;
+        for (auto& rc : m_rowControls)
+            if (rc.get() == child.get()) { isRowControl = true; break; }
+        if (isRowControl) continue;
         child->draw();
     }
 
@@ -308,6 +405,14 @@ bool TreeView::handleEvent(shared_ptr<Event> event) {
                 toggleExpand(m_flatRows[row].node->id);
                 return true;
             }
+            // TreeView 增强：点击行前置控件 → 选中该行 + 不消费事件，
+            // 事件落入子控件分发（ControlImpl::handleEvent）完成控件自身交互（如 CheckBox 勾选）
+            if (m_flatRows[row].node->leadingControl &&
+                m_flatRows[row].node->leadingControl->isContainsPoint(
+                    event->mouseButton.x, event->mouseButton.y)) {
+                selectNode(m_flatRows[row].node->id);
+                return false;
+            }
             selectNode(m_flatRows[row].node->id);
             return true;
         }
@@ -389,12 +494,14 @@ void TreeView::rebuildFlatRows() {
     for (auto& root : m_rootItems)
         flatten(root, 0);
 
+    syncRowControls();
     updateScrollBar();
 }
 
 void TreeView::setItems(const vector<shared_ptr<TreeNode>>& items) {
     for (auto& root : m_rootItems)
         clearNodeRecursive(root);
+    m_nodeFonts.clear();  // 旧树节点已销毁，逐节点字体缓存 key 失效
 
     m_rootItems = items;
 
@@ -440,6 +547,7 @@ bool TreeView::removeNode(const string& id) {
                 m_selectedRow = -1;
             }
             rebuildFlatRows();
+            m_nodeFonts.clear();  // 被删节点销毁，缓存 key 失效
             return true;
         }
     }
@@ -456,6 +564,7 @@ bool TreeView::removeNode(const string& id) {
                     m_selectedRow = -1;
                 }
                 rebuildFlatRows();
+                m_nodeFonts.clear();  // 被删节点销毁，缓存 key 失效
                 return true;
             }
             if (removeRecursive(*it)) return true;
@@ -484,6 +593,11 @@ bool TreeView::setNodeUserData(const string& id, void* userData) {
 }
 
 void TreeView::clearItems() {
+    // 行控件先行摘除（节点随后销毁；clearItems 不触发 rebuildFlatRows）
+    for (auto& c : m_rowControls)
+        removeControl(c);
+    m_rowControls.clear();
+    m_nodeFonts.clear();
     for (auto& root : m_rootItems)
         clearNodeRecursive(root);
     m_rootItems.clear();
@@ -602,7 +716,8 @@ float TreeView::calcContentWidth() {
     for (auto& row : m_flatRows) {
         float labelW = 0;
         if (renderer) {
-            SSize sz = renderer->measureText(m_font.get(), row.node->label);
+            SharedFont nodeFont = getNodeFont(row.node);
+            SSize sz = renderer->measureText(nodeFont.get(), row.node->label);
             labelW = sz.width / scale;
         }
         float rowW = LEFT_PADDING + row.depth * m_indentWidth + m_arrowGap + labelW + RIGHT_GAP;
@@ -700,11 +815,13 @@ int TreeView::setCallbackProperty(const char* event, void (*cb)(void*, const voi
 int TreeView::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kTreeExpand) == 0)   { return value && expandNode(value) ? 1 : 0; }
     if (strcmp(prop, PropertyNames::kTreeCollapse) == 0) { return value && collapseNode(value) ? 1 : 0; }
+    if (strcmp(prop, PropertyNames::kTreeItemId) == 0)   { m_itemTargetId = value ? value : ""; return 1; }
     return ControlImpl::setStringProperty(prop, value);
 }
 
 int TreeView::getStringProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kSelectedId) == 0) { out = m_selectedId.c_str(); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemId) == 0) { out = m_itemTargetId.c_str(); return 1; }
     return ControlImpl::getStringProperty(prop, out);
 }
 
@@ -714,6 +831,19 @@ int TreeView::setPtrProperty(const char* prop, void* value) {
         if (node) { node->userData = value; return 1; }
         return 0;
     }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingControl) == 0) {
+        // 前置控件容器（借用语义，生命周期由调用方保证，与 selected-user-data 同约定）：
+        // 无删除器包装，避免 TreeView 误删外部控件；挂树由 syncRowControls 完成
+        auto node = findNodeById(m_itemTargetId);
+        if (!node) return 0;
+        if (value) {
+            node->leadingControl = shared_ptr<Control>(static_cast<Control*>(value), [](Control*) {});
+        } else {
+            node->leadingControl.reset();   // NULL = 解除容器并摘树
+        }
+        syncRowControls();
+        return 1;
+    }
     return ControlImpl::setPtrProperty(prop, value);
 }
 
@@ -721,6 +851,11 @@ int TreeView::getPtrProperty(const char* prop, void*& out) {
     if (strcmp(prop, PropertyNames::kSelectedUserData) == 0) {
         auto node = findNodeById(m_selectedId);
         if (node) { out = node->userData; return 1; }
+        return 0;
+    }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingControl) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node && node->leadingControl) { out = node->leadingControl.get(); return 1; }
         return 0;
     }
     return ControlImpl::getPtrProperty(prop, out);
@@ -735,6 +870,11 @@ int TreeView::setBoolProperty(const char* prop, int value) {
 }
 int TreeView::setIntProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kFontSize) == 0) { setFontSize(value); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemFontSize) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node) { node->fontSize = value; m_nodeFonts.clear(); updateScrollBar(); return 1; }
+        return 0;
+    }
     return ControlImpl::setIntProperty(prop, value);
 }
 int TreeView::setFloatProperty(const char* prop, float value) {
@@ -742,12 +882,22 @@ int TreeView::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kRowHeight) == 0)   { setRowHeight(value);    return 1; }
     if (strcmp(prop, PropertyNames::kLineSpacing) == 0) { setLineSpacing(value);  return 1; }
     if (strcmp(prop, PropertyNames::kArrowGap) == 0)    { setArrowGap(value);     return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingGap) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node) { node->leadingGap = value; return 1; }
+        return 0;
+    }
     return ControlImpl::setFloatProperty(prop, value);
 }
 int TreeView::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kFont) == 0) {
         setFont(FontNameFromString(value));
         return 1;
+    }
+    if (strcmp(prop, PropertyNames::kTreeItemFont) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node && value) { node->fontName = FontNameFromString(value); m_nodeFonts.clear(); updateScrollBar(); return 1; }
+        return 0;
     }
     return ControlImpl::setEnumProperty(prop, value);
 }
@@ -758,6 +908,11 @@ int TreeView::getBoolProperty(const char* prop, int& out) {
 }
 int TreeView::getIntProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kFontSize) == 0) { out = m_fontSize; return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemFontSize) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node) { out = node->fontSize; return 1; }
+        return 0;
+    }
     return ControlImpl::getIntProperty(prop, out);
 }
 int TreeView::getFloatProperty(const char* prop, float& out) {
@@ -765,12 +920,22 @@ int TreeView::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kRowHeight) == 0)   { out = m_rowHeight;   return 1; }
     if (strcmp(prop, PropertyNames::kLineSpacing) == 0) { out = m_lineSpacing; return 1; }
     if (strcmp(prop, PropertyNames::kArrowGap) == 0)    { out = m_arrowGap;    return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingGap) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node) { out = node->leadingGap; return 1; }
+        return 0;
+    }
     return ControlImpl::getFloatProperty(prop, out);
 }
 int TreeView::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kFont) == 0) {
         out = FontNameToString(m_fontName);
         return 1;
+    }
+    if (strcmp(prop, PropertyNames::kTreeItemFont) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (node) { out = FontNameToString(node->fontName); return 1; }
+        return 0;
     }
     return ControlImpl::getEnumProperty(prop, out);
 }

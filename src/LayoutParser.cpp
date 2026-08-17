@@ -1789,6 +1789,27 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
                 node->id = item.value(PropertyNames::kJsonId, "");
                 node->label = item.value(PropertyNames::kJsonLabel, "");
                 node->expanded = item.value(PropertyNames::kJsonExpanded, false);
+                if (item.contains(PropertyNames::kJsonLeadingGap) && item[PropertyNames::kJsonLeadingGap].is_number())
+                    node->leadingGap = item[PropertyNames::kJsonLeadingGap].get<float>();
+                if (item.contains(PropertyNames::kJsonItemFont) && item[PropertyNames::kJsonItemFont].is_string())
+                    node->fontName = FontNameFromString(item[PropertyNames::kJsonItemFont].get<string>().c_str());
+                if (item.contains(PropertyNames::kJsonItemFontSize) && item[PropertyNames::kJsonItemFontSize].is_number())
+                    node->fontSize = item[PropertyNames::kJsonItemFontSize].get<int>();
+                if (item.contains(PropertyNames::kJsonLeadingControl) && item[PropertyNames::kJsonLeadingControl].is_object()) {
+                    // 前置控件容器：复用控件 JSON（type + 控件属性），
+                    // parent 传 nullptr，由 TreeView::syncRowControls 挂树（create 在挂树后重放）
+                    json lcJson = item[PropertyNames::kJsonLeadingControl];
+                    if (!lcJson.contains(PropertyNames::kJsonRect)) {
+                        // 行控件 rect 由 TreeView 按行高/文字高自适应覆盖，解析期仅需占位
+                        lcJson[PropertyNames::kJsonRect] = {
+                            {PropertyNames::kJsonX, 0}, {PropertyNames::kJsonY, 0},
+                            {PropertyNames::kJsonW, 0}, {PropertyNames::kJsonH, 0}
+                        };
+                    }
+                    auto lc = parseControl(lcJson, nullptr, 0);
+                    if (lc) node->leadingControl = lc;
+                    else logWarn("treeview item \"" + node->id + "\" leadingControl parse failed, skipped");
+                }
                 if (item.contains(PropertyNames::kJsonUserData) && item[PropertyNames::kJsonUserData].is_string()) {
                     node->userData = static_cast<void*>(new std::string(item[PropertyNames::kJsonUserData].get<string>()));
                 }

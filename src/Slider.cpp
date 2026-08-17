@@ -47,6 +47,7 @@ Slider::Slider(Control* parent, SRect rect, float xScale, float yScale):
     m_lastRect(),
     m_onValueChanged(nullptr)
 {
+    m_ctlType = ControlType::Slider;
     m_rect = rect;
     setTransparent(true);
     setBorderVisible(false);

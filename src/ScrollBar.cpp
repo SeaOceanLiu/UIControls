@@ -25,6 +25,7 @@ ScrollBar::ScrollBar(Control *parent, SRect rect, ScrollBarOrientation orientati
     , m_thumbHoverColor(ConstDef::SCROLLBAR_THUMB_HOVER_COLOR)
     , m_thumbPressedColor(ConstDef::SCROLLBAR_THUMB_PRESSED_COLOR)
 {
+    m_ctlType = ControlType::ScrollBar;
     m_id = 0;
     m_visible = true;
     m_enable = true;

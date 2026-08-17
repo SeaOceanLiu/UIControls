@@ -11,6 +11,7 @@ Popup::Popup(Control* parent, SRect rect,
              float xScale, float yScale)
     : Panel(parent, rect, xScale, yScale)
 {
+    m_ctlType = ControlType::Popup;
     setFocusable(false);
     setTransparent(false);
     setBorderVisible(true);
@@ -263,6 +264,7 @@ ConfirmPopup::ConfirmPopup(Control* parent, SRect rect,
                            float xScale, float yScale)
     : Popup(parent, rect, xScale, yScale)
 {
+    m_ctlType = ControlType::ConfirmPopup;
 }
 
 void ConfirmPopup::create() {
@@ -355,6 +357,7 @@ Dialog::Dialog(Control* parent, SRect rect,
                float xScale, float yScale)
     : ConfirmPopup(parent, rect, xScale, yScale)
 {
+    m_ctlType = ControlType::Dialog;
 }
 
 void Dialog::create() {

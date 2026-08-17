@@ -1524,6 +1524,46 @@ int UICornerstone_GetPtr(UIInstance instance, UIControlHandle ctl, const char* p
     return c->getPtrProperty(prop, *out);
 }
 
+// 控件运行时类型查询：dynamic_cast 链（具体类在前），返回 JSON "type" 小写 kebab-case。
+// 新增控件类型时须在此补充分支（与 PropertyNames::kControlType* 保持一致）。
+int UICornerstone_GetControlType(UIInstance instance, UIControlHandle ctl, char* out, int maxLen) {
+    if (!instance || !ctl || !out || maxLen <= 0) return 0;
+    Control* c = validateControl(instance, ctl);
+    if (!c) return 0;
+    // 枚举→字符串（构造时由子类设置的 m_type，O(1) 查询）
+    const char* type = nullptr;
+    switch (c->getControlType()) {
+        case ControlType::Label:         type = PropertyNames::kControlTypeLabel; break;
+        case ControlType::Button:        type = PropertyNames::kControlTypeButton; break;   // 含 image-button
+        case ControlType::EditBox:       type = PropertyNames::kControlTypeEditBox; break;
+        case ControlType::ComboBox:      type = PropertyNames::kControlTypeComboBox; break;
+        case ControlType::TextArea:      type = PropertyNames::kControlTypeTextArea; break;
+        case ControlType::CheckBox:      type = PropertyNames::kControlTypeCheckBox; break;
+        case ControlType::ProgressBar:   type = PropertyNames::kControlTypeProgressBar; break;
+        case ControlType::Slider:        type = PropertyNames::kControlTypeSlider; break;
+        case ControlType::ScrollBar:     type = PropertyNames::kControlTypeScrollBar; break;
+        case ControlType::Panel:         type = PropertyNames::kControlTypePanel; break;
+        case ControlType::WinFrame:      type = PropertyNames::kControlTypeWinFrame; break;
+        case ControlType::ColorPicker:   type = PropertyNames::kControlTypeColorPicker; break;
+        case ControlType::Splitter:      type = PropertyNames::kControlTypeSplitter; break;
+        case ControlType::TreeView:      type = PropertyNames::kControlTypeTreeView; break;
+        case ControlType::NumericUpDown: type = PropertyNames::kControlTypeNumericUpDown; break;
+        case ControlType::Popup:         type = PropertyNames::kControlTypePopup; break;
+        case ControlType::ConfirmPopup:  type = PropertyNames::kControlTypeConfirmPopup; break;
+        case ControlType::Dialog:        type = PropertyNames::kControlTypeDialog; break;
+        case ControlType::MenuItem:      type = PropertyNames::kControlTypeMenuItem; break;
+        case ControlType::MenuPanel:     type = PropertyNames::kControlTypeMenuPanel; break;
+        case ControlType::MenuBar:       type = PropertyNames::kControlTypeMenuBar; break;
+        case ControlType::Image:         type = PropertyNames::kControlTypeImage; break;
+        case ControlType::Animation:     type = PropertyNames::kControlTypeAnimation; break;
+        case ControlType::HandleControl: type = PropertyNames::kControlTypeHandleControl; break;
+        default:                         break;
+    }
+    if (!type) return 0;
+    strncpy_s(out, maxLen, type, _TRUNCATE);
+    return 1;
+}
+
 int UICornerstone_SetCallback(UIInstance instance, UIControlHandle ctl, const char* event, UIEventCallback cb, void* userData) {
     if (!instance || !ctl || !event) return 0;
     Control* c = validateControl(instance, ctl);

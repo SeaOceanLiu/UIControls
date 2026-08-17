@@ -33,9 +33,9 @@ build_scripts\build.bat sdl3                   // Windows 快捷脚本</code></p
 
 <table>
 <tr><th>key</th><th>类型</th><th>sdl3</th><th>sfml</th><th>raylib</th><th>说明</th></tr>
-<tr><td><code>vsync</code></td><td>bool/int/string</td><td>✓</td><td>✓</td><td>✓*</td><td>0/1；raylib 创建期 <code>FLAG_VSYNC_HINT</code>，须在创建实例前用 inst=NULL 设置</td></tr>
-<tr><td><code>swap-ratio</code></td><td>int</td><td>✓</td><td>✗</td><td>✗</td><td>SDL3 <code>SDL_SetRenderVSync</code>（0/1/-1）</td></tr>
 <tr><td><code>renderer-name</code></td><td>string（只读）</td><td>✓</td><td>✗</td><td>✗</td><td>渲染器能力探测（如 "direct3d11"）</td></tr>
+<tr><td><code>swap-ratio</code></td><td>int</td><td>✓</td><td>✗</td><td>✗</td><td>SDL3 <code>SDL_SetRenderVSync</code>（0/1/-1）</td></tr>
+<tr><td><code>vsync</code></td><td>bool/int/string</td><td>✓</td><td>✓</td><td>✓*</td><td>0/1；raylib 创建期 <code>FLAG_VSYNC_HINT</code>，须在创建实例前用 inst=NULL 设置</td></tr>
 </table>
 
 <pre><code>// 全局默认（创建前，raylib vsync 必须走这里）
@@ -60,11 +60,11 @@ UICornerstone_GetBackendConfig(g_inst, "renderer-name", name, sizeof(name));</co
 
 <table>
 <tr><th>字段</th><th>默认</th><th>说明</th></tr>
+<tr><td><code>debugLabel</code></td><td>"Instance_&lt;id&gt;"</td><td>多实例日志区分</td></tr>
+<tr><td><code>resourceRoot</code></td><td>默认</td><td>资源根目录（图片 / 字体 / 动画相对路径基准）</td></tr>
+<tr><td><code>windowFlags</code></td><td>0</td><td><code>0x00000020</code> 可调大小；<code>0x00002000</code> 高 DPI（SDL3 生效，其余透传）</td></tr>
 <tr><td><code>windowTitle</code></td><td>"UICornerstone"</td><td>窗口标题</td></tr>
 <tr><td><code>windowWidth/Height</code></td><td>1024 / 768</td><td>0 → 默认</td></tr>
-<tr><td><code>windowFlags</code></td><td>0</td><td><code>0x00000020</code> 可调大小；<code>0x00002000</code> 高 DPI（SDL3 生效，其余透传）</td></tr>
-<tr><td><code>resourceRoot</code></td><td>默认</td><td>资源根目录（图片 / 字体 / 动画相对路径基准）</td></tr>
-<tr><td><code>debugLabel</code></td><td>"Instance_&lt;id&gt;"</td><td>多实例日志区分</td></tr>
 </table>
 
 <h2>10.6 Binding Config</h2>

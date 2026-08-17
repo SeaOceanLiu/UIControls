@@ -24,6 +24,7 @@ NumericUpDown::NumericUpDown(Control* parent, const SRect& rect,
     , m_arrowPressColor(ConstDef::NUMERICUPDOWN_ARROW_PRESS_COLOR)
     , m_lastRect(), m_onValueChanged(nullptr)
 {
+    m_ctlType = ControlType::NumericUpDown;
     m_fontSize = ConstDef::NUMERICUPDOWN_FONT_SIZE;
     m_margin.right += m_buttonWidth;
     setNormalStateBGColor(ConstDef::NUMERICUPDOWN_BG_COLOR);

@@ -1,15 +1,20 @@
 ﻿#include <iostream>
+#include <filesystem>
 #include <memory>
 #include "TreeView.h"
 #include "Panel.h"
 #include "Label.h"
 #include "Button.h"
+#include "CheckBox.h"
+#include "Actor.h"
 #include "MainWindow.h"
 #include "Bench.h"
 #include "AppCallbacks.h"
+#include "LayoutParser.h"
 #include "PlatformUtils.h"
 #include "TestUtils.h"
 #include "TestInstance.h"
+#include "StateMachine.h"
 
 using namespace std;
 
@@ -19,6 +24,7 @@ shared_ptr<Label> g_statusLabel;
 shared_ptr<TreeView> g_treeView2x;
 shared_ptr<TreeView> g_treeViewCollapsed;
 shared_ptr<TreeView> g_treeViewStyled;
+shared_ptr<TreeView> g_treeViewEnhanced;
 shared_ptr<Label> g_dataLabel;
 
 int g_selectCount = 0;
@@ -26,6 +32,11 @@ int g_expandCount = 0;
 int g_collapseCount = 0;
 string g_lastSelectedId;
 int g_clearNodeCount = 0;
+int g_enhancedCheckCount = 0;
+
+void onEnhancedCheckChanged(shared_ptr<CheckBox>, CheckState, CheckState) {
+    g_enhancedCheckCount++;
+}
 
 void onTreeSelect(shared_ptr<TreeView>, const string& nodeId) {
     g_selectCount++;
@@ -153,6 +164,173 @@ void initTestStyled() {
     g_treeViewStyled->setItems(items);
 }
 
+// TreeView 增强（leadingControl + 逐节点字体）：演示 + 自动断言
+void initTestEnhanced() {
+    g_treeViewEnhanced = TreeViewBuilder(nullptr, SRect(280, 320, 300, 200))
+        .setFontSize(12)
+        .setOnSelect(onTreeSelect)
+        .setId(104)
+        .build();
+    g_rootPanel->addControl(g_treeViewEnhanced);
+
+    auto node1 = makeNode("enh_cb", "Checkbox Row");
+    auto cb = CheckBoxBuilder(nullptr, SRect(0, 0, 16, 16))
+        .setOnCheckChanged(onEnhancedCheckChanged)
+        .build();
+    node1->leadingControl = cb;
+
+    auto node2 = makeNode("enh_big", "Big Font Row");
+    node2->fontSize = 18;
+
+    auto node3 = makeNode("enh_img", "Image Row");
+    auto img = make_shared<Actor>(nullptr, fs::path("assets/images/cross_down.png"), false);
+    node3->leadingControl = img;
+
+    g_treeViewEnhanced->setItems({ node1, node2, node3 });
+
+    int pass = 0, fail = 0;
+    auto check = [&](bool ok, const char* name) {
+        if (ok) { pass++; cout << "PASS: " << name << endl; }
+        else { fail++; cout << "FAIL: " << name << endl; }
+    };
+
+    // 1. 行控件挂树（addControl 进 TreeView）
+    check(cb->getParent() == g_treeViewEnhanced.get(), "enh row checkbox attached");
+    check(img->getParent() == g_treeViewEnhanced.get(), "enh row image attached");
+
+    // 先跑一帧 draw：刷新 m_frameDrawRect + 行控件 setRect（行高自适应）
+    g_treeViewEnhanced->draw();
+
+    // 5. 槽高 = 文字高度：图片与 CheckBox 等高、小于行高 24，行间留空隙；宽按 1:1 等比
+    check(img->getTexture() != nullptr, "enh image texture loaded");
+    check(img->getRect().height > 0 && img->getRect().height < 24.0f, "enh image height follows text height");
+    check(img->getRect().width == img->getRect().height, "enh image scaled to text height");
+    check(cb->getRect().height == img->getRect().height && cb->getRect().width == cb->getRect().height,
+          "enh checkbox scaled to text height");
+    // 6. 槽起点 = 原文本起点（LEFT_PADDING 4 + arrowGap 16 = 20），局部坐标非负（缩进不越界）
+    check(img->getRect().left == 20.0f && cb->getRect().left == 20.0f,
+          "enh slot aligned with original text indent");
+
+    // 2. 点击 CheckBox 中心 → 选中该行 + 勾选翻转（MouseDown 不消费落子控件分发，MouseUp 触发翻转）
+    SRect cbRect = cb->getDrawRect();
+    float cx = cbRect.left + cbRect.width / 2;
+    float cy = cbRect.top + cbRect.height / 2;
+    auto down = make_shared<Event>(EventType::MouseDown);
+    down->mouseButton = { cx, cy, MouseButton::Left };
+    g_treeViewEnhanced->handleEvent(down);
+    auto up = make_shared<Event>(EventType::MouseUp);
+    up->mouseButton = { cx, cy, MouseButton::Left };
+    g_treeViewEnhanced->handleEvent(up);
+    check(g_lastSelectedId == "enh_cb", "enh click selects row");
+    check(cb->getCheckState() == CheckState::Checked, "enh click toggles checkbox");
+    check(g_enhancedCheckCount == 1, "enh check callback fired once");
+
+    // 3. 移除节点 → 行控件摘除（事件不再响应：点击树内空白区不选中、不勾选）
+    int selBefore = g_selectCount;
+    int cbBefore = g_enhancedCheckCount;
+    g_treeViewEnhanced->removeNode("enh_cb");
+    auto down2 = make_shared<Event>(EventType::MouseDown);
+    down2->mouseButton = { cx, cbRect.top + 150, MouseButton::Left };  // 树下方空白（第 3 行之后）
+    auto up2 = make_shared<Event>(EventType::MouseUp);
+    up2->mouseButton = { cx, cbRect.top + 150, MouseButton::Left };
+    g_treeViewEnhanced->handleEvent(down2);
+    g_treeViewEnhanced->handleEvent(up2);
+    check(g_selectCount == selBefore, "enh detached row no longer selects");
+    check(g_enhancedCheckCount == cbBefore, "enh detached row no longer toggles");
+
+    // 4. cloneNode：leadingControl 置空 + 字体字段照常复制
+    auto cloned = cloneNode(node1);
+    check(cloned->leadingControl == nullptr, "enh cloneNode nulls leadingControl");
+    check(cloned->fontSize == node1->fontSize && cloned->fontName == node1->fontName,
+          "enh cloneNode copies font fields");
+
+    cout << (fail ? "Enhanced assertions: FAILURES = " + to_string(fail)
+                  : "Enhanced assertions: ALL PASS") << " (" << pass << " passed)" << endl;
+}
+
+// JSON 用例：TreeView item 增加前置控件容器（CheckBox/Image）+ 逐 Item 字体（粗体）+ leadingGap
+static const char* ENH_JSON = R"({
+  "controls": [{
+    "type": "panel",
+    "id": "rootJsonEnh",
+    "rect": { "x": 620, "y": 10, "w": 170, "h": 180 },
+    "children": [{
+      "type": "tree-view",
+      "id": "jsonTreeEnh",
+      "rect": { "x": 10, "y": 10, "w": 150, "h": 160 },
+      "items": [
+        { "id": "j1", "label": "JSON CB row",
+          "leadingControl": { "type": "check-box", "checkState": "checked" },
+          "leadingGap": 10 },
+        { "id": "j2", "label": "JSON img row",
+          "leadingControl": { "type": "image", "image": "assets/images/cross_down.png" },
+          "font": "harmonyos-sans-sc-bold", "size": 16 }
+      ]
+    }]
+  }]
+})";
+
+void initTestJsonEnh(Bench* bench) {
+    LayoutParser parser;
+    auto root = parser.parseLayout(ENH_JSON);
+    if (!root) {
+        TestUtil::log("json enh: FAILED to parse ENH_JSON");
+        return;
+    }
+    bench->addControl(root);
+
+    auto tv = dynamic_pointer_cast<TreeView>(parser.findControlById("jsonTreeEnh"));
+    int pass = 0, fail = 0;
+    auto check = [&](bool cond, const char* name) {
+        if (cond) { pass++; cout << "PASS: " << name << endl; }
+        else      { fail++; cout << "FAIL: " << name << endl; }
+    };
+    check(tv != nullptr, "json enh treeview parsed");
+    if (!tv) {
+        cout << (fail ? "json enh: FAILURES = " + to_string(fail) : "json enh: ALL PASS")
+             << " (" << pass << " passed)" << endl;
+        return;
+    }
+
+    // item 级字段
+    auto j1 = tv->findNodeById("j1");
+    auto j2 = tv->findNodeById("j2");
+    check(j1 != nullptr && j2 != nullptr, "json enh items found");
+    check(j1 && j1->leadingGap == 10.0f, "json enh item leadingGap");
+    check(j2 && j2->fontName == FontName::HarmonyOS_Sans_SC_Bold, "json enh item bold font");
+    check(j2 && j2->fontSize == 16, "json enh item font size");
+
+    // 前置控件容器：挂树 + 类型 + 勾选态
+    check(j1 && j1->leadingControl != nullptr, "json enh j1 leadingControl attached");
+    if (j1 && j1->leadingControl) {
+        check(j1->leadingControl->getParent() == tv.get(), "json enh j1 leadingControl attached to tree");
+        auto cb = dynamic_pointer_cast<CheckBox>(j1->leadingControl);
+        check(cb != nullptr && cb->getCheckState() == CheckState::Checked, "json enh j1 checkbox checked");
+    }
+    check(j2 && j2->leadingControl != nullptr, "json enh j2 leadingControl attached");
+    if (j2 && j2->leadingControl) {
+        auto img = dynamic_pointer_cast<Actor>(j2->leadingControl);
+        tv->draw();
+        check(img != nullptr && img->getTexture() != nullptr, "json enh j2 image texture loaded");
+    }
+
+    // CABI item 级属性（item-id 定位 → item-leading-gap / item-font-size / item-font）
+    check(tv->setStringProperty(PropertyNames::kTreeItemId, "j2"), "json enh item-id set");
+    float gap = 0; check(tv->getFloatProperty(PropertyNames::kTreeItemLeadingGap, gap) && gap == 6.0f,
+                         "json enh item-leading-gap default 6");
+    check(tv->setFloatProperty(PropertyNames::kTreeItemLeadingGap, 14.0f) &&
+          tv->getFloatProperty(PropertyNames::kTreeItemLeadingGap, gap) && gap == 14.0f,
+          "json enh item-leading-gap set/get");
+    check(j2 && j2->leadingGap == 14.0f, "json enh item-leading-gap applied to node");
+    check(tv->setIntProperty(PropertyNames::kTreeItemFontSize, 18), "json enh item-font-size set");
+    int fs = 0;
+    check(tv->getIntProperty(PropertyNames::kTreeItemFontSize, fs) && fs == 18 && j2->fontSize == 18,
+          "json enh item-font-size applied");
+
+    cout << (fail ? "json enh: FAILURES = " + to_string(fail) : "json enh: ALL PASS")
+         << " (" << pass << " passed)" << endl;
+}
+
 void testAppInitialize(shared_ptr<Bench>) {
     TestUtil::log("testTreeViewInitialize");
 
@@ -226,6 +404,8 @@ void testAppInitialize(shared_ptr<Bench>) {
     initTest2xTree();
     initTestCollapsed();
     initTestStyled();
+    initTestEnhanced();
+    initTestJsonEnh(BENCH);
 
     TestUtil::log("TreeView test data initialized");
 }

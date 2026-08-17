@@ -25,6 +25,7 @@ CheckBox::CheckBox(Control *parent, SRect rect, float xScale, float yScale):
     m_crossStateColor(StateColor::Type::Text),
     m_indeterminateStateColor(StateColor::Type::Text)
 {
+    m_ctlType = ControlType::CheckBox;
     m_checkStateColor.setNormal(ConstDef::CHECKBOX_CHECK_COLOR);
     m_crossStateColor.setNormal(ConstDef::CHECKBOX_CROSS_COLOR);
     m_indeterminateStateColor.setNormal(ConstDef::CHECKBOX_INDETERMINATE_COLOR);

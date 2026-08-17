@@ -39,10 +39,10 @@ if (caps &amp; UICORN_BACKEND_CAP_RENDER_TARGET) { /* 可离屏渲染 */ }</code
 
 <table>
 <tr><th>能力位</th><th>sdl3</th><th>sfml</th><th>raylib</th></tr>
-<tr><td><code>MULTI_WINDOW</code></td><td>✓</td><td>✓</td><td><strong>✗</strong>（单窗口架构）</td></tr>
-<tr><td><code>RENDER_TARGET</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td><code>CLIP_RECT</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td><code>MULTI_WINDOW</code></td><td>✓</td><td>✓</td><td><strong>✗</strong>（单窗口架构）</td></tr>
 <tr><td><code>READBACK</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td><code>RENDER_TARGET</code></td><td>✓</td><td>✓</td><td>✓</td></tr>
 </table>
 
 <div class="warn">raylib 为单窗口架构：多实例下仅首个实例有真实窗口，其余为 headless，对其渲染会串扰到主实例窗口。多窗口渲染前必须查能力位条件化。</div>

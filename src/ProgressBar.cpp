@@ -25,6 +25,7 @@ ProgressBar::ProgressBar(Control *parent, SRect rect, float xScale, float yScale
     m_textLabel(nullptr),
     m_onValueChanged(nullptr)
 {
+    m_ctlType = ControlType::ProgressBar;
     m_rect = rect;
     setTransparent(true);
     setBorderVisible(false);

@@ -244,6 +244,11 @@ Control UICornerstone::FindControl(const std::string& id) {
     return MakeControl(Dyn::API().fnFindControl(m_impl->instance, id.c_str()));
 }
 
+Control UICornerstone::FromHandle(UIControlHandle handle) {
+    if (!m_impl->instance) return Control();
+    return MakeControl(handle);
+}
+
 // ============================================================
 // Control 生命周期注册
 // ============================================================

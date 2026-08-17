@@ -35,14 +35,14 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>button-height</code> / <code>button-gap</code> / <code>padding</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
+<tr><td><code>centered-mode</code></td><td>Enum</td><td>—</td><td><code>"centered"</code> → setCentered()</td></tr>
 <tr><td><code>close-on-click-outside</code></td><td>Bool</td><td>1</td><td>点击外部关闭</td></tr>
 <tr><td><code>close-on-esc</code></td><td>Bool</td><td>1</td><td>ESC 关闭</td></tr>
-<tr><td><code>visible</code></td><td>Bool</td><td>0</td><td>置 1 = open()，置 0 = close()（Popup 专属语义）</td></tr>
-<tr><td><code>content</code></td><td>Ptr</td><td>null</td><td>内容控件句柄（SetPtr）</td></tr>
-<tr><td><code>centered-mode</code></td><td>Enum</td><td>—</td><td><code>"centered"</code> → setCentered()</td></tr>
-<tr><td><code>confirm-visible</code></td><td>Bool</td><td>1</td><td>确定按钮可见性</td></tr>
 <tr><td><code>confirm-text</code> / <code>cancel-text</code></td><td>String</td><td>"确定" / "取消"</td><td>按钮文字</td></tr>
-<tr><td><code>button-height</code> / <code>button-gap</code> / <code>padding</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
+<tr><td><code>confirm-visible</code></td><td>Bool</td><td>1</td><td>确定按钮可见性</td></tr>
+<tr><td><code>content</code></td><td>Ptr</td><td>null</td><td>内容控件句柄（SetPtr）</td></tr>
+<tr><td><code>visible</code></td><td>Bool</td><td>0</td><td>置 1 = open()，置 0 = close()（Popup 专属语义）</td></tr>
 </table>
 
 
@@ -50,9 +50,9 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>cancel</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
 <tr><td><code>close</code></td><td>close() 被调用时</td><td><code>(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
 <tr><td><code>confirm</code></td><td>点确定按钮或按 Enter（ConfirmPopup 及以上）</td><td><code>(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
-<tr><td><code>cancel</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
 </table>
 
 
@@ -114,19 +114,20 @@ UICornerstone_SetCallback(g_inst, dlg, "cancel", onCancel, NULL);</code></pre>
 <summary>4.7.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
-<table><tr><th>方法</th><th>说明</th></tr>
-<tr><td><code>open()</code></td><td>打开：计算位置、注册事件 watcher、挂到 BENCH 顶层、注册焦点边界、聚焦首个内容控件</td></tr>
+<table>
+<tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>close(DialogResult result = Cancelled)</code></td><td>关闭并触发 <code>onClose</code> 回调</td></tr>
-<tr><td><code>isPopupVisible()</code> / <code>getResult()</code></td><td>可见（且 result==None）/ 查询结果（None/Confirmed/Cancelled）</td></tr>
-<tr><td><code>setContent(shared_ptr&lt;ControlImpl&gt;)</code> / <code>getContent()</code></td><td>设置 / 获取内容控件</td></tr>
-<tr><td><code>setCentered()</code> / <code>setAnchored(anchor, offset)</code> / <code>setAbsolute(SRect)</code></td><td>三种定位方式</td></tr>
-<tr><td><code>setCloseOnClickOutside(bool)</code> / <code>setCloseOnEsc(bool)</code></td><td>行为开关</td></tr>
-<tr><td><code>setOnClose(OnCloseHandler)</code></td><td>关闭回调 <code>void(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
-<tr><td><code>ConfirmPopup::setConfirmButtonVisible(bool)</code> / <code>setConfirmButtonText(string)</code> / <code>setConfirmButtonRect(SRect)</code> / <code>getConfirmButton()</code></td><td>确定按钮配置（默认文字「确定」）</td></tr>
 <tr><td><code>ConfirmPopup::setButtonHeight(float)</code> / <code>setButtonGap(float)</code> / <code>setPadding(float)</code></td><td>布局参数（默认 28 / 8 / 10）</td></tr>
+<tr><td><code>ConfirmPopup::setConfirmButtonVisible(bool)</code> / <code>setConfirmButtonText(string)</code> / <code>setConfirmButtonRect(SRect)</code> / <code>getConfirmButton()</code></td><td>确定按钮配置（默认文字「确定」）</td></tr>
 <tr><td><code>ConfirmPopup::setOnConfirm(OnConfirmHandler)</code></td><td>确定回调 <code>void(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
 <tr><td><code>Dialog::setCancelButtonText(string)</code> / <code>setCancelButtonRect(SRect)</code> / <code>getCancelButton()</code> / <code>recreateButtons()</code> / <code>setOnCancel(OnCancelHandler)</code></td><td>取消按钮配置（默认「取消」）与取消回调</td></tr>
+<tr><td><code>isPopupVisible()</code> / <code>getResult()</code></td><td>可见（且 result==None）/ 查询结果（None/Confirmed/Cancelled）</td></tr>
 <tr><td><code>onEscPressed() / onOutsideClicked() / onConfirmAction() / onCancelAction() / layoutContent()</code></td><td>可重写虚方法（子类定制行为）</td></tr>
+<tr><td><code>open()</code></td><td>打开：计算位置、注册事件 watcher、挂到 BENCH 顶层、注册焦点边界、聚焦首个内容控件</td></tr>
+<tr><td><code>setCentered()</code> / <code>setAnchored(anchor, offset)</code> / <code>setAbsolute(SRect)</code></td><td>三种定位方式</td></tr>
+<tr><td><code>setCloseOnClickOutside(bool)</code> / <code>setCloseOnEsc(bool)</code></td><td>行为开关</td></tr>
+<tr><td><code>setContent(shared_ptr&lt;ControlImpl&gt;)</code> / <code>getContent()</code></td><td>设置 / 获取内容控件</td></tr>
+<tr><td><code>setOnClose(OnCloseHandler)</code></td><td>关闭回调 <code>void(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
 </table>
 
 </details>

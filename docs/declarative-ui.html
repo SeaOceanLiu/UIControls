@@ -42,15 +42,15 @@
 
 <table>
 <tr><th>键</th><th>说明</th></tr>
-<tr><td><code>type</code></td><td>控件类型（kebab 小写）：<code>label</code> / <code>button</code> / <code>image</code> / <code>image-button</code> / <code>animation</code> / <code>edit-box</code> / <code>check-box</code> / <code>combo-box</code> / <code>numeric-up-down</code> / <code>progress-bar</code> / <code>scroll-bar</code> / <code>color-picker</code> / <code>text-area</code> / <code>panel</code> / <code>menu-bar</code> / <code>win-frame</code> / <code>splitter</code> / <code>tree-view</code></td></tr>
-<tr><td><code>id</code></td><td>全局唯一标识，供 <code>FindControl</code> / <code>findControlById</code> 查找</td></tr>
-<tr><td><code>rect</code></td><td><code>{"x","y","w","h"}</code>；支持百分比字符串（<code>"50%"</code>）</td></tr>
-<tr><td><code>scale</code></td><td><code>{"x":1.0,"y":1.0}</code> 本地缩放</td></tr>
-<tr><td><code>visible</code> / <code>enabled</code></td><td>可见 / 启用</td></tr>
-<tr><td><code>margin</code></td><td><code>{"left","top","right","bottom"}</code></td></tr>
+<tr><td><code>children</code></td><td>子控件数组（容器类型）</td></tr>
 <tr><td><code>colors</code></td><td>状态色对象：<code>{"background":{"normal","hover","pressed","disabled"}}</code>，含 text / border / textShadow / 控件特有键</td></tr>
 <tr><td><code>events</code></td><td><code>{"onClick":"handlerName"}</code> 引用已注册处理器</td></tr>
-<tr><td><code>children</code></td><td>子控件数组（容器类型）</td></tr>
+<tr><td><code>id</code></td><td>全局唯一标识，供 <code>FindControl</code> / <code>findControlById</code> 查找</td></tr>
+<tr><td><code>margin</code></td><td><code>{"left","top","right","bottom"}</code></td></tr>
+<tr><td><code>rect</code></td><td><code>{"x","y","w","h"}</code>；支持百分比字符串（<code>"50%"</code>）</td></tr>
+<tr><td><code>scale</code></td><td><code>{"x":1.0,"y":1.0}</code> 本地缩放</td></tr>
+<tr><td><code>type</code></td><td>控件类型（kebab 小写）：<code>label</code> / <code>button</code> / <code>image</code> / <code>image-button</code> / <code>animation</code> / <code>edit-box</code> / <code>check-box</code> / <code>combo-box</code> / <code>numeric-up-down</code> / <code>progress-bar</code> / <code>scroll-bar</code> / <code>color-picker</code> / <code>text-area</code> / <code>panel</code> / <code>menu-bar</code> / <code>win-frame</code> / <code>splitter</code> / <code>tree-view</code></td></tr>
+<tr><td><code>visible</code> / <code>enabled</code></td><td>可见 / 启用</td></tr>
 </table>
 
 <p>颜色格式：<code>"#RGB"</code> / <code>"#RRGGBB"</code> / <code>"#RRGGBBAA"</code>，或 <code>{"r":255,"g":0,"b":0,"a":128}</code>。</p>
@@ -147,16 +147,16 @@ ui->LoadLayout(layoutJson);</code></pre>
 
 <table>
 <tr><th>控件</th><th>JSON 事件键</th></tr>
-<tr><td>Button / Label / MenuItem</td><td><code>onClick</code></td></tr>
-<tr><td>EditBox / TextArea</td><td><code>onTextChanged</code>、<code>onEnter</code></td></tr>
 <tr><td>CheckBox</td><td><code>onCheckChanged</code></td></tr>
-<tr><td>ProgressBar</td><td><code>onValueChanged</code></td></tr>
-<tr><td>Slider / NumericUpDown</td><td><code>onValueChanged</code></td></tr>
+<tr><td>Button / Label / MenuItem</td><td><code>onClick</code></td></tr>
+<tr><td>WinFrame / Dialog</td><td><code>onClose</code>、<code>onConfirm</code>、<code>onCancel</code></td></tr>
+<tr><td>ColorPicker</td><td><code>onColorChanged</code></td></tr>
 <tr><td>ScrollBar</td><td><code>onPositionChanged</code></td></tr>
 <tr><td>ComboBox</td><td><code>onSelectionChanged</code></td></tr>
-<tr><td>ColorPicker</td><td><code>onColorChanged</code></td></tr>
-<tr><td>WinFrame / Dialog</td><td><code>onClose</code>、<code>onConfirm</code>、<code>onCancel</code></td></tr>
 <tr><td>Splitter</td><td><code>onSplitterMoved</code></td></tr>
+<tr><td>EditBox / TextArea</td><td><code>onTextChanged</code>、<code>onEnter</code></td></tr>
+<tr><td>ProgressBar</td><td><code>onValueChanged</code></td></tr>
+<tr><td>Slider / NumericUpDown</td><td><code>onValueChanged</code></td></tr>
 </table>
 
 <pre><code>// C++（直接 API 的 LayoutParser）
