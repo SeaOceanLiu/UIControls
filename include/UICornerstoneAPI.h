@@ -360,6 +360,59 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateScrollBar(UIInstance insta
     float x, float y, float w, float h, int orientation, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateTreeView(UIInstance instance,
     float x, float y, float w, float h, float xScale, float yScale);
+
+/* ============ TreeView 节点操作 ============ */
+// parentId 为空串 = 插入为根节点；返回 1 成功 / 0 失败（父节点不存在 / id 已存在由树内部策略决定）。
+// 展开/折叠类也可经属性系统（SetString "expand" / "collapse" / SetBool "expand-all" 等）实现，函数式接口更顺手。
+// 返回值语义：1 = 成功（节点存在/已执行），0 = 失败（父或节点不存在）。
+UICORNERSTONE_API int UICornerstone_TreeViewAddNode(UIInstance instance,
+    UIControlHandle tree, const char* parentId, const char* id, const char* label, int expanded);
+UICORNERSTONE_API int UICornerstone_TreeViewRemoveNode(UIInstance instance,
+    UIControlHandle tree, const char* id);
+UICORNERSTONE_API int UICornerstone_TreeViewSetNodeLabel(UIInstance instance,
+    UIControlHandle tree, const char* id, const char* label);
+UICORNERSTONE_API int UICornerstone_TreeViewSetNodeUserData(UIInstance instance,
+    UIControlHandle tree, const char* id, void* userData);
+UICORNERSTONE_API int UICornerstone_TreeViewSelectNode(UIInstance instance,
+    UIControlHandle tree, const char* id);
+UICORNERSTONE_API void UICornerstone_TreeViewClearSelection(UIInstance instance, UIControlHandle tree);
+UICORNERSTONE_API int UICornerstone_TreeViewExpandNode(UIInstance instance,
+    UIControlHandle tree, const char* id);
+UICORNERSTONE_API int UICornerstone_TreeViewCollapseNode(UIInstance instance,
+    UIControlHandle tree, const char* id);
+UICORNERSTONE_API void UICornerstone_TreeViewExpandAll(UIInstance instance, UIControlHandle tree);
+UICORNERSTONE_API void UICornerstone_TreeViewCollapseAll(UIInstance instance, UIControlHandle tree);
+UICORNERSTONE_API void UICornerstone_TreeViewClearItems(UIInstance instance, UIControlHandle tree);
+// 读取选中节点 id（无选中返回 0；有选中将 id 拷入 outBuf 并返回 1）
+UICORNERSTONE_API int UICornerstone_TreeViewGetSelectedId(UIInstance instance,
+    UIControlHandle tree, char* outBuf, int outSize);
+
+/* ============ EditBox / TextArea 文本操作 ============ */
+// 选区与剪贴板命令式操作（对应 EditBox/TextArea 方法）。返回 1 成功 / 0 失败（非文本控件）。
+UICORNERSTONE_API int UICornerstone_EditBoxSelectAll(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxSetSelection(UIInstance instance, UIControlHandle ctl, int start, int end);
+UICORNERSTONE_API int UICornerstone_EditBoxClearSelection(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxHasSelection(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxGetCursorPosition(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxCopy(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxCut(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxPaste(UIInstance instance, UIControlHandle ctl);
+UICORNERSTONE_API int UICornerstone_EditBoxDeleteSelectedText(UIInstance instance, UIControlHandle ctl);
+
+/* ============ NumericUpDown 数值操作 ============ */
+// 按方向步进（dir=+1 增 / -1 减，超界自动 clamp）。返回 1 成功 / 0 失败。
+UICORNERSTONE_API int UICornerstone_NumericUpDownStep(UIInstance instance, UIControlHandle ctl, int dir);
+
+/* ============ ComboBox 选项操作 ============ */
+// 运行期增删选项。label/value 为文本；disabled=0/1。返回 1 成功 / 0 失败（非 ComboBox）。
+UICORNERSTONE_API int UICornerstone_ComboBoxAddItem(UIInstance instance, UIControlHandle ctl,
+    const char* label, const char* value, int disabled);
+// 按索引移除选项。index 越界返回 0。
+UICORNERSTONE_API int UICornerstone_ComboBoxRemoveItem(UIInstance instance, UIControlHandle ctl, int index);
+UICORNERSTONE_API int UICornerstone_ComboBoxClearItems(UIInstance instance, UIControlHandle ctl);
+// 返回当前选项数量；非 ComboBox 返回 -1。
+UICORNERSTONE_API int UICornerstone_ComboBoxGetItemCount(UIInstance instance, UIControlHandle ctl);
+
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,
     UIControlHandle target, float x, float y, float w, float h, float xScale, float yScale);
 UICORNERSTONE_API UIControlHandle UICornerstone_CreateImageButton(UIInstance instance,
@@ -403,6 +456,12 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateAnimatedButton(
     UIInstance instance,
     const char* jsoncPath,
     float x, float y, float w, float h, float xScale, float yScale);
+
+/* ============ LuotiAni 动画操作 ============ */
+// 预渲染动画帧（两阶段 prepare；startFrame 指定起始帧）。返回 1 成功 / 0 失败（非动画控件）。
+UICORNERSTONE_API int UICornerstone_AnimationPrepare(UIInstance instance, UIControlHandle ctl, int startFrame);
+// 帧位图采样过滤开关（1=双线性，0=最近邻；prepare 时生效）。返回 1 成功 / 0 失败。
+UICORNERSTONE_API int UICornerstone_AnimationSetFrameFilter(UIInstance instance, UIControlHandle ctl, int bilinear);
 
 /* ============ 控件通用操作 ============ */
 UICORNERSTONE_API void UICornerstone_SetRect(UIInstance instance, UIControlHandle ctl, float x, float y, float w, float h);

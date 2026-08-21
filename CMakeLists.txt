@@ -66,6 +66,7 @@ set(CORE_SOURCES
     src/Splitter.cpp
     src/TreeView.cpp
     src/ResourceProvider.cpp
+    src/LeadingControlSlot.cpp
     src/ScrollBar.cpp
     src/Slider.cpp
     src/Surface.cpp

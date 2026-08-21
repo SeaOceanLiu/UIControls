@@ -10,6 +10,7 @@
 #include "ConstDef.h"
 #include "ScrollBar.h"
 #include "RenderDevice.h"
+#include "Label.h"
 #include "EventTypes.h"
 #include "TextRenderer.h"
 #include "ResourceProvider.h"
@@ -20,9 +21,11 @@ struct TreeNode {
     bool expanded = false;
     std::vector<std::shared_ptr<TreeNode>> children;
     void* userData = nullptr;
+    bool userDataOwned = false;  // 节点销毁时是否由 TreeView 清理 userData（LayoutParser 创建的堆对象置 true；外部 CABI 置入的指针由调用方管理）
     // TreeView 增强：Item 前置控件容器 + 逐 Item 字体（见 design/TreeView_Enhancement_Design.md）
     std::shared_ptr<Control> leadingControl;  // 前置控件（CheckBox/Actor/Image 等）；高度自适应行高
     float leadingGap = 6.0f;                  // 控件与文字之间的空隙（局部 px，可调）
+    AlignmentMode leadingAlign = AlignmentMode::AM_MID_LEFT;  // 槽位对齐（复用 Label 9 宫格；水平分量忽略，槽位贴文本起点）
     FontName fontName = FontName::HarmonyOS_Sans_SC_Regular;  // 与 TreeView 默认一致；仅 fontSize>0 时生效
     int fontSize = 0;                         // 0 = 继承 TreeView 级字号
 };
@@ -55,6 +58,8 @@ inline std::shared_ptr<TreeNode> cloneNode(
     node->userData = src->userData;
     node->fontName = src->fontName;
     node->fontSize = src->fontSize;
+    node->leadingGap = src->leadingGap;
+    node->leadingAlign = src->leadingAlign;
     // leadingControl 必须置空：项目无控件深拷贝（共享实例会 getParent 冲突/双树串扰），
     // 调用方按需对新树重新赋值（见 TreeView_Enhancement_Design.md 4.1）
     return node;
@@ -146,6 +151,7 @@ public:
     void setItems(const std::vector<std::shared_ptr<TreeNode>>& items);
     const std::vector<std::shared_ptr<TreeNode>>& getItems() const { return m_rootItems; }
     bool addChild(const std::string& parentId, std::shared_ptr<TreeNode> node);
+    bool addRootItem(std::shared_ptr<TreeNode> node);
     bool removeNode(const std::string& id);
     bool setNodeLabel(const std::string& id, const std::string& label);
     bool setNodeUserData(const std::string& id, void* userData);
@@ -157,6 +163,7 @@ public:
     void expandAll();
     void collapseAll();
     bool selectNode(const std::string& id);
+    void clearSelection() { m_selectedId.clear(); m_selectedRow = -1; }
     std::string getSelectedId() const { return m_selectedId; }
 
     void setIndentWidth(float px);

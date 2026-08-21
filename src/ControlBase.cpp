@@ -341,6 +341,16 @@ bool ControlImpl::afterEventHandlingWatcher(shared_ptr<Event> event){
     return false;
 }
 
+static void AddControlSetRenderDevice(Control* child, RenderDevice* rd) {
+    // 经 dynamic_cast 将任意 Control* 位模式规范化为 ControlImpl* 后限定调用：
+    // 虚调用 setRenderDevice 依赖 Control* 位模式的正确性（虚基子对象地址），
+    // 若调用方传入未调整位模式（如 CABI void* 直传派生类指针）会错位崩溃；
+    // 全部 Control 子类均为 ControlImpl 且 setRenderDevice 无派生 override，行为等价
+    if (auto impl = dynamic_cast<ControlImpl*>(child)) {
+        impl->ControlImpl::setRenderDevice(rd);
+    }
+}
+
 void ControlImpl::addControl(shared_ptr<Control> child){
     if (child == nullptr) return;
 
@@ -359,7 +369,7 @@ void ControlImpl::addControl(shared_ptr<Control> child){
     // getRenderDevice 错误日志与空值缓存），由 getRenderDevice() 在 context
     // 就绪后经 parent 链重查
     if (m_context && m_context->renderDevice) {
-        child->setRenderDevice(m_context->renderDevice);
+        AddControlSetRenderDevice(child.get(), m_context->renderDevice);
     }
 
     stabilizeTopmostChildren();
@@ -880,6 +890,7 @@ int ControlImpl::setColorProperty(const char* prop, SColor color) {
     if (strcmp(prop, PropertyNames::kTextShadowHover) == 0)    { setTextShadowHoverStateColor(color);return 1; }
     if (strcmp(prop, PropertyNames::kTextShadowPressed) == 0)  { setTextShadowPressedStateColor(color);return 1; }
     if (strcmp(prop, PropertyNames::kTextShadowDisabled) == 0) { setTextShadowDisabledStateColor(color);return 1; }
+    if (strcmp(prop, PropertyNames::kFocusRingColor) == 0)     { setFocusRingColor(color); return 1; }
     return 0;
 }
 
@@ -892,10 +903,15 @@ int ControlImpl::setStateColorProperty(const char* prop, StateColor sc) {
 }
 
 int ControlImpl::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kTabIndex) == 0)  { setTabIndex(value); return 1; }
     return 0;
 }
 
 int ControlImpl::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kMarginLeft) == 0)   { Margin m = getMargin(); m.left = value; setMargin(m); return 1; }
+    if (strcmp(prop, PropertyNames::kMarginTop) == 0)    { Margin m = getMargin(); m.top = value; setMargin(m); return 1; }
+    if (strcmp(prop, PropertyNames::kMarginRight) == 0)  { Margin m = getMargin(); m.right = value; setMargin(m); return 1; }
+    if (strcmp(prop, PropertyNames::kMarginBottom) == 0) { Margin m = getMargin(); m.bottom = value; setMargin(m); return 1; }
     return 0;
 }
 
@@ -909,10 +925,27 @@ int ControlImpl::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kEnabled) == 0)         { setEnable(b);  return 1; }
     if (strcmp(prop, PropertyNames::kTransparent) == 0)     { setTransparent(b); return 1; }
     if (strcmp(prop, PropertyNames::kBorderVisible) == 0)  { setBorderVisible(b); return 1; }
+    if (strcmp(prop, PropertyNames::kFocusable) == 0)       { setFocusable(b); return 1; }
+    if (strcmp(prop, PropertyNames::kShowFocusRing) == 0)   { setShowFocusRing(b); return 1; }
+    if (strcmp(prop, PropertyNames::kFocusRingAlwaysVisible) == 0) { setFocusRingAlwaysVisible(b); return 1; }
+    if (strcmp(prop, PropertyNames::kFocusBoundary) == 0)   { setFocusBoundary(b); return 1; }
+    if (strcmp(prop, PropertyNames::kAlwaysOnTop) == 0)     { setAlwaysOnTop(b); return 1; }
     return 0;
 }
 
 int ControlImpl::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kState) == 0) {
+        if (strcmp(value, PropertyNames::kStateKeyNormal) == 0)   { setState(ControlState::Normal);   return 1; }
+        if (strcmp(value, PropertyNames::kStateKeyHover) == 0)    { setState(ControlState::Hover);    return 1; }
+        if (strcmp(value, PropertyNames::kStateKeyPressed) == 0)  { setState(ControlState::Pressed);  return 1; }
+        if (strcmp(value, PropertyNames::kStateKeyDisabled) == 0) { setState(ControlState::Disabled); return 1; }
+        return 0;
+    }
+    if (strcmp(prop, PropertyNames::kFocusRingStyle) == 0) {
+        if (strcmp(value, PropertyNames::kFocusRingSolid) == 0)  { setFocusRingStyle(FocusRingStyle::Solid);  return 1; }
+        if (strcmp(value, PropertyNames::kFocusRingDashed) == 0) { setFocusRingStyle(FocusRingStyle::Dashed); return 1; }
+        return 0;
+    }
     return 0;
 }
 
@@ -967,6 +1000,7 @@ int ControlImpl::getColorProperty(const char* prop, SColor& out) {
     if (strcmp(prop, PropertyNames::kTextPressed) == 0)        { out = txt.getPressed(); return 1; }
     if (strcmp(prop, PropertyNames::kTextDisabled) == 0)       { out = txt.getDisabled();return 1; }
     if (strcmp(prop, PropertyNames::kTextShadow) == 0)         { out = shd.getNormal();  return 1; }
+    if (strcmp(prop, PropertyNames::kFocusRingColor) == 0)     { out = getFocusRingColor(); return 1; }
     return 0;
 }
 
@@ -983,21 +1017,76 @@ int ControlImpl::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kEnabled) == 0)         { out = getEnable()  ? 1 : 0; return 1; }
     if (strcmp(prop, PropertyNames::kTransparent) == 0)     { out = getTransparent() ? 1 : 0; return 1; }
     if (strcmp(prop, PropertyNames::kJsonBorderVisible) == 0)  { out = getBorderVisible() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kFocusable) == 0)       { out = isFocusable() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kShowFocusRing) == 0)   { out = getShowFocusRing() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kFocusRingAlwaysVisible) == 0) { out = getFocusRingAlwaysVisible() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kFocusBoundary) == 0)   { out = isFocusBoundary() ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kAlwaysOnTop) == 0)     { out = isAlwaysOnTop() ? 1 : 0; return 1; }
     return 0;
 }
 
 int ControlImpl::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kTabIndex) == 0)  { out = getTabIndex(); return 1; }
     return 0;
 }
 
 int ControlImpl::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kMarginLeft) == 0)   { out = getMargin().left; return 1; }
+    if (strcmp(prop, PropertyNames::kMarginTop) == 0)    { out = getMargin().top; return 1; }
+    if (strcmp(prop, PropertyNames::kMarginRight) == 0)  { out = getMargin().right; return 1; }
+    if (strcmp(prop, PropertyNames::kMarginBottom) == 0) { out = getMargin().bottom; return 1; }
     return 0;
 }
 
 int ControlImpl::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kControlType) == 0) {
+        switch (getControlType()) {
+        case ControlType::Label:         out = PropertyNames::kControlTypeLabel; return 1;
+        case ControlType::Button:        out = PropertyNames::kControlTypeButton; return 1;
+        case ControlType::EditBox:       out = PropertyNames::kControlTypeEditBox; return 1;
+        case ControlType::ComboBox:      out = PropertyNames::kControlTypeComboBox; return 1;
+        case ControlType::TextArea:      out = PropertyNames::kControlTypeTextArea; return 1;
+        case ControlType::CheckBox:      out = PropertyNames::kControlTypeCheckBox; return 1;
+        case ControlType::ProgressBar:   out = PropertyNames::kControlTypeProgressBar; return 1;
+        case ControlType::Slider:        out = PropertyNames::kControlTypeSlider; return 1;
+        case ControlType::ScrollBar:     out = PropertyNames::kControlTypeScrollBar; return 1;
+        case ControlType::Panel:         out = PropertyNames::kControlTypePanel; return 1;
+        case ControlType::WinFrame:      out = PropertyNames::kControlTypeWinFrame; return 1;
+        case ControlType::ColorPicker:   out = PropertyNames::kControlTypeColorPicker; return 1;
+        case ControlType::Splitter:      out = PropertyNames::kControlTypeSplitter; return 1;
+        case ControlType::TreeView:      out = PropertyNames::kControlTypeTreeView; return 1;
+        case ControlType::NumericUpDown: out = PropertyNames::kControlTypeNumericUpDown; return 1;
+        case ControlType::Popup:         out = PropertyNames::kControlTypePopup; return 1;
+        case ControlType::ConfirmPopup:  out = PropertyNames::kControlTypeConfirmPopup; return 1;
+        case ControlType::Dialog:        out = PropertyNames::kControlTypeDialog; return 1;
+        case ControlType::MenuItem:      out = PropertyNames::kControlTypeMenuItem; return 1;
+        case ControlType::MenuPanel:     out = PropertyNames::kControlTypeMenuPanel; return 1;
+        case ControlType::MenuBar:       out = PropertyNames::kControlTypeMenuBar; return 1;
+        case ControlType::Image:         out = PropertyNames::kControlTypeImage; return 1;
+        case ControlType::Animation:     out = PropertyNames::kControlTypeAnimation; return 1;
+        case ControlType::HandleControl: out = PropertyNames::kControlTypeHandleControl; return 1;
+        default: return 0;
+        }
+    }
     return 0;
 }
 
 int ControlImpl::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kState) == 0) {
+        switch (getState()) {
+        case ControlState::Normal:   out = PropertyNames::kStateKeyNormal;   return 1;
+        case ControlState::Hover:    out = PropertyNames::kStateKeyHover;    return 1;
+        case ControlState::Pressed:  out = PropertyNames::kStateKeyPressed;  return 1;
+        case ControlState::Disabled: out = PropertyNames::kStateKeyDisabled; return 1;
+        }
+        return 0;
+    }
+    if (strcmp(prop, PropertyNames::kFocusRingStyle) == 0) {
+        switch (getFocusRingStyle()) {
+        case FocusRingStyle::Solid:  out = PropertyNames::kFocusRingSolid;  return 1;
+        case FocusRingStyle::Dashed: out = PropertyNames::kFocusRingDashed; return 1;
+        }
+        return 0;
+    }
     return 0;
 }

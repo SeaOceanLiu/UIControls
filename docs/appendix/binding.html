@@ -123,6 +123,7 @@ tree.SetString("item-id", "cb1");                  // 定位目标节点
 tree.SetFloat( "item-leading-gap", 10.0f);         // 容器与文本间隔
 tree.SetInt(   "item-font-size", 18);
 tree.SetEnum(  "item-font", "harmonyos-sans-sc-bold");   // 粗体
+tree.SetEnum(  "item-leading-align", "bottom-left");     // 槽位贴行底
 float gap = tree.GetFloat("item-leading-gap");
 
 // 行前置控件容器：借出手柄 → FromHandle 包装 → GetType 判断类型 → 通用属性操作
@@ -142,6 +143,54 @@ if (holder.GetType() == "check-box") {
 item 级属性（<code>item-id</code> / <code>item-leading-gap</code> /
 <code>item-font-size</code> / <code>item-font</code> / <code>item-leading-control</code>）
 走 <code>Set*/Get*</code> 通用通道，键名与 C ABI 及 JSON 一致。</div>
+
+<h3>11.5.2 EditBox / TextArea 文本操作</h3>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>EditBoxSelectAll(ctl)</code></td><td>全选</td></tr>
+<tr><td><code>EditBoxSetSelection(ctl, start, end)</code></td><td>设置选区</td></tr>
+<tr><td><code>EditBoxClearSelection(ctl)</code></td><td>清除选区</td></tr>
+<tr><td><code>EditBoxHasSelection(ctl)</code></td><td>查询是否有选区</td></tr>
+<tr><td><code>EditBoxGetCursorPosition(ctl)</code></td><td>获取光标位置</td></tr>
+<tr><td><code>EditBoxCopy(ctl)</code> / <code>EditBoxCut(ctl)</code> / <code>EditBoxPaste(ctl)</code></td><td>剪贴板操作</td></tr>
+<tr><td><code>EditBoxDeleteSelectedText(ctl)</code></td><td>删除选中文本</td></tr>
+</table>
+
+<h3>11.5.3 ComboBox 选项操作</h3>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>ComboBoxAddItem(ctl, label, value, disabled)</code></td><td>添加选项</td></tr>
+<tr><td><code>ComboBoxRemoveItem(ctl, index)</code></td><td>按索引移除选项</td></tr>
+<tr><td><code>ComboBoxClearItems(ctl)</code></td><td>清空选项</td></tr>
+<tr><td><code>ComboBoxGetItemCount(ctl)</code></td><td>获取选项数量</td></tr>
+</table>
+
+<h3>11.5.4 NumericUpDown 数值操作</h3>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>NumericUpDownStep(ctl, dir)</code></td><td>步进（dir=+1 增 / -1 减）</td></tr>
+</table>
+
+<h3>11.5.5 LuotiAni 动画操作</h3>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>AnimationPrepare(ctl, startFrame)</code></td><td>预渲染帧</td></tr>
+<tr><td><code>AnimationSetFrameFilter(ctl, bilinear)</code></td><td>帧位图采样过滤</td></tr>
+</table>
+
+<h3>11.5.6 截图读回</h3>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>CaptureRect(x, y, w, h, pixels, outW, outH)</code></td><td>截取矩形区域像素</td></tr>
+<tr><td><code>CaptureViewport(pixels, w, h)</code> / <code>CaptureBench(pixels, w, h)</code></td><td>截取视口 / 根画布</td></tr>
+<tr><td><code>CaptureControl(ctl, pixels, w, h)</code></td><td>截取控件范围</td></tr>
+<tr><td><code>SavePixelsToFile(pixels, w, h, filePath)</code>（静态）</td><td>保存 RGBA8888 像素为 BMP 文件</td></tr>
+</table>
 
 <h2>11.6 事件访问器（Event 类）</h2>
 

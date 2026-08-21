@@ -362,6 +362,168 @@ void UICornerstone::MenuBarAddMenu(Control& bar, const std::string& caption, Con
     if (m_impl->instance && bar.Handle() && panel.Handle())
         Dyn::API().fnMenuBarAddMenu(m_impl->instance, bar.Handle(), caption.c_str(), panel.Handle());
 }
+
+// ── TreeView 节点操作 ──
+bool UICornerstone::TreeViewAddNode(Control& tree, const std::string& parentId,
+                                    const std::string& id, const std::string& label, bool expanded) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewAddNode(m_impl->instance, tree.Handle(),
+            parentId.c_str(), id.c_str(), label.c_str(), expanded ? 1 : 0) != 0;
+    return false;
+}
+bool UICornerstone::TreeViewRemoveNode(Control& tree, const std::string& id) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewRemoveNode(m_impl->instance, tree.Handle(), id.c_str()) != 0;
+    return false;
+}
+bool UICornerstone::TreeViewSetNodeLabel(Control& tree, const std::string& id, const std::string& label) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewSetNodeLabel(m_impl->instance, tree.Handle(),
+            id.c_str(), label.c_str()) != 0;
+    return false;
+}
+bool UICornerstone::TreeViewSetNodeUserData(Control& tree, const std::string& id, void* userData) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewSetNodeUserData(m_impl->instance, tree.Handle(),
+            id.c_str(), userData) != 0;
+    return false;
+}
+bool UICornerstone::TreeViewSelectNode(Control& tree, const std::string& id) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewSelectNode(m_impl->instance, tree.Handle(), id.c_str()) != 0;
+    return false;
+}
+void UICornerstone::TreeViewClearSelection(Control& tree) {
+    if (m_impl->instance && tree.Handle())
+        Dyn::API().fnTreeViewClearSelection(m_impl->instance, tree.Handle());
+}
+bool UICornerstone::TreeViewExpandNode(Control& tree, const std::string& id) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewExpandNode(m_impl->instance, tree.Handle(), id.c_str()) != 0;
+    return false;
+}
+bool UICornerstone::TreeViewCollapseNode(Control& tree, const std::string& id) {
+    if (m_impl->instance && tree.Handle())
+        return Dyn::API().fnTreeViewCollapseNode(m_impl->instance, tree.Handle(), id.c_str()) != 0;
+    return false;
+}
+void UICornerstone::TreeViewExpandAll(Control& tree) {
+    if (m_impl->instance && tree.Handle())
+        Dyn::API().fnTreeViewExpandAll(m_impl->instance, tree.Handle());
+}
+void UICornerstone::TreeViewCollapseAll(Control& tree) {
+    if (m_impl->instance && tree.Handle())
+        Dyn::API().fnTreeViewCollapseAll(m_impl->instance, tree.Handle());
+}
+void UICornerstone::TreeViewClearItems(Control& tree) {
+    if (m_impl->instance && tree.Handle())
+        Dyn::API().fnTreeViewClearItems(m_impl->instance, tree.Handle());
+}
+std::string UICornerstone::TreeViewGetSelectedId(Control& tree) {
+    if (m_impl->instance && tree.Handle()) {
+        char buf[512];
+        if (Dyn::API().fnTreeViewGetSelectedId(m_impl->instance, tree.Handle(), buf, (int)sizeof(buf)))
+            return std::string(buf);
+    }
+    return std::string();
+}
+
+// ── EditBox / TextArea 文本操作 ──
+void UICornerstone::EditBoxSelectAll(Control& ctl) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxSelectAll(m_impl->instance, ctl.Handle());
+}
+void UICornerstone::EditBoxSetSelection(Control& ctl, int start, int end) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxSetSelection(m_impl->instance, ctl.Handle(), start, end);
+}
+void UICornerstone::EditBoxClearSelection(Control& ctl) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxClearSelection(m_impl->instance, ctl.Handle());
+}
+bool UICornerstone::EditBoxHasSelection(Control& ctl) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnEditBoxHasSelection(m_impl->instance, ctl.Handle()) != 0;
+    return false;
+}
+int UICornerstone::EditBoxGetCursorPosition(Control& ctl) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnEditBoxGetCursorPosition(m_impl->instance, ctl.Handle());
+    return -1;
+}
+void UICornerstone::EditBoxCopy(Control& ctl) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxCopy(m_impl->instance, ctl.Handle());
+}
+void UICornerstone::EditBoxCut(Control& ctl) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxCut(m_impl->instance, ctl.Handle());
+}
+void UICornerstone::EditBoxPaste(Control& ctl) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxPaste(m_impl->instance, ctl.Handle());
+}
+void UICornerstone::EditBoxDeleteSelectedText(Control& ctl) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnEditBoxDeleteSelectedText(m_impl->instance, ctl.Handle());
+}
+
+// ── NumericUpDown 数值操作 ──
+void UICornerstone::NumericUpDownStep(Control& ctl, int dir) {
+    if (m_impl->instance && ctl.Handle()) Dyn::API().fnNumericUpDownStep(m_impl->instance, ctl.Handle(), dir);
+}
+
+// ── ComboBox 选项操作 ──
+bool UICornerstone::ComboBoxAddItem(Control& ctl, const std::string& label, const std::string& value, bool disabled) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnComboBoxAddItem(m_impl->instance, ctl.Handle(), label.c_str(), value.c_str(), disabled ? 1 : 0) != 0;
+    return false;
+}
+bool UICornerstone::ComboBoxRemoveItem(Control& ctl, int index) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnComboBoxRemoveItem(m_impl->instance, ctl.Handle(), index) != 0;
+    return false;
+}
+bool UICornerstone::ComboBoxClearItems(Control& ctl) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnComboBoxClearItems(m_impl->instance, ctl.Handle()) != 0;
+    return false;
+}
+int UICornerstone::ComboBoxGetItemCount(Control& ctl) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnComboBoxGetItemCount(m_impl->instance, ctl.Handle());
+    return -1;
+}
+
+// ── LuotiAni 动画操作 ──
+bool UICornerstone::AnimationPrepare(Control& ctl, int startFrame) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnAnimationPrepare(m_impl->instance, ctl.Handle(), startFrame) != 0;
+    return false;
+}
+bool UICornerstone::AnimationSetFrameFilter(Control& ctl, bool bilinear) {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnAnimationSetFrameFilter(m_impl->instance, ctl.Handle(), bilinear ? 1 : 0) != 0;
+    return false;
+}
+
+// ── 截图读回 ──
+bool UICornerstone::CaptureRect(float x, float y, float w, float h, uint8_t* outPixels, int* outW, int* outH) const {
+    if (m_impl->instance)
+        return Dyn::API().fnCaptureRect(m_impl->instance, x, y, w, h, outPixels, outW, outH) != 0;
+    return false;
+}
+bool UICornerstone::CaptureViewport(uint8_t* out, int* w, int* h) const {
+    if (m_impl->instance)
+        return Dyn::API().fnCaptureViewport(m_impl->instance, out, w, h) != 0;
+    return false;
+}
+bool UICornerstone::CaptureBench(uint8_t* out, int* w, int* h) const {
+    if (m_impl->instance)
+        return Dyn::API().fnCaptureBench(m_impl->instance, out, w, h) != 0;
+    return false;
+}
+bool UICornerstone::CaptureControl(Control& ctl, uint8_t* out, int* w, int* h) const {
+    if (m_impl->instance && ctl.Handle())
+        return Dyn::API().fnCaptureControl(m_impl->instance, ctl.Handle(), out, w, h) != 0;
+    return false;
+}
+bool UICornerstone::SavePixelsToFile(const uint8_t* pixels, int w, int h, const std::string& filePath) {
+    return Dyn::API().fnSavePixelsToFile(pixels, w, h, filePath.c_str()) != 0;
+}
 void UICornerstone::MenuPanelAddItem(Control& panel, Control& item) {
     if (m_impl->instance && panel.Handle() && item.Handle())
         Dyn::API().fnMenuPanelAddItem(m_impl->instance, panel.Handle(), item.Handle());

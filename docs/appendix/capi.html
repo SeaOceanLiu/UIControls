@@ -107,11 +107,52 @@
 UICornerstone_SetFloat( inst, tree, "item-leading-gap", 10.0f);
 UICornerstone_SetInt(   inst, tree, "item-font-size", 18);
 UICornerstone_SetEnum(  inst, tree, "item-font", "harmonyos-sans-sc-bold");
+UICornerstone_SetEnum(  inst, tree, "item-leading-align", "bottom-left");   // 槽位贴行底
 UICornerstone_GetPtr(   inst, tree, "item-leading-control", &amp;lc);  // 借用手柄（生命周期由调用方保证）
 // SetPtr 可运行时挂载容器（立即挂树）；传 NULL 解除容器并摘树：
 UICornerstone_SetPtr(   inst, tree, "item-leading-control", lc);
 // 相对上一级的缩进宽度（TreeView 级，既有 CABI）：
 UICornerstone_SetFloat( inst, tree, "indent-width", 20.0f);</code></pre>
+
+<h2 id="editbox-ops">8.4.2 EditBox / TextArea 文本操作</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_EditBoxSelectAll(inst, ctl)</code></td><td>全选</td></tr>
+<tr><td><code>UICornerstone_EditBoxSetSelection(inst, ctl, start, end)</code></td><td>设置选区</td></tr>
+<tr><td><code>UICornerstone_EditBoxClearSelection(inst, ctl)</code></td><td>清除选区</td></tr>
+<tr><td><code>UICornerstone_EditBoxHasSelection(inst, ctl)</code></td><td>查询是否有选区</td></tr>
+<tr><td><code>UICornerstone_EditBoxGetCursorPosition(inst, ctl)</code></td><td>获取光标位置</td></tr>
+<tr><td><code>UICornerstone_EditBoxCopy(inst, ctl)</code></td><td>复制</td></tr>
+<tr><td><code>UICornerstone_EditBoxCut(inst, ctl)</code></td><td>剪切</td></tr>
+<tr><td><code>UICornerstone_EditBoxPaste(inst, ctl)</code></td><td>粘贴</td></tr>
+<tr><td><code>UICornerstone_EditBoxDeleteSelectedText(inst, ctl)</code></td><td>删除选中文本</td></tr>
+</table>
+
+<h2 id="combobox-ops">8.4.3 ComboBox 选项操作</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_ComboBoxAddItem(inst, ctl, label, value, disabled)</code></td><td>添加选项</td></tr>
+<tr><td><code>UICornerstone_ComboBoxRemoveItem(inst, ctl, index)</code></td><td>按索引移除选项</td></tr>
+<tr><td><code>UICornerstone_ComboBoxClearItems(inst, ctl)</code></td><td>清空选项</td></tr>
+<tr><td><code>UICornerstone_ComboBoxGetItemCount(inst, ctl)</code></td><td>获取选项数量</td></tr>
+</table>
+
+<h2 id="nud-ops">8.4.4 NumericUpDown 数值操作</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_NumericUpDownStep(inst, ctl, dir)</code></td><td>步进（dir=+1 增 / -1 减）</td></tr>
+</table>
+
+<h2 id="animation-ops">8.4.5 LuotiAni 动画操作</h2>
+
+<table>
+<tr><th>函数</th><th>说明</th></tr>
+<tr><td><code>UICornerstone_AnimationPrepare(inst, ctl, startFrame)</code></td><td>预渲染帧（两阶段 prepare）</td></tr>
+<tr><td><code>UICornerstone_AnimationSetFrameFilter(inst, ctl, bilinear)</code></td><td>帧位图采样过滤（1=双线性 / 0=最近邻）</td></tr>
+</table>
 
 <h2>8.5 控件通用操作</h2>
 

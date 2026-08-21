@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <defs>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#2196F3"/>
+    </marker>
+  </defs>
+
+  <!-- ============ 示例窗口场景 ============ -->
+  <rect x="0" y="0" width="480" height="420" fill="#2B2B2B"/>
+  <rect x="0" y="0" width="480" height="28" fill="#323232"/>
+  <text x="14" y="19" font-size="12" fill="#CCCCCC" font-family="sans-serif">示例窗口</text>
+
+  <!-- 按钮（右键触发控件） -->
+  <rect x="30" y="56" width="120" height="40" rx="4" fill="#3C3C3C" stroke="#666666"/>
+  <text x="90" y="81" font-size="13" fill="#E8E8E8" font-family="sans-serif" text-anchor="middle">打开文件</text>
+
+  <!-- 列表区 -->
+  <rect x="30" y="116" width="420" height="240" fill="#202020" stroke="#454545"/>
+  <text x="42" y="140" font-size="12" fill="#8F8F8F" font-family="sans-serif">readme.md</text>
+  <text x="42" y="164" font-size="12" fill="#8F8F8F" font-family="sans-serif">main.cpp</text>
+  <text x="42" y="188" font-size="12" fill="#8F8F8F" font-family="sans-serif">build.json</text>
+  <line x1="42" y1="205" x2="438" y2="205" stroke="#454545"/>
+
+  <!-- ============ 右键点击点 ============ -->
+  <circle cx="90" cy="66" r="4" fill="#F44336" stroke="#FFFFFF" stroke-width="1"/>
+  <text x="104" y="62" font-size="11" fill="#FFB300" font-family="sans-serif">右键点击点</text>
+  <line x1="90" y1="70" x2="90" y2="82" stroke="#2196F3" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowBlue)"/>
+
+  <!-- ============ 右键菜单（ContextMenu 弹出，左上角 ≈ 点击点） ============ -->
+  <rect x="90" y="80" width="228" height="149" rx="5" fill="#252526" stroke="#454545"/>
+
+  <!-- 项1 打开(O)：icon 区容器（文件夹）+ 文字 -->
+  <path d="M112,90 h4 l2,3 h5 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-11 a2,2 0 0 1 -2,-2 v-6 a2,2 0 0 1 2,-2 z"
+        fill="#FFB300" stroke="#B28704" stroke-width="1"/>
+  <text x="142" y="105" font-size="15" fill="#CCCCCC" font-family="sans-serif">打开(O)</text>
+
+  <!-- 项2 复制(C)：快捷键 -->
+  <text x="142" y="137" font-size="15" fill="#CCCCCC" font-family="sans-serif">复制(C)</text>
+  <text x="253" y="137" font-size="13" fill="#858585" font-family="sans-serif">Ctrl+C</text>
+
+  <!-- 项3 删除(D)：禁用 -->
+  <text x="142" y="169" font-size="15" fill="#5A5A5A" font-family="sans-serif">删除(D)</text>
+
+  <!-- 分隔线 -->
+  <line x1="100" y1="190" x2="308" y2="190" stroke="#454545" stroke-width="1"/>
+
+  <!-- 项4 属性(P)…：hover 高亮 + 子菜单箭头 -->
+  <rect x="90" y="201" width="228" height="32" fill="#094771"/>
+  <text x="142" y="220" font-size="15" fill="#CCCCCC" font-family="sans-serif">属性(P)…</text>
+  <path d="M294.7,211 L294.7,219 L301.3,215 Z" fill="#CCCCCC"/>
+
+  <!-- ============ 说明文字（窗口底部） ============ -->
+  <text x="12" y="386" font-size="11" fill="#9E9E9E" font-family="sans-serif">① 右键点击控件 → ControlBase 右键检查 → show(点击点)</text>
+  <text x="12" y="400" font-size="11" fill="#9E9E9E" font-family="sans-serif">② 点击菜单外 / Esc → 自动关闭（Popup watcher）</text>
+  <text x="12" y="414" font-size="11" fill="#9E9E9E" font-family="sans-serif">③ 禁用/分隔/子菜单/快捷键/icon 容器 = MenuPanel 现成能力</text>
+
+  <!-- ============ 右侧：边缘钳制示意 ============ -->
+  <text x="490" y="50" font-size="12" fill="#2196F3" font-family="sans-serif">边缘钳制示意</text>
+  <rect x="490" y="60" width="160" height="180" fill="#2B2B2B" stroke="#666666"/>
+  <text x="498" y="76" font-size="10" fill="#9E9E9E" font-family="sans-serif">视口（GET_CONTEXT->viewport）</text>
+  <!-- 越界位置（红虚线，完全在视口外） -->
+  <rect x="652" y="90" width="90" height="110" rx="3" fill="#252526" stroke="#F44336" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <text x="654" y="105" font-size="9" fill="#F44336" font-family="sans-serif">原始位置越界</text>
+  <line x1="652" y1="150" x2="647" y2="150" stroke="#2196F3" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+  <!-- 钳制后（蓝实线，贴视口右缘 650） -->
+  <rect x="560" y="90" width="90" height="110" rx="3" fill="#252526" stroke="#2196F3" stroke-width="1.5"/>
+  <text x="562" y="105" font-size="9" fill="#2196F3" font-family="sans-serif">钳制后贴右缘</text>
+
+  <text x="494" y="262" font-size="11" fill="#9E9E9E" font-family="sans-serif">钳制：x' = min(x, 视口右缘 - 宽)</text>
+  <text x="494" y="278" font-size="11" fill="#9E9E9E" font-family="sans-serif">y 同理（参考 Anchored 钳制公式）</text>
+  <text x="494" y="300" font-size="11" fill="#9E9E9E" font-family="sans-serif">关闭：外部点击 / Esc → Popup watcher</text>
+  <text x="494" y="316" font-size="11" fill="#9E9E9E" font-family="sans-serif">点击菜单项 → 回调执行 + 自动关闭</text>
+  <text x="494" y="338" font-size="11" fill="#9E9E9E" font-family="sans-serif">CABI + C++ Binding 一期支持</text>
+  <text x="494" y="354" font-size="11" fill="#9E9E9E" font-family="sans-serif">open()：挂 BENCH 顶层，浮层置顶</text>
+</svg>

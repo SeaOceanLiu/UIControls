@@ -60,6 +60,7 @@ private:
     OnCheckChangedHandler m_onCheckChanged;
 
     float m_sizeRatio;
+    float m_captionSize;
     bool m_triStateEnabled;
 
     SRect m_boxRect;
@@ -97,6 +98,9 @@ public:
     void setSizeRatio(float ratio);
     float getSizeRatio() const;
 
+    void setCaptionSize(float size);
+    float getCaptionSize() const;
+
     void setTriStateEnabled(bool enabled);
     bool isTriStateEnabled() const;
 
@@ -128,6 +132,7 @@ private:
     void setBoxSize(void);
     void adjustSpaceAssignment(void);
     void adjustBoxVerticalAlign(void);
+    float effectiveCaptionSize() const;
 
     // float calculateCheckBoxSize();
     // SRect calculateCheckBoxRect();

@@ -272,6 +272,12 @@ int Actor::setIntProperty(const char* prop, int value) {
     return ControlImpl::setIntProperty(prop, value);
 }
 
+int Actor::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kAnchorX) == 0) { setAnchorPoint(value, m_anchorPoint.y); return 1; }
+    if (strcmp(prop, PropertyNames::kAnchorY) == 0) { setAnchorPoint(m_anchorPoint.x, value); return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
 int Actor::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kScaleType) == 0) {
         if (_stricmp(value, PropertyNames::kScaleTypeStretch) == 0)     { setScaleType(ScaleType::STRETCH);     return 1; }
@@ -332,4 +338,10 @@ int Actor::getBoolProperty(const char* prop, int& out) {
 int Actor::getIntProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kAlpha) == 0) { out = (int)m_alpha; return 1; }
     return ControlImpl::getIntProperty(prop, out);
+}
+
+int Actor::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kAnchorX) == 0) { out = m_anchorPoint.x; return 1; }
+    if (strcmp(prop, PropertyNames::kAnchorY) == 0) { out = m_anchorPoint.y; return 1; }
+    return ControlImpl::getFloatProperty(prop, out);
 }

@@ -6,6 +6,9 @@
 
 #define NOMINMAX
 #include <windows.h>
+#ifdef _DEBUG
+#include <crtdbg.h>
+#endif
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
@@ -38,6 +41,32 @@ typedef int   (*UISetIntFn)(UIInstance, void*, const char*, int);
 typedef int   (*UIGetIntFn)(UIInstance, void*, const char*, int*);
 typedef int   (*UISetBoolFn)(UIInstance, void*, const char*, int);
 typedef int   (*UIGetEnumFn)(UIInstance, void*, const char*, char*, int);
+
+typedef int   (*UITreeViewAddNodeFn)(UIInstance, void*, const char*, const char*, const char*, int);
+typedef int   (*UITreeViewRemoveNodeFn)(UIInstance, void*, const char*);
+typedef int   (*UITreeViewSetNodeLabelFn)(UIInstance, void*, const char*, const char*);
+typedef int   (*UITreeViewSetNodeUserDataFn)(UIInstance, void*, const char*, void*);
+typedef int   (*UITreeViewSelectNodeFn)(UIInstance, void*, const char*);
+typedef void  (*UITreeViewClearSelectionFn)(UIInstance, void*);
+typedef int   (*UITreeViewExpandNodeFn)(UIInstance, void*, const char*);
+typedef int   (*UITreeViewCollapseNodeFn)(UIInstance, void*, const char*);
+typedef void  (*UITreeViewExpandAllFn)(UIInstance, void*);
+typedef void  (*UITreeViewCollapseAllFn)(UIInstance, void*);
+typedef void  (*UITreeViewClearItemsFn)(UIInstance, void*);
+typedef int   (*UITreeViewGetSelectedIdFn)(UIInstance, void*, char*, int);
+
+static UITreeViewAddNodeFn          uiTreeViewAddNode        = nullptr;
+static UITreeViewRemoveNodeFn       uiTreeViewRemoveNode     = nullptr;
+static UITreeViewSetNodeLabelFn     uiTreeViewSetNodeLabel   = nullptr;
+static UITreeViewSetNodeUserDataFn  uiTreeViewSetNodeUserData= nullptr;
+static UITreeViewSelectNodeFn       uiTreeViewSelectNode     = nullptr;
+static UITreeViewClearSelectionFn   uiTreeViewClearSelection = nullptr;
+static UITreeViewExpandNodeFn       uiTreeViewExpandNode     = nullptr;
+static UITreeViewCollapseNodeFn     uiTreeViewCollapseNode   = nullptr;
+static UITreeViewExpandAllFn        uiTreeViewExpandAll      = nullptr;
+static UITreeViewCollapseAllFn      uiTreeViewCollapseAll    = nullptr;
+static UITreeViewClearItemsFn       uiTreeViewClearItems     = nullptr;
+static UITreeViewGetSelectedIdFn    uiTreeViewGetSelectedId  = nullptr;
 
 static UICreateInstanceFn      uiCreateInstance       = nullptr;
 static UISetViewportFn         uiSetViewport          = nullptr;
@@ -190,9 +219,27 @@ static void loadFunctions() {
     uiSetBool        = (UISetBoolFn)          GetProcAddress(g_uiDll, "UICornerstone_SetBool");
     uiGetEnum        = (UIGetEnumFn)          GetProcAddress(g_uiDll, "UICornerstone_GetEnum");
     uiGetPtr         = (UIGetPtrFn)           GetProcAddress(g_uiDll, "UICornerstone_GetPtr");
+    uiTreeViewAddNode        = (UITreeViewAddNodeFn)         GetProcAddress(g_uiDll, "UICornerstone_TreeViewAddNode");
+    uiTreeViewRemoveNode     = (UITreeViewRemoveNodeFn)      GetProcAddress(g_uiDll, "UICornerstone_TreeViewRemoveNode");
+    uiTreeViewSetNodeLabel   = (UITreeViewSetNodeLabelFn)    GetProcAddress(g_uiDll, "UICornerstone_TreeViewSetNodeLabel");
+    uiTreeViewSetNodeUserData= (UITreeViewSetNodeUserDataFn) GetProcAddress(g_uiDll, "UICornerstone_TreeViewSetNodeUserData");
+    uiTreeViewSelectNode     = (UITreeViewSelectNodeFn)      GetProcAddress(g_uiDll, "UICornerstone_TreeViewSelectNode");
+    uiTreeViewClearSelection = (UITreeViewClearSelectionFn)  GetProcAddress(g_uiDll, "UICornerstone_TreeViewClearSelection");
+    uiTreeViewExpandNode     = (UITreeViewExpandNodeFn)      GetProcAddress(g_uiDll, "UICornerstone_TreeViewExpandNode");
+    uiTreeViewCollapseNode   = (UITreeViewCollapseNodeFn)    GetProcAddress(g_uiDll, "UICornerstone_TreeViewCollapseNode");
+    uiTreeViewExpandAll      = (UITreeViewExpandAllFn)       GetProcAddress(g_uiDll, "UICornerstone_TreeViewExpandAll");
+    uiTreeViewCollapseAll    = (UITreeViewCollapseAllFn)     GetProcAddress(g_uiDll, "UICornerstone_TreeViewCollapseAll");
+    uiTreeViewClearItems     = (UITreeViewClearItemsFn)      GetProcAddress(g_uiDll, "UICornerstone_TreeViewClearItems");
+    uiTreeViewGetSelectedId  = (UITreeViewGetSelectedIdFn)   GetProcAddress(g_uiDll, "UICornerstone_TreeViewGetSelectedId");
 }
 
 int main(int argc, char* argv[]) {
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+#ifdef _DEBUG
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+#endif
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "auto=", 5) == 0) g_autoSec = atoi(argv[i] + 5);
     }
@@ -286,6 +333,84 @@ int main(int argc, char* argv[]) {
     printf("GetControlType: check-box / tree-view OK\n");
 
     printf("TreeView item CABI assertions PASSED\n");
+
+    // ---- TreeView 节点操作 CABI ----
+    // 1. AddNode：根节点（parentId 空串）
+    if (!uiTreeViewAddNode || uiTreeViewAddNode(g_inst, g_treeHandle, "", "n20", u8"新增根节点", 0) != 1) {
+        printf("FAIL: TreeViewAddNode(root)\n"); return 1;
+    }
+    printf("TreeViewAddNode(root n20) OK\n");
+    // 2. AddNode：子节点挂到 n20（父不存在时失败）
+    if (uiTreeViewAddNode(g_inst, g_treeHandle, "nope", "nx", "x", 0) != 0) {
+        printf("FAIL: TreeViewAddNode(bad parent) should fail\n"); return 1;
+    }
+    if (uiTreeViewAddNode(g_inst, g_treeHandle, "n20", "n20a", u8"新增子节点", 0) != 1) {
+        printf("FAIL: TreeViewAddNode(child)\n"); return 1;
+    }
+    printf("TreeViewAddNode(child n20a) OK\n");
+    // 3. SetNodeLabel 改名 + 验证
+    if (!uiTreeViewSetNodeLabel || uiTreeViewSetNodeLabel(g_inst, g_treeHandle, "n20", u8"改名后的根") != 1 ||
+        uiTreeViewSetNodeLabel(g_inst, g_treeHandle, "nope", "x") != 0) {
+        printf("FAIL: TreeViewSetNodeLabel\n"); return 1;
+    }
+    printf("TreeViewSetNodeLabel OK\n");
+    // 4. SetNodeUserData + SelectNode + GetSelectedId
+    // 注意：onSelect 回调会把 userData 转 std::string*（见 onTreeNodeSelected），必须传 std::string
+    static std::string n20Data = "n20 user data";
+    if (!uiTreeViewSetNodeUserData || uiTreeViewSetNodeUserData(g_inst, g_treeHandle, "n20", &n20Data) != 1 ||
+        uiTreeViewSetNodeUserData(g_inst, g_treeHandle, "nope", &n20Data) != 0) {
+        printf("FAIL: TreeViewSetNodeUserData\n"); return 1;
+    }
+    if (!uiTreeViewSelectNode || uiTreeViewSelectNode(g_inst, g_treeHandle, "n20") != 1 ||
+        uiTreeViewSelectNode(g_inst, g_treeHandle, "nope") != 0) {
+        printf("FAIL: TreeViewSelectNode\n"); return 1;
+    }
+    char selBuf[64] = {0};
+    if (!uiTreeViewGetSelectedId || uiTreeViewGetSelectedId(g_inst, g_treeHandle, selBuf, (int)sizeof(selBuf)) != 1 ||
+        strcmp(selBuf, "n20") != 0) {
+        printf("FAIL: TreeViewGetSelectedId\n"); return 1;
+    }
+    printf("TreeViewSetNodeUserData/SelectNode/GetSelectedId OK\n");
+    // 5. ClearSelection → GetSelectedId 返回 0
+    if (!uiTreeViewClearSelection) { printf("FAIL: TreeViewClearSelection\n"); return 1; }
+    uiTreeViewClearSelection(g_inst, g_treeHandle);
+    if (uiTreeViewGetSelectedId(g_inst, g_treeHandle, selBuf, (int)sizeof(selBuf)) != 0) {
+        printf("FAIL: GetSelectedId after ClearSelection\n"); return 1;
+    }
+    printf("TreeViewClearSelection OK\n");
+    // 6. ExpandNode/CollapseNode/ExpandAll/CollapseAll
+    // addChild 会自动展开父（n20），故先折叠再展开验证双向
+    if (!uiTreeViewCollapseNode || uiTreeViewCollapseNode(g_inst, g_treeHandle, "n20") != 1 ||
+        uiTreeViewExpandNode(g_inst, g_treeHandle, "n20") != 1 ||
+        uiTreeViewCollapseNode(g_inst, g_treeHandle, "nope") != 0) {
+        printf("FAIL: TreeViewExpandNode/CollapseNode\n"); return 1;
+    }
+    if (!uiTreeViewExpandAll || !uiTreeViewCollapseAll) { printf("FAIL: ExpandAll/CollapseAll\n"); return 1; }
+    uiTreeViewExpandAll(g_inst, g_treeHandle);
+    uiTreeViewCollapseAll(g_inst, g_treeHandle);
+    printf("TreeViewExpand/Collapse/ExpandAll/CollapseAll OK\n");
+    // 7. RemoveNode：删除子节点后父保留；删除不存在节点失败
+    if (!uiTreeViewRemoveNode) { printf("FAIL: RemoveNode null\n"); return 1; }
+    if (uiTreeViewRemoveNode(g_inst, g_treeHandle, "nope") != 0) { printf("FAIL: RemoveNode(nope) should fail\n"); return 1; }
+    if (uiTreeViewRemoveNode(g_inst, g_treeHandle, "n20a") != 1) { printf("FAIL: RemoveNode(n20a)\n"); return 1; }
+    if (uiTreeViewSelectNode(g_inst, g_treeHandle, "n20a") != 0) { printf("FAIL: SelectNode(deleted) should fail\n"); return 1; }
+    printf("TreeViewRemoveNode OK\n");
+#if 1 // BISECT: clearItems crash investigation
+    // 8. ClearItems：清空全部节点后 selectNode 全部失败
+    if (!uiTreeViewClearItems) { printf("FAIL: TreeViewClearItems\n"); return 1; }
+    uiTreeViewClearItems(g_inst, g_treeHandle);
+    if (uiTreeViewSelectNode(g_inst, g_treeHandle, "n20") != 0) {
+        printf("FAIL: SelectNode after ClearItems\n"); return 1;
+    }
+    // 恢复演示内容（ClearItems 已清空整棵树）
+    if (uiTreeViewAddNode(g_inst, g_treeHandle, "", "n30", u8"演示根节点", 1) != 1 ||
+        uiTreeViewAddNode(g_inst, g_treeHandle, "n30", "n30a", u8"演示子节点 A", 0) != 1 ||
+        uiTreeViewAddNode(g_inst, g_treeHandle, "n30", "n30b", u8"演示子节点 B", 0) != 1) {
+        printf("FAIL: restore demo nodes\n"); return 1;
+    }
+    printf("TreeViewClearItems OK\n");
+#endif
+    printf("TreeView node-op CABI assertions PASSED\n");
 
     printf("Frame loop running - click nodes in the TreeView, close window to exit\n");
     ULONGLONG autoT0 = GetTickCount64();

@@ -182,6 +182,10 @@ public:
     virtual void setFocusRingAlwaysVisible(bool always) = 0;
     virtual void setFocusRingColor(SColor color) = 0;
     virtual void setFocusRingStyle(FocusRingStyle style) = 0;
+    virtual bool getShowFocusRing() const = 0;
+    virtual bool getFocusRingAlwaysVisible() const = 0;
+    virtual SColor getFocusRingColor() const = 0;
+    virtual FocusRingStyle getFocusRingStyle() const = 0;
     virtual bool isFocusBoundary() const = 0;
     virtual void setFocusBoundary(bool boundary) = 0;
 
@@ -393,6 +397,10 @@ public:
     void setFocusRingAlwaysVisible(bool always) override { m_focusRingAlwaysVisible = always; }
     void setFocusRingColor(SColor color) override { m_focusRingColor = color; }
     void setFocusRingStyle(FocusRingStyle style) override { m_focusRingStyle = style; }
+    bool getShowFocusRing() const override { return m_showFocusRing; }
+    bool getFocusRingAlwaysVisible() const override { return m_focusRingAlwaysVisible; }
+    SColor getFocusRingColor() const override { return m_focusRingColor; }
+    FocusRingStyle getFocusRingStyle() const override { return m_focusRingStyle; }
     bool isFocusBoundary() const override { return m_isFocusBoundary; }
     void setFocusBoundary(bool boundary) override { m_isFocusBoundary = boundary; }
     void drawFocusRing();

@@ -120,11 +120,16 @@ static bool treeContains(Control* root, Control* target) {
 }
 
 static bool instanceHoldsControl(UIInstance instance, Control* target) {
-    if (instance->bench && treeContains(instance->bench, target)) return true;
-    for (auto& sp : instance->popupPool)
-        if (sp.get() == target || treeContains(sp.get(), target)) return true;
-    for (auto& sp : instance->menuPool)
-        if (sp.get() == target || treeContains(sp.get(), target)) return true;
+    // 沿 parent 链上溯：菜单面板/项经 setParent 挂靠（不在 children 列表），
+    // 从 target 逐层上溯到 bench 根或池成员即视为本实例持有
+    for (Control* cur = target; cur != nullptr; cur = cur->getParent()) {
+        if (instance->bench && (cur == instance->bench || treeContains(instance->bench, cur)))
+            return true;
+        for (auto& sp : instance->popupPool)
+            if (sp.get() == cur || treeContains(sp.get(), cur)) return true;
+        for (auto& sp : instance->menuPool)
+            if (sp.get() == cur) return true;
+    }
     return false;
 }
 
@@ -1272,6 +1277,27 @@ UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(btn.get()));
 }
 
+// ── LuotiAni 动画操作 ──
+int UICornerstone_AnimationPrepare(UIInstance instance, UIControlHandle ctl, int startFrame) {
+    if (!instance || !ctl) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    auto* ani = dynamic_cast<LuotiAni*>(ctlV);
+    if (!ani) return 0;
+    ani->prepare(static_cast<uint32_t>(startFrame < 0 ? 0 : startFrame));
+    return 1;
+}
+
+int UICornerstone_AnimationSetFrameFilter(UIInstance instance, UIControlHandle ctl, int bilinear) {
+    if (!instance || !ctl) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    auto* ani = dynamic_cast<LuotiAni*>(ctlV);
+    if (!ani) return 0;
+    ani->setFrameFilter(bilinear != 0);
+    return 1;
+}
+
 // ============================================================
 // 控件通用操作
 // ============================================================
@@ -1523,6 +1549,217 @@ UIControlHandle UICornerstone_CreateTreeView(UIInstance instance, float x, float
     tv->create();
     tv->setVisible(true);
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(tv.get()));
+}
+
+// ── TreeView 节点操作 ──
+static TreeView* treeViewOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<TreeView*>(ctl);
+}
+
+// ── EditBox / TextArea 文本操作 ──
+static EditBox* editBoxOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<EditBox*>(ctl);
+}
+
+int UICornerstone_EditBoxSelectAll(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->selectAll();
+    return 1;
+}
+
+int UICornerstone_EditBoxSetSelection(UIInstance instance, UIControlHandle ctl, int start, int end) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->setSelection(start, end);
+    return 1;
+}
+
+int UICornerstone_EditBoxClearSelection(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->clearSelection();
+    return 1;
+}
+
+int UICornerstone_EditBoxHasSelection(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    return eb->hasSelection() ? 1 : 0;
+}
+
+int UICornerstone_EditBoxGetCursorPosition(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return -1;
+    return eb->getCursorPosition();
+}
+
+int UICornerstone_EditBoxCopy(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->copy();
+    return 1;
+}
+
+int UICornerstone_EditBoxCut(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->cut();
+    return 1;
+}
+
+int UICornerstone_EditBoxPaste(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->paste();
+    return 1;
+}
+
+int UICornerstone_EditBoxDeleteSelectedText(UIInstance instance, UIControlHandle ctl) {
+    EditBox* eb = editBoxOf(instance, ctl);
+    if (!eb) return 0;
+    eb->deleteSelectedText();
+    return 1;
+}
+
+// ── NumericUpDown 数值操作 ──
+int UICornerstone_NumericUpDownStep(UIInstance instance, UIControlHandle ctl, int dir) {
+    if (!instance || !ctl) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    auto* nud = dynamic_cast<NumericUpDown*>(ctlV);
+    if (!nud) return 0;
+    nud->stepValue(dir);
+    return 1;
+}
+
+// ── ComboBox 选项操作 ──
+int UICornerstone_ComboBoxAddItem(UIInstance instance, UIControlHandle ctl,
+    const char* label, const char* value, int disabled) {
+    if (!instance || !ctl || !label) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    auto* combo = dynamic_cast<ComboBox*>(ctlV);
+    if (!combo) return 0;
+    combo->addItem(label ? label : "", value ? value : "", disabled != 0);
+    return 1;
+}
+
+int UICornerstone_ComboBoxRemoveItem(UIInstance instance, UIControlHandle ctl, int index) {
+    if (!instance || !ctl || index < 0) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    auto* combo = dynamic_cast<ComboBox*>(ctlV);
+    if (!combo) return 0;
+    if (index >= combo->getItemCount()) return 0;
+    combo->removeItem(index);
+    return 1;
+}
+
+int UICornerstone_ComboBoxClearItems(UIInstance instance, UIControlHandle ctl) {
+    if (!instance || !ctl) return 0;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return 0;
+    auto* combo = dynamic_cast<ComboBox*>(ctlV);
+    if (!combo) return 0;
+    combo->clearItems();
+    return 1;
+}
+
+int UICornerstone_ComboBoxGetItemCount(UIInstance instance, UIControlHandle ctl) {
+    if (!instance || !ctl) return -1;
+    Control* ctlV = validateControl(instance, ctl);
+    if (!ctlV) return -1;
+    auto* combo = dynamic_cast<ComboBox*>(ctlV);
+    if (!combo) return -1;
+    return combo->getItemCount();
+}
+
+int UICornerstone_TreeViewAddNode(UIInstance instance, UIControlHandle tree,
+    const char* parentId, const char* id, const char* label, int expanded) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id || !label) return 0;
+    auto node = makeNode(id ? id : "", label ? label : "", expanded != 0);
+    if (parentId && parentId[0] != '\0')
+        return tv->addChild(parentId, node) ? 1 : 0;
+    return tv->addRootItem(node) ? 1 : 0;
+}
+
+int UICornerstone_TreeViewRemoveNode(UIInstance instance, UIControlHandle tree, const char* id) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id) return 0;
+    return tv->removeNode(id) ? 1 : 0;
+}
+
+int UICornerstone_TreeViewSetNodeLabel(UIInstance instance, UIControlHandle tree,
+    const char* id, const char* label) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id || !label) return 0;
+    return tv->setNodeLabel(id, label) ? 1 : 0;
+}
+
+int UICornerstone_TreeViewSetNodeUserData(UIInstance instance, UIControlHandle tree,
+    const char* id, void* userData) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id) return 0;
+    return tv->setNodeUserData(id, userData) ? 1 : 0;
+}
+
+int UICornerstone_TreeViewSelectNode(UIInstance instance, UIControlHandle tree, const char* id) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id) return 0;
+    return tv->selectNode(id) ? 1 : 0;
+}
+
+void UICornerstone_TreeViewClearSelection(UIInstance instance, UIControlHandle tree) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (tv) tv->clearSelection();
+}
+
+int UICornerstone_TreeViewExpandNode(UIInstance instance, UIControlHandle tree, const char* id) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id) return 0;
+    return tv->expandNode(id) ? 1 : 0;
+}
+
+int UICornerstone_TreeViewCollapseNode(UIInstance instance, UIControlHandle tree, const char* id) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !id) return 0;
+    return tv->collapseNode(id) ? 1 : 0;
+}
+
+void UICornerstone_TreeViewExpandAll(UIInstance instance, UIControlHandle tree) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (tv) tv->expandAll();
+}
+
+void UICornerstone_TreeViewCollapseAll(UIInstance instance, UIControlHandle tree) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (tv) tv->collapseAll();
+}
+
+void UICornerstone_TreeViewClearItems(UIInstance instance, UIControlHandle tree) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (tv) tv->clearItems();
+}
+
+int UICornerstone_TreeViewGetSelectedId(UIInstance instance, UIControlHandle tree,
+    char* outBuf, int outSize) {
+    TreeView* tv = treeViewOf(instance, tree);
+    if (!tv || !outBuf || outSize <= 0) return 0;
+    const string& id = tv->getSelectedId();
+    if (id.empty()) return 0;
+    int n = (int)id.size();
+    if (n >= outSize) n = outSize - 1;
+    memcpy(outBuf, id.c_str(), (size_t)n);
+    outBuf[n] = '\0';
+    return 1;
 }
 
 UIControlHandle UICornerstone_CreateHandleControl(UIInstance instance,

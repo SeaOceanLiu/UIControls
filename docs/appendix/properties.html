@@ -27,6 +27,18 @@
 <tr><td><code>text</code> / <code>text-shadow</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
 <tr><td><code>transparent</code></td><td>Bool</td><td>背景透明</td></tr>
 <tr><td><code>visible</code></td><td>Bool</td><td>可见性</td></tr>
+<tr><td><code>focusable</code></td><td>Bool</td><td>可聚焦</td></tr>
+<tr><td><code>show-focus-ring</code></td><td>Bool</td><td>显示焦点环</td></tr>
+<tr><td><code>focus-ring-always-visible</code></td><td>Bool</td><td>焦点环常显</td></tr>
+<tr><td><code>focus-ring-color</code></td><td>Color</td><td>焦点环颜色</td></tr>
+<tr><td><code>focus-ring-style</code></td><td>Enum</td><td>焦点环样式（<code>solid</code> / <code>dashed</code>）</td></tr>
+<tr><td><code>focus-boundary</code></td><td>Bool</td><td>焦点边界</td></tr>
+<tr><td><code>tab-index</code></td><td>Int</td><td>Tab 键顺序</td></tr>
+<tr><td><code>state</code></td><td>Enum</td><td>控件状态（<code>normal</code> / <code>hover</code> / <code>pressed</code> / <code>disabled</code>）</td></tr>
+<tr><td><code>always-on-top</code></td><td>Bool</td><td>始终置顶</td></tr>
+<tr><td><code>control-type</code></td><td>String</td><td>控件类型（只读，如 <code>button</code> / <code>label</code>）</td></tr>
+<tr><td><code>debug-draw</code></td><td>Bool</td><td>调试绘制（Label 等）</td></tr>
+<tr><td><code>margin-left</code> / <code>margin-top</code> / <code>margin-right</code> / <code>margin-bottom</code></td><td>Float</td><td>外边距分量</td></tr>
 </table>
 
 <h2>7.2 按控件速查（字母序）</h2>
@@ -36,6 +48,7 @@
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>alpha</code></td><td>Int</td><td>255</td></tr>
 <tr><td><code>anchor</code></td><td>Enum</td><td><code>top-left</code> … <code>center</code> …（9 值）</td></tr>
+<tr><td><code>anchor-x</code> / <code>anchor-y</code></td><td>Float</td><td>自由坐标锚点分量</td></tr>
 <tr><td><code>image</code> / <code>image-resource</code></td><td>String（只写）</td><td>—</td></tr>
 <tr><td><code>match-parent-rect</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>scale-type</code></td><td>Enum</td><td><code>stretch</code> / <code>fit-center</code> / <code>center-crop</code> / <code>none</code></td></tr>
@@ -91,6 +104,8 @@
 <tr><td><code>items</code></td><td>String(JSON)</td><td>—</td></tr>
 <tr><td><code>max-visible-items</code></td><td>Int</td><td>6</td></tr>
 <tr><td><code>selected-value</code> / <code>selected-index</code></td><td>String / Int</td><td>— / -1</td></tr>
+<tr><td><code>selected-label</code></td><td>String（只读）</td><td>当前选中项的 label</td></tr>
+<tr><td><code>list-panel</code> / <code>list-scroll-bar</code></td><td>Ptr（只读）</td><td>下拉列表面板 / 滚动条句柄</td></tr>
 <tr><td><code>text</code></td><td>String</td><td>空</td></tr>
 </table>
 
@@ -103,6 +118,9 @@
 <tr><td><code>confirm-text</code> / <code>cancel-text</code></td><td>String</td><td>"确定" / "取消"</td></tr>
 <tr><td><code>confirm-visible</code></td><td>Bool</td><td>1</td></tr>
 <tr><td><code>content</code></td><td>Ptr</td><td>null</td></tr>
+<tr><td><code>popup-visible</code></td><td>Bool（只读）</td><td>弹窗是否可见</td></tr>
+<tr><td><code>result</code></td><td>Int（只读）</td><td>关闭结果（0=None / 1=Confirmed / 2=Cancelled）</td></tr>
+<tr><td><code>confirm-button</code> / <code>cancel-button</code></td><td>Ptr（只读）</td><td>确定/取消按钮句柄</td></tr>
 <tr><td><code>visible</code></td><td>Bool</td><td>0（置 1=open，置 0=close）</td></tr>
 </table>
 
@@ -135,6 +153,8 @@
 <tr><td><code>font-size</code></td><td>Int</td><td>16</td></tr>
 <tr><td><code>line-height</code> / <code>line-spacing-ratio</code></td><td>Int / Float</td><td>字体默认</td></tr>
 <tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
+<tr><td><code>shadow-offset-x</code> / <code>shadow-offset-y</code></td><td>Float</td><td>阴影偏移分量</td></tr>
+<tr><td><code>font-style</code></td><td>Enum</td><td><code>normal</code> / <code>bold</code> / <code>italic</code> / <code>underline</code> / <code>strikethrough</code></td></tr>
 </table>
 
 <h3>LuotiAni（类型 <code>animation</code>）</h3>
@@ -142,6 +162,7 @@
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>animation</code></td><td>String</td><td>JSONC 路径（只写）</td></tr>
 <tr><td><code>frame</code></td><td>Int</td><td>跳帧</td></tr>
+<tr><td><code>total-frames</code> / <code>current-frame</code></td><td>Int（只读）</td><td>总帧数 / 当前帧</td></tr>
 <tr><td><code>loop</code></td><td>Bool</td><td>循环</td></tr>
 <tr><td><code>playing</code></td><td>Bool</td><td>命令式（置 1=play 重播，置 0=pause；未 prepare 置 1 记录请求，prepare 后自动播放）</td></tr>
 </table>
@@ -154,6 +175,7 @@
 <tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击</td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>菜单字体（默认 MapleMono_NF_CN_Regular）</td></tr>
 <tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸</td></tr>
+<tr><td><code>manual-position</code></td><td>Bool</td><td>MenuBar 手动定位（跳过全宽布局，setRect 自由生效）</td></tr>
 <tr><td><code>hovered-index</code></td><td>Int</td><td>MenuPanel 悬停项索引（读写）</td></tr>
 </table>
 
@@ -171,6 +193,7 @@
 
 <h3>Panel（类型 <code>panel</code>）</h3>
 <p>无特有属性键（仅通用属性）；容器能力经 JSON <code>"children"</code> + <code>"layout"</code>（h-flow / v-flow / anchor / grid，见 6.5）声明，编程式经 <code>AddChild</code> / <code>CreatePanel</code>。</p>
+<p>布局子属性（需先 <code>child-id</code> 定位目标子控件）：<code>flow-weight</code>（Float）、<code>anchor</code>（Enum）、<code>anchor-offset-x</code> / <code>anchor-offset-y</code>（Float）、<code>grid-row</code> / <code>grid-col</code> / <code>grid-row-span</code> / <code>grid-col-span</code>（Int）。</p>
 
 <h3>ProgressBar（类型 <code>progress-bar</code>）</h3>
 <table>
@@ -183,6 +206,7 @@
 <tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
 <tr><td><code>text-mode</code></td><td>Enum</td><td><code>none</code> / <code>percent</code> / <code>custom</code></td></tr>
 <tr><td><code>value</code></td><td>Float</td><td>0.0</td></tr>
+<tr><td><code>percent</code></td><td>Float（只读）</td><td>进度百分比 0–100</td></tr>
 </table>
 
 <h3>ScrollBar（类型 <code>scroll-bar</code>）</h3>
@@ -200,7 +224,9 @@
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>label-font</code></td><td>Enum</td><td>数值标签字体（同通用字体枚举）</td></tr>
+<tr><td><code>label-font-size</code></td><td>Int</td><td>数值标签字号</td></tr>
 <tr><td><code>label-gap</code> / <code>label-format</code></td><td>Float / String</td><td>4 / —</td></tr>
+<tr><td><code>percent</code></td><td>Float（只读）</td><td>当前值百分比 0–100</td></tr>
 <tr><td><code>range-min</code> / <code>range-max</code></td><td>Float</td><td>0 / 100</td></tr>
 <tr><td><code>show-value-label</code> / <code>reverse</code></td><td>Bool</td><td>false / false</td></tr>
 <tr><td><code>style</code></td><td>Enum</td><td><code>horizontal</code> / <code>vertical</code></td></tr>
@@ -246,10 +272,12 @@
 <tr><td><code>item-id</code></td><td>String</td><td>定位目标节点（item 级属性的作用对象）</td></tr>
 <tr><td><code>item-leading-control</code></td><td>Ptr</td><td>行前置控件容器句柄（借用语义，可再经通用属性系统操作；运行时 SetPtr 立即挂树，传 NULL 解除并摘树）</td></tr>
 <tr><td><code>item-leading-gap</code></td><td>Float</td><td>行前置控件容器与文本间隔（默认 6）</td></tr>
+<tr><td><code>item-leading-align</code></td><td>Enum</td><td>槽位对齐（Label 9 宫格：<code>top-left</code>/<code>mid-left</code>/<code>bottom-left</code> ...，默认 <code>mid-left</code>；水平分量忽略，槽位贴文本起点）</td></tr>
 <tr><td><code>line-spacing</code></td><td>Int</td><td>行距（默认 0 = 继承字体行高）</td></tr>
 <tr><td><code>row-height</code></td><td>Float</td><td>行高</td></tr>
 <tr><td><code>selected-id</code></td><td>String（只读）</td><td>当前选中节点 id</td></tr>
 <tr><td><code>selected-user-data</code></td><td>Ptr</td><td>选中节点 userData 读写（借用语义）</td></tr>
+<tr><td><code>scroll-bar</code> / <code>h-scroll-bar</code></td><td>Ptr（只读）</td><td>垂直/水平滚动条句柄</td></tr>
 <tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>按节点 id 展开 / 折叠</td></tr>
 </table>
 <p>节点数据经布局 JSON <code>"items": [{"id","label","expanded","userData","children":[...]}]</code> 声明（见 6.3 tree-view）；编程式用 C ABI <code>CreateTreeView</code> + 核心 TreeView API。
@@ -262,6 +290,7 @@ item 增强：<code>leadingControl</code>（行前置控件容器，复用控件
 <tr><td><code>edge-margin</code></td><td>Float</td><td>4.0</td></tr>
 <tr><td><code>resizable</code></td><td>Bool</td><td>true</td></tr>
 <tr><td><code>title</code></td><td>String</td><td>"WinFrame"</td></tr>
+<tr><td><code>title-bar</code> / <code>title-label</code> / <code>close-button</code> / <code>client-panel</code></td><td>Ptr（只读）</td><td>子控件句柄</td></tr>
 <tr><td><code>win-frame-bg</code> / <code>win-frame-border</code> / <code>title-bar-bg</code> / <code>title-text</code> / <code>closed-text</code></td><td>Color</td><td>见 4.20 属性表</td></tr>
 </table>
 

@@ -720,6 +720,7 @@ int EditBox::setBoolProperty(const char* prop, int value) {
 }
 int EditBox::setIntProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kFontSize) == 0) { setFontSize(value); return 1; }
+    if (strcmp(prop, PropertyNames::kPasswordChar) == 0) { setPasswordChar(static_cast<char>(value)); return 1; }
     return ControlImpl::setIntProperty(prop, value);
 }
 int EditBox::setStringProperty(const char* prop, const char* value) {
@@ -752,6 +753,7 @@ int EditBox::getBoolProperty(const char* prop, int& out) {
 }
 int EditBox::getIntProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kFontSize) == 0) { out = m_fontSize; return 1; }
+    if (strcmp(prop, PropertyNames::kPasswordChar) == 0) { out = static_cast<int>(m_passwordChar); return 1; }
     return ControlImpl::getIntProperty(prop, out);
 }
 int EditBox::getStringProperty(const char* prop, const char*& out) {

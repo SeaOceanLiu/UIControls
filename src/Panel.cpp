@@ -1,5 +1,6 @@
 ﻿#include "Panel.h"
 #include "PropertyNames.h"
+#include "UIContext.h"
 
 Panel::Panel(Control *parent, SRect rect, float xScale, float yScale):
     ControlImpl(parent, xScale, yScale)
@@ -73,6 +74,85 @@ void Panel::resized(SRect newRect) {
     } else {
         resolveChildPercentages();
     }
+}
+
+int Panel::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kChildTargetId) == 0) { m_childTargetId = value ? value : ""; return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+int Panel::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kChildTargetId) == 0) { out = m_childTargetId.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+
+static Control* findChildById(Panel* panel, const string& id) {
+    if (id.empty()) return nullptr;
+    auto* ctx = panel->getContext();
+    if (!ctx) return nullptr;
+    auto it = ctx->controlsById.find(id);
+    if (it == ctx->controlsById.end()) return nullptr;
+    return static_cast<Control*>(it->second);
+}
+
+int Panel::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kChildFlowWeight) == 0) {
+        auto* child = findChildById(this, m_childTargetId);
+        if (!child) return 0;
+        FlowItemProps p = m_flowItemProps[child];
+        p.flexWeight = value;
+        setChildFlowProps(child, p);
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kChildAnchorOffsetX) == 0) {
+        auto* child = findChildById(this, m_childTargetId);
+        if (!child) return 0;
+        AnchorInfo a = m_anchorItemProps[child];
+        a.offset.left = value;
+        setChildAnchorProps(child, a);
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kChildAnchorOffsetY) == 0) {
+        auto* child = findChildById(this, m_childTargetId);
+        if (!child) return 0;
+        AnchorInfo a = m_anchorItemProps[child];
+        a.offset.top = value;
+        setChildAnchorProps(child, a);
+        return 1;
+    }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+int Panel::setIntProperty(const char* prop, int value) {
+    bool isGridProp = strcmp(prop, PropertyNames::kChildGridRow) == 0 ||
+                      strcmp(prop, PropertyNames::kChildGridCol) == 0 ||
+                      strcmp(prop, PropertyNames::kChildGridRowSpan) == 0 ||
+                      strcmp(prop, PropertyNames::kChildGridColSpan) == 0;
+    if (isGridProp) {
+        auto* child = findChildById(this, m_childTargetId);
+        if (!child) return 0;
+        GridItemProps g = m_gridItemProps[child];
+        if (strcmp(prop, PropertyNames::kChildGridRow) == 0) {
+            g.row = value; setChildGridProps(child, g); return 1;
+        }
+        if (strcmp(prop, PropertyNames::kChildGridCol) == 0) {
+            g.col = value; setChildGridProps(child, g); return 1;
+        }
+        if (strcmp(prop, PropertyNames::kChildGridRowSpan) == 0) {
+            g.rowSpan = value; setChildGridProps(child, g); return 1;
+        }
+        g.colSpan = value; setChildGridProps(child, g); return 1;
+    }
+    return ControlImpl::setIntProperty(prop, value);
+}
+int Panel::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kChildAnchor) == 0) {
+        auto* child = findChildById(this, m_childTargetId);
+        if (!child || !value) return 0;
+        AnchorInfo a = m_anchorItemProps[child];
+        a.anchor = value;
+        setChildAnchorProps(child, a);
+        return 1;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
 }
 
 // *********************************************************************************************

@@ -85,6 +85,38 @@ struct Api {
     UIControlHandle (*fnCreateSplitter)(UIInstance, float, float, float, float, int, float, float) = nullptr;
     UIControlHandle (*fnCreateScrollBar)(UIInstance, float, float, float, float, int, float, float) = nullptr;
     UIControlHandle (*fnCreateTreeView)(UIInstance, float, float, float, float, float, float) = nullptr;
+    int  (*fnTreeViewAddNode)(UIInstance, UIControlHandle, const char*, const char*, const char*, int) = nullptr;
+    int  (*fnTreeViewRemoveNode)(UIInstance, UIControlHandle, const char*) = nullptr;
+    int  (*fnTreeViewSetNodeLabel)(UIInstance, UIControlHandle, const char*, const char*) = nullptr;
+    int  (*fnTreeViewSetNodeUserData)(UIInstance, UIControlHandle, const char*, void*) = nullptr;
+    int  (*fnTreeViewSelectNode)(UIInstance, UIControlHandle, const char*) = nullptr;
+    void (*fnTreeViewClearSelection)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnTreeViewExpandNode)(UIInstance, UIControlHandle, const char*) = nullptr;
+    int  (*fnTreeViewCollapseNode)(UIInstance, UIControlHandle, const char*) = nullptr;
+    void (*fnTreeViewExpandAll)(UIInstance, UIControlHandle) = nullptr;
+    void (*fnTreeViewCollapseAll)(UIInstance, UIControlHandle) = nullptr;
+    void (*fnTreeViewClearItems)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnTreeViewGetSelectedId)(UIInstance, UIControlHandle, char*, int) = nullptr;
+
+    // EditBox / TextArea 文本操作
+    int  (*fnEditBoxSelectAll)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxSetSelection)(UIInstance, UIControlHandle, int, int) = nullptr;
+    int  (*fnEditBoxClearSelection)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxHasSelection)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxGetCursorPosition)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxCopy)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxCut)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxPaste)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnEditBoxDeleteSelectedText)(UIInstance, UIControlHandle) = nullptr;
+
+    // NumericUpDown 数值操作
+    int  (*fnNumericUpDownStep)(UIInstance, UIControlHandle, int) = nullptr;
+
+    // ComboBox 选项操作
+    int  (*fnComboBoxAddItem)(UIInstance, UIControlHandle, const char*, const char*, int) = nullptr;
+    int  (*fnComboBoxRemoveItem)(UIInstance, UIControlHandle, int) = nullptr;
+    int  (*fnComboBoxClearItems)(UIInstance, UIControlHandle) = nullptr;
+    int  (*fnComboBoxGetItemCount)(UIInstance, UIControlHandle) = nullptr;
     UIControlHandle (*fnCreateHandleControl)(UIInstance, UIControlHandle, float, float, float, float, float, float) = nullptr;
     UIControlHandle (*fnCreateImageButton)(UIInstance, const char*, const char*, const char*, float, float, float, float, float, float) = nullptr;
     UIControlHandle (*fnCreateImage)(UIInstance, const char*, float, float, float, float, float, float) = nullptr;
@@ -98,6 +130,17 @@ struct Api {
     void (*fnAddChildControl)(UIInstance, UIControlHandle, UIControlHandle) = nullptr;
     void (*fnDestroyControl)(UIInstance, UIControlHandle) = nullptr;
     const char* (*fnGetControlId)(UIInstance, UIControlHandle) = nullptr;
+
+    // LuotiAni 动画操作
+    int (*fnAnimationPrepare)(UIInstance, UIControlHandle, int) = nullptr;
+    int (*fnAnimationSetFrameFilter)(UIInstance, UIControlHandle, int) = nullptr;
+
+    // 截图读回
+    int (*fnCaptureRect)(UIInstance, float, float, float, float, uint8_t*, int*, int*) = nullptr;
+    int (*fnCaptureViewport)(UIInstance, uint8_t*, int*, int*) = nullptr;
+    int (*fnCaptureBench)(UIInstance, uint8_t*, int*, int*) = nullptr;
+    int (*fnCaptureControl)(UIInstance, UIControlHandle, uint8_t*, int*, int*) = nullptr;
+    int (*fnSavePixelsToFile)(const uint8_t*, int, int, const char*) = nullptr;
 
     // 属性系统
     int (*fnSetColor)(UIInstance, UIControlHandle, const char*, UIColor) = nullptr;

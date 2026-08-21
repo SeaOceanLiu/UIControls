@@ -20,6 +20,24 @@
 ### [设计文档规范 →](design/guidelines/design-docs.md)
 架构决策原则、设计文档编写规范。
 
+### [新增控件验收清单](design/guidelines/coding.md)
+每次新增控件时，必须逐项完成以下工作：
+
+1. 控件的声明式UI（JSON）、CABI接口、C++Binding API接口要经过初步测试。
+2. 三个后端功能也要完成测试，避免各后端有功能性差异。
+3. 控件的缩放功能要经过测试。
+4. 确认所有属性字段要放到 PropertyNames.h。
+5. 确认所有 JSON 字段要放到 PropertyNames.h。
+6. 确认所有字面量都常量化，并酌情放到 PropertyNames.h。
+7. 确认控件类型枚举和字符映射已添加。
+8. 确认新增 CABI 能让用户从 C 接口创建和操作控件。
+9. 确认 C++Binding API 封装了 CABI 接口。
+10. 确认涉及的设计文档已刷新，与源码核对无误，并至少自检 2 遍。
+11. 确认刷新了 README.md。
+12. 确认刷新了用户手册的相关章节（包括但不限于：控件相关、声明式UI语法速查、属性速查表、CABI速查表、C++Binding速查表）。
+13. ~~确认 JSON Schema 已刷新并验证完成（`docs/schema/declarative-ui.schema.json` 同步新增/修改的属性，且 `validate_layout --strict` 校验通过）。~~ **暂缓执行**（2026-08-19 用户指示：JSON Schema 体系尚未启动，`tools/validate_layout` 与 schema 文件尚未实现；待启动后再执行本条）。
+14. 确认 `design/API_Mapping_Table.md` 已刷新，对照"补"列的缺口标注，逐条决策是否需要补充 CABI / C++Binding / 属性键，并优先实施高优先级项。
+
 ## Reference (Read as Needed)
 
 | Topic | Document |

@@ -5,6 +5,7 @@
 #include "PropertyNames.h"
 #include "PlatformUtils.h"
 #include "EventQueue.h"
+#include "LeadingControlSlot.h"
 #include <algorithm>
 #include <cmath>
 
@@ -38,7 +39,7 @@ void TreeView::syncStateColor() {
 void TreeView::clearNodeRecursive(const shared_ptr<TreeNode>& node) {
     shared_ptr<TreeView> self;
     try { self = std::dynamic_pointer_cast<TreeView>(getThis()); } catch (...) {}
-    if (m_onClearNode && node->userData)
+    if (m_onClearNode && node->userData && node->userDataOwned)
         m_onClearNode(self, node->userData);
     TreeNodePayload tn = { node->id.c_str(), node->userData };
     fireCCallback(PropertyNames::kEventNodeRemoved, CCallbackData::TreeNode, &tn);
@@ -51,6 +52,7 @@ void TreeView::create() {
     if (GET_CONTEXT == nullptr) return;  // 未挂入实例上下文：延迟创建
     ControlImpl::create();
 
+    if (m_scrollBar) removeControl(m_scrollBar);
     m_scrollBar = ScrollBarBuilder(this,
         {m_rect.width - ConstDef::SCROLLBAR_WIDTH, 0,
          ConstDef::SCROLLBAR_WIDTH, m_rect.height},
@@ -63,6 +65,7 @@ void TreeView::create() {
         .build();
     addControl(m_scrollBar);
 
+    if (m_hScrollBar) removeControl(m_hScrollBar);
     m_hScrollBar = ScrollBarBuilder(this,
         {0, m_rect.height - ConstDef::SCROLLBAR_WIDTH,
          m_rect.width, ConstDef::SCROLLBAR_WIDTH},
@@ -256,8 +259,9 @@ void TreeView::draw() {
                     float oh = lc->getRect().height;
                     if (oh > 0 && ow > 0) ratio = ow / oh;
                 }
-                // 槽高 = 文字高度（行内垂直居中，行间留空隙）；无字体时回退行高
-                float slotH = (fontH > 0) ? (float)fontH : m_rowHeight;
+                // 槽高 = 文字高度（行内垂直居中，行间留空隙）；无字体时回退行高；
+                // fontH 为缩放后像素，先还原逻辑值，后续 slotH*scale 才是像素
+                float slotH = (fontH > 0) ? (float)fontH / scaleY : m_rowHeight;
                 float slotW = slotH * ratio;
                 // 槽起点 = 原文本起点（labelX = arrowX + arrowGap）：
                 // 图片缩进与无容器时文本缩进一致，有箭头行箭头在图片左侧不重叠
@@ -266,7 +270,11 @@ void TreeView::draw() {
                 textX = slotStartX + slotWpx + m_flatRows[i].node->leadingGap * scaleX;
                 SRect r;
                 r.left = (slotStartX - cr.left) / scaleX;
-                r.top = (y + (scaledRowH - slotH * scaleY) / 2 - cr.top) / scaleY;
+                // 槽位垂直对齐（复用 Label 9 宫格，见 LeadingControlSlot.h）：
+                // 水平分量忽略（槽位始终贴文本起点）
+                float slotTopPx = y + (scaledRowH - slotH * scaleY)
+                                  * LeadingControlSlot::verticalFactor(m_flatRows[i].node->leadingAlign);
+                r.top = (slotTopPx - cr.top) / scaleY;
                 r.width = slotW;
                 r.height = slotH;
                 lc->setRect(r);
@@ -480,9 +488,17 @@ void TreeView::rebuildFlatRows() {
     m_nodeMap.clear();
     m_selectedRow = -1;
 
+    // 全量索引所有节点（含折叠子树），保证 findNodeById/removeNode 对折叠节点也有效
+    function<void(const shared_ptr<TreeNode>&, int)> indexAll;
+    indexAll = [&](const shared_ptr<TreeNode>& node, int) {
+        m_nodeMap[node->id] = node;
+        for (auto& child : node->children)
+            indexAll(child, 0);
+    };
+    for (auto& root : m_rootItems) indexAll(root, 0);
+
     function<void(const shared_ptr<TreeNode>&, int)> flatten;
     flatten = [&](const shared_ptr<TreeNode>& node, int depth) {
-        m_nodeMap[node->id] = node;
         m_flatRows.push_back({node, depth});
         if (node->id == m_selectedId)
             m_selectedRow = (int)m_flatRows.size() - 1;
@@ -529,6 +545,13 @@ bool TreeView::addChild(const string& parentId, shared_ptr<TreeNode> node) {
         if (m_onExpand) m_onExpand(std::dynamic_pointer_cast<TreeView>(getThis()), parentId);
         fireCCallback(PropertyNames::kEventExpand, CCallbackData::String, parentId.c_str());
     }
+    rebuildFlatRows();
+    return true;
+}
+
+bool TreeView::addRootItem(shared_ptr<TreeNode> node) {
+    if (!node) return false;
+    m_rootItems.push_back(node);
     rebuildFlatRows();
     return true;
 }
@@ -589,6 +612,7 @@ bool TreeView::setNodeUserData(const string& id, void* userData) {
     auto node = findNodeById(id);
     if (!node) return false;
     node->userData = userData;
+    node->userDataOwned = false;  // 外部指针由调用方管理，TreeView 不负责清理
     return true;
 }
 
@@ -715,12 +739,31 @@ float TreeView::calcContentWidth() {
     float scale = getScaleXX();
     for (auto& row : m_flatRows) {
         float labelW = 0;
+        SharedFont nodeFont = getNodeFont(row.node);
         if (renderer) {
-            SharedFont nodeFont = getNodeFont(row.node);
             SSize sz = renderer->measureText(nodeFont.get(), row.node->label);
             labelW = sz.width / scale;
         }
         float rowW = LEFT_PADDING + row.depth * m_indentWidth + m_arrowGap + labelW + RIGHT_GAP;
+        // 前置控件（leadingControl）计入内容宽：与绘制同公式（槽宽 = 行字号高 × 宽高比）
+        if (row.node->leadingControl) {
+            auto& lc = row.node->leadingControl;
+            float ratio = 1.0f;
+            if (auto* actor = dynamic_cast<Actor*>(lc.get())) {
+                Texture* tex = actor->getTexture();
+                if (tex && tex->height() > 0)
+                    ratio = (float)tex->width() / tex->height();
+            }
+            if (ratio == 1.0f) {
+                float ow = lc->getRect().width;
+                float oh = lc->getRect().height;
+                if (oh > 0 && ow > 0) ratio = ow / oh;
+            }
+            float fontH = 0;
+            if (renderer) fontH = renderer->getFontHeight(nodeFont.get());
+            float slotW = (fontH > 0 ? fontH : m_rowHeight) * ratio;
+            rowW += slotW + row.node->leadingGap;
+        }
         if (rowW > maxW) maxW = rowW;
     }
     return maxW;
@@ -858,6 +901,8 @@ int TreeView::getPtrProperty(const char* prop, void*& out) {
         if (node && node->leadingControl) { out = node->leadingControl.get(); return 1; }
         return 0;
     }
+    if (strcmp(prop, PropertyNames::kScrollBarProp) == 0)  { out = m_scrollBar  ? static_cast<Control*>(m_scrollBar.get())  : nullptr; return 1; }
+    if (strcmp(prop, PropertyNames::kHScrollBarProp) == 0) { out = m_hScrollBar ? static_cast<Control*>(m_hScrollBar.get()) : nullptr; return 1; }
     return ControlImpl::getPtrProperty(prop, out);
 }
 
@@ -889,6 +934,25 @@ int TreeView::setFloatProperty(const char* prop, float value) {
     }
     return ControlImpl::setFloatProperty(prop, value);
 }
+static bool parseItemAlign(const char* value, AlignmentMode& out) {
+    if (!value) return false;
+    static const unordered_map<string, AlignmentMode> alignMap = {
+        {PropertyNames::kAlignLowerTopLeft,      AlignmentMode::AM_TOP_LEFT},
+        {PropertyNames::kAlignLowerTopCenter,    AlignmentMode::AM_TOP_CENTER},
+        {PropertyNames::kAlignLowerTopRight,     AlignmentMode::AM_TOP_RIGHT},
+        {PropertyNames::kAlignLowerMidLeft,      AlignmentMode::AM_MID_LEFT},
+        {PropertyNames::kAlignLowerCenter,       AlignmentMode::AM_CENTER},
+        {PropertyNames::kAlignLowerMidRight,     AlignmentMode::AM_MID_RIGHT},
+        {PropertyNames::kAlignLowerBottomLeft,   AlignmentMode::AM_BOTTOM_LEFT},
+        {PropertyNames::kAlignLowerBottomCenter, AlignmentMode::AM_BOTTOM_CENTER},
+        {PropertyNames::kAlignLowerBottomRight,  AlignmentMode::AM_BOTTOM_RIGHT},
+    };
+    auto it = alignMap.find(value);
+    if (it == alignMap.end()) return false;
+    out = it->second;
+    return true;
+}
+
 int TreeView::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kFont) == 0) {
         setFont(FontNameFromString(value));
@@ -898,6 +962,13 @@ int TreeView::setEnumProperty(const char* prop, const char* value) {
         auto node = findNodeById(m_itemTargetId);
         if (node && value) { node->fontName = FontNameFromString(value); m_nodeFonts.clear(); updateScrollBar(); return 1; }
         return 0;
+    }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingAlign) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        AlignmentMode mode;
+        if (!node || !parseItemAlign(value, mode)) return 0;
+        node->leadingAlign = mode;
+        return 1;
     }
     return ControlImpl::setEnumProperty(prop, value);
 }
@@ -936,6 +1007,22 @@ int TreeView::getEnumProperty(const char* prop, const char*& out) {
         auto node = findNodeById(m_itemTargetId);
         if (node) { out = FontNameToString(node->fontName); return 1; }
         return 0;
+    }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingAlign) == 0) {
+        auto node = findNodeById(m_itemTargetId);
+        if (!node) return 0;
+        switch (node->leadingAlign) {
+            case AlignmentMode::AM_TOP_LEFT:      out = PropertyNames::kAlignLowerTopLeft;      return 1;
+            case AlignmentMode::AM_TOP_CENTER:    out = PropertyNames::kAlignLowerTopCenter;    return 1;
+            case AlignmentMode::AM_TOP_RIGHT:     out = PropertyNames::kAlignLowerTopRight;     return 1;
+            case AlignmentMode::AM_MID_LEFT:      out = PropertyNames::kAlignLowerMidLeft;      return 1;
+            case AlignmentMode::AM_CENTER:        out = PropertyNames::kAlignLowerCenter;       return 1;
+            case AlignmentMode::AM_MID_RIGHT:     out = PropertyNames::kAlignLowerMidRight;     return 1;
+            case AlignmentMode::AM_BOTTOM_LEFT:   out = PropertyNames::kAlignLowerBottomLeft;   return 1;
+            case AlignmentMode::AM_BOTTOM_CENTER: out = PropertyNames::kAlignLowerBottomCenter; return 1;
+            case AlignmentMode::AM_BOTTOM_RIGHT:  out = PropertyNames::kAlignLowerBottomRight;  return 1;
+        }
+        return 1;
     }
     return ControlImpl::getEnumProperty(prop, out);
 }

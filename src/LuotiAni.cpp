@@ -917,5 +917,7 @@ int LuotiAni::getBoolProperty(const char* prop, int& out) {
 
 int LuotiAni::getIntProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kFrame) == 0) { out = static_cast<int>(m_frameToDraw); return 1; }
+    if (strcmp(prop, PropertyNames::kTotalFrames) == 0)  { out = static_cast<int>(m_totalFrames); return 1; }
+    if (strcmp(prop, PropertyNames::kCurrentFrame) == 0) { out = static_cast<int>(m_frameToDraw); return 1; }
     return ControlImpl::getIntProperty(prop, out);
 }

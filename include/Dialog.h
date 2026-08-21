@@ -77,6 +77,8 @@ public:
     // ── Property system overrides ──
     int setBoolProperty(const char* prop, int value) override;
     int getBoolProperty(const char* prop, int& out) override;
+    int setIntProperty(const char* prop, int value) override;
+    int getIntProperty(const char* prop, int& out) override;
     int setPtrProperty(const char* prop, void* value) override;
     int setEnumProperty(const char* prop, const char* value) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
@@ -124,6 +126,9 @@ public:
 
     void setOnConfirm(OnConfirmHandler handler) { m_onConfirm = handler; }
 
+    // ── Property system overrides ──
+    int getPtrProperty(const char* prop, void*& out) override;
+
     bool handleEvent(shared_ptr<Event> event) override;
 };
 
@@ -166,6 +171,7 @@ public:
     int getBoolProperty(const char* prop, int& out) override;
     int getFloatProperty(const char* prop, float& out) override;
     int getStringProperty(const char* prop, const char*& out) override;
+    int getPtrProperty(const char* prop, void*& out) override;
     int setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) override;
 
     bool handleEvent(shared_ptr<Event> event) override;

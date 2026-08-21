@@ -34,7 +34,7 @@ namespace MenuColors {
     constexpr float DEFAULT_HEIGHT_RATIO = 1.6f;
     constexpr float MIN_HEIGHT_RATIO = 1.0f;
     constexpr float MAX_HEIGHT_RATIO = 3.0f;
-    constexpr float ITEM_LEFT_PADDING   = 28.0f;
+    constexpr float ITEM_LEFT_PADDING   = 20.0f;  // icon 区左 padding（面板左缘 → icon 区起点，决策 v3/v4）
     constexpr float ITEM_RIGHT_PADDING  = 20.0f;
     constexpr float ICON_AREA_WIDTH     = 20.0f;
     constexpr float SHORTCUT_MIN_WIDTH  = 60.0f;
@@ -123,24 +123,41 @@ void MenuItem::draw() {
 
     SRect drawRect = getDrawRect();
 
-    // 绘制勾选标记
-    if (m_checked) {
+    // Menu 增强：icon 区布局参数（面板实例状态 + 自身行高/空隙）
+    auto* panel = dynamic_cast<MenuPanel*>(getParent());
+    float iconAreaW = panel ? panel->getIconAreaWidth() : MenuColors::ICON_AREA_WIDTH;
+    float rowH = panel ? panel->itemRowHeight(this) : m_fontSize * MenuColors::DEFAULT_HEIGHT_RATIO;
+    float gap = leading ? leading->getGap() : 8.0f;
+
+    TextRenderer* renderer = getTextRenderer();
+    int fontHeight = (renderer && m_font) ? renderer->getFontHeight(m_font.get()) : 0;
+
+    // 前置控件容器（icon 区）：正方形边长 = 字体高度（无字体回退 icon 区宽），
+    // icon 区内水平居中、行内垂直居中（各行独立，行高不同则中心线自然错开）。
+    // 几何/对齐/命中统一由 LeadingControlSlot 组件承载（见 LeadingControlSlot.h）
+    if (leading && leading->hasControl()) {
+        float slotSize = leading->getSlotHeight((float)fontHeight);
+        float slotLeft = MenuColors::ITEM_LEFT_PADDING + (iconAreaW - slotSize) / 2.0f;
+        auto ctl = leading->getControl();
+        ctl->setRect(leading->layout(0.0f, rowH, slotLeft, 0.0f, 0.0f, 1.0f, 1.0f, (float)fontHeight));
+        ctl->draw();
+    } else if (m_checked) {
+        // 勾选标记：icon 区中心（有容器时不绘制，勾选视觉由容器内 CheckBox 承担）；行内垂直居中
         GET_RENDERDEVICE->setDrawColor(MenuColors::ITEM_TEXT);
-        float cx = drawRect.left + MenuColors::ICON_AREA_WIDTH / 2.0f;
+        float cx = drawRect.left + (MenuColors::ITEM_LEFT_PADDING + iconAreaW / 2.0f) * getScaleXX();
         float cy = drawRect.top + drawRect.height / 2.0f;
         GET_RENDERDEVICE->drawLine(cx - 4, cy, cx - 1, cy + 3);
         GET_RENDERDEVICE->drawLine(cx - 1, cy + 3, cx + 4, cy - 3);
     }
 
-    TextRenderer* renderer = getTextRenderer();
     if (renderer && m_font) {
-        int fontHeight = renderer->getFontHeight(m_font.get());
         float textY = drawRect.top + (drawRect.height - fontHeight) / 2;
 
-        // 标题（左侧 padding 后开始）
+        // 标题（所有行文字起点统一：无 leadingControl 时从左 padding 起，不预留 icon 区）
         if (!m_caption.empty()) {
             renderer->drawText(m_font.get(), m_caption,
-                drawRect.left + MenuColors::ITEM_LEFT_PADDING, textY, MenuColors::ITEM_TEXT);
+                drawRect.left + (MenuColors::ITEM_LEFT_PADDING
+                    + (panel && panel->hasLeadingControl() ? (iconAreaW + gap) : 0)) * getScaleXX(), textY, MenuColors::ITEM_TEXT);
         }
 
         // 快捷键（右侧右对齐，箭头区域之前）
@@ -180,6 +197,12 @@ bool MenuItem::handleEvent(shared_ptr<Event> event) {
     if (gotPos) {
         SRect drawRect = getDrawRect();
         if (drawRect.contains(mx, my)) {
+            // 前置控件命中（先于 onClick 判断，覆盖 MouseMove/MouseDown/MouseUp）：
+            // 不触发 item onClick、不关闭菜单链，转子控件分发完成控件自身交互
+            // （CheckBox 在 MouseUp 翻转勾选，须经此路径送达；返回子控件分发结果）
+            if (leading && leading->containsPoint(mx, my)) {
+                return ControlImpl::handleEvent(event);
+            }
             if (event->m_type == EventType::MouseDown && event->mouseButton.button == MouseButton::Left) {
                 if (m_type == MenuItemType::Normal && m_onClick) {
                     closeMenuChain();
@@ -215,6 +238,32 @@ void MenuItem::closeMenuChain() {
     }
 }
 
+// Menu 增强：前置控件统一由 LeadingControlSlot 组件承载（挂载/对齐/间隙/命中）
+void MenuItem::setLeadingControl(shared_ptr<Control> ctl) {
+    ensureLeading();
+    if (leading->getControl() == ctl) return;
+    leading->detachFrom(this);
+    leading->setControl(ctl);
+    leading->attachTo(this);
+}
+
+void MenuItem::ensureLeading() {
+    if (!leading) {
+        leading = make_shared<LeadingControlSlot>();
+        leading->setFallbackSize(MenuColors::ICON_AREA_WIDTH);
+    }
+}
+
+// fontSize>0 时按自身 fontName/fontSize 重建字体；加载失败保持现状（回退注入字体）
+void MenuItem::ensureOwnFont() {
+    if (fontSize <= 0) return;
+    SharedFont f = loadMenuFont(this, fontName, (float)fontSize);
+    if (f) {
+        m_font = std::move(f);
+        m_fontSize = (float)fontSize;
+    }
+}
+
 // ==================== MenuPanel 实现 ====================
 
 MenuPanel::MenuPanel(Control *parent, float xScale, float yScale)
@@ -223,6 +272,7 @@ MenuPanel::MenuPanel(Control *parent, float xScale, float yScale)
     , m_heightRatio(MenuColors::DEFAULT_HEIGHT_RATIO)
     , m_itemHeight(m_fontSize * m_heightRatio)
     , m_iconAreaWidth(MenuColors::ICON_AREA_WIDTH)
+    , m_hasLeadingControl(false)
     , m_shortcutAreaWidth(0)
     , m_arrowAreaWidth(MenuColors::ARROW_AREA_WIDTH)
     , m_hoveredIndex(-1)
@@ -281,6 +331,8 @@ void MenuPanel::refreshScaleWith(float parentXX, float parentYY) {
         recalculateSize();
     }
     for (auto& item : m_items) {
+        // items 不在 m_children 中（面板手动管理），父链缩放须显式下发
+        item->refreshScaleWith(m_xxScale, m_yyScale);
         if (item->m_subMenu) item->m_subMenu->refreshScaleWith(m_xxScale, m_yyScale);
     }
     if (m_openSubMenu) m_openSubMenu->refreshScaleWith(m_xxScale, m_yyScale);
@@ -288,7 +340,8 @@ void MenuPanel::refreshScaleWith(float parentXX, float parentYY) {
 
 void MenuPanel::updateItemsFont() {
     for (auto& item : m_items) {
-        item->setMenuFont(m_font, m_fontSize);
+        if (item->fontSize > 0) item->ensureOwnFont();
+        else item->setMenuFont(m_font, m_fontSize);
     }
 }
 
@@ -327,7 +380,9 @@ void MenuPanel::addItem(shared_ptr<MenuItem> item) {
     if (!item) return;
     ensureFont();
     item->setParent(this);
-    item->setMenuFont(m_font, m_fontSize);
+    // 覆盖项先建自身字体再测量（否则 recalculateSize 首测用面板字体，icon 区宽/行高/面板宽偏差）
+    if (item->fontSize > 0) item->ensureOwnFont();
+    else item->setMenuFont(m_font, m_fontSize);
     m_items.push_back(item);
     if (getContext()) item->setContext(getContext());
     recalculateSize();
@@ -345,6 +400,14 @@ void MenuPanel::removeItem(shared_ptr<MenuItem> item) {
         m_items.erase(it);
         recalculateSize();
     }
+}
+
+// 变行高统一 helper（recalculateSize/layoutItems/hitTest 三处共用，防漂移）：
+// Separator = 分隔线高；其余 = 生效字号（注入或自身覆盖）× heightRatio
+float MenuPanel::itemRowHeight(MenuItem* item) const {
+    if (item->getType() == MenuItemType::Separator)
+        return MenuColors::SEPARATOR_HEIGHT + 2 * MenuColors::SEPARATOR_MARGIN;
+    return item->m_fontSize * m_heightRatio;
 }
 
 void MenuPanel::show() {
@@ -377,41 +440,50 @@ void MenuPanel::recalculateSize() {
     float maxCaptionWidth = 0;
     float maxShortcutWidth = 0;
     bool hasSubMenu = false;
+    float maxGap = 0;          // 各行 leadingGap 最大值（面板宽度用）
+    float maxIconFontH = 0;    // 各行字体高度最大值（icon 区宽 = max(...,20)）
 
     TextRenderer* renderer = getTextRenderer();
+    m_hasLeadingControl = false;
     for (auto& item : m_items) {
         if (item->getType() == MenuItemType::Separator) continue;
+        if (item->leading && item->leading->hasControl()) m_hasLeadingControl = true;
         if (item->hasSubMenu()) hasSubMenu = true;
+        if (item->leading && item->leading->getGap() > maxGap) maxGap = item->leading->getGap();
 
         // 获取标题宽度
-        if (renderer && item->m_font && !item->m_caption.empty()) {
-            float w = renderer->measureText(item->m_font.get(), item->m_caption).width / getScaleXX();
-            if (w > maxCaptionWidth) maxCaptionWidth = w;
-        }
-        // 获取快捷键宽度
-        if (renderer && item->m_font && !item->m_shortcut.empty()) {
-            float w = renderer->measureText(item->m_font.get(), item->m_shortcut).width / getScaleXX();
-            if (w > maxShortcutWidth) maxShortcutWidth = w;
+        if (renderer && item->m_font) {
+            float fontH = (float)renderer->getFontHeight(item->m_font.get());
+            if (fontH > maxIconFontH) maxIconFontH = fontH;
+            if (!item->m_caption.empty()) {
+                float w = renderer->measureText(item->m_font.get(), item->m_caption).width / getScaleXX();
+                if (w > maxCaptionWidth) maxCaptionWidth = w;
+            }
+            // 获取快捷键宽度
+            if (!item->m_shortcut.empty()) {
+                float w = renderer->measureText(item->m_font.get(), item->m_shortcut).width / getScaleXX();
+                if (w > maxShortcutWidth) maxShortcutWidth = w;
+            }
         }
     }
 
+    // icon 区宽 = max(各行字体高度, 20)（实例状态，随逐项字体变化）
+    m_iconAreaWidth = (std::max)(maxIconFontH, MenuColors::ICON_AREA_WIDTH);
     m_shortcutAreaWidth = (std::max)(maxShortcutWidth, MenuColors::SHORTCUT_MIN_WIDTH);
 
-    // 计算面板宽度
+    // 面板宽度：icon 区左 padding + icon 区宽 + 最大 gap + 标题 + 快捷键 + 箭头 + 右 padding
+    // （面板内无 leadingControl 时不预留 icon 区与 gap 空间）
     float panelWidth = MenuColors::ITEM_LEFT_PADDING
+                     + (m_hasLeadingControl ? (m_iconAreaWidth + maxGap) : 0)
                      + maxCaptionWidth
                      + (m_shortcutAreaWidth > 0 ? m_shortcutAreaWidth + 10.0f : 0)
                      + (hasSubMenu ? m_arrowAreaWidth : 0)
                      + MenuColors::ITEM_RIGHT_PADDING;
 
-    // 计算面板高度
+    // 面板高度（变行高：逐行累加）
     float panelHeight = 0;
     for (auto& item : m_items) {
-        if (item->getType() == MenuItemType::Separator) {
-            panelHeight += MenuColors::SEPARATOR_HEIGHT + 2 * MenuColors::SEPARATOR_MARGIN;
-        } else {
-            panelHeight += m_itemHeight;
-        }
+        panelHeight += itemRowHeight(item.get());
     }
 
     setRect(SRect(getRect().left, getRect().top, panelWidth, panelHeight));
@@ -426,26 +498,23 @@ void MenuPanel::layoutItems() {
                 MenuColors::SEPARATOR_HEIGHT + 2 * MenuColors::SEPARATOR_MARGIN));
             y += item->getRect().height;
         } else {
-            item->setRect(SRect(0, y, getRect().width, m_itemHeight));
-            y += m_itemHeight;
+            float rowH = itemRowHeight(item.get());
+            item->setRect(SRect(0, y, getRect().width, rowH));
+            y += rowH;
         }
     }
 }
 
 int MenuPanel::hitTest(float x, float y) {
-    SRect drawRect = getDrawRect();
-    // 转换为局部坐标
-    float localX = x - drawRect.left;
-    float localY = y - drawRect.top;
+    // 输入为全局绘制（像素）坐标；itemY/itemRowHeight 为逻辑坐标 → mapViewportToCanvas 换算（÷复合缩放）
+    SPoint local = mapViewportToCanvas({x, y});
 
     float itemY = 0;
     for (size_t i = 0; i < m_items.size(); ++i) {
         auto& item = m_items[i];
-        float itemHeight = (item->getType() == MenuItemType::Separator)
-            ? MenuColors::SEPARATOR_HEIGHT + 2 * MenuColors::SEPARATOR_MARGIN
-            : m_itemHeight;
+        float itemHeight = itemRowHeight(item.get());
 
-        if (localY >= itemY && localY < itemY + itemHeight) {
+        if (local.y >= itemY && local.y < itemY + itemHeight) {
             return (item->getType() == MenuItemType::Separator) ? -1 : (int)i;
         }
         itemY += itemHeight;
@@ -499,12 +568,125 @@ void MenuPanel::setHoveredIndex(int index) {
 
 int MenuPanel::setIntProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kHoveredIndex) == 0) { setHoveredIndex(value); return 1; }
+    if (strcmp(prop, PropertyNames::kLabelFontSize) == 0) { setFontSize((float)value); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemFontSize) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item) return 0;
+        item->setOwnFontSize(value);
+        if (value > 0) item->ensureOwnFont();
+        else item->setMenuFont(m_font, m_fontSize);  // 0 = 恢复继承面板字体
+        recalculateSize();
+        return 1;
+    }
     return ControlImpl::setIntProperty(prop, value);
 }
 
 int MenuPanel::getIntProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kHoveredIndex) == 0) { out = m_hoveredIndex; return 1; }
+    if (strcmp(prop, PropertyNames::kLabelFontSize) == 0) { out = (int)m_fontSize; return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemFontSize) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item) return 0;
+        out = item->getOwnFontSize();
+        return 1;
+    }
     return ControlImpl::getIntProperty(prop, out);
+}
+
+int MenuPanel::setStringProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kTreeItemId) == 0) { m_itemTargetId = value ? value : ""; return 1; }
+    return ControlImpl::setStringProperty(prop, value);
+}
+
+int MenuPanel::getStringProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kTreeItemId) == 0) { out = m_itemTargetId.c_str(); return 1; }
+    return ControlImpl::getStringProperty(prop, out);
+}
+
+int MenuPanel::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kItemHeightRatio) == 0) { setItemHeightRatio(value); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingGap) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item) return 0;
+        item->setLeadingGap(value);
+        recalculateSize();
+        return 1;
+    }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
+int MenuPanel::getFloatProperty(const char* prop, float& out) {
+    if (strcmp(prop, PropertyNames::kItemHeightRatio) == 0) { out = m_heightRatio; return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingGap) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item) return 0;
+        out = item->getLeadingGap();
+        return 1;
+    }
+    return ControlImpl::getFloatProperty(prop, out);
+}
+
+int MenuPanel::setEnumProperty(const char* prop, const char* value) {
+    if (strcmp(prop, PropertyNames::kFont) == 0) {
+        if (!value) return 0;
+        setFontName(FontNameFromString(value));
+        return 1;
+    }
+    if (strcmp(prop, PropertyNames::kTreeItemFont) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item || !value) return 0;
+        item->setFontName(FontNameFromString(value));
+        if (item->getOwnFontSize() > 0) item->ensureOwnFont();
+        recalculateSize();
+        return 1;
+    }
+    return ControlImpl::setEnumProperty(prop, value);
+}
+
+int MenuPanel::getEnumProperty(const char* prop, const char*& out) {
+    if (strcmp(prop, PropertyNames::kFont) == 0) { out = FontNameToString(m_fontName); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemFont) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item) return 0;
+        out = FontNameToString(item->getFontName());
+        return 1;
+    }
+    return ControlImpl::getEnumProperty(prop, out);
+}
+
+int MenuPanel::setPtrProperty(const char* prop, void* value) {
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingControl) == 0) {
+        // 前置控件容器（借用语义，生命周期由调用方保证，与 TreeView 同约定）：
+        // 无删除器包装，避免 MenuPanel 误删外部控件；挂/摘由 setLeadingControl（addControl/removeControl）完成
+        auto item = getItemById(m_itemTargetId);
+        if (!item) return 0;
+        if (value) {
+            item->setLeadingControl(shared_ptr<Control>(static_cast<Control*>(value), [](Control*) {}));
+        } else {
+            item->setLeadingControl(nullptr);   // NULL = 解除容器并摘树
+        }
+        recalculateSize();
+        return 1;
+    }
+    return ControlImpl::setPtrProperty(prop, value);
+}
+
+int MenuPanel::getPtrProperty(const char* prop, void*& out) {
+    if (strcmp(prop, PropertyNames::kTreeItemLeadingControl) == 0) {
+        auto item = getItemById(m_itemTargetId);
+        if (!item || !item->getLeadingControl()) return 0;
+        out = item->getLeadingControl().get();
+        return 1;
+    }
+    return ControlImpl::getPtrProperty(prop, out);
+}
+
+shared_ptr<MenuItem> MenuPanel::getItemById(const string& id) const {
+    if (id.empty()) return nullptr;
+    for (auto& item : m_items) {
+        if (item->getItemId() == id) return item;
+    }
+    return nullptr;
 }
 
 void MenuPanel::closeWithChildren() {
@@ -611,18 +793,28 @@ bool MenuPanel::handleEvent(shared_ptr<Event> event) {
         if (drawRect.contains(mx, my)) {
             int index = hitTest(mx, my);
             if (event->m_type == EventType::MouseMove) {
+                // 带前置控件的行先转发 MouseMove（容器 hover 态），再统一维护面板 hover 背景
+                if (index >= 0) {
+                    auto& item = m_items[index];
+                    if (item->leading && item->leading->hasControl()) item->leading->handleEvent(event);
+                }
                 setHoveredIndex(index);
                 return true;
             }
             if (event->m_type == EventType::MouseDown && event->mouseButton.button == MouseButton::Left) {
                 if (index >= 0) {
                     auto& item = m_items[index];
-                    if (item->getType() == MenuItemType::Normal && item->m_onClick) {
-                        item->closeMenuChain();
-                        item->m_onClick(dynamic_pointer_cast<MenuItem>(item->getThis()));
-                        fireCCallback(PropertyNames::kEventClick, CCallbackData::None, nullptr);
-                        return true;
-                    }
+                    // 命中前置控件 → 控件自身交互（不关菜单不触发 onClick，面板仍消费防穿透）；
+                    // 未命中 → item onClick + 关菜单链（item 级 fireCCallback）
+                    item->handleEvent(event);
+                }
+                return true;
+            }
+            if (event->m_type == EventType::MouseUp && event->mouseButton.button == MouseButton::Left) {
+                // 带前置控件的行转发 MouseUp（CheckBox 在 MouseUp 翻转勾选，须送达）
+                if (index >= 0) {
+                    auto& item = m_items[index];
+                    if (item->leading && item->leading->hasControl()) item->leading->handleEvent(event);
                 }
                 return true;
             }
@@ -697,11 +889,28 @@ void MenuBar::refreshScaleWith(float parentXX, float parentYY) {
     }
 }
 
+void MenuPanel::setParent(Control* parent) {
+    ControlImpl::setParent(parent);
+    if (parent) {
+        // items 不在 m_children 中，挂载后复合缩放须显式下发；字体按新复合重建并重排
+        for (auto& item : m_items) item->refreshScaleWith(m_xxScale, m_yyScale);
+        m_font.reset();
+        if (m_isCreated) {
+            ensureFont();
+            updateItemsFont();
+        }
+        recalculateSize();
+    }
+}
+
 void MenuBar::setParent(Control *parent) {
     ControlImpl::setParent(parent);
     if (parent) {
-        setRect(SRect(0, 0, parent->getRect().width, m_barHeight));
-        layoutEntries();
+        // 挂树时 parent 链已可解析 renderer：补加载字体（parseLayout 创建的菜单栏
+        // 挂树前 ensureFont 失败，缺字体时 layoutEntries 的 hitRect 宽度为 0，
+        // 导致点击菜单栏条目无法打开面板），再按父宽布局（手动定位模式跳过全宽重置）
+        ensureFont();
+        layoutEntries();  // 全宽重置仅非 manual 时生效（manual 由 setRect 自由定位）
     }
 }
 
@@ -725,6 +934,11 @@ void MenuBar::addMenu(const string& caption, shared_ptr<MenuPanel> panel) {
     layoutEntries();
 }
 
+shared_ptr<MenuPanel> MenuBar::getMenuPanel(int index) const {
+    if (index < 0 || index >= (int)m_entries.size()) return nullptr;
+    return m_entries[index].panel;
+}
+
 void MenuBar::removeMenu(const string& caption) {
     auto it = std::find_if(m_entries.begin(), m_entries.end(),
         [&caption](const MenuEntry& e) { return e.caption == caption; });
@@ -746,19 +960,17 @@ void MenuBar::layoutEntries() {
         entry.hitRect = SRect(x, 0, entryWidth, m_barHeight);
         x += entryWidth;
     }
-    // 更新菜单栏宽度
-    if (getParent()) {
+    // 更新菜单栏宽度（手动定位模式跳过：setRect 自由生效，条目 hitRect 仍按 0 起点排布）
+    if (!m_manualPosition && getParent()) {
         ControlImpl::setRect(SRect(0, 0, getParent()->getRect().width, m_barHeight));
     }
 }
 
 int MenuBar::hitTest(float x, float y) {
-    SRect drawRect = getDrawRect();
-    float localX = x - drawRect.left;
-    float localY = y - drawRect.top;
-
+    // 输入为全局绘制（像素）坐标；hitRect 为逻辑坐标 → mapViewportToCanvas 换算（÷复合缩放）
+    SPoint local = mapViewportToCanvas({x, y});
     for (size_t i = 0; i < m_entries.size(); ++i) {
-        if (m_entries[i].hitRect.contains(localX, localY)) {
+        if (m_entries[i].hitRect.contains(local.x, local.y)) {
             return (int)i;
         }
     }
@@ -775,11 +987,8 @@ void MenuBar::openMenu(int index) {
     if (index >= 0 && index < (int)m_entries.size()) {
         auto& entry = m_entries[index];
         SRect hitRect = entry.hitRect;
-        SRect drawRect = getDrawRect();
-        // MenuPanel 是 MenuBar 的子控件，需使用相对 MenuBar 的坐标（扣除父链偏移）
-        float offsetX = drawRect.left - getRect().left * getScaleXX();
-        float offsetY = drawRect.top - getRect().top * getScaleYY();
-        entry.panel->setPosition(offsetX + hitRect.left, offsetY + hitRect.top + hitRect.height);
+        // MenuPanel 是 MenuBar 子控件：局部逻辑坐标即可（绘制时自动乘复合缩放 + 父绘制位置）
+        entry.panel->setPosition(hitRect.left, hitRect.top + hitRect.height);
         entry.panel->show();
     }
 }
@@ -845,6 +1054,16 @@ int MenuBar::setFloatProperty(const char* prop, float value) {
     return ControlImpl::setFloatProperty(prop, value);
 }
 
+int MenuBar::setBoolProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kManualPosition) == 0) { setManualPosition(value != 0); return 1; }
+    return ControlImpl::setBoolProperty(prop, value);
+}
+
+int MenuBar::getBoolProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kManualPosition) == 0) { out = m_manualPosition ? 1 : 0; return 1; }
+    return ControlImpl::getBoolProperty(prop, out);
+}
+
 int MenuBar::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kFont) == 0) {
         FontName fn = FontNameFromString(value);
@@ -884,26 +1103,28 @@ void MenuBar::draw() {
 
     // 2. 绘制菜单项（背景 + 标题文本）
     TextRenderer* renderer = getTextRenderer();
+    float sx = getScaleXX(), sy = getScaleYY();
     for (size_t i = 0; i < m_entries.size(); ++i) {
         auto& entry = m_entries[i];
         SRect hitRect = entry.hitRect;
 
         if ((int)i == m_activeIndex) {
-            SRect itemBg(drawRect.left + hitRect.left, drawRect.top, hitRect.width, hitRect.height);
+            SRect itemBg(drawRect.left + hitRect.left * sx, drawRect.top + hitRect.top * sy,
+                         hitRect.width * sx, hitRect.height * sy);
             GET_RENDERDEVICE->setDrawColor(m_activeBgColor);
             GET_RENDERDEVICE->fillRect(itemBg);
         } else if ((int)i == m_hoveredIndex) {
-            SRect itemBg(drawRect.left + hitRect.left, drawRect.top, hitRect.width, hitRect.height);
+            SRect itemBg(drawRect.left + hitRect.left * sx, drawRect.top + hitRect.top * sy,
+                         hitRect.width * sx, hitRect.height * sy);
             GET_RENDERDEVICE->setDrawColor(m_hoverBgColor);
             GET_RENDERDEVICE->fillRect(itemBg);
         }
 
         if (renderer && m_font) {
             SSize sz = renderer->measureText(m_font.get(), entry.caption);
-            float textWidth = sz.width / getScaleXX();
             int fontHeight = renderer->getFontHeight(m_font.get());
             float textY = drawRect.top + (drawRect.height - fontHeight) / 2;
-            float textX = drawRect.left + hitRect.left + (hitRect.width - textWidth) / 2;
+            float textX = drawRect.left + hitRect.left * sx + (hitRect.width * sx - sz.width) / 2;
             SColor color = ((int)i == m_hoveredIndex) ? m_hoverTextColor : m_textColor;
             renderer->drawText(m_font.get(), entry.caption, textX, textY, color);
         }
@@ -995,6 +1216,7 @@ int MenuItem::setBoolProperty(const char* prop, int value) {
 int MenuItem::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kCaption) == 0)  { setCaption(value);  return 1; }
     if (strcmp(prop, PropertyNames::kShortcut) == 0) { setShortcut(value); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemId) == 0) { setItemId(value); return 1; }
     return ControlImpl::setStringProperty(prop, value);
 }
 int MenuItem::getBoolProperty(const char* prop, int& out) {
@@ -1004,6 +1226,7 @@ int MenuItem::getBoolProperty(const char* prop, int& out) {
 int MenuItem::getStringProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kCaption) == 0)  { out = m_caption.c_str();  return 1; }
     if (strcmp(prop, PropertyNames::kShortcut) == 0) { out = m_shortcut.c_str(); return 1; }
+    if (strcmp(prop, PropertyNames::kTreeItemId) == 0) { out = m_itemId.c_str(); return 1; }
     return ControlImpl::getStringProperty(prop, out);
 }
 int MenuItem::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
@@ -1050,6 +1273,31 @@ MenuItemBuilder& MenuItemBuilder::setBackgroundStateColor(StateColor stateColor)
 
 MenuItemBuilder& MenuItemBuilder::setTextStateColor(StateColor stateColor) {
     m_item->setTextStateColor(stateColor);
+    return *this;
+}
+
+MenuItemBuilder& MenuItemBuilder::setLeadingControl(shared_ptr<Control> ctl) {
+    m_item->setLeadingControl(std::move(ctl));
+    return *this;
+}
+
+MenuItemBuilder& MenuItemBuilder::setLeadingGap(float gap) {
+    m_item->setLeadingGap(gap);
+    return *this;
+}
+
+MenuItemBuilder& MenuItemBuilder::setFontName(FontName fn) {
+    m_item->setFontName(fn);
+    return *this;
+}
+
+MenuItemBuilder& MenuItemBuilder::setFontSize(int size) {
+    m_item->setOwnFontSize(size);
+    return *this;
+}
+
+MenuItemBuilder& MenuItemBuilder::setItemId(const string& id) {
+    m_item->setItemId(id);
     return *this;
 }
 

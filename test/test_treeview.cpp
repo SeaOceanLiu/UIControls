@@ -166,7 +166,7 @@ void initTestStyled() {
 
 // TreeView 增强（leadingControl + 逐节点字体）：演示 + 自动断言
 void initTestEnhanced() {
-    g_treeViewEnhanced = TreeViewBuilder(nullptr, SRect(280, 320, 300, 200))
+    g_treeViewEnhanced = TreeViewBuilder(nullptr, SRect(800, 320, 300, 200))
         .setFontSize(12)
         .setOnSelect(onTreeSelect)
         .setId(104)
@@ -248,12 +248,115 @@ void initTestEnhanced() {
                   : "Enhanced assertions: ALL PASS") << " (" << pass << " passed)" << endl;
 }
 
+// 2x 缩放断言（验收清单第 3 项）：布局矩形不变、绘制矩形翻倍、事件命中按逻辑坐标
+static void initTestScale2x() {
+    int pass = 0, fail = 0;
+    auto check = [&](bool ok, const char* name) {
+        if (ok) { pass++; cout << "PASS: " << name << endl; }
+        else { fail++; cout << "FAIL: " << name << endl; }
+    };
+    // 1. 逻辑矩形不受缩放影响
+    SRect lr = g_treeView2x->getRect();
+    check(lr.left == 280.0f && lr.top == 10.0f && lr.width == 250.0f && lr.height == 300.0f,
+          "2x treeview logic rect unchanged (280,10,250,300)");
+    // 2. 绘制矩形 = 逻辑 × 2（父 rootPanel 位于 (10,10)）
+    SRect dr = g_treeView2x->getDrawRect();
+    check(dr.left == 290.0f && dr.top == 20.0f && dr.width == 500.0f && dr.height == 600.0f,
+          "2x treeview drawRect doubled (290,20,500,600)");
+    // 3. 事件命中按绘制坐标：点击第一行（2x 树 draw (310, 20+12×2=44)）→ 选中
+    g_treeView2x->draw();
+    float rowHalf = (g_treeView2x->getRowHeight()) / 2.0f;
+    auto down = make_shared<Event>(EventType::MouseDown);
+    down->mouseButton = { 290.0f + 60.0f, 20.0f + rowHalf * 2.0f, MouseButton::Left };
+    g_treeView2x->handleEvent(down);
+    auto up = make_shared<Event>(EventType::MouseUp);
+    up->mouseButton = { 290.0f + 60.0f, 20.0f + rowHalf * 2.0f, MouseButton::Left };
+    g_treeView2x->handleEvent(up);
+    check(!g_treeView2x->getSelectedId().empty(), "2x treeview row hit by draw coords");
+    // 清选：避免 2x 树首行残留选中高亮（用户目测对比时无蓝色底色）
+    g_treeView2x->clearSelection();
+
+    // 4. 增强对比：1x 与 2x 树各追加一行 leadingControl + 一行大字号（18），
+    //    断言两者逻辑布局一致、2x 绘制尺寸翻倍
+    auto lc1 = CheckBoxBuilder(nullptr, SRect(0, 0, 16, 16)).build();
+    auto n1lc = makeNode("s_lc", "LC Row");
+    n1lc->leadingControl = lc1;
+    auto n1big = makeNode("s_big", "Big Font Row");
+    n1big->fontSize = 18;
+    auto items1 = g_treeView->getItems();
+    items1.push_back(n1lc);
+    items1.push_back(n1big);
+    g_treeView->setItems(items1);
+
+    auto lc2 = CheckBoxBuilder(nullptr, SRect(0, 0, 16, 16)).build();
+    auto n2lc = makeNode("s2_lc", "s2 LC Row");
+    n2lc->leadingControl = lc2;
+    auto n2big = makeNode("s2_big", "s2 Big Font Row");
+    n2big->fontSize = 18;
+    auto items2 = g_treeView2x->getItems();
+    items2.push_back(n2lc);
+    items2.push_back(n2big);
+    g_treeView2x->setItems(items2);
+
+    g_treeView->draw();
+    g_treeView2x->draw();
+
+    check(lc1 && lc2 && lc1->getParent() == g_treeView.get() && lc2->getParent() == g_treeView2x.get(),
+          "scale lc attached to both trees");
+    check(lc1->getRect().left == 20.0f && lc2->getRect().left == 20.0f,
+          "scale lc slot left == 20 (1x == 2x logic)");
+    // 字体像素度量有取整噪声（如 15 vs 14.5），用 ≤1px 容差
+    check(fabsf(lc1->getRect().width - lc2->getRect().width) <= 1.0f && lc1->getRect().width > 0,
+          "scale lc size same logic (1x == 2x)");
+    check(fabsf(lc2->getDrawRect().width - lc1->getDrawRect().width * 2.0f) <= 2.0f &&
+          fabsf(lc2->getDrawRect().height - lc1->getDrawRect().height * 2.0f) <= 2.0f,
+          "scale 2x lc draw size doubled vs 1x");
+    // 垂直居中：槽位中心 = 所在行中心（1x/2x 均成立，2x 槽位不再垂直错位）。
+    // s_lc 为顶层第 3 行（index=2）：rootPnl(折叠)1 行 + deep_0(折叠)1 行 + s_lc
+    float lc1c = lc1->getDrawRect().top + lc1->getDrawRect().height / 2;
+    float lc2c = lc2->getDrawRect().top + lc2->getDrawRect().height / 2;
+    float row1c = g_treeView->getDrawRect().top + 2 * g_treeView->getRowHeight()
+                  + g_treeView->getRowHeight() / 2;
+    float row2c = g_treeView2x->getDrawRect().top + 2 * g_treeView2x->getRowHeight() * 2
+                  + g_treeView2x->getRowHeight();
+    check(fabsf(lc1c - row1c) <= 1.0f, "scale 1x lc vertically centered");
+    check(fabsf(lc2c - row2c) <= 2.0f, "scale 2x lc vertically centered");
+
+    // 逐项字号经 item-id 定位读取，1x/2x 一致
+    g_treeView->setStringProperty("item-id", "s_big");
+    int fs1 = 0;
+    g_treeView->getIntProperty("item-font-size", fs1);
+    g_treeView2x->setStringProperty("item-id", "s2_big");
+    int fs2 = 0;
+    g_treeView2x->getIntProperty("item-font-size", fs2);
+    check(fs1 == 18 && fs2 == 18, "scale big row font size via item-id (1x == 2x)");
+
+    // 5. 槽位对齐：item-leading-align = bottom-left → 2x 槽位贴行底（复用 Label 9 宫格语义）
+    g_treeView2x->setStringProperty("item-id", "s2_lc");
+    check(g_treeView2x->setEnumProperty("item-leading-align", "bottom-left"),
+          "scale item-leading-align set");
+    g_treeView2x->draw();
+    const char* alignOut = "";
+    check(g_treeView2x->getEnumProperty("item-leading-align", alignOut) &&
+          alignOut && strcmp(alignOut, "bottom-left") == 0,
+          "scale item-leading-align get (bottom-left)");
+    float slotBottom = lc2->getDrawRect().top + lc2->getDrawRect().height;
+    float rowBottom = row2c + g_treeView2x->getRowHeight();
+    check(fabsf(slotBottom - rowBottom) <= 2.0f, "scale bottom-left slot flush to row bottom");
+    // 还原居中，供目视对比（1x/2x 均居中）
+    g_treeView2x->setEnumProperty("item-leading-align", "mid-left");
+    g_treeView2x->draw();
+
+    cout << (fail ? "Scale2x assertions: FAILURES = " + to_string(fail)
+                  : "Scale2x assertions: ALL PASS") << " (" << pass << " passed)" << endl;
+}
+
 // JSON 用例：TreeView item 增加前置控件容器（CheckBox/Image）+ 逐 Item 字体（粗体）+ leadingGap
 static const char* ENH_JSON = R"({
   "controls": [{
     "type": "panel",
     "id": "rootJsonEnh",
-    "rect": { "x": 620, "y": 10, "w": 170, "h": 180 },
+    "rect": { "x": 800, "y": 10, "w": 170, "h": 180 },
     "children": [{
       "type": "tree-view",
       "id": "jsonTreeEnh",
@@ -264,7 +367,10 @@ static const char* ENH_JSON = R"({
           "leadingGap": 10 },
         { "id": "j2", "label": "JSON img row",
           "leadingControl": { "type": "image", "image": "assets/images/cross_down.png" },
-          "font": "harmonyos-sans-sc-bold", "size": 16 }
+          "font": "harmonyos-sans-sc-bold", "size": 16 },
+        { "id": "j3", "label": "JSON align row",
+          "leadingControl": { "type": "check-box" },
+          "alignment": "bottom-left" }
       ]
     }]
   }]
@@ -295,6 +401,7 @@ void initTestJsonEnh(Bench* bench) {
     // item 级字段
     auto j1 = tv->findNodeById("j1");
     auto j2 = tv->findNodeById("j2");
+    auto j3 = tv->findNodeById("j3");
     check(j1 != nullptr && j2 != nullptr, "json enh items found");
     check(j1 && j1->leadingGap == 10.0f, "json enh item leadingGap");
     check(j2 && j2->fontName == FontName::HarmonyOS_Sans_SC_Bold, "json enh item bold font");
@@ -313,6 +420,8 @@ void initTestJsonEnh(Bench* bench) {
         tv->draw();
         check(img != nullptr && img->getTexture() != nullptr, "json enh j2 image texture loaded");
     }
+    check(j3 && j3->leadingControl != nullptr && j3->leadingAlign == AlignmentMode::AM_BOTTOM_LEFT,
+          "json enh j3 alignment parsed (bottom-left)");
 
     // CABI item 级属性（item-id 定位 → item-leading-gap / item-font-size / item-font）
     check(tv->setStringProperty(PropertyNames::kTreeItemId, "j2"), "json enh item-id set");
@@ -406,6 +515,7 @@ void testAppInitialize(shared_ptr<Bench>) {
     initTestStyled();
     initTestEnhanced();
     initTestJsonEnh(BENCH);
+    initTestScale2x();
 
     TestUtil::log("TreeView test data initialized");
 }

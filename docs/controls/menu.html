@@ -50,8 +50,20 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
 <tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>manual-position</code></td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比）（Set/GetBool）</td></tr>
 <tr><td><code>hovered-index</code></td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
 <tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
+</table>
+
+<h3>4.12.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
+<p>Menu 的逐项增强属性挂在 <strong>MenuPanel</strong> 上：先 <code>SetString("item-id", id)</code> 定位目标菜单项，随后 item 级属性作用于该菜单项。MenuItem 自身也支持 <code>SetString("item-id", id)</code> 设置其定位 id（编程式创建时便于后续定位）。</p>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th><th>说明</th></tr>
+<tr><td><code>item-id</code></td><td>String</td><td>—</td><td>定位目标菜单项（在 MenuPanel 上设置后，后续 item 级属性作用于该菜单项）</td></tr>
+<tr><td><code>item-font</code></td><td>Enum</td><td>继承 MenuPanel</td><td>逐项字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
+<tr><td><code>item-font-size</code></td><td>Int</td><td>0</td><td>逐项字号（0 = 继承面板字号；&gt;0 时该行行高 = 字号×item-height-ratio，独立于面板其余行）</td></tr>
+<tr><td><code>item-leading-gap</code></td><td>Float</td><td>8</td><td>行前置控件容器与文本之间的间隔（局部 px）</td></tr>
+<tr><td><code>item-leading-control</code></td><td>Ptr</td><td>—</td><td>行前置控件容器句柄（<strong>借用语义</strong>，生命周期由调用方保证；类型经 <code>UICornerstone_GetControlType</code> 查询（如 <code>"check-box"</code>），再经通用属性系统操作）。有容器时该行保留 icon 区（宽 = max(各行字体高度, 20)）、不绘制手绘勾选标记（勾选视觉由容器内控件承担）；传 <code>NULL</code> 解除容器</td></tr>
 </table>
 
 
@@ -74,15 +86,32 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
     {
       "caption": "文件(F)",
       "items": [
-        { "caption": "新建", "shortcut": "Ctrl+N", "events": { "onClick": "onMenuNew" } },
+        { "id": "mNew", "caption": "新建", "shortcut": "Ctrl+N", "events": { "onClick": "onMenuNew" } },
         { "type": "separator" },
-        { "caption": "最近打开",
+        { "id": "mRecent", "caption": "最近打开",
           "items": [ { "caption": "file1.txt", "events": { "onClick": "onOpenRecent" } } ] },
+        { "id": "mToggle", "caption": "已启用开关", "checked": true,
+          "leadingControl": { "type": "check-box", "checkState": "checked" } },
+        { "id": "mBig", "caption": "大字号项", "font": { "size": 24 } },
         { "caption": "退出", "checked": false, "events": { "onClick": "onMenuExit" } }
       ]
     }
   ]
 }</code></pre>
+
+<h3>4.12.4.1 item 增强（行前置控件容器 + 逐 Item 字号/行高）</h3>
+<p>Menu 二期增强（2026-08 实施）支持：</p>
+<ul>
+<li><strong>行前置控件容器</strong>：JSON 键 <code>leadingControl</code>（任意控件类型，如 <code>check-box</code> / <code>image</code>）。容器正方形、边长 = 该行字体高度、水平居中于 icon 区、垂直居中于行；面板有容器行时保留 icon 区（宽 = max(各行字体高度, 20)），无容器时 icon 区宽为 0（文本起点 = 左内边距 20，无 gap 预留）。</li>
+<li><strong>逐 Item 字体/字号</strong>：JSON 键 <code>font</code>（<code>name</code> / <code>size</code>，仅对该项生效；size=0 或缺省继承面板字号）。覆盖项行高 = 该项字号×item-height-ratio（默认 1.6），可形成变行高菜单。</li>
+<li><strong>勾选标记</strong>：<code>checked</code>（手绘勾，有容器行不绘制；item 勾选状态与容器内 CheckBox 自身状态相互独立）。</li>
+</ul>
+<pre><code>// 逐项增强 + 面板级定位（C ABI）
+UICornerstone_SetString(g_inst, panel, "item-id", "mToggle");        // 定位项
+void* lc = UICornerstone_GetPtr(g_inst, panel, "item-leading-control", NULL); // 取容器
+UICornerstone_GetBool(g_inst, lc, "checked", &checked);             // 操作容器
+UICornerstone_SetInt(g_inst, panel, "item-font-size", 18);          // 逐项字号
+UICornerstone_SetFloat(g_inst, panel, "item-leading-gap", 10);      // 逐项 gap</code></pre>
 
 
 <h2>4.12.5 C++ Binding / 核心库样例</h2>
@@ -146,6 +175,9 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 <tr><td><code>setOnClick(OnClickHandler)</code></td><td>点击回调</td></tr>
 <tr><td><code>setShortcut(string)</code> / <code>getShortcut()</code></td><td>快捷键文本（如 "Ctrl+N"）</td></tr>
 <tr><td><code>setSubMenu(shared_ptr&lt;MenuPanel&gt;)</code> / <code>getSubMenu()</code> / <code>hasSubMenu()</code></td><td>子菜单</td></tr>
+<tr><td><code>setItemId(string)</code> / <code>getItemId()</code></td><td>项定位 id（CABI item-id 定位模式，MenuPanel 经 item-id 定位到该项）</td></tr>
+<tr><td><code>setLeadingControl(shared_ptr&lt;Control&gt;)</code> / <code>getLeadingControl()</code></td><td>行前置控件容器（借用语义；NULL 解除）</td></tr>
+<tr><td><code>setOwnFontSize(float)</code> / <code>getOwnFontSize()</code> / <code>setFontName(FontName)</code> / <code>getFontName()</code></td><td>逐项覆盖字号（0 = 继承面板）/ 逐项字体</td></tr>
 </table>
 
 <h3>MenuPanel</h3>
@@ -153,7 +185,7 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addItem(shared_ptr&lt;MenuItem&gt;)</code> / <code>addSeparator()</code> / <code>removeItem(...)</code></td><td>菜单项管理</td></tr>
 <tr><td><code>closeWithChildren()</code> / <code>recalculateSize()</code></td><td>关闭 / 重算尺寸</td></tr>
-<tr><td><code>getItemAt(x, y)</code></td><td>命中测试</td></tr>
+<tr><td><code>getItemAt(x, y)</code> / <code>getItemById(id)</code></td><td>命中测试 / 按 item-id 定位项</td></tr>
 <tr><td><code>getOpenSubMenu()</code> / <code>setOpenSubMenu(panel)</code>、<code>getHoveredIndex()</code> / <code>setHoveredIndex(int)</code></td><td>子菜单 / 悬停状态</td></tr>
 <tr><td><code>setFontSize(float)</code> / <code>getFontSize()</code>、<code>setItemHeightRatio(float)</code> / <code>getItemHeightRatio()</code>（1.0~3.0，默认 1.6）、<code>setFontName(FontName)</code></td><td>字体 / 行高比 / 字体名（即时生效）</td></tr>
 <tr><td><code>show()</code> / <code>hide()</code> / <code>isVisible()</code> / <code>setPosition(x, y)</code></td><td>显隐与定位</td></tr>

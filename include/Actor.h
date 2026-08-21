@@ -54,10 +54,12 @@ public:
     int setStringProperty(const char* prop, const char* value) override;  // "image" / "image-resource"
     int setBoolProperty(const char* prop, int value) override;            // "match-parent-rect"
     int setIntProperty(const char* prop, int value) override;             // "alpha"
+    int setFloatProperty(const char* prop, float value) override;         // "anchor-x" / "anchor-y"
     int setEnumProperty(const char* prop, const char* value) override;    // "scale-type" / "anchor"
     int getEnumProperty(const char* prop, const char*& out) override;     // "scale-type" / "anchor"
     int getBoolProperty(const char* prop, int& out) override;             // "match-parent-rect"
     int getIntProperty(const char* prop, int& out) override;              // "alpha"
+    int getFloatProperty(const char* prop, float& out) override;          // "anchor-x" / "anchor-y"
     // image/image-resource 只写不读（m_filePath 为 fs::path，string() 临时对象会悬垂）
 
     void draw(void) override;   // 使用成员 alpha（原走 Material::draw 默认 255）

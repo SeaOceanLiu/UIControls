@@ -511,6 +511,10 @@ shared_ptr<Control> LayoutParser::parseImage(const json& j, Control* parent) {
     m_theme.applyCommonColors(actor, PropertyNames::kThemeCatPanel);
     parseCommonProperties(actor, j);
 
+    if (j.contains(PropertyNames::kJsonAlpha) && j[PropertyNames::kJsonAlpha].is_number_integer()) {
+        actor->setAlpha(static_cast<uint8_t>(j[PropertyNames::kJsonAlpha].get<int>()));
+    }
+
     if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string()) {
         m_controlsById[j[PropertyNames::kJsonId].get<string>()] = actor;
     }
@@ -1186,6 +1190,15 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
         menuBar->setBarHeight(j[PropertyNames::kJsonBarHeight].get<float>());
     }
 
+    // manualPosition（手动定位：跳过全宽布局，setRect 自由生效——同屏多 MenuBar / 缩放对比）
+    if (j.contains(PropertyNames::kJsonManualPosition) && j[PropertyNames::kJsonManualPosition].is_boolean()) {
+        menuBar->setManualPosition(j[PropertyNames::kJsonManualPosition].get<bool>());
+        // manual 模式在通用 rect 解析之后才生效，重放 rect 使自由定位立即落地
+        if (j.contains(PropertyNames::kJsonRect) && j[PropertyNames::kJsonRect].is_object()) {
+            menuBar->setRect(parseRect(j[PropertyNames::kJsonRect]));
+        }
+    }
+
     // menus array
     if (j.contains(PropertyNames::kJsonMenus) && j[PropertyNames::kJsonMenus].is_array()) {
         pushJsonPath(PropertyNames::kJsonMenus);
@@ -1196,6 +1209,19 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
 
             if (menuJson.contains(PropertyNames::kJsonItems) && menuJson[PropertyNames::kJsonItems].is_array()) {
                 auto panel = make_shared<MenuPanel>(nullptr, xScale, yScale);
+                if (menuJson.contains(PropertyNames::kJsonFont) && menuJson[PropertyNames::kJsonFont].is_object()) {
+                    if (menuJson[PropertyNames::kJsonFont].contains(PropertyNames::kJsonSize) &&
+                        menuJson[PropertyNames::kJsonFont][PropertyNames::kJsonSize].is_number()) {
+                        panel->setFontSize((float)menuJson[PropertyNames::kJsonFont][PropertyNames::kJsonSize].get<int>());
+                    }
+                    if (menuJson[PropertyNames::kJsonFont].contains(PropertyNames::kJsonName) &&
+                        menuJson[PropertyNames::kJsonFont][PropertyNames::kJsonName].is_string()) {
+                        panel->setFontName(FontNameFromString(menuJson[PropertyNames::kJsonFont][PropertyNames::kJsonName].get<string>().c_str()));
+                    }
+                }
+                if (menuJson.contains(PropertyNames::kJsonItemHeightRatio) && menuJson[PropertyNames::kJsonItemHeightRatio].is_number()) {
+                    panel->setItemHeightRatio(menuJson[PropertyNames::kJsonItemHeightRatio].get<float>());
+                }
                 populateMenuPanel(panel, menuJson[PropertyNames::kJsonItems], xScale, yScale);
                 menuBar->addMenu(caption, panel);
             } else {
@@ -1236,6 +1262,11 @@ void LayoutParser::populateMenuPanel(shared_ptr<MenuPanel> panel, const json& it
             item->setCaption(itemJson[PropertyNames::kJsonCaption].get<string>());
         }
 
+        // Item id（CABI item-id 属性定位的目标）
+        if (itemJson.contains(PropertyNames::kJsonId) && itemJson[PropertyNames::kJsonId].is_string()) {
+            item->setItemId(itemJson[PropertyNames::kJsonId].get<string>());
+        }
+
         // Shortcut
         if (itemJson.contains(PropertyNames::kJsonShortcut) && itemJson[PropertyNames::kJsonShortcut].is_string()) {
             item->setShortcut(itemJson[PropertyNames::kJsonShortcut].get<string>());
@@ -1262,6 +1293,27 @@ void LayoutParser::populateMenuPanel(shared_ptr<MenuPanel> panel, const json& it
         if (itemJson.contains(PropertyNames::kJsonEvents) && itemJson[PropertyNames::kJsonEvents].is_object()) {
             parseEvents(item, itemJson);
         }
+
+        // Menu 增强：前置控件容器（复用控件 JSON type 分发；缺 rect 补 {0,0,0,0} 占位，
+        // 容器 rect 由 MenuItem::draw 按 icon 区布局覆盖；parent 传 nullptr，由 setLeadingControl 挂树）
+        if (itemJson.contains(PropertyNames::kJsonLeadingControl) && itemJson[PropertyNames::kJsonLeadingControl].is_object()) {
+            json lcJson = itemJson[PropertyNames::kJsonLeadingControl];
+            if (!lcJson.contains(PropertyNames::kJsonRect)) {
+                lcJson[PropertyNames::kJsonRect] = {
+                    {PropertyNames::kJsonX, 0}, {PropertyNames::kJsonY, 0},
+                    {PropertyNames::kJsonW, 0}, {PropertyNames::kJsonH, 0}
+                };
+            }
+            auto lc = parseControl(lcJson, nullptr, 0);
+            if (lc) item->setLeadingControl(lc);
+            else logWarn("menu item leadingControl parse failed, skipped");
+        }
+        if (itemJson.contains(PropertyNames::kJsonLeadingGap) && itemJson[PropertyNames::kJsonLeadingGap].is_number())
+            item->setLeadingGap(itemJson[PropertyNames::kJsonLeadingGap].get<float>());
+        if (itemJson.contains(PropertyNames::kJsonItemFont) && itemJson[PropertyNames::kJsonItemFont].is_string())
+            item->setFontName(FontNameFromString(itemJson[PropertyNames::kJsonItemFont].get<string>().c_str()));
+        if (itemJson.contains(PropertyNames::kJsonItemFontSize) && itemJson[PropertyNames::kJsonItemFontSize].is_number())
+            item->setOwnFontSize(itemJson[PropertyNames::kJsonItemFontSize].get<int>());
 
         item->create();
 
@@ -1791,6 +1843,8 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
                 node->expanded = item.value(PropertyNames::kJsonExpanded, false);
                 if (item.contains(PropertyNames::kJsonLeadingGap) && item[PropertyNames::kJsonLeadingGap].is_number())
                     node->leadingGap = item[PropertyNames::kJsonLeadingGap].get<float>();
+                if (item.contains(PropertyNames::kJsonAlignment) && item[PropertyNames::kJsonAlignment].is_string())
+                    node->leadingAlign = parseAlignment(item[PropertyNames::kJsonAlignment].get<string>());
                 if (item.contains(PropertyNames::kJsonItemFont) && item[PropertyNames::kJsonItemFont].is_string())
                     node->fontName = FontNameFromString(item[PropertyNames::kJsonItemFont].get<string>().c_str());
                 if (item.contains(PropertyNames::kJsonItemFontSize) && item[PropertyNames::kJsonItemFontSize].is_number())
@@ -1812,6 +1866,7 @@ shared_ptr<TreeView> LayoutParser::parseTreeView(const json& j, Control* parent)
                 }
                 if (item.contains(PropertyNames::kJsonUserData) && item[PropertyNames::kJsonUserData].is_string()) {
                     node->userData = static_cast<void*>(new std::string(item[PropertyNames::kJsonUserData].get<string>()));
+                    node->userDataOwned = true;
                 }
                 if (item.contains(PropertyNames::kJsonChildren) && item[PropertyNames::kJsonChildren].is_array()) {
                     parseItems(item[PropertyNames::kJsonChildren], node->children);
@@ -2133,6 +2188,16 @@ void LayoutParser::parseEvents(shared_ptr<ControlImpl> ctrl, const json& j) {
             if (it != m_handlers.end()) {
                 auto handler = it->second;
                 label->setOnClick([handler](shared_ptr<Label> sender) {
+                    handler(sender);
+                });
+            }
+        }
+        if (events.contains(PropertyNames::kEventKeyPropertyChanged) && events[PropertyNames::kEventKeyPropertyChanged].is_string()) {
+            string handlerName = events[PropertyNames::kEventKeyPropertyChanged].get<string>();
+            auto it = m_handlers.find(handlerName);
+            if (it != m_handlers.end()) {
+                auto handler = it->second;
+                label->setOnPropertyChanged([handler](shared_ptr<Label> sender) {
                     handler(sender);
                 });
             }

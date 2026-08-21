@@ -1012,6 +1012,15 @@ int ComboBox::getFloatProperty(const char* prop, float& out) {
 }
 
 int ComboBox::getStringProperty(const char* prop, const char*& out) {
+    // selected-label：当前选中项的 label；无选中返回空串
+    if (strcmp(prop, PropertyNames::kSelectedLabel) == 0) {
+        if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_items.size()) {
+            out = m_items[m_selectedIndex].label.c_str();
+        } else {
+            out = "";
+        }
+        return 1;
+    }
     // selected-value：选中项的 value；无匹配时返回编辑框保留的输入内容
     if (strcmp(prop, PropertyNames::kSelectedValue) == 0) {
         if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_items.size()) {
@@ -1027,6 +1036,12 @@ int ComboBox::getStringProperty(const char* prop, const char*& out) {
         return 1;
     }
     return ControlImpl::getStringProperty(prop, out);
+}
+
+int ComboBox::getPtrProperty(const char* prop, void*& out) {
+    if (strcmp(prop, PropertyNames::kListPanel) == 0)     { out = m_listPanel ? static_cast<Control*>(m_listPanel.get()) : nullptr;     return 1; }
+    if (strcmp(prop, PropertyNames::kListScrollBar) == 0) { out = m_scrollBar ? static_cast<Control*>(m_scrollBar.get()) : nullptr;      return 1; }
+    return ControlImpl::getPtrProperty(prop, out);
 }
 
 int ComboBox::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {

@@ -65,6 +65,7 @@ PROP_CONSTEXPR const char* kTitleBarBG          = "title-bar-bg";
 PROP_CONSTEXPR const char* kTitleText           = "title-text";
 PROP_CONSTEXPR const char* kClosedText          = "closed-text";
 PROP_CONSTEXPR const char* kPopupBG             = "popup-bg";
+PROP_CONSTEXPR const char* kFocusRingColor      = "focus-ring-color";
 
 // TreeView 颜色
 PROP_CONSTEXPR const char* kTreeSelected        = "selected";
@@ -75,6 +76,11 @@ PROP_CONSTEXPR const char* kVisible             = "visible";
 PROP_CONSTEXPR const char* kEnabled             = "enabled";
 PROP_CONSTEXPR const char* kTransparent         = "transparent";
 PROP_CONSTEXPR const char* kBorderVisible       = "border-visible";
+PROP_CONSTEXPR const char* kFocusable           = "focusable";
+PROP_CONSTEXPR const char* kShowFocusRing       = "show-focus-ring";
+PROP_CONSTEXPR const char* kFocusRingAlwaysVisible = "focus-ring-always-visible";
+PROP_CONSTEXPR const char* kFocusBoundary       = "focus-boundary";
+PROP_CONSTEXPR const char* kAlwaysOnTop         = "always-on-top";
 
 // -- Button 状态图（字符串属性：图片路径；设置后创建对应状态 Actor）--
 PROP_CONSTEXPR const char* kNormalImage         = "normal-image";
@@ -95,6 +101,7 @@ PROP_CONSTEXPR const char* kShowValueLabel      = "show-value-label";
 PROP_CONSTEXPR const char* kCycleEnabled        = "cycle-enabled";
 PROP_CONSTEXPR const char* kCycleNavigation     = "cycle-navigation";
 PROP_CONSTEXPR const char* kDefaultExpand       = "default-expand";
+PROP_CONSTEXPR const char* kDebugDraw           = "debug-draw";
 PROP_CONSTEXPR const char* kResizable           = "resizable";
 PROP_CONSTEXPR const char* kCloseOnClickOutside = "close-on-click-outside";
 PROP_CONSTEXPR const char* kCloseOnEsc          = "close-on-esc";
@@ -120,6 +127,41 @@ PROP_CONSTEXPR const char* kMaxVisibleItems     = "max-visible-items";
 PROP_CONSTEXPR const char* kSelectedIndex       = "selected-index";
 PROP_CONSTEXPR const char* kHoveredIndex        = "hovered-index";
 PROP_CONSTEXPR const char* kDecimals            = "decimals";
+PROP_CONSTEXPR const char* kTabIndex            = "tab-index";
+PROP_CONSTEXPR const char* kPasswordChar        = "password-char";
+// 只读查询属性
+PROP_CONSTEXPR const char* kPercent             = "percent";
+PROP_CONSTEXPR const char* kTotalFrames         = "total-frames";
+PROP_CONSTEXPR const char* kCurrentFrame        = "current-frame";
+PROP_CONSTEXPR const char* kPopupVisible        = "popup-visible";
+PROP_CONSTEXPR const char* kResult              = "result";
+PROP_CONSTEXPR const char* kSelectedLabel       = "selected-label";
+// 命令式开关属性（Popup/Dialog）
+PROP_CONSTEXPR const char* kOpen                = "open";
+// 自由坐标锚点
+PROP_CONSTEXPR const char* kAnchorX             = "anchor-x";
+PROP_CONSTEXPR const char* kAnchorY             = "anchor-y";
+// 子控件访问器（只读 Ptr 属性）
+PROP_CONSTEXPR const char* kTitleBar            = "title-bar";
+PROP_CONSTEXPR const char* kTitleLabel          = "title-label";
+PROP_CONSTEXPR const char* kCloseButton         = "close-button";
+PROP_CONSTEXPR const char* kClientPanel         = "client-panel";
+PROP_CONSTEXPR const char* kListPanel           = "list-panel";
+PROP_CONSTEXPR const char* kListScrollBar       = "list-scroll-bar";
+PROP_CONSTEXPR const char* kScrollBarProp       = "scroll-bar";
+PROP_CONSTEXPR const char* kHScrollBarProp      = "h-scroll-bar";
+PROP_CONSTEXPR const char* kConfirmButton       = "confirm-button";
+PROP_CONSTEXPR const char* kCancelButton        = "cancel-button";
+// 布局子属性（Panel setChild*Props 属性系统入口）
+PROP_CONSTEXPR const char* kChildTargetId       = "child-id";
+PROP_CONSTEXPR const char* kChildFlowWeight     = "flow-weight";
+PROP_CONSTEXPR const char* kChildAnchor          = "anchor";
+PROP_CONSTEXPR const char* kChildAnchorOffsetX  = "anchor-offset-x";
+PROP_CONSTEXPR const char* kChildAnchorOffsetY  = "anchor-offset-y";
+PROP_CONSTEXPR const char* kChildGridRow        = "grid-row";
+PROP_CONSTEXPR const char* kChildGridCol        = "grid-col";
+PROP_CONSTEXPR const char* kChildGridRowSpan    = "grid-row-span";
+PROP_CONSTEXPR const char* kChildGridColSpan    = "grid-col-span";
 
 // -- Float 属性 --
 PROP_CONSTEXPR const char* kLineSpacingRatio    = "line-spacing-ratio";
@@ -140,6 +182,7 @@ PROP_CONSTEXPR const char* kStepSize            = "step-size";
 PROP_CONSTEXPR const char* kThickness           = "thickness";
 PROP_CONSTEXPR const char* kEdgeMargin          = "edge-margin";
 PROP_CONSTEXPR const char* kBarHeight           = "bar-height";
+PROP_CONSTEXPR const char* kManualPosition      = "manual-position";
 PROP_CONSTEXPR const char* kItemHeightRatio     = "item-height-ratio";
 PROP_CONSTEXPR const char* kArrowWidth          = "arrow-width";
 PROP_CONSTEXPR const char* kItemHeight          = "item-height";
@@ -155,6 +198,12 @@ PROP_CONSTEXPR const char* kClosedSwatchSize    = "closed-swatch-size";
 PROP_CONSTEXPR const char* kPageStep            = "page-step";
 PROP_CONSTEXPR const char* kButtonWidth         = "button-width";
 PROP_CONSTEXPR const char* kCaptionSize         = "caption-size";
+PROP_CONSTEXPR const char* kMarginLeft          = "margin-left";
+PROP_CONSTEXPR const char* kMarginTop           = "margin-top";
+PROP_CONSTEXPR const char* kMarginRight         = "margin-right";
+PROP_CONSTEXPR const char* kMarginBottom        = "margin-bottom";
+PROP_CONSTEXPR const char* kShadowOffsetX       = "shadow-offset-x";
+PROP_CONSTEXPR const char* kShadowOffsetY       = "shadow-offset-y";
 
 // Splitter
 PROP_CONSTEXPR const char* kFirstMin            = "first-min";
@@ -171,6 +220,8 @@ PROP_CONSTEXPR const char* kShortcut            = "shortcut";
 PROP_CONSTEXPR const char* kTitle               = "title";
 PROP_CONSTEXPR const char* kConfirmText         = "confirm-text";
 PROP_CONSTEXPR const char* kCancelText          = "cancel-text";
+PROP_CONSTEXPR const char* kId                  = "id";
+PROP_CONSTEXPR const char* kControlType         = "control-type";
 PROP_CONSTEXPR const char* kColor               = "color";
 PROP_CONSTEXPR const char* kAnimation           = "animation";
 PROP_CONSTEXPR const char* kPlaying             = "playing";            // LuotiAni 播放/暂停（命令式，置 1=play 帧复位 0 重播）
@@ -186,6 +237,7 @@ PROP_CONSTEXPR const char* kSelectedUserData    = "selected-user-data";
 // TreeView item 级属性：先以字符串属性 "item-id" 定位目标节点，再用下列属性作用于该节点
 PROP_CONSTEXPR const char* kTreeItemId             = "item-id";
 PROP_CONSTEXPR const char* kTreeItemLeadingGap     = "item-leading-gap";
+PROP_CONSTEXPR const char* kTreeItemLeadingAlign   = "item-leading-align";
 PROP_CONSTEXPR const char* kTreeItemFontSize       = "item-font-size";
 PROP_CONSTEXPR const char* kTreeItemFont           = "item-font";
 PROP_CONSTEXPR const char* kTreeItemLeadingControl = "item-leading-control";
@@ -218,6 +270,9 @@ PROP_CONSTEXPR const char* kOrientation         = "orientation";
 PROP_CONSTEXPR const char* kCheckState          = "check-state";
 PROP_CONSTEXPR const char* kLabelFont           = "label-font";
 PROP_CONSTEXPR const char* kCenteredMode        = "centered-mode";
+PROP_CONSTEXPR const char* kState               = "state";
+PROP_CONSTEXPR const char* kFocusRingStyle      = "focus-ring-style";
+PROP_CONSTEXPR const char* kFontStyle           = "font-style";
 
 // -- 枚举值常量 --
 
@@ -262,6 +317,10 @@ PROP_CONSTEXPR const char* kAlignBottomCenter   = "bottom-center";
 
 // CenteredMode
 PROP_CONSTEXPR const char* kCentered            = "centered";
+
+// FocusRingStyle
+PROP_CONSTEXPR const char* kFocusRingSolid      = "solid";
+PROP_CONSTEXPR const char* kFocusRingDashed     = "dashed";
 
 // -- Font 枚举值 --
 PROP_CONSTEXPR const char* kFontAsulBold                    = "asul-bold";
@@ -422,6 +481,7 @@ PROP_CONSTEXPR const char* kJsonResourceProviders   = "resourceProviders";    //
 PROP_CONSTEXPR const char* kJsonRPMountName         = "name";                 // 挂载点项：资源名
 PROP_CONSTEXPR const char* kJsonRPMountPath         = "path";                 // 挂载点项：相对路径
 PROP_CONSTEXPR const char* kJsonScaleType           = "scaleType";
+PROP_CONSTEXPR const char* kJsonAlpha               = "alpha";            // 图片透明度 0-255
 PROP_CONSTEXPR const char* kJsonLuotiAni            = "luotiAni";
 PROP_CONSTEXPR const char* kJsonPlaying             = "playing";           // 内嵌动画：置 true 挂树后自动播放
 PROP_CONSTEXPR const char* kJsonPlaceholder         = "placeholder";
@@ -504,6 +564,8 @@ PROP_CONSTEXPR const char* kJsonTextMode            = "textMode";
 PROP_CONSTEXPR const char* kJsonStep                = "step";
 PROP_CONSTEXPR const char* kJsonReverse             = "reverse";
 PROP_CONSTEXPR const char* kJsonBarHeight           = "barHeight";
+PROP_CONSTEXPR const char* kJsonManualPosition      = "manualPosition";
+PROP_CONSTEXPR const char* kJsonItemHeightRatio     = "itemHeightRatio";
 PROP_CONSTEXPR const char* kJsonPresetCols          = "cols";
 PROP_CONSTEXPR const char* kJsonPresetRows          = "rows";
 PROP_CONSTEXPR const char* kJsonFirstPanel          = "firstPanel";
@@ -552,6 +614,7 @@ PROP_CONSTEXPR const char* kEventKeyConfirm          = "onConfirm";
 PROP_CONSTEXPR const char* kEventKeyCancel           = "onCancel";
 PROP_CONSTEXPR const char* kEventKeyClose            = "onClose";
 PROP_CONSTEXPR const char* kEventKeySplitterMoved    = "onSplitterMoved";
+PROP_CONSTEXPR const char* kEventKeyPropertyChanged  = "onPropertyChanged";
 
 // -- 控件类型名（布局 JSON type 字段，小写 kebab-case）--
 PROP_CONSTEXPR const char* kControlTypeLabel = "label";

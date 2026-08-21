@@ -10,6 +10,7 @@
 #include "ControlBase.h"
 #include "Font.h"
 #include "GraphTool.h"
+#include "LeadingControlSlot.h"
 
 using namespace std;
 
@@ -63,6 +64,24 @@ public:
     Font* getFont() const { return m_font.get(); }
     float getFontSize() const { return m_fontSize; }
 
+    // Menu 增强：前置控件容器 + 逐 Item 字体
+    void setLeadingControl(shared_ptr<Control> ctl);
+    shared_ptr<Control> getLeadingControl() const {
+        return (leading && leading->hasControl()) ? leading->getControl() : nullptr;
+    }
+    void setLeadingGap(float gap) { ensureLeading(); leading->setGap(gap); }
+    float getLeadingGap() const { return leading ? leading->getGap() : 8.0f; }
+    void setFontName(FontName fn) { fontName = fn; }
+    FontName getFontName() const { return fontName; }
+    void setOwnFontSize(int size) { fontSize = size; }
+    int getOwnFontSize() const { return fontSize; }
+    void setItemId(const string& id) { m_itemId = id; }
+    const string& getItemId() const { return m_itemId; }
+    // fontSize>0 时按自身 fontName/fontSize 重建字体（加载失败保持现状回退）
+    void ensureOwnFont();
+    // 惰性创建 leading 组件
+    void ensureLeading();
+
     // 关闭整个菜单链
     void closeMenuChain();
 
@@ -82,6 +101,13 @@ private:
     shared_ptr<MenuPanel> m_subMenu;
     SharedFont m_font;
     float m_fontSize;
+
+    // Menu 增强：前置控件统一由 LeadingControlSlot 组件承载（挂载/对齐/间隙/命中，
+    // 见 LeadingControlSlot.h，供 TreeView/Menu/未来 ListView 等复用）
+    shared_ptr<LeadingControlSlot> leading;
+    FontName fontName = FontName::MapleMono_NF_CN_Regular; // 与面板默认一致；仅 fontSize>0 时生效
+    int fontSize = 0;                                     // 0 = 继承面板级字号
+    string m_itemId;                                      // CABI item-id 定位（第二期）
 };
 
 // ==================== MenuPanel 菜单面板 ====================
@@ -93,6 +119,7 @@ public:
     ~MenuPanel() override;
 
     void setContext(UIContext* ctx) override;
+    void setParent(Control* parent) override;
     void draw() override;
     bool handleEvent(shared_ptr<Event> event) override;
     bool isContainsPoint(float x, float y) override;
@@ -120,6 +147,9 @@ public:
     // 重新计算尺寸
     void recalculateSize();
 
+    // 命中测试：输入绘制（像素）坐标，返回条目索引（未命中 -1）
+    int hitTest(float x, float y);
+
     // 获取子菜单面板
     shared_ptr<MenuPanel> getOpenSubMenu() const { return m_openSubMenu; }
     void setOpenSubMenu(shared_ptr<MenuPanel> panel);
@@ -135,9 +165,27 @@ public:
     float getItemHeightRatio() const { return m_heightRatio; }
     void setFontName(FontName fontName);
 
-    // 属性系统
+    // Menu 增强：icon 区宽（max(各行字体高度, 20)，实例状态，随逐项字体变化；
+    // 面板内没有任何 leadingControl 时 = 0，不预留 icon 区空间）
+    float getIconAreaWidth() const { return m_hasLeadingControl ? m_iconAreaWidth : 0; }
+    // 面板内是否存在 leadingControl（决定是否预留 icon 区）
+    bool hasLeadingControl() const { return m_hasLeadingControl; }
+    // 行高（变行高）：Separator = 分隔线高；其余 = 生效字号 × heightRatio
+    float itemRowHeight(MenuItem* item) const;
+    // 按 item-id 定位（CABI 属性分发用；getItemAt 为位置定位）
+    shared_ptr<MenuItem> getItemById(const string& id) const;
+
+    // 属性系统（CABI item-id 定位 + item-leading-* 属性，TreeView v7 同模式）
     int setIntProperty(const char* prop, int value) override;
     int getIntProperty(const char* prop, int& out) override;
+    int setStringProperty(const char* prop, const char* value) override;
+    int getStringProperty(const char* prop, const char*& out) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int getFloatProperty(const char* prop, float& out) override;
+    int setEnumProperty(const char* prop, const char* value) override;
+    int getEnumProperty(const char* prop, const char*& out) override;
+    int setPtrProperty(const char* prop, void* value) override;
+    int getPtrProperty(const char* prop, void*& out) override;
 
 private:
     vector<shared_ptr<MenuItem>> m_items;
@@ -145,6 +193,7 @@ private:
     float m_heightRatio;
     float m_itemHeight;
     float m_iconAreaWidth;
+    bool m_hasLeadingControl;
     float m_shortcutAreaWidth;
     float m_arrowAreaWidth;
     int m_hoveredIndex;
@@ -165,8 +214,8 @@ private:
     void ensureFont();
     void updateItemsFont();
     void layoutItems();
-    int hitTest(float x, float y);
     void drawShadow();
+    string m_itemTargetId;  // CABI "item-id" 定位：item 级属性的作用目标
 };
 
 // ==================== MenuBar 菜单栏 ====================
@@ -186,6 +235,7 @@ public:
 
     // 添加顶级菜单
     void addMenu(const string& caption, shared_ptr<MenuPanel> panel);
+    shared_ptr<MenuPanel> getMenuPanel(int index) const;  // 第 index 个菜单面板（越界返回 nullptr）
     void removeMenu(const string& caption);
 
     // 关闭所有下拉菜单
@@ -194,6 +244,12 @@ public:
     // 菜单栏高度
     void setBarHeight(float height);
     float getBarHeight() const { return m_barHeight; }
+
+    // 手动定位模式：默认 false = 全宽布局（宽=父宽、top=0，setRect 被 layoutEntries 覆盖）；
+    // 开启后 setRect 自由生效（同屏多 MenuBar / 缩放对比测试用），条目标题 hitRect 仍按
+    // 0 起点排布（条目区域 = 标题宽 + 2×padding，缩放时随绘制矩形放大）
+    void setManualPosition(bool on) { m_manualPosition = on; }
+    bool getManualPosition() const { return m_manualPosition; }
 
     // 设置菜单项高度与字体大小的比例系数（范围 1.0 ~ 3.0）
     void setItemHeightRatio(float ratio);
@@ -209,6 +265,9 @@ public:
     void enterMenuMode(int index);
     void exitMenuMode();
 
+    // 命中测试：输入绘制（像素）坐标，返回条目索引（未命中 -1）
+    int hitTest(float x, float y);
+
 private:
     struct MenuEntry {
         string caption;
@@ -221,6 +280,7 @@ private:
     int m_hoveredIndex;
     int m_activeIndex;
     bool m_menuMode;
+    bool m_manualPosition = false;
 
     // 颜色
     SColor m_bgColor;
@@ -236,14 +296,15 @@ private:
 
     void ensureFont();
     void layoutEntries();
-    int hitTest(float x, float y);
     void openMenu(int index);
     void switchMenu(int index);
 public:
     // ── Property system overrides ──
+    int setBoolProperty(const char* prop, int value) override;
     int setFloatProperty(const char* prop, float value) override;
     int setEnumProperty(const char* prop, const char* value) override;
 
+    int getBoolProperty(const char* prop, int& out) override;
     int getFloatProperty(const char* prop, float& out) override;
     int getEnumProperty(const char* prop, const char*& out) override;
 };
@@ -262,6 +323,11 @@ public:
     MenuItemBuilder& setEnabled(bool enabled);
     MenuItemBuilder& setBackgroundStateColor(StateColor stateColor);
     MenuItemBuilder& setTextStateColor(StateColor stateColor);
+    MenuItemBuilder& setLeadingControl(shared_ptr<Control> ctl);
+    MenuItemBuilder& setLeadingGap(float gap);
+    MenuItemBuilder& setFontName(FontName fn);
+    MenuItemBuilder& setFontSize(int size);
+    MenuItemBuilder& setItemId(const string& id);
 
     shared_ptr<MenuItem> build();
 

@@ -610,6 +610,7 @@ int Label::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kShadow) == 0)    { setShadow(value != 0);      return 1; }
     if (strcmp(prop, PropertyNames::kExpand) == 0)    { setEnableExpand(value != 0); return 1; }
     if (strcmp(prop, PropertyNames::kClickable) == 0)  { setClickable(value != 0);   return 1; }
+    if (strcmp(prop, PropertyNames::kDebugDraw) == 0)  { setDebugDraw(value != 0);   return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 int Label::setIntProperty(const char* prop, int value) {
@@ -619,6 +620,8 @@ int Label::setIntProperty(const char* prop, int value) {
 }
 int Label::setFloatProperty(const char* prop, float value) {
     if (strcmp(prop, PropertyNames::kLineSpacingRatio) == 0) { setLineSpacingRatio(value); return 1; }
+    if (strcmp(prop, PropertyNames::kShadowOffsetX) == 0) { SPoint o = m_shadowOffset; o.x = value; setShadowOffset(o); return 1; }
+    if (strcmp(prop, PropertyNames::kShadowOffsetY) == 0) { SPoint o = m_shadowOffset; o.y = value; setShadowOffset(o); return 1; }
     return ControlImpl::setFloatProperty(prop, value);
 }
 int Label::setStringProperty(const char* prop, const char* value) {
@@ -662,12 +665,21 @@ int Label::setEnumProperty(const char* prop, const char* value) {
         setFont(FontNameFromString(value));
         return 1;
     }
+    if (strcmp(prop, PropertyNames::kFontStyle) == 0) {
+        if (_stricmp(value, PropertyNames::kFontStyleNormal) == 0)        { SetFontStyle(0); return 1; }
+        if (_stricmp(value, PropertyNames::kFontStyleBold) == 0)          { SetFontStyle(1); return 1; }
+        if (_stricmp(value, PropertyNames::kFontStyleItalic) == 0)        { SetFontStyle(2); return 1; }
+        if (_stricmp(value, PropertyNames::kFontStyleUnderline) == 0)     { SetFontStyle(4); return 1; }
+        if (_stricmp(value, PropertyNames::kFontStyleStrikethrough) == 0) { SetFontStyle(8); return 1; }
+        return 0;
+    }
     return ControlImpl::setEnumProperty(prop, value);
 }
 int Label::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kShadow) == 0)    { out = m_shadowEnabled ? 1 : 0;      return 1; }
     if (strcmp(prop, PropertyNames::kExpand) == 0)    { out = m_enableExpand ? 1 : 0;       return 1; }
     if (strcmp(prop, PropertyNames::kClickable) == 0)  { out = m_clickable ? 1 : 0;          return 1; }
+    if (strcmp(prop, PropertyNames::kDebugDraw) == 0) { out = m_debugDraw ? 1 : 0;          return 1; }
     return ControlImpl::getBoolProperty(prop, out);
 }
 int Label::getIntProperty(const char* prop, int& out) {
@@ -677,6 +689,8 @@ int Label::getIntProperty(const char* prop, int& out) {
 }
 int Label::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kLineSpacingRatio) == 0) { out = m_defaultLineSpacingRatio; return 1; }
+    if (strcmp(prop, PropertyNames::kShadowOffsetX) == 0)    { out = m_shadowOffset.x;  return 1; }
+    if (strcmp(prop, PropertyNames::kShadowOffsetY) == 0)    { out = m_shadowOffset.y; return 1; }
     return ControlImpl::getFloatProperty(prop, out);
 }
 int Label::getStringProperty(const char* prop, const char*& out) {
@@ -702,6 +716,16 @@ int Label::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kFont) == 0) {
         out = FontNameToString(m_fontName);
         return 1;
+    }
+    if (strcmp(prop, PropertyNames::kFontStyle) == 0) {
+        switch (m_fontStyle) {
+        case 0:  out = PropertyNames::kFontStyleNormal; return 1;
+        case 1:  out = PropertyNames::kFontStyleBold; return 1;
+        case 2:  out = PropertyNames::kFontStyleItalic; return 1;
+        case 4:  out = PropertyNames::kFontStyleUnderline; return 1;
+        case 8:  out = PropertyNames::kFontStyleStrikethrough; return 1;
+        default: out = PropertyNames::kFontStyleNormal; return 1;
+        }
     }
     return ControlImpl::getEnumProperty(prop, out);
 }

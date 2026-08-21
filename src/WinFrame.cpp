@@ -476,6 +476,14 @@ int WinFrame::getStringProperty(const char* prop, const char*& out) {
     return Panel::getStringProperty(prop, out);
 }
 
+int WinFrame::getPtrProperty(const char* prop, void*& out) {
+    if (strcmp(prop, PropertyNames::kTitleBar) == 0)    { out = m_titleBar ? static_cast<Control*>(m_titleBar.get()) : nullptr;    return 1; }
+    if (strcmp(prop, PropertyNames::kTitleLabel) == 0)  { out = m_titleLabel ? static_cast<Control*>(m_titleLabel.get()) : nullptr;  return 1; }
+    if (strcmp(prop, PropertyNames::kCloseButton) == 0) { out = m_closeButton ? static_cast<Control*>(m_closeButton.get()) : nullptr; return 1; }
+    if (strcmp(prop, PropertyNames::kClientPanel) == 0) { out = m_clientPanel ? static_cast<Control*>(m_clientPanel.get()) : nullptr; return 1; }
+    return Panel::getPtrProperty(prop, out);
+}
+
 // ==================== WinFrameBuilder ====================
 
 WinFrameBuilder::WinFrameBuilder(Control* parent, SRect rect, float xScale, float yScale):

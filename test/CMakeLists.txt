@@ -489,4 +489,32 @@ if(UICORNERSTONE_BUILD_DLL)
     endif()
 endif()
 
+if(UICORNERSTONE_BUILD_DLL)
+    if(_BACKEND_UPPER STREQUAL "SDL3")
+        add_fromsource_target(test_menu_cabi test_menu_cabi.cpp)
+    endif()
+
+    if(_BACKEND_UPPER STREQUAL "SFML")
+        add_fromsource_target(test_menu_cabi test_menu_cabi.cpp)
+    endif()
+
+    if(_BACKEND_UPPER STREQUAL "RAYLIB")
+        add_fromsource_target(test_menu_cabi test_menu_cabi.cpp)
+    endif()
+endif()
+
+if(UICORNERSTONE_BUILD_DLL)
+    if(_BACKEND_UPPER STREQUAL "SDL3")
+        add_fromsource_target(test_gaps_cabi test_gaps_cabi.cpp)
+    endif()
+
+    if(_BACKEND_UPPER STREQUAL "SFML")
+        add_fromsource_target(test_gaps_cabi test_gaps_cabi.cpp)
+    endif()
+
+    if(_BACKEND_UPPER STREQUAL "RAYLIB")
+        add_fromsource_target(test_gaps_cabi test_gaps_cabi.cpp)
+    endif()
+endif()
+
 

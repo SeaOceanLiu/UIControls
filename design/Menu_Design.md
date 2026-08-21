@@ -226,7 +226,7 @@ VSCode菜单的核心交互是"菜单模式"：
 3. **退出菜单模式**：
    - 点击菜单项执行操作
    - 点击菜单外部区域
-   - 按ESC键
+   - 按ESC键（**规划中未实施**：Menu.cpp 无任何 KeyDown/ESC 处理——`MenuPanel::handleEvent` 仅处理 MouseMove/MouseDown/MouseUp，`MenuBar::handleEvent` 同理；已核对源码）
 
 ### 3.2 控件生命周期
 
@@ -265,12 +265,12 @@ MouseMove (mousePos):
   └─ 在子菜单项上hover → 延迟展开子菜单
 
 KeyDown (keyEvent):
-  └─ ESC → 关闭当前子菜单，或退出菜单模式
+  └─ ESC → 关闭当前子菜单，或退出菜单模式（**规划中未实施**：Menu.cpp 无 KeyDown 分支，键盘退出菜单模式未实现；已核对源码 Menu.cpp:760-806）
 ```
 
 ### 3.4 子菜单展开
 
-- 鼠标hover到子菜单项时，延迟200ms展开子菜单
+- 鼠标hover到子菜单项时，延迟200ms展开子菜单（**规划中未实施**：实际为 `setHoveredIndex` 内**立即展开**——命中子菜单项直接 `setOpenSubMenu`，无延迟定时器，Menu.cpp:537-558；已核对源码）
 - 鼠标从子菜单项移向子菜单面板时，不关闭子菜单
 - 子菜单面板位置：在父菜单项的右侧展开
 
@@ -308,7 +308,7 @@ KeyDown (keyEvent):
 |------|------|
 | 菜单栏高度 | `m_fontSize × m_heightRatio`（默认 20 × 1.6 = 32px） |
 | 菜单项高度 | `m_fontSize × m_heightRatio`（默认 20 × 1.6 = 32px） |
-| 菜单项左侧padding | 28px |
+| 菜单项左侧padding | 20px（已核对源码：`MenuColors::ITEM_LEFT_PADDING = 20.0f`，Menu.cpp:37） |
 | 菜单项右侧padding | 20px |
 | 图标区域宽度 | 20px |
 | 快捷键区域最小宽度 | 60px |
@@ -414,7 +414,7 @@ MenuBar 已集成到 LayoutParser 中，支持通过 JSON 配置文件定义完�
 
 ```
 parseControl(j, parent)
-  └─ type == "MenuBar"
+  └─ type == "menu-bar"（已核对源码：`PropertyNames::kControlTypeMenuBar = "menu-bar"`，PropertyNames.h:572；`LayoutParser::parseControl` 类型分发 LayoutParser.cpp:292）
        → parseMenuBar(j, parent)
             ├─ 创建 MenuBar(parent, xScale, yScale)
             ├─ parseCommonProperties (visible/enabled)

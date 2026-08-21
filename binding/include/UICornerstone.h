@@ -124,6 +124,55 @@ public:
     void MenuItemSetSubMenu(Control& item, Control& panel);
     Control CreateScrollBar(float x, float y, float w, float h, int orientation, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateTreeView(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+
+    // ── TreeView 节点操作 ──
+    // parentId 空串 = 插入为根节点；返回 true 成功 / false 失败
+    bool TreeViewAddNode(Control& tree, const std::string& parentId, const std::string& id,
+                         const std::string& label, bool expanded = false);
+    bool TreeViewRemoveNode(Control& tree, const std::string& id);
+    bool TreeViewSetNodeLabel(Control& tree, const std::string& id, const std::string& label);
+    bool TreeViewSetNodeUserData(Control& tree, const std::string& id, void* userData);
+    bool TreeViewSelectNode(Control& tree, const std::string& id);
+    void TreeViewClearSelection(Control& tree);
+    bool TreeViewExpandNode(Control& tree, const std::string& id);
+    bool TreeViewCollapseNode(Control& tree, const std::string& id);
+    void TreeViewExpandAll(Control& tree);
+    void TreeViewCollapseAll(Control& tree);
+    void TreeViewClearItems(Control& tree);
+    std::string TreeViewGetSelectedId(Control& tree);
+
+    // ── EditBox / TextArea 文本操作 ──
+    void EditBoxSelectAll(Control& ctl);
+    void EditBoxSetSelection(Control& ctl, int start, int end);
+    void EditBoxClearSelection(Control& ctl);
+    bool EditBoxHasSelection(Control& ctl);
+    int  EditBoxGetCursorPosition(Control& ctl);
+    void EditBoxCopy(Control& ctl);
+    void EditBoxCut(Control& ctl);
+    void EditBoxPaste(Control& ctl);
+    void EditBoxDeleteSelectedText(Control& ctl);
+
+    // ── NumericUpDown 数值操作 ──
+    void NumericUpDownStep(Control& ctl, int dir);
+
+    // ── ComboBox 选项操作 ──
+    bool ComboBoxAddItem(Control& ctl, const std::string& label, const std::string& value, bool disabled = false);
+    bool ComboBoxRemoveItem(Control& ctl, int index);
+    bool ComboBoxClearItems(Control& ctl);
+    int  ComboBoxGetItemCount(Control& ctl);
+
+    // ── LuotiAni 动画操作 ──
+    bool AnimationPrepare(Control& ctl, int startFrame = 0);
+    bool AnimationSetFrameFilter(Control& ctl, bool bilinear);
+
+    // ── 截图读回（像素级测试辅助；需后端 READBACK 能力位）──
+    bool CaptureRect(float x, float y, float w, float h, uint8_t* outPixels, int* outW, int* outH) const;
+    bool CaptureViewport(uint8_t* out, int* w, int* h) const;
+    bool CaptureBench(uint8_t* out, int* w, int* h) const;
+    bool CaptureControl(Control& ctl, uint8_t* out, int* w, int* h) const;
+    // 将 RGBA8888 像素缓冲保存为 BMP 文件（与实例无关，线程安全）
+    static bool SavePixelsToFile(const uint8_t* pixels, int w, int h, const std::string& filePath);
+
     Control CreateHandleControl(Control target, float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
 
     // ── 视口 ──

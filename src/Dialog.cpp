@@ -443,7 +443,22 @@ int Popup::setBoolProperty(const char* prop, int value) {
 int Popup::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kCloseOnClickOutside) == 0) { out = m_closeOnClickOutside ? 1 : 0; return 1; }
     if (strcmp(prop, PropertyNames::kCloseOnEsc) == 0) { out = m_closeOnEsc ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kPopupVisible) == 0) { out = isPopupVisible() ? 1 : 0; return 1; }
     return Panel::getBoolProperty(prop, out);
+}
+int Popup::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kResult) == 0) {
+        if (value >= 0 && value <= 2) {  // DialogResult: None=0 Confirmed=1 Cancelled=2
+            m_result = static_cast<DialogResult>(value);
+            return 1;
+        }
+        return 0;
+    }
+    return Panel::setIntProperty(prop, value);
+}
+int Popup::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kResult) == 0) { out = static_cast<int>(m_result); return 1; }
+    return Panel::getIntProperty(prop, out);
 }
 int Popup::setPtrProperty(const char* prop, void* value) {
     if (strcmp(prop, PropertyNames::kContent) == 0) {
@@ -497,6 +512,14 @@ int Dialog::getStringProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kConfirmText) == 0) { out = m_btnConfirmText.c_str(); return 1; }
     if (strcmp(prop, PropertyNames::kCancelText) == 0)  { out = m_btnCancelText.c_str();  return 1; }
     return Popup::getStringProperty(prop, out);
+}
+int ConfirmPopup::getPtrProperty(const char* prop, void*& out) {
+    if (strcmp(prop, PropertyNames::kConfirmButton) == 0) { out = m_btnConfirm ? static_cast<Control*>(m_btnConfirm.get()) : nullptr; return 1; }
+    return Popup::getPtrProperty(prop, out);
+}
+int Dialog::getPtrProperty(const char* prop, void*& out) {
+    if (strcmp(prop, PropertyNames::kCancelButton) == 0) { out = m_btnCancel ? static_cast<Control*>(m_btnCancel.get()) : nullptr; return 1; }
+    return ConfirmPopup::getPtrProperty(prop, out);
 }
 int Dialog::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
     if (strcmp(event, PropertyNames::kEventConfirm) == 0 ||

@@ -68,7 +68,7 @@ bool TreeView::selectNode(const string& id) {
         return false;  // O(1) 快速拒绝
     m_selectedId = id;
     rebuildFlatRows();  // 设置 m_selectedRow
-    if (m_onSelect) m_onSelect(id);
+    if (m_onSelect) m_onSelect(std::dynamic_pointer_cast<TreeView>(getThis()), id);  // sender 首参（TreeView.cpp:683）
     return true;
 }
 ```
@@ -77,11 +77,13 @@ map 的 O(1) 存在性检查避免了对不存在的 id 执行全量 `rebuildFla
 
 ### 2.4 滚动方案
 
-直接复用 `ScrollBar` 控件，TreeView 自身设置 clipRect 限制绘制区域。与 ComboBox 列表滚动**完全相同**的模式：
+直接复用 `ScrollBar` 控件，TreeView 自身设置 clipRect 限制绘制区域。与 ComboBox 列表滚动**相同**的模式，但回调注册名为 **`setOnPositionChanged`**（ScrollBar.h:69，**非 `onValueChanged`**）：
 
 ```
-ScrollBar::onValueChanged -> TreeView 更新 m_scrollOffset -> draw() 时 ClipRect + 偏移绘制
+ScrollBar::setOnPositionChanged -> TreeView 回调内读 getValue() 更新 m_scrollOffset -> draw() 时 pushClipRect + 偏移绘制
 ```
+
+（实际注册：create() 内 `ScrollBarBuilder::setOnPositionChanged([this](...){ m_scrollOffset = m_scrollBar->getValue(); })`，TreeView.cpp:61-63/73-75；水平滚动条同款回调更新 `m_hScrollOffset`）
 
 ### 2.5 缺省展开
 
@@ -93,33 +95,34 @@ TreeView 是一个可聚焦控件：
 
 | 场景 | 行为 |
 |------|------|
-| **获得焦点** | `create()` 中设置 `m_tabStop = true`；`onFocus()` 调用 `invalidate()` 重绘 focus ring |
-| **失去焦点** | 清除 `m_hoveredRow`（-1）、`invalidate()`；**不**清除 `m_selectedId`/`m_selectedRow`（选中状态持续可见，仅 focus ring 隐藏） |
-| **键盘事件** | 仅在 `hasFocus()` 为 true 时处理 ↑↓←→/Home/End/PageUp/PageDown |
-| **鼠标事件** | 不受焦点状态影响；点击行时自动 `setFocus()` |
-| **Focus Ring** | `afterDraw()` 中使用 `dev->drawRect` 绘制虚线框（与现有其他控件一致） |
-| **Tab 导航** | 遵循 `ControlImpl` 的 tab-stop 体系，Tab 键按 `tabIndex` 顺序跳入/跳出 |
+| **获得焦点** | 构造函数 `setFocusable(true)`（TreeView.cpp:23）——焦点体系基于 `m_focusable`/`m_tabIndex`（ControlBase.h:348-349），**无 `m_tabStop` 成员、无 `onFocus()` 方法、无 `invalidate()`**；焦点切换由 `setFocused()` → `onFocusGained(byKeyboard)`/`onFocusLost()` 回调通知（ControlBase.cpp:761-772、ControlBase.h:389-390） |
+| **失去焦点** | `onFocusLost()`（TreeView 未覆写，基类空实现）**不**清除 `m_selectedId`/`m_selectedRow`（选中状态持续可见，仅 focus ring 隐藏）；`m_hoveredRow` 实际由 MouseMove 维护（移出控件范围即置 -1，TreeView.cpp:423-429），**并非失焦时清除** |
+| **键盘事件** | 仅在 `getFocused()` 为 true 时处理 ↑↓←→/Home/End/PageUp/PageDown（TreeView.cpp:325，`hasFocus()` 的现名为 `getFocused()`，ControlBase.h:383） |
+| **鼠标事件** | 不受焦点状态影响；点击行时自动 `setFocused(true)`（TreeView.cpp:395） |
+| **Focus Ring** | `ControlImpl::afterDraw()`（ControlBase.cpp:217-221）→ `drawFocusRing()`（ControlBase.cpp:800-835）绘制 3 层矩形/虚线环（与现有其他控件一致，非自定义 `dev->drawRect` 调用） |
+| **Tab 导航** | 遵循 `ControlImpl` 的 tab-stop 体系（`m_tabIndex`），Tab 键按 tabIndex 顺序跳入/跳出 |
 
 ```cpp
 void TreeView::create() {
     ControlImpl::create();
-    m_tabStop = true;
+    // setFocusable(true) 实际在构造函数中设置（TreeView.cpp:23），create() 内无焦点相关代码
 }
 
 bool TreeView::handleEvent(shared_ptr<Event> event) {
-    // 鼠标点击自动获取焦点
+    // 鼠标点击自动获取焦点（实际实现，TreeView.cpp:391-395）
     if (event->m_type == EventType::MouseDown && event->mouseButton.button == MouseButton::Left) {
-        if (!hasFocus()) setFocus();
+        if (!isContainsPoint(event->mouseButton.x, event->mouseButton.y)) return false;
+        if (!getFocused()) setFocused(true);
         // ... 命中测试
     }
-    // 键盘事件仅在焦点下处理
-    if (event->m_type == EventType::KeyDown && hasFocus()) {
+    // 键盘事件仅在焦点下处理（实际实现，TreeView.cpp:325）
+    if (event->m_type == EventType::KeyDown && getFocused()) {
         // ↑/↓/←/→/PageUp/PageDown/Home/End
     }
 }
 ```
 
-✅ 与 `ControlImpl` 的焦点体系一致，无额外复杂度和遗漏。
+✅ 与 `ControlImpl` 的焦点体系一致（已核对源码：ControlBase.h:348-349/383/389-390、ControlBase.cpp:761-772/800-835、TreeView.cpp:23/325/391-395）。
 
 ### 2.7 性能与内存分析
 
@@ -202,11 +205,12 @@ struct TreeNode {
 class TreeView : public ControlImpl {
     friend class TreeViewBuilder;
 public:
-    using OnSelectHandler = function<void(const string& nodeId)>;
-    using OnSelectDataHandler = function<void(const string& nodeId, void* userData)>;
-    using OnExpandHandler = function<void(const string& nodeId)>;
-    using OnCollapseHandler = function<void(const string& nodeId)>;
-    using OnClearNodeHandler = function<void(void* userData)>;
+    using OnSelectHandler = function<void(shared_ptr<TreeView>, const string& nodeId)>;
+    using OnSelectDataHandler = function<void(shared_ptr<TreeView>, const string& nodeId, void* userData)>;
+    using OnExpandHandler = function<void(shared_ptr<TreeView>, const string& nodeId)>;
+    using OnCollapseHandler = function<void(shared_ptr<TreeView>, const string& nodeId)>;
+    using OnClearNodeHandler = function<void(shared_ptr<TreeView>, void* userData)>;
+    // 与源码一致：5 个回调均带 sender 首参（TreeView.h:66-70），事件触发处传 dynamic_pointer_cast<TreeView>(getThis())
 
 private:
     // 数据
@@ -453,43 +457,61 @@ flowchart TD
 ### 5.2 绘制流程
 
 ```cpp
-void TreeView::draw() {
+void TreeView::draw() {  // 实际实现，TreeView.cpp:187-298
     if (!m_visible) return;
-    beforeDraw();  // 背景 + 边框
-
     auto* dev = getRenderDevice();
-    dev->setDrawColor(m_bgColor);
-    dev->fillRect(m_rect);
-    dev->setDrawColor(m_borderColor);
-    dev->drawRect(m_rect);
+    if (!dev) return;
 
-    updateScrollBar();
-    SRect cr = getContentRect();
+    beforeDraw();               // 背景 + 边框（StateColor 统一绘制，无手动 fillRect/drawRect）
+
+    updateScrollBar();          // 两遍互斥布局（见 §7）
+
+    float scaleX = getScaleXX(), scaleY = getScaleYY();
+    float hSb = m_hScrollBar->getVisible() ? ConstDef::SCROLLBAR_WIDTH * scaleX : 0;
+    float vSb = m_scrollBar->getVisible()  ? ConstDef::SCROLLBAR_WIDTH * scaleX : 0;
+    SRect cr = m_frameDrawRect;  // 内容裁剪区（在 frame 上，非 m_rect）
     cr.width -= vSb;
     cr.height -= hSb;
-    dev->setClipRect(cr);
+    dev->pushClipRect(cr);
 
-    float stride = getStride();  // = m_rowHeight + m_lineSpacing
+    float stride = getStride();                      // = m_rowHeight + m_lineSpacing
     int firstVisible = max(0, (int)(m_scrollOffset / stride));
-    float topY = cr.top - fmod(m_scrollOffset, stride);
+    float topY  = cr.top  - fmod(m_scrollOffset, stride) * scaleY;
+    float leftX = cr.left - m_hScrollOffset * scaleX;   // 水平滚动偏移
+    float scaledRowH = m_rowHeight * scaleY;
+
     for (int i = firstVisible; i < (int)m_flatRows.size(); i++) {
-        float y = topY + (i - firstVisible) * stride;
+        float y = topY + (i - firstVisible) * stride * scaleY;
         if (y > cr.bottom()) break;
 
-        if (i == m_selectedRow)
-            dev->fillRect({cr.left, y, cr.width, m_rowHeight}, m_selectedColor);
-        else if (i == m_hoveredRow)
-            dev->fillRect({cr.left, y, cr.width, m_rowHeight}, m_hoverColor);
+        if (i == m_selectedRow) { dev->setDrawColor(m_selectedColor); dev->fillRect({cr.left, y, cr.width, scaledRowH}); }
+        else if (i == m_hoveredRow) { dev->setDrawColor(m_hoverColor); dev->fillRect({cr.left, y, cr.width, scaledRowH}); }
 
-        float arrowX = cr.left + 4 + m_flatRows[i].depth * m_indentWidth;
-        float labelX = arrowX + m_arrowGap;
+        float arrowX = leftX + LEFT_PADDING * scaleX + m_flatRows[i].depth * m_indentWidth * scaleX;
+        float labelX = arrowX + m_arrowGap * scaleX;
         if (!m_flatRows[i].node->children.empty())
-            drawArrow(dev, arrowX, y, m_flatRows[i].node->expanded);
-        dev->drawText(m_flatRows[i].node->label, labelX, y + padding);
+            drawArrow(dev, arrowX, y, m_flatRows[i].node->expanded);  // cx=x+6*scale, cy=y+rowH*scale/2, size=5*scale
+
+        SharedFont nodeFont = getNodeFont(m_flatRows[i].node);  // 逐节点字体（增强）
+        int fontH = renderer ? renderer->getFontHeight(nodeFont.get()) : 0;
+
+        // 行前置控件（增强）：槽宽 = 文字高 × 宽高比（Actor 优先取纹理自然比），
+        // 文本右移 = slotW + leadingGap；控件 rect 为局部坐标（绝对坐标会双重偏移）
+        float textX = labelX;
+        if (m_flatRows[i].node->leadingControl) { /* 计算槽位并 lc->draw() */ }
+
+        if (renderer && nodeFont) {
+            float textY = y + (scaledRowH - fontH) / 2;   // 垂直居中（非 y+padding）
+            renderer->drawText(nodeFont.get(), m_flatRows[i].node->label, textX, textY, m_textColor);
+        }
     }
 
-    dev->clearClipRect();
-    afterDraw();  // ScrollBar + focus ring
+    dev->popClipRect();
+    for (auto& child : m_children) {   // 子控件（ScrollBar 等）；行控件已在行循环内绘制，跳过防重复
+        if (isRowControl(child)) continue;
+        child->draw();
+    }
+    afterDraw();   // focus ring（背景/边框由 beforeDraw 完成）
 }
 ```
 
@@ -559,16 +581,41 @@ O(1) 查找，依赖 `rebuildFlatRows` 构建的 `m_nodeMap`。任何修改树�
 与 ComboBox 列表相同的滚动模式——
 
 ```cpp
+// 实际实现（TreeView.cpp:768-815）：两遍互斥布局——先假定垂直条出现算水平条，
+// 再反向修正垂直条，保证横竖滚动条不互相重叠
 void TreeView::updateScrollBar() {
-    if (!m_scrollBar) return;
-    float contentH = m_flatRows.size() * m_rowHeight;
-    float viewH = getContentRect().height;
-    m_scrollBar->setRange(0, max(0.0f, contentH - viewH));
-    m_scrollBar->setPageStep(viewH);
-    m_scrollBar->setVisible(contentH > viewH);
+    if (!m_scrollBar || !m_hScrollBar) return;
+
+    float stride = getStride();
+    float contentH = m_flatRows.size() * stride;
+    float contentW = calcContentWidth();          // 含缩进/箭头/文本/前置控件槽宽
+    float viewH = m_rect.height;
+    float viewW = m_rect.width;
+    float sb = ConstDef::SCROLLBAR_WIDTH;         // 16.0f
+
+    // Two-pass mutual exclusion
+    bool vVis = contentH > viewH;
+    bool hVis = contentW > (viewW - (vVis ? sb : 0));
+    vVis = contentH > (viewH - (hVis ? sb : 0));
+    hVis = contentW > (viewW - (vVis ? sb : 0));
+
+    float vH = viewH - (hVis ? sb : 0);
+    float hW = viewW - (vVis ? sb : 0);
+
+    // 垂直滚动条：setRange(0, maxScroll) + setPageSize(vH) + setValue(m_scrollOffset)
+    m_scrollBar->setVisible(vVis);
+    if (vVis) { /* clamp m_scrollOffset → setRange/setPageSize/setValue */ }
+    else      { m_scrollOffset = 0; m_scrollBar->setValue(0); }
+    m_scrollBar->setRect({viewW - sb, 0, sb, vH});
+
+    // 水平滚动条：同款（maxScroll = contentW - hW）
+    m_hScrollBar->setVisible(hVis);
+    /* ... */
+    m_hScrollBar->setRect({0, viewH - sb, hW, sb});
 }
 
-// ScrollBar::onValueChanged -> m_scrollOffset = value -> draw()
+// 回调：ScrollBar::setOnPositionChanged → m_scrollOffset = getValue() → draw() 偏移绘制
+// 注意 ScrollBar 接口为 setPageSize（非 setPageStep），注册于 create()（TreeView.cpp:55-77）
 ```
 
 ---

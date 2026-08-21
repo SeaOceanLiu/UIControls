@@ -17,7 +17,7 @@ CheckBox::CheckBox(Control *parent, SRect rect, float xScale, float yScale):
     m_caption(nullptr),
     m_onCheckChanged(nullptr),
     m_sizeRatio(ConstDef::CHECKBOX_SIZE_RATIO),
-    // m_captionSize(),
+    m_captionSize(0),  // 0 = 使用 ConstDef::CHECKBOX_DEFAULT_CAPTION_SIZE
     m_boxRect({0, 0, 0, 0}),
     m_boxMargin(ConstDef::CHECKBOX_BOX_MARGIN),
     m_triStateEnabled(true),
@@ -55,7 +55,7 @@ void CheckBox::createCaption(void){
     m_caption = LabelBuilder(this, {0, 0, getRect().width, getRect().height})
         .setFont(FontName::HarmonyOS_Sans_SC_Regular)
         .setAlignmentMode(AlignmentMode::AM_MID_LEFT)
-        .setFontSize((int)ConstDef::CHECKBOX_DEFAULT_CAPTION_SIZE)
+        .setFontSize((int)effectiveCaptionSize())
         .setCaption("")
         .setTextStateColor(m_textColor)
         // .setMargin({0, 0, 0, 0})
@@ -362,6 +362,22 @@ float CheckBox::getSizeRatio() const {
     return m_sizeRatio;
 }
 
+// 生效的 caption 字号：0 = 使用 ConstDef 默认常量
+float CheckBox::effectiveCaptionSize() const {
+    return m_captionSize > 0 ? m_captionSize : ConstDef::CHECKBOX_DEFAULT_CAPTION_SIZE;
+}
+
+void CheckBox::setCaptionSize(float size) {
+    m_captionSize = size;
+    if (m_caption != nullptr) {
+        m_caption->setFontSize((int)effectiveCaptionSize());  // 回调触发盒子/布局重排
+    }
+}
+
+float CheckBox::getCaptionSize() const {
+    return m_captionSize;
+}
+
 void CheckBox::setOnCheckChanged(OnCheckChangedHandler handler) {
     m_onCheckChanged = handler;
 }
@@ -579,7 +595,7 @@ CheckBoxBuilder& CheckBoxBuilder::setCaptionText(string caption) {
 }
 
 CheckBoxBuilder& CheckBoxBuilder::setCaptionSize(float size) {
-    m_checkBox->getCaption()->setFontSize(size);
+    m_checkBox->setCaptionSize(size);
     return *this;
 }
 

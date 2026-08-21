@@ -105,6 +105,7 @@ public:
     int getBoolProperty(const char* prop, int& out) override;
     int getFloatProperty(const char* prop, float& out) override;
     int getStringProperty(const char* prop, const char*& out) override;
+    int getPtrProperty(const char* prop, void*& out) override;
 };
 
 class WinFrameBuilder

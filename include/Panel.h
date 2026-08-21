@@ -20,6 +20,7 @@ private:
     unordered_map<Control*, FlowItemProps> m_flowItemProps;
     unordered_map<Control*, AnchorInfo> m_anchorItemProps;
     unordered_map<Control*, GridItemProps> m_gridItemProps;
+    string m_childTargetId;
 public:
     Panel(Control *parent, SRect rect, float xScale=1.0f, float yScale=1.0f);
     void update(void) override;
@@ -36,6 +37,11 @@ public:
     void setChildGridProps(Control* child, GridItemProps props) { m_gridItemProps[child] = props; }
     void reflowChildren();
     void resolveChildPercentages();
+    int setStringProperty(const char* prop, const char* value) override;
+    int setFloatProperty(const char* prop, float value) override;
+    int setIntProperty(const char* prop, int value) override;
+    int setEnumProperty(const char* prop, const char* value) override;
+    int getStringProperty(const char* prop, const char*& out) override;
     void setRect(SRect rect) override;
     void resized(SRect newRect) override;
 };

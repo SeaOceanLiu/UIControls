@@ -361,6 +361,7 @@ int ProgressBar::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kRangeMin) == 0)       { out = m_minValue;       return 1; }
     if (strcmp(prop, PropertyNames::kRangeMax) == 0)       { out = m_maxValue;       return 1; }
     if (strcmp(prop, PropertyNames::kAnimationSpeed) == 0) { out = m_animationSpeed; return 1; }
+    if (strcmp(prop, PropertyNames::kPercent) == 0)        { out = getPercent();     return 1; }
     return ControlImpl::getFloatProperty(prop, out);
 }
 

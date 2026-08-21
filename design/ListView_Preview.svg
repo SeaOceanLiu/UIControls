@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="320" viewBox="0 0 700 320">
+  <!-- ============ 图标题 ============ -->
+  <text x="30" y="20" font-size="14" fill="#4CAF50" font-family="sans-serif" font-weight="bold">ListView（多列详情 Details）</text>
+  <text x="430" y="20" font-size="14" fill="#4CAF50" font-family="sans-serif" font-weight="bold">单列模式 = ListBox 替代</text>
+
+  <!-- ============ 左：ListView 多列 ============ -->
+  <rect x="30" y="30" width="380" height="260" fill="#2B2B2B" stroke="#454545"/>
+  <!-- 列头 -->
+  <rect x="30" y="30" width="380" height="28" fill="#3C3C3C"/>
+  <text x="46" y="49" font-size="12" fill="#CCCCCC" font-family="sans-serif">名称</text>
+  <text x="206" y="49" font-size="12" fill="#CCCCCC" font-family="sans-serif">类型</text>
+  <text x="308" y="49" font-size="12" fill="#CCCCCC" font-family="sans-serif">大小</text>
+  <!-- 排序箭头（名称列升序） -->
+  <path d="M158,42 L162,49 L154,49 Z" fill="#007ACC"/>
+  <!-- 行区（先画，行高亮在其上） -->
+  <rect x="30" y="58" width="366" height="232" fill="#252526"/>
+  <!-- 行1 main.cpp：选中 -->
+  <rect x="30" y="58" width="366" height="32" fill="#094771"/>
+  <!-- 行2 build.bat：hover -->
+  <rect x="30" y="90" width="366" height="32" fill="#2A2D2E"/>
+  <!-- 列分隔线（行高亮之后、行文字之前：网格线可见且不穿文字） -->
+  <line x1="190" y1="58" x2="190" y2="290" stroke="#454545" stroke-width="1"/>
+  <line x1="292" y1="58" x2="292" y2="290" stroke="#454545" stroke-width="1"/>
+  <path d="M40,70 h14 v12 h-14 Z" fill="none" stroke="#9CDCFE" stroke-width="1"/>
+  <text x="60" y="79" font-size="12" fill="#FFFFFF" font-family="sans-serif">main.cpp</text>
+  <text x="206" y="79" font-size="12" fill="#CCCCCC" font-family="sans-serif">C++ 源文件</text>
+  <text x="308" y="79" font-size="12" fill="#CCCCCC" font-family="sans-serif">2.1 KB</text>
+  <text x="46" y="111" font-size="12" fill="#CCCCCC" font-family="sans-serif">build.bat</text>
+  <text x="206" y="111" font-size="12" fill="#CCCCCC" font-family="sans-serif">批处理</text>
+  <text x="308" y="111" font-size="12" fill="#CCCCCC" font-family="sans-serif">512 B</text>
+  <!-- 行3 -->
+  <text x="46" y="143" font-size="12" fill="#CCCCCC" font-family="sans-serif">README.md</text>
+  <text x="206" y="143" font-size="12" fill="#CCCCCC" font-family="sans-serif">文档</text>
+  <text x="308" y="143" font-size="12" fill="#CCCCCC" font-family="sans-serif">1.8 KB</text>
+  <!-- 行4 src：文件夹图标 -->
+  <rect x="40" y="169" width="14" height="10" rx="1" fill="#E8A33D"/>
+  <text x="60" y="175" font-size="12" fill="#CCCCCC" font-family="sans-serif">src</text>
+  <text x="206" y="175" font-size="12" fill="#CCCCCC" font-family="sans-serif">文件夹</text>
+  <text x="308" y="175" font-size="12" fill="#CCCCCC" font-family="sans-serif">--</text>
+  <!-- 行5 -->
+  <text x="46" y="207" font-size="12" fill="#CCCCCC" font-family="sans-serif">assets</text>
+  <text x="206" y="207" font-size="12" fill="#CCCCCC" font-family="sans-serif">文件夹</text>
+  <text x="308" y="207" font-size="12" fill="#CCCCCC" font-family="sans-serif">--</text>
+  <!-- 行6 -->
+  <text x="46" y="239" font-size="12" fill="#CCCCCC" font-family="sans-serif">temp.log</text>
+  <text x="206" y="239" font-size="12" fill="#CCCCCC" font-family="sans-serif">日志</text>
+  <text x="308" y="239" font-size="12" fill="#CCCCCC" font-family="sans-serif">24 KB</text>
+  <!-- 滚动条 -->
+  <rect x="396" y="58" width="14" height="232" fill="#2B2B2B"/>
+  <rect x="396" y="78" width="14" height="80" fill="#3C3C3C"/>
+
+  <!-- ============ 右：单列模式（ListBox 替代） ============ -->
+  <rect x="430" y="30" width="240" height="260" fill="#2B2B2B" stroke="#454545"/>
+  <rect x="430" y="30" width="240" height="260" fill="#252526"/>
+  <!-- 行1 -->
+  <text x="448" y="59" font-size="12" fill="#CCCCCC" font-family="sans-serif">apples</text>
+  <!-- 行2 hover -->
+  <rect x="430" y="62" width="240" height="32" fill="#2A2D2E"/>
+  <text x="448" y="83" font-size="12" fill="#CCCCCC" font-family="sans-serif">oranges</text>
+  <!-- 行3 选中 -->
+  <rect x="430" y="94" width="240" height="32" fill="#094771"/>
+  <text x="448" y="115" font-size="12" fill="#FFFFFF" font-family="sans-serif">bananas</text>
+  <!-- 行4 -->
+  <text x="448" y="147" font-size="12" fill="#CCCCCC" font-family="sans-serif">grapes</text>
+  <!-- 行5 -->
+  <text x="448" y="179" font-size="12" fill="#CCCCCC" font-family="sans-serif">lemons</text>
+  <!-- 行6 -->
+  <text x="448" y="211" font-size="12" fill="#CCCCCC" font-family="sans-serif">peaches</text>
+
+  <!-- ============ 底部说明 ============ -->
+  <text x="30" y="306" font-size="12" fill="#2196F3" font-family="sans-serif">决策点 0（建议）：已有 ListView 则不需要独立 ListBox —— 单列模式覆盖其全部场景（无列头 / 无网格线 / 列宽铺满）</text>
+</svg>

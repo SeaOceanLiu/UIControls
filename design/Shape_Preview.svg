@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="580">
+  <!-- 背景 -->
+  <rect x="0" y="0" width="900" height="580" fill="#1E1E1E"/>
+  <!-- 标题 -->
+  <text x="24" y="34" fill="#FFFFFF" font-family="Consolas, monospace" font-size="21" font-weight="bold">Shape 控件效果图 — 7 形状 + 空心/环 + 应用</text>
+  <text x="24" y="56" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">虚线框 = 控件 rect；黄点 = 顶点（本地坐标，resize 时基准等比缩放）；空心 = fill 透明；环 = ringWidth &gt; 0</text>
+
+  <!-- 每格：图形区 y0+15..y0+100，说明文字 y0+108 / y0+126 -->
+
+  <!-- 格 1: rect 描边矩形 -->
+  <g>
+    <rect x="20" y="75" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <rect x="40" y="98" width="165" height="55" fill="none" stroke="#3B82F6" stroke-width="2"/>
+    <text x="35" y="183" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">rect · 描边矩形</text>
+    <text x="35" y="201" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">stroke #3B82F6 · 2px</text>
+  </g>
+
+  <!-- 格 2: filled-rect 填充矩形 -->
+  <g>
+    <rect x="240" y="75" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <rect x="260" y="98" width="165" height="55" fill="#F59E0B"/>
+    <text x="255" y="183" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">filled-rect · 填充矩形</text>
+    <text x="255" y="201" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">fill #F59E0B</text>
+  </g>
+
+  <!-- 格 3: round-rect 圆角矩形 -->
+  <g>
+    <rect x="460" y="75" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <rect x="480" y="98" width="165" height="55" fill="#10B981" rx="10"/>
+    <text x="475" y="183" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">round-rect · 圆角矩形</text>
+    <text x="475" y="201" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">radius 10 · fill #10B981</text>
+  </g>
+
+  <!-- 格 4: circle 实心圆（拉伸=内切整个 rect，方 rect 时为正圆） -->
+  <g>
+    <rect x="680" y="75" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <rect x="735" y="93" width="100" height="80" fill="none" stroke="#666666" stroke-width="1" stroke-dasharray="6,6"/>
+    <ellipse cx="785" cy="133" rx="50" ry="40" fill="#3B82F6" stroke="#1E293B" stroke-width="2"/>
+    <text x="695" y="183" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">circle · 圆（拉伸）</text>
+    <text x="695" y="201" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">内切整个 rect · 方时为正圆</text>
+  </g>
+
+  <!-- 格 5: 空心圆 -->
+  <g>
+    <rect x="20" y="240" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <circle cx="122" cy="300" r="40" fill="none" stroke="#3B82F6" stroke-width="2"/>
+    <text x="35" y="348" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">空心圆 = circle</text>
+    <text x="35" y="366" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">fill 透明（缺省）+ stroke</text>
+  </g>
+
+  <!-- 格 6: 圆环 -->
+  <g>
+    <rect x="240" y="240" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <circle cx="342" cy="300" r="40" fill="#3B82F6" stroke="#1E293B" stroke-width="1"/>
+    <circle cx="342" cy="300" r="28" fill="#1E1E1E"/>
+    <text x="255" y="348" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">圆环 = circle + ringWidth</text>
+    <text x="255" y="366" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">ringWidth 12 · 环带=fill</text>
+  </g>
+
+  <!-- 格 7: ellipse 实心椭圆（内切整个 rect） -->
+  <g>
+    <rect x="460" y="240" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <rect x="498" y="268" width="124" height="64" fill="none" stroke="#666666" stroke-width="1" stroke-dasharray="6,6"/>
+    <ellipse cx="560" cy="300" rx="62" ry="32" fill="#EC4899" stroke="#1E293B" stroke-width="2"/>
+    <text x="475" y="348" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">ellipse · 实心椭圆</text>
+    <text x="475" y="366" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">内切整个 rect</text>
+  </g>
+
+  <!-- 格 8: 空心 ellipse -->
+  <g>
+    <rect x="680" y="240" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <ellipse cx="780" cy="300" rx="62" ry="32" fill="none" stroke="#EC4899" stroke-width="2"/>
+    <text x="695" y="348" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">空心 ellipse</text>
+    <text x="695" y="366" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">fill 透明（缺省）+ stroke</text>
+  </g>
+
+  <!-- 格 9: ellipse 环 -->
+  <g>
+    <rect x="20" y="405" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <ellipse cx="120" cy="465" rx="62" ry="32" fill="#EC4899" stroke="#1E293B" stroke-width="1"/>
+    <ellipse cx="120" cy="465" rx="50" ry="20" fill="#1E1E1E"/>
+    <text x="35" y="513" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">ellipse 环 = ellipse + ringWidth</text>
+    <text x="35" y="531" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">ringWidth 12 · 环带=fill</text>
+  </g>
+
+  <!-- 格 10: polyline 折线 3 顶点 -->
+  <g>
+    <rect x="240" y="405" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <polyline points="255,460 345,425 435,460" fill="none" stroke="#8B5CF6" stroke-width="3"/>
+    <circle cx="255" cy="460" r="4" fill="#FACC15"/>
+    <circle cx="345" cy="425" r="4" fill="#FACC15"/>
+    <circle cx="435" cy="460" r="4" fill="#FACC15"/>
+    <text x="255" y="513" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">polyline · 折线</text>
+    <text x="255" y="531" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">3 顶点（本地坐标 · resize 等比缩放）</text>
+  </g>
+
+  <!-- 格 11: polygon 三角形 -->
+  <g>
+    <rect x="460" y="405" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <polygon points="475,480 655,480 565,425" fill="#EF4444" stroke="#7F1D1D" stroke-width="2"/>
+    <circle cx="475" cy="480" r="4" fill="#FACC15"/>
+    <circle cx="655" cy="480" r="4" fill="#FACC15"/>
+    <circle cx="565" cy="425" r="4" fill="#FACC15"/>
+    <text x="475" y="513" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">polygon · 多边形</text>
+    <text x="475" y="531" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">三角形 · fill+stroke · 本地坐标</text>
+  </g>
+
+  <!-- 格 12: 应用示例 -->
+  <g>
+    <rect x="680" y="405" width="205" height="140" fill="none" stroke="#3A3A3A" stroke-width="1" stroke-dasharray="6,6"/>
+    <rect x="695" y="430" width="135" height="4" fill="#4EC9B0"/>
+    <rect x="695" y="452" width="135" height="2" fill="#3B82F6"/>
+    <rect x="695" y="470" width="135" height="1" fill="#6B7280"/>
+    <circle cx="705" cy="495" r="5" fill="#10B981"/>
+    <rect x="720" y="488" width="60" height="14" rx="3" fill="#10B981"/>
+    <rect x="790" y="488" width="40" height="14" rx="3" fill="#F59E0B"/>
+    <rect x="690" y="418" width="150" height="90" fill="none" stroke="#FF3B30" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="695" y="531" fill="#4EC9B0" font-family="Consolas, monospace" font-size="13">应用示例 · 分割线/状态点/圆角块</text>
+  </g>
+</svg>

@@ -875,6 +875,7 @@ int Slider::getBoolProperty(const char* prop, int& out) {
 
 int Slider::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kStep) == 0)           { out = m_step;           return 1; }
+    if (strcmp(prop, PropertyNames::kPercent) == 0)        { out = getPercent() * 100.0f; return 1; }
     if (strcmp(prop, PropertyNames::kTrackThickness) == 0) { out = m_trackThickness; return 1; }
     if (strcmp(prop, PropertyNames::kThumbSize) == 0)      { out = m_thumbSize;      return 1; }
     if (strcmp(prop, PropertyNames::kTickInterval) == 0)   { out = m_tickInterval;   return 1; }
@@ -901,6 +902,16 @@ int Slider::getEnumProperty(const char* prop, const char*& out) {
         return 1;
     }
     return ControlImpl::getEnumProperty(prop, out);
+}
+
+int Slider::setIntProperty(const char* prop, int value) {
+    if (strcmp(prop, PropertyNames::kLabelFontSize) == 0) { setLabelFontSize(value); return 1; }
+    return ControlImpl::setIntProperty(prop, value);
+}
+
+int Slider::getIntProperty(const char* prop, int& out) {
+    if (strcmp(prop, PropertyNames::kLabelFontSize) == 0) { out = m_labelFontSize; return 1; }
+    return ControlImpl::getIntProperty(prop, out);
 }
 
 int Slider::setCallbackProperty(const char* event, void (*cb)(void*, const void*, void*), void* userData) {
