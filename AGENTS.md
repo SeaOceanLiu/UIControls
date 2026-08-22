@@ -35,7 +35,7 @@
 10. 确认涉及的设计文档已刷新，与源码核对无误，并至少自检 2 遍。
 11. 确认刷新了 README.md。
 12. 确认刷新了用户手册的相关章节（包括但不限于：控件相关、声明式UI语法速查、属性速查表、CABI速查表、C++Binding速查表）。
-13. ~~确认 JSON Schema 已刷新并验证完成（`docs/schema/declarative-ui.schema.json` 同步新增/修改的属性，且 `validate_layout --strict` 校验通过）。~~ **暂缓执行**（2026-08-19 用户指示：JSON Schema 体系尚未启动，`tools/validate_layout` 与 schema 文件尚未实现；待启动后再执行本条）。
+13. 确认 JSON Schema 已刷新并验证完成（`docs/schema/declarative-ui.schema.json` 同步新增/修改的属性，且 `tools/validate_layout --strict` 校验通过；构建：`cmake -S tools -B build/tools && cmake --build build/tools`）。（2026-08-21 设计审核通过，解除 2026-08-19 暂缓，见 design/JSON_Schema_Design.md）
 14. 确认 `design/API_Mapping_Table.md` 已刷新，对照"补"列的缺口标注，逐条决策是否需要补充 CABI / C++Binding / 属性键，并优先实施高优先级项。
 
 ## Reference (Read as Needed)

@@ -1,0 +1,4 @@
+{ "controls": [
+  { "type": "label", "id": "a", "rect": {"x":0,"y":0,"w":9,"h":9}, "text": "x", "colr": "#FF0000" },
+  { "type": "button", "id": "b", "rect": {"x":0,"y":0,"w":9,"h":9}, "captionX": "笔误" }
+] }

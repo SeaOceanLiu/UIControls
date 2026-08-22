@@ -1,6 +1,6 @@
 # 声明式 UI JSON 语法限定表（Schema）设计
 
-> 状态：**设计定稿，待审核（审核通过后方可实施）**
+> 状态：**一期已实施（2026-08-22）**——Schema 21 控件全量、校验器 `tools/validate_layout`（独立子工程）、ctest 9 项（Schema 自检 + 样本 --strict + 7 负例）全部通过；AGENTS.md 第 13 条已解除暂缓并生效。
 > 关联：[LayoutSystem_Design.md](LayoutSystem_Design.md)（JSON 布局系统）、[CABI_Property_Design.md](CABI_Property_Design.md)（属性键体系）、[API_Mapping_Table.md](API_Mapping_Table.md)（五层映射交叉核对源）、`include/PropertyNames.h`（**键名唯一来源**）、各控件 `*_Design.md`/`*_Analysis.md`（JSON 语法散点）
 > 消费方：① 自动化 JSON 语法检查（校验器）② CornerstoneCreator（后续 JSON 生成器）
 
@@ -234,9 +234,11 @@ validate_layout <layout.json...>
 
 | 阶段 | 内容 | 依赖 |
 |---|---|---|
-| 一期 | AGENTS.md #13 解除 + Schema（draft 2020-12 + `x-` 标注，25 控件全量）+ C++ 校验器（`tools/validate_layout` + `LayoutValidator`）+ 键集一致性强制 + `layouts/` 样本扩充与 `--strict` 回归 + ctest 集成 | 本设计审核通过 |
+| ~~一期~~ | ~~AGENTS.md #13 解除 + Schema（draft 2020-12 + `x-` 标注，21 控件 JSON 类型全量）+ C++ 校验器 + 键集一致性强制 + `layouts/` 样本扩充与 `--strict` 回归 + ctest 集成~~ | ✅已完成(2026-08-22) |
 | 二期 | `--strict` 分级警告配置；LayoutParser `--strict-json` 调试开关（需求出现再做）；CI workflow 接入（随 workflow 建立一行接入） | 一期 |
 | 三期 | CornerstoneCreator 立项（复用 LayoutValidator + 消费 Schema 生成） | 二期 + Creator 立项 |
+
+> 实施说明：oneOf 覆盖 21 个 JSON 控件类型（handle-control 无 JSON 类型、image-button 走 button、menu-item/menu-panel 为运行时类型——均不进 oneOf）；实施中发现并修复：$defs 遍历缺失（幽灵键检查曾形同虚设）、common 规则经 allOf 展开查找（findRule）、组件实例 type=components 键名放行、布局子属性（flowWeight/anchor/grid/row/col 等）入结构性白名单。
 
 ## 7. 涉及文件清单
 

@@ -1,0 +1,1 @@
+{ "controls": [ { "type": "label", "id": "l2", "rect": {"x":0,"y":0,"w":9,"h":9}, "textShadow": "#12345" } ] }

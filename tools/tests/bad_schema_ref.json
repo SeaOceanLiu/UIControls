@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [ { "$ref": "#/$defs/x" } ],
+  "$defs": {
+    "x": {
+      "type": "object",
+      "properties": {
+        "ghost-key-not-registered": { "type": "string" },
+        "bad-ref": { "$ref": "#/$defs/nonexistent" }
+      }
+    }
+  }
+}
