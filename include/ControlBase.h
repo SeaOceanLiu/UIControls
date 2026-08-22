@@ -141,7 +141,7 @@ enum class ControlType {
     Label, Button, EditBox, ComboBox, TextArea, CheckBox,
     ProgressBar, Slider, ScrollBar, Panel, WinFrame, ColorPicker,
     Splitter, TreeView, NumericUpDown, Popup, ConfirmPopup, Dialog,
-    MenuItem, MenuPanel, MenuBar, Image, Animation, HandleControl
+    MenuItem, MenuPanel, MenuBar, Image, Animation, HandleControl, Shape
 };
 
 class Control{

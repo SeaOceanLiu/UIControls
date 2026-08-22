@@ -341,6 +341,26 @@ UI_FACTORY(CreateScrollBar,
 UI_FACTORY(CreateTreeView,
     (float x, float y, float w, float h, float xScale, float yScale),
     x, y, w, h, xScale, yScale)
+UI_FACTORY(CreateShape,
+    (float x, float y, float w, float h, float xScale, float yScale),
+    x, y, w, h, xScale, yScale)
+
+// ── Shape 专用（点集与坐标映射） ──
+void UICornerstone::ShapeSetPoints(Control& sh, const std::vector<std::pair<float, float>>& pts) {
+    if (!m_impl->instance || !sh.Handle() || pts.empty()) return;
+    std::vector<float> xs(pts.size()), ys(pts.size());
+    for (size_t i = 0; i < pts.size(); ++i) { xs[i] = pts[i].first; ys[i] = pts[i].second; }
+    Dyn::API().fnShapeSetPoints(m_impl->instance, sh.Handle(),
+                                static_cast<int>(pts.size()), xs.data(), ys.data());
+}
+std::pair<float, float> UICornerstone::ShapeMapToDrawPoint(Control& sh, float lx, float ly) {
+    if (m_impl->instance && sh.Handle()) {
+        float gx = 0.f, gy = 0.f;
+        if (Dyn::API().fnShapeMapToDrawPoint(m_impl->instance, sh.Handle(), lx, ly, &gx, &gy))
+            return {gx, gy};
+    }
+    return {0.f, 0.f};
+}
 
 Control UICornerstone::CreateMenuPanel(float xScale, float yScale) {
     if (!m_impl->instance) return Control();

@@ -85,6 +85,11 @@ struct Api {
     UIControlHandle (*fnCreateSplitter)(UIInstance, float, float, float, float, int, float, float) = nullptr;
     UIControlHandle (*fnCreateScrollBar)(UIInstance, float, float, float, float, int, float, float) = nullptr;
     UIControlHandle (*fnCreateTreeView)(UIInstance, float, float, float, float, float, float) = nullptr;
+
+    // Shape 形状控件
+    UIControlHandle (*fnCreateShape)(UIInstance, float, float, float, float, float, float) = nullptr;
+    int (*fnShapeSetPoints)(UIInstance, UIControlHandle, int, const float*, const float*) = nullptr;
+    int (*fnShapeMapToDrawPoint)(UIInstance, UIControlHandle, float, float, float*, float*) = nullptr;
     int  (*fnTreeViewAddNode)(UIInstance, UIControlHandle, const char*, const char*, const char*, int) = nullptr;
     int  (*fnTreeViewRemoveNode)(UIInstance, UIControlHandle, const char*) = nullptr;
     int  (*fnTreeViewSetNodeLabel)(UIInstance, UIControlHandle, const char*, const char*) = nullptr;

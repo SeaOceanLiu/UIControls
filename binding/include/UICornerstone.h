@@ -6,6 +6,8 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <utility>
+#include <vector>
 #include "UICornerstoneAPI.h"
 
 class Control;
@@ -124,6 +126,10 @@ public:
     void MenuItemSetSubMenu(Control& item, Control& panel);
     Control CreateScrollBar(float x, float y, float w, float h, int orientation, float xScale = 1.0f, float yScale = 1.0f);
     Control CreateTreeView(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    // Shape 形状控件（参数经 Control::Set* 属性接口；SetPoints/MapToDrawPoint 走专用方法）
+    Control CreateShape(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    void ShapeSetPoints(Control& sh, const std::vector<std::pair<float, float>>& pts); // 本地像素
+    std::pair<float, float> ShapeMapToDrawPoint(Control& sh, float lx, float ly);      // 本地 → 全局
 
     // ── TreeView 节点操作 ──
     // parentId 空串 = 插入为根节点；返回 true 成功 / false 失败

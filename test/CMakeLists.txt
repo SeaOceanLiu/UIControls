@@ -103,6 +103,7 @@ set(UI_TEST_EXECUTABLES
     test_graphtool
     test_handlecontrol
     test_slider
+    test_shape
     test_numericupdown
     test_splitter
     test_treeview

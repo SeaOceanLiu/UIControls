@@ -68,6 +68,8 @@ set(CORE_SOURCES
     src/ResourceProvider.cpp
     src/LeadingControlSlot.cpp
     src/ScrollBar.cpp
+    src/Shape.cpp
+    src/RenderDevice.cpp
     src/Slider.cpp
     src/Surface.cpp
     src/TextArea.cpp
@@ -80,6 +82,7 @@ set(CORE_SOURCES
 # Backend-specific sources and dependencies
 # ============================================================
 set(BACKEND_SOURCES
+    src/RenderDevice.cpp
     src/backend/${UICORNERSTONE_BACKEND}/BackendPlugin.cpp
     src/backend/${UICORNERSTONE_BACKEND}/RenderDevice.cpp
     src/backend/${UICORNERSTONE_BACKEND}/TextRenderer.cpp

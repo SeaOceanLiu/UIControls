@@ -46,6 +46,20 @@ public:
     virtual void drawTriangle(float x0, float y0, float x1, float y1, float x2, float y2, SColor color) = 0;
     virtual void drawQuad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, SColor color) = 0;
 
+    // === 形状图元（基类默认实现：CPU 顶点生成 + 既有纯虚提交；后端零改动自动获得，
+    //     可选 override 原生加速。设计：design/Shape_Design.md §4.4） ===
+    // 圆角矩形（radius=0 退化为直角）；fill 透明则仅描边；绘制顺序 fill 先于 stroke
+    virtual void drawRoundRect(const SRect& rect, float radius, SColor fill, SColor stroke, float lineWidth);
+    // 椭圆（rx=ry 即圆）内切语义由调用方保证；ringWidth>0 绘制环带（fill 填充环带、内孔透明），stroke 外缘描边
+    virtual void drawEllipse(float cx, float cy, float rx, float ry,
+                             SColor fill, SColor stroke, float lineWidth, float ringWidth = 0.0f);
+    // 宽线（width<=1 走像素对齐 1px drawLine；>1 端帽四边形边带）
+    virtual void drawLine(float x1, float y1, float x2, float y2, float width, SColor color);
+    // 折线（开放路径，逐段宽线）
+    virtual void drawPolyline(const SPoint* pts, int count, SColor color, float width);
+    // 多边形（闭合；凸顶点扇 / 凹耳切三角剖分 PhaseA[无自交无洞] + 沿轮廓宽线描边；fill 透明=仅描边）
+    virtual void drawPolygon(const SPoint* pts, int count, SColor fill, SColor stroke, float lineWidth);
+
     // === 纹理操作 ===
     virtual SharedTexture createTextureFromFile(const std::string& path) = 0;
     virtual SharedTexture createTextureFromSurface(Surface* surface) = 0;

@@ -6,6 +6,7 @@
 #include "ComboBox.h"
 #include "NumericUpDown.h"
 #include "LuotiAni.h"
+#include "Shape.h"
 #include "LayoutEngine.h"
 #include "PropertyNames.h"
 #include <fstream>
@@ -261,6 +262,8 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = parseButton(j, parent);
     } else if (type == PropertyNames::kControlTypeImage) {
         result = parseImage(j, parent);
+    } else if (type == PropertyNames::kControlTypeShape) {
+        result = parseShape(j, parent);
     } else if (type == PropertyNames::kControlTypeAnimation) {
         result = parseAnimation(j, parent);
     } else if (type == PropertyNames::kControlTypeEditBox) {
@@ -467,6 +470,63 @@ shared_ptr<Control> LayoutParser::parseAnimation(const json& j, Control* parent)
 }
 
 // ==================== Image（Actor 独立节点） ====================
+
+shared_ptr<Control> LayoutParser::parseShape(const json& j, Control* parent) {
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
+    popJsonPath();
+
+    float xScale = 1.0f, yScale = 1.0f;
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
+    }
+
+    auto shape = make_shared<Shape>(parent, rect, xScale, yScale);
+    m_theme.applyCommonColors(shape, PropertyNames::kThemeCatPanel);
+    parseCommonProperties(shape, j);
+
+    // 形状类型
+    if (j.contains(PropertyNames::kShape) && j[PropertyNames::kShape].is_string()) {
+        const std::string& st = j[PropertyNames::kShape].get<std::string>();
+        if (st == PropertyNames::kShapeRect)              shape->setShape(ShapeType::Rect);
+        else if (st == PropertyNames::kShapeFilledRect)   shape->setShape(ShapeType::FilledRect);
+        else if (st == PropertyNames::kShapeRoundRect)    shape->setShape(ShapeType::RoundRect);
+        else if (st == PropertyNames::kShapeCircle)       shape->setShape(ShapeType::Circle);
+        else if (st == PropertyNames::kShapeEllipse)      shape->setShape(ShapeType::Ellipse);
+        else if (st == PropertyNames::kShapePolyline)     shape->setShape(ShapeType::Polyline);
+        else if (st == PropertyNames::kShapePolygon)      shape->setShape(ShapeType::Polygon);
+        else logWarn("shape: unknown shape \"" + st + "\", keep default rect");
+    }
+    // 颜色（hex 字符串复用现有 parseColor 链路）
+    if (j.contains(PropertyNames::kFill) && j[PropertyNames::kFill].is_string())
+        shape->setFillColor(parseColor(j[PropertyNames::kFill]));
+    if (j.contains(PropertyNames::kStroke) && j[PropertyNames::kStroke].is_string())
+        shape->setStrokeColor(parseColor(j[PropertyNames::kStroke]));
+    // 数值参数
+    if (j.contains(PropertyNames::kJsonLineWidth) && j[PropertyNames::kJsonLineWidth].is_number())
+        shape->setLineWidth(j[PropertyNames::kJsonLineWidth].get<float>());
+    if (j.contains(PropertyNames::kRadius) && j[PropertyNames::kRadius].is_number())
+        shape->setRadius(j[PropertyNames::kRadius].get<float>());
+    if (j.contains(PropertyNames::kJsonRingWidth) && j[PropertyNames::kJsonRingWidth].is_number())
+        shape->setRingWidth(j[PropertyNames::kJsonRingWidth].get<float>());
+    // 点集（本地像素，决策 3.3）
+    if (j.contains(PropertyNames::kJsonPoints) && j[PropertyNames::kJsonPoints].is_array()) {
+        std::vector<Shape::SPointF> pts;
+        for (const auto& p : j[PropertyNames::kJsonPoints]) {
+            if (p.is_object() && p.contains("x") && p.contains("y") &&
+                p["x"].is_number() && p["y"].is_number())
+                pts.push_back({p["x"].get<float>(), p["y"].get<float>()});
+        }
+        if (!pts.empty()) shape->setPoints(pts);
+    }
+
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<std::string>()] = shape;
+
+    shape->create();
+    return shape;
+}
 
 shared_ptr<Control> LayoutParser::parseImage(const json& j, Control* parent) {
     pushJsonPath(PropertyNames::kJsonRect);

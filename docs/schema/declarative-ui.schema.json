@@ -152,6 +152,7 @@
         { "$ref": "#/$defs/popup" },
         { "$ref": "#/$defs/progress-bar" },
         { "$ref": "#/$defs/scroll-bar" },
+        { "$ref": "#/$defs/shape" },
         { "$ref": "#/$defs/splitter" },
         { "$ref": "#/$defs/text-area" },
         { "$ref": "#/$defs/tree-view" },
@@ -454,6 +455,36 @@
         "stepSize": { "type": "number" },
         "thickness": { "type": "number", "x-default": "16" },
         "value": { "type": "number", "x-default": "0" }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "shape": {
+      "type": "object",
+      "allOf": [ { "$ref": "#/$defs/common" } ],
+      "properties": {
+        "type": { "const": "shape" },
+        "fill": { "$ref": "#/$defs/color", "description": "填充色（缺省透明=空心）" },
+        "lineWidth": { "type": "number", "x-default": "1" },
+        "points": {
+          "type": "array",
+          "description": "polyline/polygon 顶点（本地像素，随 rect 等比缩放）",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "radius": { "type": "number", "x-default": "0" },
+        "ringWidth": { "type": "number", "x-default": "0" },
+        "shape": {
+          "enum": ["rect", "filled-rect", "round-rect", "circle", "ellipse", "polyline", "polygon"],
+          "x-default": "rect"
+        },
+        "stroke": { "$ref": "#/$defs/color", "description": "描边色（缺省黑）" }
       },
       "required": ["type"],
       "additionalProperties": false

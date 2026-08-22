@@ -448,6 +448,19 @@ UICORNERSTONE_API UIControlHandle UICornerstone_CreateAnimation(
     const char* jsoncPath,
     float x, float y, float w, float h, float xScale, float yScale);
 
+/* ============ Shape 形状控件 ============ */
+// 形状参数经通用属性 setter：SetEnum("shape","circle"/...)/SetColor("fill"/"stroke")/
+// SetFloat("line-width"/"radius"/"ring-width")；点集为浮点数组走专用接口（决策 3.6）。
+// 所有参数修改在控件内统一触发几何重算。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateShape(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale);
+// 写入点集（本地像素坐标；以当前 rect 为缩放基准，决策 3.3）。返回 1 成功 / 0 失败。
+UICORNERSTONE_API int UICornerstone_ShapeSetPoints(UIInstance instance, UIControlHandle sh,
+    int count, const float* xs, const float* ys);
+// 本地 → 全局绘制坐标映射（主查询 API）。成功返回 1 并写入 outX/outY。
+UICORNERSTONE_API int UICornerstone_ShapeMapToDrawPoint(UIInstance instance, UIControlHandle sh,
+    float lx, float ly, float* outX, float* outY);
+
 // 创建"动画按钮"：Button 承载内嵌 LuotiAni 动画（LuotiAni 仅作为按钮的内部
 // 绘制资源，不响应鼠标事件；按钮自身响应点击并触发 "click" 回调）。
 // 语义同 CreateAnimation：创建后不自动播放（SetBool "playing" 启动）、

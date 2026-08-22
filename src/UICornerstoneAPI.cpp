@@ -27,6 +27,7 @@
 #include "PlatformUtils.h"
 #include "Actor.h"
 #include "LuotiAni.h"
+#include "Shape.h"
 #include "EventTypes.h"
 #include "PropertyNames.h"
 #include <cstdio>
@@ -1250,7 +1251,47 @@ UIControlHandle UICornerstone_CreateAnimation(UIInstance instance,
     return reinterpret_cast<UIControlHandle>(static_cast<Control*>(ani.get()));
 }
 
-UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
+// ── Shape 形状控件（design/Shape_Design.md §4.7）──
+UIControlHandle UICornerstone_CreateShape(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto shape = std::make_shared<Shape>(instance->bench, SRect(x, y, w, h), xScale, yScale);
+    instance->bench->addControl(shape);
+    shape->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(shape.get()));
+}
+
+int UICornerstone_ShapeSetPoints(UIInstance instance, UIControlHandle sh,
+    int count, const float* xs, const float* ys)
+{
+    if (!instance || !sh || count < 0 || (count > 0 && (!xs || !ys))) return 0;
+    Control* ctlV = validateControl(instance, sh);
+    if (!ctlV) return 0;
+    auto* shape = dynamic_cast<Shape*>(ctlV);
+    if (!shape) return 0;
+    std::vector<Shape::SPointF> pts;
+    pts.reserve(count);
+    for (int i = 0; i < count; ++i) pts.push_back({xs[i], ys[i]});
+    shape->setPoints(pts);
+    return 1;
+}
+
+int UICornerstone_ShapeMapToDrawPoint(UIInstance instance, UIControlHandle sh,
+    float lx, float ly, float* outX, float* outY)
+{
+    if (!instance || !sh || !outX || !outY) return 0;
+    Control* ctlV = validateControl(instance, sh);
+    if (!ctlV) return 0;
+    auto* shape = dynamic_cast<Shape*>(ctlV);
+    if (!shape) return 0;
+    const SPoint g = shape->mapToDrawPoint(lx, ly);
+    *outX = g.x;
+    *outY = g.y;
+    return 1;
+}
+
+ UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
     const char* jsoncPath, float x, float y, float w, float h, float xScale, float yScale)
 {
     if (!instance || !instance->initialized) return nullptr;
@@ -1882,6 +1923,7 @@ int UICornerstone_GetControlType(UIInstance instance, UIControlHandle ctl, char*
         case ControlType::MenuBar:       type = PropertyNames::kControlTypeMenuBar; break;
         case ControlType::Image:         type = PropertyNames::kControlTypeImage; break;
         case ControlType::Animation:     type = PropertyNames::kControlTypeAnimation; break;
+        case ControlType::Shape:         type = PropertyNames::kControlTypeShape; break;
         case ControlType::HandleControl: type = PropertyNames::kControlTypeHandleControl; break;
         default:                         break;
     }

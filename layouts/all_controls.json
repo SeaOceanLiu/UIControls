@@ -43,6 +43,16 @@
       "firstPanel": "spLeft", "secondPanel": "spRight", "ratio": 0.5, "thickness": 6 },
     { "type": "image", "id": "img", "rect": { "x": 60, "y": 180, "w": 96, "h": 96 },
       "imageResource": "logo_256", "scaleType": "fit-center", "alpha": 255 },
+    { "type": "shape", "id": "shpRing", "rect": { "x": 480, "y": 190, "w": 80, "h": 80 },
+      "shape": "circle", "fill": "#3B82F6", "stroke": "#1E293B", "lineWidth": 2, "ringWidth": 14 },
+    { "type": "shape", "id": "shpArrow", "rect": { "x": 590, "y": 190, "w": 120, "h": 70 },
+      "shape": "polygon", "fill": "#F59E0B", "stroke": "#7C2D12", "lineWidth": 2,
+      "points": [
+        { "x": 0, "y": 0 }, { "x": 70, "y": 0 }, { "x": 70, "y": 24 },
+        { "x": 110, "y": 35 }, { "x": 70, "y": 46 }, { "x": 70, "y": 70 }, { "x": 0, "y": 70 }
+      ] },
+    { "type": "shape", "id": "shpRound", "rect": { "x": 740, "y": 196, "w": 140, "h": 56 },
+      "shape": "round-rect", "fill": "#10B981", "stroke": "#064E3B", "lineWidth": 3, "radius": 16 },
     { "type": "tree-view", "id": "tree", "rect": { "x": 200, "y": 180, "w": 280, "h": 200 },
       "indentWidth": 18, "defaultExpand": true,
       "items": [

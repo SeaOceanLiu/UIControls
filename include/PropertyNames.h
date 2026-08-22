@@ -242,6 +242,24 @@ PROP_CONSTEXPR const char* kTreeItemFontSize       = "item-font-size";
 PROP_CONSTEXPR const char* kTreeItemFont           = "item-font";
 PROP_CONSTEXPR const char* kTreeItemLeadingControl = "item-leading-control";
 
+// -- Shape 形状控件 --
+PROP_CONSTEXPR const char* kShape                  = "shape";             // 枚举属性：形状类型
+PROP_CONSTEXPR const char* kFill                   = "fill";              // 颜色属性：填充色（缺省透明=空心）
+PROP_CONSTEXPR const char* kStroke                 = "stroke";            // 颜色属性：描边色（缺省黑）
+PROP_CONSTEXPR const char* kLineWidthProp          = "line-width";        // 浮点属性：描边宽 px
+PROP_CONSTEXPR const char* kRadius                 = "radius";            // 浮点属性：圆角半径
+PROP_CONSTEXPR const char* kRingWidth              = "ring-width";        // 浮点属性：环带宽度
+PROP_CONSTEXPR const char* kJsonLineWidth          = "lineWidth";         // JSON 键（camelCase）
+PROP_CONSTEXPR const char* kJsonRingWidth          = "ringWidth";
+// ShapeType 枚举值
+PROP_CONSTEXPR const char* kShapeRect              = "rect";
+PROP_CONSTEXPR const char* kShapeFilledRect        = "filled-rect";
+PROP_CONSTEXPR const char* kShapeRoundRect         = "round-rect";
+PROP_CONSTEXPR const char* kShapeCircle            = "circle";
+PROP_CONSTEXPR const char* kShapeEllipse           = "ellipse";
+PROP_CONSTEXPR const char* kShapePolyline          = "polyline";
+PROP_CONSTEXPR const char* kShapePolygon           = "polygon";
+
 // -- Image --
 PROP_CONSTEXPR const char* kImage             = "image";              // 文件路径（只写不读）
 PROP_CONSTEXPR const char* kImageResource     = "image-resource";     // 资源 ID（只写不读）
@@ -639,6 +657,7 @@ PROP_CONSTEXPR const char* kControlTypeTreeView = "tree-view";
 PROP_CONSTEXPR const char* kControlTypeImageButton = "image-button";
 PROP_CONSTEXPR const char* kControlTypeImage       = "image";
 PROP_CONSTEXPR const char* kControlTypeAnimation = "animation";
+PROP_CONSTEXPR const char* kControlTypeShape = "shape";
 PROP_CONSTEXPR const char* kControlTypeHandleControl = "handle-control";   // 仅 C ABI GetControlType 返回（JSON 无此类型）
 PROP_CONSTEXPR const char* kControlTypeMenuItem = "menu-item";              // 同上（menu-bar 内部项）
 PROP_CONSTEXPR const char* kControlTypeMenuPanel = "menu-panel";            // 同上（menu-bar 内部面板）

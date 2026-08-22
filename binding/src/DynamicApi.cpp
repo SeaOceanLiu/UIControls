@@ -96,6 +96,9 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(CreateSplitter);
     RESOLVE(CreateScrollBar);
     RESOLVE(CreateTreeView);
+    RESOLVE(CreateShape);
+    RESOLVE(ShapeSetPoints);
+    RESOLVE(ShapeMapToDrawPoint);
     RESOLVE(TreeViewAddNode);
     RESOLVE(TreeViewRemoveNode);
     RESOLVE(TreeViewSetNodeLabel);
