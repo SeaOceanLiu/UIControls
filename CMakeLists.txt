@@ -57,6 +57,7 @@ set(CORE_SOURCES
     src/MainWindow.cpp
     src/LayoutEngine.cpp
     src/LayoutParser.cpp
+    src/ListView.cpp
     src/LuotiAni.cpp
     src/Material.cpp
     src/Panel.cpp

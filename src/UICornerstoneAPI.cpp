@@ -28,6 +28,7 @@
 #include "Actor.h"
 #include "LuotiAni.h"
 #include "Shape.h"
+#include "ListView.h"
 #include "EventTypes.h"
 #include "PropertyNames.h"
 #include <cstdio>
@@ -1291,6 +1292,194 @@ int UICornerstone_ShapeMapToDrawPoint(UIInstance instance, UIControlHandle sh,
     return 1;
 }
 
+// ── ListView 列表控件（design/ListView_Design.md §7）──
+static ListView* listViewOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<ListView*>(ctl);
+}
+
+UIControlHandle UICornerstone_CreateListView(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto lv = std::make_shared<ListView>(instance->bench, SRect(x, y, w, h), xScale, yScale);
+    instance->bench->addControl(lv);
+    lv->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(lv.get()));
+}
+
+int UICornerstone_ListViewAddRow(UIInstance instance, UIControlHandle lv,
+    const char* id, int count, const char* const* cells)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || !id || count < 0 || (count > 0 && !cells)) return 0;
+    std::vector<std::string> row;
+    for (int i = 0; i < count; ++i) row.push_back(cells[i] ? cells[i] : "");
+    return v->addRow(id ? id : "", row) >= 0 ? 1 : 0;
+}
+
+int UICornerstone_ListViewInsertRow(UIInstance instance, UIControlHandle lv,
+    int index, const char* id, int count, const char* const* cells)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || !id || count < 0 || (count > 0 && !cells)) return 0;
+    std::vector<std::string> row;
+    for (int i = 0; i < count; ++i) row.push_back(cells[i] ? cells[i] : "");
+    return v->insertRow(index, id ? id : "", row) >= 0 ? 1 : 0;
+}
+
+int UICornerstone_ListViewRemoveRow(UIInstance instance, UIControlHandle lv, int index) {
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    v->removeRow(index);
+    return 1;
+}
+
+int UICornerstone_ListViewSetCellText(UIInstance instance, UIControlHandle lv,
+    int row, int col, const char* text)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || !text) return 0;
+    v->setCell(row, col, text);
+    return 1;
+}
+
+int UICornerstone_ListViewGetCellText(UIInstance instance, UIControlHandle lv,
+    int row, int col, char* outBuf, int maxLen)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || !outBuf || maxLen <= 0) return 0;
+    const std::string t = v->getCell(row, col);
+    snprintf(outBuf, static_cast<size_t>(maxLen), "%s", t.c_str());
+    return 1;
+}
+
+int UICornerstone_ListViewSetRowCells(UIInstance instance, UIControlHandle lv,
+    int index, int count, const char* const* cells)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || count < 0 || (count > 0 && !cells)) return 0;
+    std::vector<std::string> row;
+    for (int i = 0; i < count; ++i) row.push_back(cells[i] ? cells[i] : "");
+    v->setRowCells(index, row);
+    return 1;
+}
+
+int UICornerstone_ListViewSetColumnValues(UIInstance instance, UIControlHandle lv,
+    int colIndex, int count, const char* const* values)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || colIndex < 0 || count < 0 || (count > 0 && !values)) return 0;
+    std::vector<std::string> vals;
+    for (int i = 0; i < count; ++i) vals.push_back(values[i] ? values[i] : "");
+    v->setColumnValues(colIndex, vals);
+    return 1;
+}
+
+int UICornerstone_ListViewAddColumn(UIInstance instance, UIControlHandle lv,
+    const char* title, float width, int sortable)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || !title) return 0;
+    return v->addColumn(title, width, sortable != 0) >= 0 ? 1 : 0;
+}
+
+int UICornerstone_ListViewInsertColumn(UIInstance instance, UIControlHandle lv,
+    int index, const char* title, float width, int sortable)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v || !title) return 0;
+    return v->insertColumn(index, title ? title : "", width, sortable != 0) >= 0 ? 1 : 0;
+}
+
+int UICornerstone_ListViewRemoveColumn(UIInstance instance, UIControlHandle lv, int index) {
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    v->removeColumn(index);
+    return 1;
+}
+
+int UICornerstone_ListViewSetColumnWidth(UIInstance instance, UIControlHandle lv,
+    int index, float width)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    v->setColumnWidth(index, width);
+    return 1;
+}
+
+int UICornerstone_ListViewSetColumnIcon(UIInstance instance, UIControlHandle lv,
+    int colIndex, UIControlHandle iconControl)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    Control* icon = iconControl ? validateControl(instance, iconControl) : nullptr;
+    if (iconControl && !icon) return 0;
+    v->setColumnLeadingControl(colIndex,
+        icon ? icon->getThis() : nullptr);
+    return 1;
+}
+
+int UICornerstone_ListViewSetRowLeadingControl(UIInstance instance, UIControlHandle lv,
+    int index, UIControlHandle iconControl)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    Control* icon = iconControl ? validateControl(instance, iconControl) : nullptr;
+    if (iconControl && !icon) return 0;
+    v->setRowLeadingControl(index, icon ? icon->getThis() : nullptr);
+    return 1;
+}
+
+int UICornerstone_ListViewSetCellLeadingControl(UIInstance instance, UIControlHandle lv,
+    int row, int col, UIControlHandle control)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    Control* ctl = control ? validateControl(instance, control) : nullptr;
+    if (control && !ctl) return 0;
+    v->setCellLeadingControl(row, col, ctl ? ctl->getThis() : nullptr);
+    return 1;
+}
+
+int UICornerstone_ListViewSetCellStyle(UIInstance instance, UIControlHandle lv,
+    int row, int col, uint8_t bgR, uint8_t bgG, uint8_t bgB, uint8_t bgA, int fontSize)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    CellStyle st;
+    st.bgColor = SColor(bgR, bgG, bgB, bgA);
+    st.fontSize = fontSize;
+    v->setCellStyle(row, col, st);
+    return 1;
+}
+
+int UICornerstone_ListViewSetColumnHeaderStyle(UIInstance instance, UIControlHandle lv,
+    int colIndex, uint8_t r, uint8_t g, uint8_t b, uint8_t a, int fontSize)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    HeaderStyle hs;
+    hs.textColor = SColor(r, g, b, a);
+    hs.fontSize = fontSize;
+    v->setColumnHeaderStyle(colIndex, hs);
+    return 1;
+}
+
+int UICornerstone_ListViewSetColumnSorter(UIInstance instance, UIControlHandle lv,
+    int colIndex, ListViewSortFn cmp, void* userData)
+{
+    auto* v = listViewOf(instance, lv);
+    if (!v) return 0;
+    if (!cmp) { v->clearColumnSorter(colIndex); return 1; }
+    v->setColumnSorter(colIndex, [cmp, userData](const std::string& a, const std::string& b) {
+        return cmp(a.c_str(), b.c_str(), userData) < 0;
+    });
+    return 1;
+}
+
  UIControlHandle UICornerstone_CreateAnimatedButton(UIInstance instance,
     const char* jsoncPath, float x, float y, float w, float h, float xScale, float yScale)
 {
@@ -1924,6 +2113,7 @@ int UICornerstone_GetControlType(UIInstance instance, UIControlHandle ctl, char*
         case ControlType::Image:         type = PropertyNames::kControlTypeImage; break;
         case ControlType::Animation:     type = PropertyNames::kControlTypeAnimation; break;
         case ControlType::Shape:         type = PropertyNames::kControlTypeShape; break;
+        case ControlType::ListView:      type = PropertyNames::kControlTypeListView; break;
         case ControlType::HandleControl: type = PropertyNames::kControlTypeHandleControl; break;
         default:                         break;
     }

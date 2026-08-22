@@ -260,6 +260,20 @@ PROP_CONSTEXPR const char* kShapeEllipse           = "ellipse";
 PROP_CONSTEXPR const char* kShapePolyline          = "polyline";
 PROP_CONSTEXPR const char* kShapePolygon           = "polygon";
 
+// -- ListView 列表控件（selected-index/cycle-navigation/row-height 复用 TreeView 键）--
+PROP_CONSTEXPR const char* kMode                   = "mode";               // 枚举属性：视图模式
+PROP_CONSTEXPR const char* kMultiSelect            = "multi-select";       // bool：Ctrl 多选开关
+PROP_CONSTEXPR const char* kHeaderHeight           = "header-height";      // float：列头行高
+PROP_CONSTEXPR const char* kGridlines              = "gridlines";          // bool：竖网格线
+PROP_CONSTEXPR const char* kHorizontalGridlines    = "horizontal-gridlines"; // bool：横网格线
+PROP_CONSTEXPR const char* kHoverHighlight         = "hover";              // bool：hover 高亮开关
+PROP_CONSTEXPR const char* kMinColumnWidth         = "min-column-width";   // float：列宽拖拽最小钳制
+PROP_CONSTEXPR const char* kSortColumn             = "sort-column";        // int：排序列（-1 无）
+PROP_CONSTEXPR const char* kSortAscending          = "sort-ascending";     // bool：排序方向
+// ListView 枚举值
+PROP_CONSTEXPR const char* kModeMulti              = "multi";
+PROP_CONSTEXPR const char* kModeSingle             = "single";
+
 // -- Image --
 PROP_CONSTEXPR const char* kImage             = "image";              // 文件路径（只写不读）
 PROP_CONSTEXPR const char* kImageResource     = "image-resource";     // 资源 ID（只写不读）
@@ -519,6 +533,17 @@ PROP_CONSTEXPR const char* kJsonGap                 = "gap";
 PROP_CONSTEXPR const char* kJsonPadding             = "padding";
 PROP_CONSTEXPR const char* kJsonColumns             = "columns";
 PROP_CONSTEXPR const char* kJsonRows                = "rows";
+// ListView JSON 键
+PROP_CONSTEXPR const char* kJsonMultiSelect         = "multiSelect";
+PROP_CONSTEXPR const char* kJsonHeaderHeight        = "headerHeight";
+PROP_CONSTEXPR const char* kJsonGridlines           = "gridlines";
+PROP_CONSTEXPR const char* kJsonHorizontalGridlines = "horizontalGridlines";
+PROP_CONSTEXPR const char* kJsonMinColumnWidth      = "minColumnWidth";
+PROP_CONSTEXPR const char* kJsonSortColumn          = "sortColumn";
+PROP_CONSTEXPR const char* kJsonSortAscending       = "sortAscending";
+PROP_CONSTEXPR const char* kJsonSortable            = "sortable";
+PROP_CONSTEXPR const char* kJsonIcon                = "icon";                // 列头/行图标（StatusBar icon 机制）
+PROP_CONSTEXPR const char* kJsonCellControls        = "cellControls";        // 单元格级控件 [{"col","control"}]
 PROP_CONSTEXPR const char* kJsonFlowWeight          = "flowWeight";
 PROP_CONSTEXPR const char* kJsonAnchor              = "anchor";
 PROP_CONSTEXPR const char* kJsonAnchorOffset        = "anchorOffset";
@@ -658,6 +683,7 @@ PROP_CONSTEXPR const char* kControlTypeImageButton = "image-button";
 PROP_CONSTEXPR const char* kControlTypeImage       = "image";
 PROP_CONSTEXPR const char* kControlTypeAnimation = "animation";
 PROP_CONSTEXPR const char* kControlTypeShape = "shape";
+PROP_CONSTEXPR const char* kControlTypeListView = "list-view";
 PROP_CONSTEXPR const char* kControlTypeHandleControl = "handle-control";   // 仅 C ABI GetControlType 返回（JSON 无此类型）
 PROP_CONSTEXPR const char* kControlTypeMenuItem = "menu-item";              // 同上（menu-bar 内部项）
 PROP_CONSTEXPR const char* kControlTypeMenuPanel = "menu-panel";            // 同上（menu-bar 内部面板）

@@ -97,6 +97,14 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(CreateScrollBar);
     RESOLVE(CreateTreeView);
     RESOLVE(CreateShape);
+    RESOLVE(CreateListView);
+    RESOLVE(ListViewAddRow);
+    RESOLVE(ListViewRemoveRow);
+    RESOLVE(ListViewSetCellText);
+    RESOLVE(ListViewGetCellText);
+    RESOLVE(ListViewAddColumn);
+    RESOLVE(ListViewSetColumnWidth);
+    RESOLVE(ListViewSetCellLeadingControl);
     RESOLVE(ShapeSetPoints);
     RESOLVE(ShapeMapToDrawPoint);
     RESOLVE(TreeViewAddNode);

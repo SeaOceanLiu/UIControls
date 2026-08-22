@@ -508,6 +508,44 @@ int UICornerstone::ComboBoxGetItemCount(Control& ctl) {
     return -1;
 }
 
+// ── ListView 列表控件 ──
+Control UICornerstone::CreateListView(float x, float y, float w, float h, float xScale, float yScale) {
+    if (!m_impl->instance) return Control();
+    return MakeControl(Dyn::API().fnCreateListView(m_impl->instance, x, y, w, h, xScale, yScale));
+}
+bool UICornerstone::ListViewAddRow(Control& lv, const std::string& id,
+                                   const std::vector<std::string>& cells) {
+    if (!m_impl->instance || !lv.Handle()) return false;
+    std::vector<const char*> ptrs;
+    ptrs.reserve(cells.size());
+    for (auto& c : cells) ptrs.push_back(c.c_str());
+    return Dyn::API().fnListViewAddRow(m_impl->instance, lv.Handle(), id.c_str(),
+        static_cast<int>(ptrs.size()), ptrs.data()) != 0;
+}
+bool UICornerstone::ListViewRemoveRow(Control& lv, int index) {
+    if (!m_impl->instance || !lv.Handle()) return false;
+    return Dyn::API().fnListViewRemoveRow(m_impl->instance, lv.Handle(), index) != 0;
+}
+bool UICornerstone::ListViewSetCellText(Control& lv, int row, int col, const std::string& text) {
+    if (!m_impl->instance || !lv.Handle()) return false;
+    return Dyn::API().fnListViewSetCellText(m_impl->instance, lv.Handle(), row, col, text.c_str()) != 0;
+}
+std::string UICornerstone::ListViewGetCellText(Control& lv, int row, int col) {
+    if (!m_impl->instance || !lv.Handle()) return {};
+    char buf[512];
+    if (Dyn::API().fnListViewGetCellText(m_impl->instance, lv.Handle(), row, col, buf, sizeof(buf)))
+        return std::string(buf);
+    return {};
+}
+int UICornerstone::ListViewAddColumn(Control& lv, const std::string& title, float width, bool sortable) {
+    if (!m_impl->instance || !lv.Handle()) return -1;
+    return Dyn::API().fnListViewAddColumn(m_impl->instance, lv.Handle(), title.c_str(), width, sortable ? 1 : 0);
+}
+bool UICornerstone::ListViewSetColumnWidth(Control& lv, int index, float width) {
+    if (!m_impl->instance || !lv.Handle()) return false;
+    return Dyn::API().fnListViewSetColumnWidth(m_impl->instance, lv.Handle(), index, width) != 0;
+}
+
 // ── LuotiAni 动画操作 ──
 bool UICornerstone::AnimationPrepare(Control& ctl, int startFrame) {
     if (m_impl->instance && ctl.Handle())

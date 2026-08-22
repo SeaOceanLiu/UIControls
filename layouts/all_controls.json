@@ -43,6 +43,25 @@
       "firstPanel": "spLeft", "secondPanel": "spRight", "ratio": 0.5, "thickness": 6 },
     { "type": "image", "id": "img", "rect": { "x": 60, "y": 180, "w": 96, "h": 96 },
       "imageResource": "logo_256", "scaleType": "fit-center", "alpha": 255 },
+    { "type": "list-view", "id": "lvDemo", "rect": { "x": 900, "y": 190, "w": 380, "h": 160 },
+      "mode": "multi", "selectedIndex": 0, "rowHeight": 28,
+      "columns": [
+        { "title": "名称", "width": 180, "sortable": true },
+        { "title": "类型", "width": 100 },
+        { "title": "大小", "width": 80, "sortable": true }
+      ],
+      "rows": [
+        { "id": "f1", "cells": ["main.cpp", "C++ 源文件", "2.1 KB"] },
+        { "id": "f2", "cells": ["build.bat", "批处理", "512 B"] },
+        { "id": "f3", "cells": ["logo.svg", "矢量图", "8 KB"] }
+      ] },
+    { "type": "list-view", "id": "lvSingle", "rect": { "x": 900, "y": 370, "w": 260, "h": 120 },
+      "mode": "single",
+      "rows": [
+        { "id": "opt1", "cells": ["选项 一"] },
+        { "id": "opt2", "cells": ["选项 二"] },
+        { "id": "opt3", "cells": ["选项 三"] }
+      ] },
     { "type": "shape", "id": "shpRing", "rect": { "x": 480, "y": 190, "w": 80, "h": 80 },
       "shape": "circle", "fill": "#3B82F6", "stroke": "#1E293B", "lineWidth": 2, "ringWidth": 14 },
     { "type": "shape", "id": "shpArrow", "rect": { "x": 590, "y": 190, "w": 120, "h": 70 },

@@ -7,6 +7,7 @@
 #include "NumericUpDown.h"
 #include "LuotiAni.h"
 #include "Shape.h"
+#include "ListView.h"
 #include "LayoutEngine.h"
 #include "PropertyNames.h"
 #include <fstream>
@@ -307,6 +308,8 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = parseSplitter(j, parent);
     } else if (type == PropertyNames::kControlTypeTreeView) {
         result = parseTreeView(j, parent);
+    } else if (type == PropertyNames::kControlTypeListView) {
+        result = parseListView(j, parent);
     } else if (m_components.find(type) != m_components.end()) {
         // Component type: instantiate from template
         result = instantiateComponent(type, j, parent, index);
@@ -526,6 +529,108 @@ shared_ptr<Control> LayoutParser::parseShape(const json& j, Control* parent) {
 
     shape->create();
     return shape;
+}
+
+shared_ptr<Control> LayoutParser::parseListView(const json& j, Control* parent) {
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
+    popJsonPath();
+
+    float xScale = 1.0f, yScale = 1.0f;
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
+    }
+
+    auto lv = make_shared<ListView>(parent, rect, xScale, yScale);
+    m_theme.applyCommonColors(lv, PropertyNames::kThemeCatPanel);
+    parseCommonProperties(lv, j);
+
+    // 属性（§5.6 矩阵一期全量）
+    if (j.contains(PropertyNames::kMode) && j[PropertyNames::kMode].is_string()) {
+        const string m = j[PropertyNames::kMode].get<string>();
+        if (m == PropertyNames::kModeSingle) lv->setMode(ListView::Mode::Single);
+        else if (m == PropertyNames::kModeMulti) lv->setMode(ListView::Mode::Multi);
+        else logWarn("list-view: unknown mode \"" + m + "\"");
+    }
+    if (j.contains(PropertyNames::kJsonMultiSelect) && j[PropertyNames::kJsonMultiSelect].is_boolean())
+        lv->setMultiSelect(j[PropertyNames::kJsonMultiSelect].get<bool>());
+    if (j.contains(PropertyNames::kJsonSelectedIndex) && j[PropertyNames::kJsonSelectedIndex].is_number_integer())
+        lv->setSelectedRow(j[PropertyNames::kJsonSelectedIndex].get<int>());
+    if (j.contains(PropertyNames::kJsonCycleNavigation) && j[PropertyNames::kJsonCycleNavigation].is_boolean())
+        lv->setCycleNavigation(j[PropertyNames::kJsonCycleNavigation].get<bool>());
+    if (j.contains(PropertyNames::kJsonRowHeight) && j[PropertyNames::kJsonRowHeight].is_number())
+        lv->setRowHeight(j[PropertyNames::kJsonRowHeight].get<float>());
+    if (j.contains(PropertyNames::kJsonHeaderHeight) && j[PropertyNames::kJsonHeaderHeight].is_number())
+        lv->setHeaderHeight(j[PropertyNames::kJsonHeaderHeight].get<float>());
+    if (j.contains(PropertyNames::kJsonGridlines) && j[PropertyNames::kJsonGridlines].is_boolean())
+        lv->setGridlines(j[PropertyNames::kJsonGridlines].get<bool>());
+    if (j.contains(PropertyNames::kJsonHorizontalGridlines) && j[PropertyNames::kJsonHorizontalGridlines].is_boolean())
+        lv->setHorizontalGridlines(j[PropertyNames::kJsonHorizontalGridlines].get<bool>());
+    if (j.contains(PropertyNames::kJsonHover) && j[PropertyNames::kJsonHover].is_boolean())
+        lv->setHoverHighlight(j[PropertyNames::kJsonHover].get<bool>());
+    if (j.contains(PropertyNames::kJsonMinColumnWidth) && j[PropertyNames::kJsonMinColumnWidth].is_number())
+        lv->setMinColumnWidth(j[PropertyNames::kJsonMinColumnWidth].get<float>());
+
+    // columns [{title,width,sortable,(icon 一期暂缓：StatusBar icon 机制未落地)}]
+    if (j.contains(PropertyNames::kJsonColumns) && j[PropertyNames::kJsonColumns].is_array()) {
+        for (const auto& cj : j[PropertyNames::kJsonColumns]) {
+            const string title = cj.value(PropertyNames::kJsonTitle, string());
+            const float width = cj.value(PropertyNames::kJsonWidth, 100.0f);
+            const bool sortable = cj.value(PropertyNames::kJsonSortable, false);
+            lv->addColumn(title, width, sortable);
+            if (cj.contains(PropertyNames::kJsonIcon))
+                logWarn("list-view: column icon deferred (StatusBar icon mechanism pending), skipped");
+        }
+    }
+    // sortColumn/sortAscending（初始排序状态；列存在后触发重排）
+    if (j.contains(PropertyNames::kJsonSortColumn) && j[PropertyNames::kJsonSortColumn].is_number_integer()) {
+        lv->setSortColumn(j[PropertyNames::kJsonSortColumn].get<int>());
+        if (j.contains(PropertyNames::kJsonSortAscending) && j[PropertyNames::kJsonSortAscending].is_boolean())
+            lv->setSortAscending(j[PropertyNames::kJsonSortAscending].get<bool>());
+    }
+
+    // rows [{id,cells[],(icon 暂缓),cellControls}]
+    if (j.contains(PropertyNames::kJsonRows) && j[PropertyNames::kJsonRows].is_array()) {
+        for (const auto& rj : j[PropertyNames::kJsonRows]) {
+            const string id = rj.value(PropertyNames::kJsonId, string());
+            vector<string> cells;
+            if (rj.contains("cells") && rj["cells"].is_array())
+                for (const auto& c : rj["cells"])
+                    cells.push_back(c.is_string() ? c.get<string>() : string());
+            if (cells.empty() && !id.empty()) cells.push_back(id);   // 单列兜底
+            lv->addRow(id, cells);
+            const int rowIdx = lv->getRowCount() - 1;
+            if (rj.contains(PropertyNames::kJsonIcon))
+                logWarn("list-view: row icon deferred (StatusBar icon mechanism pending), skipped");
+            // cellControls: [{"col":0,"control":{...}}]
+            if (rj.contains(PropertyNames::kJsonCellControls) && rj[PropertyNames::kJsonCellControls].is_array()) {
+                for (const auto& cc : rj[PropertyNames::kJsonCellControls]) {
+                    if (!cc.is_object() || !cc.contains("col") || !cc["col"].is_number_integer() ||
+                        !cc.contains("control") || !cc["control"].is_object())
+                        continue;
+                    json lcJson = cc["control"];
+                    if (!lcJson.contains(PropertyNames::kJsonRect)) {
+                        lcJson[PropertyNames::kJsonRect] = {
+                            {PropertyNames::kJsonX, 0}, {PropertyNames::kJsonY, 0},
+                            {PropertyNames::kJsonW, 0}, {PropertyNames::kJsonH, 0}
+                        };
+                    }
+                    auto lc = parseControl(lcJson, nullptr, 0);
+                    if (lc) lv->setCellLeadingControl(rowIdx, cc["col"].get<int>(), lc);
+                    else logWarn("list-view cellControl parse failed, skipped");
+                }
+            }
+        }
+    }
+
+    parseEvents(lv, j);
+
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<std::string>()] = lv;
+
+    lv->create();
+    return lv;
 }
 
 shared_ptr<Control> LayoutParser::parseImage(const json& j, Control* parent) {

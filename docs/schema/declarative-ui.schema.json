@@ -146,6 +146,7 @@
         { "$ref": "#/$defs/edit-box" },
         { "$ref": "#/$defs/image" },
         { "$ref": "#/$defs/label" },
+        { "$ref": "#/$defs/list-view" },
         { "$ref": "#/$defs/menu-bar" },
         { "$ref": "#/$defs/numeric-up-down" },
         { "$ref": "#/$defs/panel" },
@@ -209,6 +210,45 @@
         "providerName": { "type": "string" },
         "resourceId": { "type": "string" },
         "scaleType": { "enum": ["stretch", "fit-center", "center-crop", "none"] }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "list-view": {
+      "type": "object",
+      "allOf": [ { "$ref": "#/$defs/common" } ],
+      "properties": {
+        "type": { "const": "list-view" },
+        "columns": {
+          "type": "array",
+          "description": "列定义 [{title,width,sortable}]（icon 一期暂缓）",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "width": { "type": "number", "x-default": "100" },
+              "sortable": { "type": "boolean", "x-default": "false" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "cycleNavigation": { "type": "boolean", "x-default": "true" },
+        "gridlines": { "type": "boolean", "x-default": "true（multi）；single 恒关" },
+        "headerHeight": { "type": "number", "x-default": "28" },
+        "hover": { "type": "boolean", "x-default": "true" },
+        "horizontalGridlines": { "type": "boolean", "x-default": "false" },
+        "minColumnWidth": { "type": "number", "x-default": "20" },
+        "mode": { "enum": ["multi", "single"], "x-default": "multi" },
+        "multiSelect": { "type": "boolean", "x-default": "true" },
+        "rowHeight": { "type": "number", "x-default": "24（TREEVIEW_DEFAULT_ROW_HEIGHT 同款）" },
+        "rows": {
+          "type": "array",
+          "description": "行数据 [{id,cells[],cellControls:[{col,control}]}]（元素宽松校验）",
+          "items": { "type": "object" }
+        },
+        "selectedIndex": { "type": "integer", "x-default": "-1" },
+        "sortAscending": { "type": "boolean", "x-default": "true" },
+        "sortColumn": { "type": "integer", "x-default": "-1" }
       },
       "required": ["type"],
       "additionalProperties": false

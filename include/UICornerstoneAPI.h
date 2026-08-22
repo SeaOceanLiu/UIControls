@@ -461,6 +461,52 @@ UICORNERSTONE_API int UICornerstone_ShapeSetPoints(UIInstance instance, UIContro
 UICORNERSTONE_API int UICornerstone_ShapeMapToDrawPoint(UIInstance instance, UIControlHandle sh,
     float lx, float ly, float* outX, float* outY);
 
+/* ============ ListView 列表控件 ============ */
+// 属性走通用 setter：SetEnum("mode","multi"/"single")、SetBool("multi-select"/"gridlines"/
+// "horizontal-gridlines"/"hover"/"sort-ascending")、SetFloat("row-height"/"header-height"/
+// "min-column-width")、SetInt("selected-index"/"sort-column")；数据/对象类走下列专用函数。
+// 返回值约定：int 1=成功 / 0=失败（非 list-view 或越界）。
+typedef int (*ListViewSortFn)(const char* a, const char* b, void* userData);
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateListView(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale);
+// 行（cells 为字符串数组，自动补足/截断到列数）
+UICORNERSTONE_API int UICornerstone_ListViewAddRow(UIInstance instance, UIControlHandle lv,
+    const char* id, int count, const char* const* cells);
+UICORNERSTONE_API int UICornerstone_ListViewInsertRow(UIInstance instance, UIControlHandle lv,
+    int index, const char* id, int count, const char* const* cells);
+UICORNERSTONE_API int UICornerstone_ListViewRemoveRow(UIInstance instance, UIControlHandle lv, int index);
+UICORNERSTONE_API int UICornerstone_ListViewSetCellText(UIInstance instance, UIControlHandle lv,
+    int row, int col, const char* text);
+UICORNERSTONE_API int UICornerstone_ListViewGetCellText(UIInstance instance, UIControlHandle lv,
+    int row, int col, char* outBuf, int maxLen);
+UICORNERSTONE_API int UICornerstone_ListViewSetRowCells(UIInstance instance, UIControlHandle lv,
+    int index, int count, const char* const* cells);
+UICORNERSTONE_API int UICornerstone_ListViewSetColumnValues(UIInstance instance, UIControlHandle lv,
+    int colIndex, int count, const char* const* values);
+// 列
+UICORNERSTONE_API int UICornerstone_ListViewAddColumn(UIInstance instance, UIControlHandle lv,
+    const char* title, float width, int sortable);
+UICORNERSTONE_API int UICornerstone_ListViewInsertColumn(UIInstance instance, UIControlHandle lv,
+    int index, const char* title, float width, int sortable);
+UICORNERSTONE_API int UICornerstone_ListViewRemoveColumn(UIInstance instance, UIControlHandle lv, int index);
+UICORNERSTONE_API int UICornerstone_ListViewSetColumnWidth(UIInstance instance, UIControlHandle lv,
+    int index, float width);
+// 对象注入（leadingControl 语义）
+UICORNERSTONE_API int UICornerstone_ListViewSetColumnIcon(UIInstance instance, UIControlHandle lv,
+    int colIndex, UIControlHandle iconControl);
+UICORNERSTONE_API int UICornerstone_ListViewSetRowLeadingControl(UIInstance instance, UIControlHandle lv,
+    int index, UIControlHandle iconControl);
+UICORNERSTONE_API int UICornerstone_ListViewSetCellLeadingControl(UIInstance instance, UIControlHandle lv,
+    int row, int col, UIControlHandle control);
+// 样式（bg 颜色 + fontSize；font 缺省；JSON/Binding 二期）
+UICORNERSTONE_API int UICornerstone_ListViewSetCellStyle(UIInstance instance, UIControlHandle lv,
+    int row, int col, uint8_t bgR, uint8_t bgG, uint8_t bgB, uint8_t bgA, int fontSize);
+UICORNERSTONE_API int UICornerstone_ListViewSetColumnHeaderStyle(UIInstance instance, UIControlHandle lv,
+    int colIndex, uint8_t r, uint8_t g, uint8_t b, uint8_t a, int fontSize);
+// 自定义排序比较器（返回 <0/0/>0；传 NULL 清除该列回调恢复字典序）
+UICORNERSTONE_API int UICornerstone_ListViewSetColumnSorter(UIInstance instance, UIControlHandle lv,
+    int colIndex, ListViewSortFn cmp, void* userData);
+
 // 创建"动画按钮"：Button 承载内嵌 LuotiAni 动画（LuotiAni 仅作为按钮的内部
 // 绘制资源，不响应鼠标事件；按钮自身响应点击并触发 "click" 回调）。
 // 语义同 CreateAnimation：创建后不自动播放（SetBool "playing" 启动）、

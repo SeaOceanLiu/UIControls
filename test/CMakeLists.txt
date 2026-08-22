@@ -104,6 +104,7 @@ set(UI_TEST_EXECUTABLES
     test_handlecontrol
     test_slider
     test_shape
+    test_listview
     test_numericupdown
     test_splitter
     test_treeview

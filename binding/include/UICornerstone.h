@@ -167,6 +167,15 @@ public:
     bool ComboBoxClearItems(Control& ctl);
     int  ComboBoxGetItemCount(Control& ctl);
 
+    // ── ListView 列表控件（属性走 Control::Set*；数据走专用方法）──
+    Control CreateListView(float x, float y, float w, float h, float xScale = 1.0f, float yScale = 1.0f);
+    bool ListViewAddRow(Control& lv, const std::string& id, const std::vector<std::string>& cells = {});
+    bool ListViewRemoveRow(Control& lv, int index);
+    bool ListViewSetCellText(Control& lv, int row, int col, const std::string& text);
+    std::string ListViewGetCellText(Control& lv, int row, int col);
+    int  ListViewAddColumn(Control& lv, const std::string& title, float width, bool sortable = false);
+    bool ListViewSetColumnWidth(Control& lv, int index, float width);
+
     // ── LuotiAni 动画操作 ──
     bool AnimationPrepare(Control& ctl, int startFrame = 0);
     bool AnimationSetFrameFilter(Control& ctl, bool bilinear);

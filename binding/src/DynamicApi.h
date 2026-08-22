@@ -88,6 +88,15 @@ struct Api {
 
     // Shape 形状控件
     UIControlHandle (*fnCreateShape)(UIInstance, float, float, float, float, float, float) = nullptr;
+    // ListView 列表控件（属性走 Control::Set* 通用接口；数据/对象类专用）
+    UIControlHandle (*fnCreateListView)(UIInstance, float, float, float, float, float, float) = nullptr;
+    int (*fnListViewAddRow)(UIInstance, UIControlHandle, const char*, int, const char* const*) = nullptr;
+    int (*fnListViewRemoveRow)(UIInstance, UIControlHandle, int) = nullptr;
+    int (*fnListViewSetCellText)(UIInstance, UIControlHandle, int, int, const char*) = nullptr;
+    int (*fnListViewGetCellText)(UIInstance, UIControlHandle, int, int, char*, int) = nullptr;
+    int (*fnListViewAddColumn)(UIInstance, UIControlHandle, const char*, float, int) = nullptr;
+    int (*fnListViewSetColumnWidth)(UIInstance, UIControlHandle, int, float) = nullptr;
+    int (*fnListViewSetCellLeadingControl)(UIInstance, UIControlHandle, int, int, void*) = nullptr;
     int (*fnShapeSetPoints)(UIInstance, UIControlHandle, int, const float*, const float*) = nullptr;
     int (*fnShapeMapToDrawPoint)(UIInstance, UIControlHandle, float, float, float*, float*) = nullptr;
     int  (*fnTreeViewAddNode)(UIInstance, UIControlHandle, const char*, const char*, const char*, int) = nullptr;
