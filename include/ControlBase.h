@@ -142,7 +142,7 @@ enum class ControlType {
     ProgressBar, Slider, ScrollBar, Panel, WinFrame, ColorPicker,
     Splitter, TreeView, NumericUpDown, Popup, ConfirmPopup, Dialog,
     MenuItem, MenuPanel, MenuBar, Image, Animation, HandleControl, Shape,
-    ListView, StatusBar
+    ListView, StatusBar, TabControl
 };
 
 class Control{

@@ -74,6 +74,7 @@ set(CORE_SOURCES
     src/Slider.cpp
     src/StatusBar.cpp
     src/ContextMenu.cpp
+    src/TabControl.cpp
     src/Surface.cpp
     src/TextArea.cpp
     src/Theme.cpp

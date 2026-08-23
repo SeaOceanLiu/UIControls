@@ -533,6 +533,19 @@ UICORNERSTONE_API int UICornerstone_ContextMenuAddSeparator(UIInstance instance,
 UICORNERSTONE_API int UICornerstone_ContextMenuShow(UIInstance instance, UIControlHandle menu, float x, float y);
 UICORNERSTONE_API int UICornerstone_ContextMenuClose(UIInstance instance, UIControlHandle menu);
 
+/* ============ TabControl 选项卡控件 ============ */
+// 控件级属性走通用 setter:SetEnum("position")=top/bottom/left/right、
+//   SetInt("current-index")、SetFloat("font-size")；数据/对象类走下列专用函数。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateTabControl(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale);
+UICORNERSTONE_API int UICornerstone_TabAddPage(UIInstance instance, UIControlHandle tab, const char* title);
+UICORNERSTONE_API int UICornerstone_TabSetTitle(UIInstance instance, UIControlHandle tab,
+    int index, const char* title);
+UICORNERSTONE_API int UICornerstone_TabSetPage(UIInstance instance, UIControlHandle tab,
+    int index, UIControlHandle page);
+UICORNERSTONE_API int UICornerstone_TabSetTabLeadingControl(UIInstance instance, UIControlHandle tab,
+    int index, UIControlHandle handle);
+
 // 创建"动画按钮"：Button 承载内嵌 LuotiAni 动画（LuotiAni 仅作为按钮的内部
 // 绘制资源，不响应鼠标事件；按钮自身响应点击并触发 "click" 回调）。
 // 语义同 CreateAnimation：创建后不自动播放（SetBool "playing" 启动）、

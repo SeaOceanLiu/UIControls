@@ -107,6 +107,7 @@ set(UI_TEST_EXECUTABLES
     test_listview
     test_statusbar
     test_contextmenu
+    test_tabcontrol
     test_numericupdown
     test_splitter
     test_treeview

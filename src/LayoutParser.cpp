@@ -10,6 +10,7 @@
 #include "ListView.h"
 #include "StatusBar.h"
 #include "ContextMenu.h"
+#include "TabControl.h"
 #include "Actor.h"
 #include "Menu.h"
 #include "LayoutEngine.h"
@@ -316,6 +317,8 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = parseTreeView(j, parent);
     } else if (type == PropertyNames::kControlTypeListView) {
         result = parseListView(j, parent);
+    } else if (type == PropertyNames::kControlTypeTabControl) {
+        result = parseTabControl(j, parent);
     } else if (m_components.find(type) != m_components.end()) {
         // Component type: instantiate from template
         result = instantiateComponent(type, j, parent, index);
@@ -650,6 +653,76 @@ shared_ptr<Control> LayoutParser::parseListView(const json& j, Control* parent) 
 
     lv->create();
     return lv;
+}
+
+shared_ptr<Control> LayoutParser::parseTabControl(const json& j, Control* parent) {
+    pushJsonPath(PropertyNames::kJsonRect);
+    SRect rect = parseRect(j[PropertyNames::kJsonRect]);
+    popJsonPath();
+
+    float xScale = 1.0f, yScale = 1.0f;
+    if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+        xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+        yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
+    }
+
+    auto tc = make_shared<TabControl>(parent, rect, xScale, yScale);
+    m_theme.applyCommonColors(tc, PropertyNames::kThemeCatPanel);
+    parseCommonProperties(tc, j);
+
+    if (j.contains(PropertyNames::kJsonPosition) && j[PropertyNames::kJsonPosition].is_string()) {
+        const string p = j[PropertyNames::kJsonPosition].get<string>();
+        if (p == "bottom") tc->setPosition(TabPosition::Bottom);
+        else if (p == "left") tc->setPosition(TabPosition::Left);
+        else if (p == "right") tc->setPosition(TabPosition::Right);
+        else tc->setPosition(TabPosition::Top);
+    }
+    if (j.contains(PropertyNames::kJsonFontSize) && j[PropertyNames::kJsonFontSize].is_number())
+        tc->setFontSize(j[PropertyNames::kJsonFontSize].get<float>());
+
+    if (j.contains(PropertyNames::kJsonTabs) && j[PropertyNames::kJsonTabs].is_array()) {
+        pushJsonPath(PropertyNames::kJsonTabs);
+        for (const auto& tj : j[PropertyNames::kJsonTabs]) {
+            const string title = tj.value(PropertyNames::kJsonTitle, string());
+            shared_ptr<Control> page;
+            if (tj.contains(PropertyNames::kJsonPage) && tj[PropertyNames::kJsonPage].is_object()) {
+                json pj = tj[PropertyNames::kJsonPage];
+                if (!pj.contains(PropertyNames::kJsonRect)) {
+                    pj[PropertyNames::kJsonRect] = {
+                        {PropertyNames::kJsonX, 0}, {PropertyNames::kJsonY, 0},
+                        {PropertyNames::kJsonW, 0}, {PropertyNames::kJsonH, 0}
+                    };
+                }
+                page = parseControl(pj, nullptr, 0);
+            }
+            tc->addTab(title, page);
+            int idx = tc->getTabCount() - 1;
+            if (tj.contains(PropertyNames::kJsonIcon) && tj[PropertyNames::kJsonIcon].is_string()) {
+                string iconPath = tj[PropertyNames::kJsonIcon].get<string>();
+                shared_ptr<Actor> actor = nullptr;
+                if (iconPath.rfind(PropertyNames::kProviderPrefix, 0) == 0) {
+                    actor = make_shared<Actor>(nullptr, iconPath.substr(strlen(PropertyNames::kProviderPrefix)), false, xScale, yScale);
+                } else {
+                    fs::path p(iconPath);
+                    if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+                    actor = make_shared<Actor>(nullptr, p, false, xScale, yScale);
+                }
+                if (actor) { actor->create(); tc->setTabLeadingControl(idx, actor); }
+            }
+        }
+        popJsonPath();
+    }
+
+    if (j.contains(PropertyNames::kJsonCurrentIndex) && j[PropertyNames::kJsonCurrentIndex].is_number_integer())
+        tc->setCurrentIndex(j[PropertyNames::kJsonCurrentIndex].get<int>());
+
+    parseEvents(tc, j);
+
+    if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+        m_controlsById[j[PropertyNames::kJsonId].get<std::string>()] = tc;
+
+    tc->create();
+    return tc;
 }
 
 shared_ptr<Control> LayoutParser::parseImage(const json& j, Control* parent) {

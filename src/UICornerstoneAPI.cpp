@@ -31,6 +31,7 @@
 #include "ListView.h"
 #include "StatusBar.h"
 #include "ContextMenu.h"
+#include "TabControl.h"
 #include "EventTypes.h"
 #include "PropertyNames.h"
 #include <cstdio>
@@ -1420,6 +1421,61 @@ int UICornerstone_ContextMenuClose(UIInstance instance, UIControlHandle menu) {
     return 1;
 }
 
+// ── TabControl C API ──
+static TabControl* tabControlOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<TabControl*>(ctl);
+}
+
+UIControlHandle UICornerstone_CreateTabControl(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto tc = std::make_shared<TabControl>(instance->bench, SRect(x, y, w, h), xScale, yScale);
+    instance->bench->addControl(tc);
+    tc->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(tc.get()));
+}
+
+int UICornerstone_TabAddPage(UIInstance instance, UIControlHandle tab, const char* title) {
+    auto* v = tabControlOf(instance, tab);
+    if (!v || !title) return -1;
+    return v->addTab(title, nullptr);
+}
+
+int UICornerstone_TabSetTitle(UIInstance instance, UIControlHandle tab,
+    int index, const char* title)
+{
+    auto* v = tabControlOf(instance, tab);
+    if (!v || !title) return 0;
+    v->setTabText(index, title);
+    return 1;
+}
+
+int UICornerstone_TabSetPage(UIInstance instance, UIControlHandle tab,
+    int index, UIControlHandle page)
+{
+    auto* v = tabControlOf(instance, tab);
+    if (!v || index < 0) return 0;
+    Control* pg = page ? validateControl(instance, page) : nullptr;
+    if (page && !pg) return 0;
+    v->setTabPage(index, pg ? pg->getThis() : nullptr);
+    return 1;
+}
+
+int UICornerstone_TabSetTabLeadingControl(UIInstance instance, UIControlHandle tab,
+    int index, UIControlHandle handle)
+{
+    auto* v = tabControlOf(instance, tab);
+    if (!v || index < 0) return 0;
+    Control* ctl = handle ? validateControl(instance, handle) : nullptr;
+    if (handle && !ctl) return 0;
+    v->setTabLeadingControl(index, ctl ? ctl->getThis() : nullptr);
+    return 1;
+}
+
 UIControlHandle UICornerstone_CreateListView(UIInstance instance,
     float x, float y, float w, float h, float xScale, float yScale)
 {
@@ -2235,6 +2291,7 @@ int UICornerstone_GetControlType(UIInstance instance, UIControlHandle ctl, char*
         case ControlType::Shape:         type = PropertyNames::kControlTypeShape; break;
         case ControlType::ListView:      type = PropertyNames::kControlTypeListView; break;
         case ControlType::StatusBar:     type = PropertyNames::kControlTypeStatusBar; break;
+        case ControlType::TabControl:    type = PropertyNames::kControlTypeTabControl; break;
         case ControlType::HandleControl: type = PropertyNames::kControlTypeHandleControl; break;
         default:                         break;
     }
