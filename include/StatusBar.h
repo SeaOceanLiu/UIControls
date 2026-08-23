@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // StatusBar.h -- 状态栏控件（VSCode 风格底部状态栏）
 // 设计：design/StatusBar_Design.md（决策点 1-6 已拍板）
 // 弹窗：内嵌共享 MenuPanel,点击 item 向上弹出（MenuBar 反向）,外部点击关闭
@@ -11,6 +11,11 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+using std::string;
+using std::vector;
+using std::shared_ptr;
+using std::function;
 
 class MenuPanel;
 

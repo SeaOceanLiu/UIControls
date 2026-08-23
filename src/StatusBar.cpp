@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // StatusBar.cpp -- 状态栏控件实现（design/StatusBar_Design.md）
 // left/right 两组布局；点击 item 向上弹出共享 MenuPanel；外部点击关闭。
 // ============================================================================
@@ -22,6 +22,7 @@ StatusBar::StatusBar(Control* parent, const SRect& rect, float xScale, float ySc
     m_ctlType = ControlType::StatusBar;
     m_rect = rect;
     m_itemHeight = rect.height;
+    setNormalStateBGColor(SColor(0, 122, 204));   // VSCode 状态栏蓝
 }
 
 // ── 数据操作 ──
@@ -47,6 +48,9 @@ void StatusBar::setStatusItemMenu(const string& id, shared_ptr<MenuPanel> panel)
     for (auto& item : m_items) {
         if (item.id == id) { item.menuPanel = std::move(panel); return; }
     }
+}
+bool StatusBar::isPopupOpen() const {
+    return m_popupPanel && m_popupPanel->getVisible();
 }
 void StatusBar::setStatusItemLeadingControl(const string& id, shared_ptr<Control> ctl) {
     for (auto& item : m_items) {
@@ -127,29 +131,38 @@ int StatusBar::hitTestIndex(float x) const {
 
 // ── 绘制 ──
 void StatusBar::draw(void) {
-    ControlImpl::draw();
+    ControlImpl::beforeDraw();                 // 背景（蓝）/ 边框
     RenderDevice* dev = getRenderDevice();
     TextRenderer* renderer = getTextRenderer();
-    if (!dev) return;
+    const float ox = m_rect.left, oy = m_rect.top;
 
-    // hover 高亮
-    if (m_hoveredItem >= 0 && m_hoveredItem < static_cast<int>(m_items.size())) {
-        const auto& r = m_items[m_hoveredItem].hitRect;
-        dev->setDrawColor(SColor(60, 60, 70));
-        dev->fillRect(SRect(r.left, r.top, r.width, r.height));
+    if (dev) {
+        // hover 高亮（浅蓝）
+        if (m_hoveredItem >= 0 && m_hoveredItem < static_cast<int>(m_items.size())) {
+            const auto& r = m_items[m_hoveredItem].hitRect;
+            dev->setDrawColor(SColor(36, 142, 222));
+            dev->fillRect(SRect(ox + r.left, oy + r.top, r.width, r.height));
+        }
+
+        for (const auto& item : m_items) {
+            float x = ox + item.hitRect.left + 4.f;
+            float iy = oy + item.hitRect.top + (m_itemHeight - m_fontSize * 1.4f) / 2.f;
+            if (item.leadingControl) {
+                const float isz = m_fontSize * 1.4f;
+                item.leadingControl->setRect(SRect(ox + item.hitRect.left + 4.f, iy, isz, isz));
+                item.leadingControl->draw();
+                x += isz + 4.f;
+            }
+            if (renderer && m_font) {
+                renderer->drawText(m_font.get(), item.text, x,
+                                   oy + item.hitRect.top + (m_itemHeight - m_fontSize) / 2.f,
+                                   SColor(235, 235, 235));
+            }
+        }
     }
 
-    for (const auto& item : m_items) {
-        float x = item.hitRect.left + 4.f;
-        if (item.leadingControl) {
-            x += m_fontSize * 1.4f + 4.f;
-        }
-        if (renderer && m_font) {
-            renderer->drawText(m_font.get(), item.text, x,
-                               item.hitRect.top + (m_itemHeight - m_fontSize) / 2.f,
-                               SColor(235, 235, 235));
-        }
-    }
+    ControlImpl::draw();                       // 子控件（弹窗 MenuPanel）
+    ControlImpl::afterDraw();
 }
 
 // ── 弹窗 ──
@@ -171,13 +184,14 @@ void StatusBar::openPopup(int itemIndex) {
     const float panelW = std::max(item.hitRect.width, 120.f);
     const float panelH = item.menuPanel->getRect().height;
 
-    // 向上定位：面板底缘贴 item 顶缘
+    // 向上定位：面板底缘贴 item 顶缘（绝对坐标，RenderDevice 以 bench 原点绘制）
     float localY = item.hitRect.top - panelH;
     // 顶部越界钳制（不出窗口顶部）
     if (localY < -m_rect.top) localY = -m_rect.top;
-    const float localX = item.hitRect.left;
+    const float absX = m_rect.left + item.hitRect.left;
+    const float absY = m_rect.top + localY;
 
-    m_popupPanel->setPosition(localX, localY);
+    m_popupPanel->setPosition(absX, absY);
     m_popupPanel->recalculateSize();
     m_popupPanel->show();
 }

@@ -29,6 +29,7 @@
 #include "LuotiAni.h"
 #include "Shape.h"
 #include "ListView.h"
+#include "StatusBar.h"
 #include "EventTypes.h"
 #include "PropertyNames.h"
 #include <cstdio>
@@ -1300,7 +1301,71 @@ static ListView* listViewOf(UIInstance instance, UIControlHandle handle) {
     return dynamic_cast<ListView*>(ctl);
 }
 
-// StatusBar CAPI 暂时禁用（待修复编译错误后恢复）
+
+static StatusBar* statusBarOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<StatusBar*>(ctl);
+}
+
+UIControlHandle UICornerstone_CreateStatusBar(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto bar = std::make_shared<StatusBar>(instance->bench, SRect(x, y, w, h), xScale, yScale);
+    instance->bench->addControl(bar);
+    bar->setVisible(true);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(bar.get()));
+}
+
+int UICornerstone_StatusBarAddItem(UIInstance instance, UIControlHandle bar,
+    const char* id, const char* text, int rightAlign)
+{
+    auto* v = statusBarOf(instance, bar);
+    if (!v || !id || !text) return 0;
+    v->addStatusItem(id, text, rightAlign != 0);
+    return 1;
+}
+
+int UICornerstone_StatusBarSetItemText(UIInstance instance, UIControlHandle bar,
+    const char* id, const char* text)
+{
+    auto* v = statusBarOf(instance, bar);
+    if (!v || !id || !text) return 0;
+    v->updateStatusItemText(id, text);
+    return 1;
+}
+
+int UICornerstone_StatusBarRemoveItem(UIInstance instance, UIControlHandle bar, const char* id) {
+    auto* v = statusBarOf(instance, bar);
+    if (!v || !id) return 0;
+    v->removeStatusItem(id);
+    return 1;
+}
+
+int UICornerstone_StatusBarSetItemMenu(UIInstance instance, UIControlHandle bar,
+    const char* id, UIControlHandle menuPanel)
+{
+    auto* v = statusBarOf(instance, bar);
+    if (!v || !id) return 0;
+    Control* mp = menuPanel ? validateControl(instance, menuPanel) : nullptr;
+    if (menuPanel && !mp) return 0;
+    v->setStatusItemMenu(id, mp ? std::dynamic_pointer_cast<MenuPanel>(
+        mp->getThis()) : nullptr);
+    return 1;
+}
+
+int UICornerstone_StatusBarSetItemIcon(UIInstance instance, UIControlHandle bar,
+    const char* id, UIControlHandle iconControl)
+{
+    auto* v = statusBarOf(instance, bar);
+    if (!v || !id) return 0;
+    Control* icon = iconControl ? validateControl(instance, iconControl) : nullptr;
+    if (iconControl && !icon) return 0;
+    v->setStatusItemLeadingControl(id, icon ? icon->getThis() : nullptr);
+    return 1;
+}
 
 UIControlHandle UICornerstone_CreateListView(UIInstance instance,
     float x, float y, float w, float h, float xScale, float yScale)
@@ -2116,6 +2181,7 @@ int UICornerstone_GetControlType(UIInstance instance, UIControlHandle ctl, char*
         case ControlType::Animation:     type = PropertyNames::kControlTypeAnimation; break;
         case ControlType::Shape:         type = PropertyNames::kControlTypeShape; break;
         case ControlType::ListView:      type = PropertyNames::kControlTypeListView; break;
+        case ControlType::StatusBar:     type = PropertyNames::kControlTypeStatusBar; break;
         case ControlType::HandleControl: type = PropertyNames::kControlTypeHandleControl; break;
         default:                         break;
     }

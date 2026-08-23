@@ -72,7 +72,7 @@ set(CORE_SOURCES
     src/Shape.cpp
     src/RenderDevice.cpp
     src/Slider.cpp
-    # src/StatusBar.cpp  # TODO: fix compile errors
+    src/StatusBar.cpp
     src/Surface.cpp
     src/TextArea.cpp
     src/Theme.cpp
