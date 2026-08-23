@@ -125,18 +125,22 @@ int ListView::visibleEndRow() const {
 void ListView::updateScrollBars() {
     const float dataY = (m_viewMode == Mode::Multi) ? m_headerHeight : 0.f;
     const float dataH = max(0.f, m_rect.height - dataY);
+    // 垂直滚动条：仅内容超高时显示
     if (m_scrollBarV) {
         const float range = max(0.f, getRowCount() * m_rowHeight - dataH);
         m_scrollBarV->setRange(0.f, range);
         m_scrollBarV->setPageSize(dataH);
+        m_scrollBarV->setVisible(range > 0.f);          // 内容不超高 → 隐藏
         m_scrollOffsetV = static_cast<int>(std::clamp(
             static_cast<float>(m_scrollOffsetV), 0.f, range));
         m_scrollBarV->setValue(static_cast<float>(m_scrollOffsetV));
     }
+    // 水平滚动条：仅内容超宽时显示
     const float hRange = max(0.f, totalContentWidth() - m_rect.width);
     if (m_scrollBarH) {
         m_scrollBarH->setRange(0.f, hRange);
         m_scrollBarH->setPageSize(m_rect.width);
+        m_scrollBarH->setVisible(hRange > 0.f);          // 内容不超宽 → 隐藏
         m_hScrollOffset = std::clamp(m_hScrollOffset, 0.f, hRange);
         m_scrollBarH->setValue(m_hScrollOffset);
     }
@@ -209,6 +213,7 @@ void ListView::syncChildControls() {
 
 // ── 数据 API：补足/截断工具 ──
 static vector<string> normalizeCells(vector<string> cells, int colCount) {
+    if (colCount <= 0) return cells;   // single 无列定义时不截断
     cells.resize(max(0, colCount), string());
     return cells;
 }
@@ -386,7 +391,9 @@ void ListView::setMode(Mode mode) {
     if (m_viewMode == mode) return;
     m_viewMode = mode;
     if (mode == Mode::Single) m_gridlines = false;   // 单列恒关（显示语义）
-    for (auto& r : m_rows) r.cells = normalizeCells(r.cells, getColumnCount());
+    // single 模式无列定义时不截断 cells（保留 addItem 的单列数据）
+    if (getColumnCount() > 0)
+        for (auto& r : m_rows) r.cells = normalizeCells(r.cells, getColumnCount());
     rebuildLayout();
 }
 void ListView::setMultiSelect(bool on) { m_multiSelect = on; if (!on) setSelectedRow(getSelectedRow()); }
@@ -509,15 +516,17 @@ void ListView::draw(void) {
     ensureFont();
     if (!m_font) return;
 
+
+
     const float fontH = renderer->getFontHeight(m_font.get());
     const bool multi = (m_viewMode == Mode::Multi);
     const float dataY = multi ? m_headerHeight : 0.f;
 
-    dev->pushClipRect(SRect(0, 0, m_rect.width, m_rect.height));
-
-    // ── 列头行（仅 multi）──
     const float ox = m_rect.left;   // 绘制原点偏移（控件位置）
     const float oy = m_rect.top;
+    dev->pushClipRect(SRect(ox, oy, m_rect.width, m_rect.height));
+
+    // ── 列头行（仅 multi）──
     if (multi) {
         dev->setDrawColor(m_headerBgColor);
         dev->fillRect(SRect(ox, oy, m_rect.width, m_headerHeight));
@@ -556,6 +565,9 @@ void ListView::draw(void) {
     // ── 数据区 ──
     const int start = visibleStartRow();
     const int end = visibleEndRow();
+    const int visColFrom = 0, visColTo = getColumnCount();   // 列裁剪经 x 越界跳过
+
+
 
     for (int i = start; i < end; ++i) {
         const float y = oy + dataY + (i * m_rowHeight - m_scrollOffsetV);
@@ -563,7 +575,10 @@ void ListView::draw(void) {
         const bool selected = m_selectedRows.count(i) != 0;
 
         // 行背景：选中 > hover
-        if (selected)              { dev->setDrawColor(m_selectedColor); dev->fillRect(SRect(ox, y, m_rect.width, m_rowHeight)); }
+        if (selected) {
+            dev->setDrawColor(m_selectedColor);
+            dev->fillRect(SRect(ox, y, m_rect.width, m_rowHeight));
+        }
         else if (i == m_hoveredRow && m_hoverHighlight) {
             dev->setDrawColor(m_hoverColor); dev->fillRect(SRect(ox, y, m_rect.width, m_rowHeight));
         }

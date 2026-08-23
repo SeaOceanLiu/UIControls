@@ -189,6 +189,10 @@ static void testListViewVisualize(Bench* bench) {
         lv->setSelectedRow(1);
         lv->create();
         bench->addControl(lv);
+        // DEBUG: 验证选中状态
+        TestUtil::log("DEBUG single: selected=%d rows=%d mode_multi=%s",
+            lv->getSelectedRow(), lv->getRowCount(),
+            lv->getMode()==ListView::Mode::Multi ? "yes" : "no");
     }
 
     runCabiChecks();
