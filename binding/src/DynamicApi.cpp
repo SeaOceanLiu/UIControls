@@ -105,6 +105,10 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(ListViewAddColumn);
     RESOLVE(ListViewSetColumnWidth);
     RESOLVE(ListViewSetCellLeadingControl);
+    RESOLVE(CreateStatusBar);
+    RESOLVE(StatusBarAddItem);
+    RESOLVE(StatusBarSetItemText);
+    RESOLVE(StatusBarRemoveItem);
     RESOLVE(ShapeSetPoints);
     RESOLVE(ShapeMapToDrawPoint);
     RESOLVE(TreeViewAddNode);

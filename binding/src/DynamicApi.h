@@ -90,6 +90,11 @@ struct Api {
     UIControlHandle (*fnCreateShape)(UIInstance, float, float, float, float, float, float) = nullptr;
     // ListView 列表控件（属性走 Control::Set* 通用接口；数据/对象类专用）
     UIControlHandle (*fnCreateListView)(UIInstance, float, float, float, float, float, float) = nullptr;
+    // StatusBar 状态栏控件
+    UIControlHandle (*fnCreateStatusBar)(UIInstance, float, float, float, float, float, float) = nullptr;
+    int (*fnStatusBarAddItem)(UIInstance, UIControlHandle, const char*, const char*, int) = nullptr;
+    int (*fnStatusBarSetItemText)(UIInstance, UIControlHandle, const char*, const char*) = nullptr;
+    int (*fnStatusBarRemoveItem)(UIInstance, UIControlHandle, const char*) = nullptr;
     int (*fnListViewAddRow)(UIInstance, UIControlHandle, const char*, int, const char* const*) = nullptr;
     int (*fnListViewRemoveRow)(UIInstance, UIControlHandle, int) = nullptr;
     int (*fnListViewSetCellText)(UIInstance, UIControlHandle, int, int, const char*) = nullptr;

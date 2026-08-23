@@ -8,6 +8,9 @@
 #include "LuotiAni.h"
 #include "Shape.h"
 #include "ListView.h"
+// #// #include "StatusBar.h" // TODO: fix // TODO: fix
+#include "Actor.h"
+#include "Menu.h"
 #include "LayoutEngine.h"
 #include "PropertyNames.h"
 #include <fstream>
@@ -265,6 +268,9 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
         result = parseImage(j, parent);
     } else if (type == PropertyNames::kControlTypeShape) {
         result = parseShape(j, parent);
+    } else if (type == PropertyNames::kControlTypeStatusBar) {
+        logWarn("status-bar: deferred until StatusBar compile fixed");
+        result = nullptr;
     } else if (type == PropertyNames::kControlTypeAnimation) {
         result = parseAnimation(j, parent);
     } else if (type == PropertyNames::kControlTypeEditBox) {
@@ -1203,6 +1209,86 @@ shared_ptr<Panel> LayoutParser::parsePanel(const json& j, Control* parent) {
     panel->create();
     return panel;
 }
+
+
+// ==================== StatusBar ====================
+
+// parseStatusBar 暂时禁用（待 StatusBar 编译修复后恢复）
+// shared_ptr<Control> LayoutParser::parseStatusBar(const json& j, Control* parent) {
+//     pushJsonPath(PropertyNames::kJsonRect);
+//     SRect rect = parseRect(j[PropertyNames::kJsonRect]);
+//     popJsonPath();
+// 
+//     float xScale = 1.0f, yScale = 1.0f;
+//     if (j.contains(PropertyNames::kJsonScale) && j[PropertyNames::kJsonScale].is_object()) {
+//         xScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonX, 1.0f);
+//         yScale = j[PropertyNames::kJsonScale].value(PropertyNames::kJsonY, 1.0f);
+//     }
+// 
+//     auto bar = make_shared<StatusBar>(parent, rect, xScale, yScale);
+//     m_theme.applyCommonColors(bar, PropertyNames::kThemeCatPanel);
+//     parseCommonProperties(bar, j);
+// 
+//     if (j.contains(PropertyNames::kJsonFontSize) && j[PropertyNames::kJsonFontSize].is_number())
+//         bar->setFontSize(j[PropertyNames::kJsonFontSize].get<float>());
+//     if (j.contains(PropertyNames::kJsonItemHeight) && j[PropertyNames::kJsonItemHeight].is_number())
+//         bar->setItemHeight(j[PropertyNames::kJsonItemHeight].get<float>());
+// 
+//     if (j.contains(PropertyNames::kJsonItems) && j[PropertyNames::kJsonItems].is_array()) {
+//         pushJsonPath(PropertyNames::kJsonItems);
+//         for (const auto& ij : j[PropertyNames::kJsonItems]) {
+//             string id = ij.value(PropertyNames::kJsonId, string());
+//             string text = ij.value(PropertyNames::kJsonText, id);
+//             bool right = ij.value(PropertyNames::kJsonAlign, "left") == "right";
+//             if (id.empty()) id = text;
+//             bar->addStatusItem(id, text, right);
+// 
+//             // icon → leadingControl（Actor 资源引用）
+//             if (ij.contains(PropertyNames::kItemIcon) && ij[PropertyNames::kItemIcon].is_string()) {
+//                 string iconPath = ij[PropertyNames::kItemIcon].get<string>();
+//                 shared_ptr<Actor> actor = nullptr;
+//                 if (iconPath.rfind(PropertyNames::kProviderPrefix, 0) == 0) {
+//                     string rid = iconPath.substr(strlen(PropertyNames::kProviderPrefix));
+//                     actor = make_shared<Actor>(nullptr, rid, false, xScale, yScale);
+//                 } else {
+//                     fs::path p(iconPath);
+//                     if (p.is_relative()) p = fs::path(Platform::GetBasePath()) / p;
+//                     actor = make_shared<Actor>(nullptr, p, false, xScale, yScale);
+//                 }
+//                 if (actor) {
+//                     actor->create();
+//                     bar->setStatusItemLeadingControl(id, actor);
+//                 }
+//             }
+// 
+//             // menu → 内嵌 items 解析（复用 populateMenuPanel）
+//             if (ij.contains(PropertyNames::kJsonMenu) && ij[PropertyNames::kJsonMenu].is_object()) {
+//                 const auto& mj = ij[PropertyNames::kJsonMenu];
+//                 if (mj.contains(PropertyNames::kJsonItems) && mj[PropertyNames::kJsonItems].is_array()) {
+//                     auto panel = make_shared<MenuPanel>(nullptr, xScale, yScale);
+//                     populateMenuPanel(panel, mj[PropertyNames::kJsonItems], xScale, yScale);
+//                     bar->setStatusItemMenu(id, panel);
+//                 }
+//             }
+// 
+//             // onClick 事件
+//             if (ij.contains("onClick") && ij["onClick"].is_string()) {
+//                 string action = ij["onClick"].get<string>();
+//                 bar->setStatusItemOnClick(id, [action](shared_ptr<StatusItem>){});
+//             }
+//         }
+//         popJsonPath();
+//     }
+// 
+//     parseEvents(bar, j);
+// 
+//     if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
+//         m_controlsById[j[PropertyNames::kJsonId].get<std::string>()] = bar;
+// 
+//     bar->create();
+//     return bar;
+// }
+
 
 // ==================== ColorPicker ====================
 

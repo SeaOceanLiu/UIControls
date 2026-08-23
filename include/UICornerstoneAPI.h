@@ -507,6 +507,21 @@ UICORNERSTONE_API int UICornerstone_ListViewSetColumnHeaderStyle(UIInstance inst
 UICORNERSTONE_API int UICornerstone_ListViewSetColumnSorter(UIInstance instance, UIControlHandle lv,
     int colIndex, ListViewSortFn cmp, void* userData);
 
+/* ============ StatusBar 状态栏控件 ============ */
+// 属性走通用 setter:SetFloat("font-size"/"item-height")；数据/对象类走下列专用函数。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateStatusBar(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale);
+UICORNERSTONE_API int UICornerstone_StatusBarAddItem(UIInstance instance, UIControlHandle bar,
+    const char* id, const char* text, int rightAlign);
+UICORNERSTONE_API int UICornerstone_StatusBarSetItemText(UIInstance instance, UIControlHandle bar,
+    const char* id, const char* text);
+UICORNERSTONE_API int UICornerstone_StatusBarRemoveItem(UIInstance instance, UIControlHandle bar,
+    const char* id);
+UICORNERSTONE_API int UICornerstone_StatusBarSetItemMenu(UIInstance instance, UIControlHandle bar,
+    const char* id, UIControlHandle menuPanel);
+UICORNERSTONE_API int UICornerstone_StatusBarSetItemIcon(UIInstance instance, UIControlHandle bar,
+    const char* id, UIControlHandle iconControl);
+
 // 创建"动画按钮"：Button 承载内嵌 LuotiAni 动画（LuotiAni 仅作为按钮的内部
 // 绘制资源，不响应鼠标事件；按钮自身响应点击并触发 "click" 回调）。
 // 语义同 CreateAnimation：创建后不自动播放（SetBool "playing" 启动）、

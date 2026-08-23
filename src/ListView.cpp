@@ -516,14 +516,16 @@ void ListView::draw(void) {
     dev->pushClipRect(SRect(0, 0, m_rect.width, m_rect.height));
 
     // ── 列头行（仅 multi）──
+    const float ox = m_rect.left;   // 绘制原点偏移（控件位置）
+    const float oy = m_rect.top;
     if (multi) {
         dev->setDrawColor(m_headerBgColor);
-        dev->fillRect(SRect(0, 0, m_rect.width, m_headerHeight));
+        dev->fillRect(SRect(ox, oy, m_rect.width, m_headerHeight));
 
         for (int c = 0; c < getColumnCount(); ++c) {
-            const float x = columnX(c);
+            const float x = ox + columnX(c);
             const float w = m_columns[c].width;
-            if (x + w < 0 || x > m_rect.width) continue;
+            if (x + w < ox || x > ox + m_rect.width) continue;
 
             const HeaderStyle& st = m_columns[c].style;
             SharedFont hf = fontFor(st.fontName, st.fontSize > 0 ? st.fontSize : m_fontSize);
@@ -533,12 +535,12 @@ void ListView::draw(void) {
             // 标题文本（leadingControl 槽让位）
             float tx = x + 6.f;
             if (m_columns[c].leadingControl) tx += m_headerHeight - 4.f;
-            dev->pushClipRect(SRect(x, 0, w, m_headerHeight));
+            dev->pushClipRect(SRect(x, oy, w, m_headerHeight));
             renderer->drawText(hf.get(), m_columns[c].title, tx,
-                               (m_headerHeight - hfh) / 2.f, m_headerTextColor);
+                               oy + (m_headerHeight - hfh) / 2.f, m_headerTextColor);
             // 排序箭头（sortable 且当前排序列）
             if (m_columns[c].sortable && c == m_sortColumn) {
-                const float ax = x + w - 14.f, ay = m_headerHeight / 2.f;
+                const float ax = x + w - 14.f, ay = oy + m_headerHeight / 2.f;
                 if (m_sortAscending)
                     dev->drawTriangle(ax, ay + 5.f, ax + 10.f, ay + 5.f, ax + 5.f, ay - 3.f, m_headerTextColor);
                 else
@@ -547,7 +549,7 @@ void ListView::draw(void) {
             dev->popClipRect();
             // 分隔线
             dev->setDrawColor(m_gridlineColor);
-            dev->drawLine(x + w - 1.f, 2.f, x + w - 1.f, m_headerHeight - 2.f);
+            dev->drawLine(x + w - 1.f, oy + 2.f, x + w - 1.f, oy + m_headerHeight - 2.f);
         }
     }
 
@@ -556,14 +558,14 @@ void ListView::draw(void) {
     const int end = visibleEndRow();
 
     for (int i = start; i < end; ++i) {
-        const float y = dataY + (i * m_rowHeight - m_scrollOffsetV);
+        const float y = oy + dataY + (i * m_rowHeight - m_scrollOffsetV);
         const ListRow& row = m_rows[i];
         const bool selected = m_selectedRows.count(i) != 0;
 
         // 行背景：选中 > hover
-        if (selected)              { dev->setDrawColor(m_selectedColor); dev->fillRect(SRect(0, y, m_rect.width, m_rowHeight)); }
+        if (selected)              { dev->setDrawColor(m_selectedColor); dev->fillRect(SRect(ox, y, m_rect.width, m_rowHeight)); }
         else if (i == m_hoveredRow && m_hoverHighlight) {
-            dev->setDrawColor(m_hoverColor); dev->fillRect(SRect(0, y, m_rect.width, m_rowHeight));
+            dev->setDrawColor(m_hoverColor); dev->fillRect(SRect(ox, y, m_rect.width, m_rowHeight));
         }
 
         // 单元格
@@ -579,13 +581,13 @@ void ListView::draw(void) {
             auto styleIt = row.cellStyles.find(c);
             if (styleIt != row.cellStyles.end() && styleIt->second.bgColor.alpha() > 0) {
                 dev->setDrawColor(styleIt->second.bgColor);
-                dev->fillRect(SRect(x, y, w, m_rowHeight));
+                dev->fillRect(SRect(ox + x, y, w, m_rowHeight));
             }
 
             // 文本（首列让位 leadingControl/cellControl 槽）
             const bool hasCtl = (c == 0 && row.leadingControl) ||
                                 row.cellControls.count(c) != 0;
-            float tx = x + 6.f + (hasCtl ? m_rowHeight - 4.f : 0.f);
+            float tx = ox + x + 6.f + (hasCtl ? m_rowHeight - 4.f : 0.f);
             const string text = (c < static_cast<int>(row.cells.size())) ? row.cells[c] : string();
             if (text.empty()) continue;
 
@@ -600,7 +602,7 @@ void ListView::draw(void) {
             if (!cf) cf = m_font;
             const float fh = renderer->getFontHeight(cf.get());
 
-            dev->pushClipRect(SRect(x, y, w, m_rowHeight));
+            dev->pushClipRect(SRect(ox + x, y, w, m_rowHeight));
             renderer->drawText(cf.get(), text, tx, y + (m_rowHeight - fh) / 2.f, tc);
             dev->popClipRect();
         }
@@ -609,20 +611,20 @@ void ListView::draw(void) {
         if (multi && m_gridlines) {
             dev->setDrawColor(m_gridlineColor);
             for (int c = 0; c < cols; ++c) {
-                const float gx = columnX(c) + ((c < cols) ? m_columns[c].width : 0.f) - 1.f;
-                if (gx >= 0 && gx <= m_rect.width)
+                const float gx = ox + columnX(c) + ((c < cols) ? m_columns[c].width : 0.f) - 1.f;
+                if (gx >= ox && gx <= ox + m_rect.width)
                     dev->drawLine(gx, y, gx, y + m_rowHeight);
             }
         }
         if (m_horizontalGridlines) {
             dev->setDrawColor(m_gridlineColor);
-            dev->drawLine(0.f, y + m_rowHeight - 1.f, m_rect.width, y + m_rowHeight - 1.f);
+            dev->drawLine(ox, y + m_rowHeight - 1.f, ox + m_rect.width, y + m_rowHeight - 1.f);
         }
     }
 
     // 焦点环
     if (getFocused())
-        drawFocusRing();
+        drawFocusRing();  // 引擎自动使用 m_rect
 
     dev->popClipRect();
 

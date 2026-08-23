@@ -1300,6 +1300,8 @@ static ListView* listViewOf(UIInstance instance, UIControlHandle handle) {
     return dynamic_cast<ListView*>(ctl);
 }
 
+// StatusBar CAPI 暂时禁用（待修复编译错误后恢复）
+
 UIControlHandle UICornerstone_CreateListView(UIInstance instance,
     float x, float y, float w, float h, float xScale, float yScale)
 {

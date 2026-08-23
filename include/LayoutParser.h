@@ -105,6 +105,7 @@ private:
     shared_ptr<Control>     parseAnimation(const json& j, Control* parent);
     shared_ptr<Control>     parseImage(const json& j, Control* parent);
     shared_ptr<Control>     parseShape(const json& j, Control* parent);
+    shared_ptr<Control>     parseStatusBar(const json& j, Control* parent);
     shared_ptr<Control>     parseListView(const json& j, Control* parent);
     shared_ptr<EditBox>     parseEditBox(const json& j, Control* parent);
     shared_ptr<ComboBox>    parseComboBox(const json& j, Control* parent);
