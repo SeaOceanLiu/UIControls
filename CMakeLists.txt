@@ -73,6 +73,7 @@ set(CORE_SOURCES
     src/RenderDevice.cpp
     src/Slider.cpp
     src/StatusBar.cpp
+    src/ContextMenu.cpp
     src/Surface.cpp
     src/TextArea.cpp
     src/Theme.cpp

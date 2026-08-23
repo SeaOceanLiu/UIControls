@@ -9,6 +9,7 @@
 #include "Shape.h"
 #include "ListView.h"
 #include "StatusBar.h"
+#include "ContextMenu.h"
 #include "Actor.h"
 #include "Menu.h"
 #include "LayoutEngine.h"
@@ -325,6 +326,19 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
     }
 
     popJsonPath();
+
+    // 右键上下文菜单（决策点 2-C）：控件级 "contextMenu" 键（内嵌 items，复用 populateMenuPanel）
+    if (result && j.contains("contextMenu") && j["contextMenu"].is_object()) {
+        auto cm = make_shared<ContextMenu>(parent, 1.f, 1.f);
+        const auto& cmj = j["contextMenu"];
+        if (cmj.contains(PropertyNames::kJsonItems) && cmj[PropertyNames::kJsonItems].is_array()) {
+            populateMenuPanel(cm->getMenuPanel(), cmj[PropertyNames::kJsonItems], 1.f, 1.f);
+        }
+        if (auto* ci = dynamic_cast<ControlImpl*>(result.get())) {
+            ci->setContextMenu(cm);
+        }
+    }
+
     return result;
 }
 

@@ -30,6 +30,7 @@
 #include "Shape.h"
 #include "ListView.h"
 #include "StatusBar.h"
+#include "ContextMenu.h"
 #include "EventTypes.h"
 #include "PropertyNames.h"
 #include <cstdio>
@@ -1364,6 +1365,58 @@ int UICornerstone_StatusBarSetItemIcon(UIInstance instance, UIControlHandle bar,
     Control* icon = iconControl ? validateControl(instance, iconControl) : nullptr;
     if (iconControl && !icon) return 0;
     v->setStatusItemLeadingControl(id, icon ? icon->getThis() : nullptr);
+    return 1;
+}
+
+// ── ContextMenu C API ──
+static ContextMenu* contextMenuOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<ContextMenu*>(ctl);
+}
+
+UIControlHandle UICornerstone_CreateContextMenu(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale)
+{
+    if (!instance || !instance->initialized) return nullptr;
+    auto menu = std::make_shared<ContextMenu>(nullptr, xScale, yScale);
+    menu->setRect(SRect(x, y, w, h));
+    instance->bench->addControl(menu);   // 挂树，确保上下文/渲染设备就绪
+    menu->setVisible(false);
+    return reinterpret_cast<UIControlHandle>(static_cast<Control*>(menu.get()));
+}
+
+int UICornerstone_ContextMenuAddItem(UIInstance instance, UIControlHandle menu,
+    const char* caption, const char* shortcut)
+{
+    auto* v = contextMenuOf(instance, menu);
+    if (!v || !caption) return 0;
+    auto item = std::make_shared<MenuItem>(v->getMenuPanel().get(), MenuItemType::Normal, 1.f, 1.f);
+    item->setCaption(caption);
+    if (shortcut) item->setShortcut(shortcut);
+    v->addItem(item);
+    return 1;
+}
+
+int UICornerstone_ContextMenuAddSeparator(UIInstance instance, UIControlHandle menu) {
+    auto* v = contextMenuOf(instance, menu);
+    if (!v) return 0;
+    v->addSeparator();
+    return 1;
+}
+
+int UICornerstone_ContextMenuShow(UIInstance instance, UIControlHandle menu, float x, float y) {
+    auto* v = contextMenuOf(instance, menu);
+    if (!v) return 0;
+    v->show(x, y);
+    return 1;
+}
+
+int UICornerstone_ContextMenuClose(UIInstance instance, UIControlHandle menu) {
+    auto* v = contextMenuOf(instance, menu);
+    if (!v) return 0;
+    v->close();
     return 1;
 }
 

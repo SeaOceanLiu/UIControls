@@ -522,6 +522,17 @@ UICORNERSTONE_API int UICornerstone_StatusBarSetItemMenu(UIInstance instance, UI
 UICORNERSTONE_API int UICornerstone_StatusBarSetItemIcon(UIInstance instance, UIControlHandle bar,
     const char* id, UIControlHandle iconControl);
 
+/* ============ ContextMenu 右键上下文菜单 ============ */
+// 决策点 2/5/6：A 纯 API（Create/AddItem/AddSeparator/Show/Close）+ B 控件绑定走
+// SetPtr(inst, ctl, "context-menu", menuHandle)；JSON 层 contextMenu 键后续追加。
+UICORNERSTONE_API UIControlHandle UICornerstone_CreateContextMenu(UIInstance instance,
+    float x, float y, float w, float h, float xScale, float yScale);
+UICORNERSTONE_API int UICornerstone_ContextMenuAddItem(UIInstance instance, UIControlHandle menu,
+    const char* caption, const char* shortcut);
+UICORNERSTONE_API int UICornerstone_ContextMenuAddSeparator(UIInstance instance, UIControlHandle menu);
+UICORNERSTONE_API int UICornerstone_ContextMenuShow(UIInstance instance, UIControlHandle menu, float x, float y);
+UICORNERSTONE_API int UICornerstone_ContextMenuClose(UIInstance instance, UIControlHandle menu);
+
 // 创建"动画按钮"：Button 承载内嵌 LuotiAni 动画（LuotiAni 仅作为按钮的内部
 // 绘制资源，不响应鼠标事件；按钮自身响应点击并触发 "click" 回调）。
 // 语义同 CreateAnimation：创建后不自动播放（SetBool "playing" 启动）、

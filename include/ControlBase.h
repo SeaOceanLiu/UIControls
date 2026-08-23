@@ -314,6 +314,7 @@ class ControlImpl: virtual public Control, public enable_shared_from_this<Contro
 protected:
     bool m_isCreated;
     int m_id;
+    shared_ptr<class ContextMenu> m_contextMenu;   // 右键上下文菜单（决策点 2-B）
     bool m_visible;
     bool m_enable;
     float m_xScale;
@@ -457,6 +458,8 @@ public:
     bool getVisible(void) override;
     void setEnable(bool enable) override;
     bool getEnable(void) override;
+    void setContextMenu(shared_ptr<class ContextMenu> menu);
+    shared_ptr<class ContextMenu> getContextMenu() const { return m_contextMenu; }
     RenderDevice* getRenderDevice(void) override;
     void setRenderDevice(RenderDevice* device) override;
     TextRenderer* getTextRenderer(void) override;

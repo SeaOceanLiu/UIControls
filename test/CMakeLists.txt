@@ -106,6 +106,7 @@ set(UI_TEST_EXECUTABLES
     test_shape
     test_listview
     test_statusbar
+    test_contextmenu
     test_numericupdown
     test_splitter
     test_treeview

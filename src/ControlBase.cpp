@@ -1,4 +1,5 @@
 ﻿#include "ControlBase.h"
+#include "ContextMenu.h"
 #include "UICornerstoneAPI.h"
 #include "PlatformUtils.h"
 #include "MainWindow.h"
@@ -294,6 +295,15 @@ void ControlImpl::moved(SRect newRect){
 }
 //事件处理，返回值表示是否处理了该事件，true表示处理了，false表示未处理
 bool ControlImpl::handleEvent(shared_ptr<Event> event){
+    // 右键上下文菜单（决策点 2-B）：命中本控件且菜单未显示 → 弹出
+    if (m_contextMenu && event->m_type == EventType::MouseDown &&
+        event->mouseButton.button == MouseButton::Right && getVisible() && getEnable()) {
+        float mx = event->mouseButton.x, my = event->mouseButton.y;
+        if (isContainsPoint(mx, my) && !m_contextMenu->isPopupVisible()) {
+            m_contextMenu->show(mx, my);
+            return true;
+        }
+    }
     // 检查当前控件是否可见且启用
     if (getVisible() && getEnable()){
         // 提取事件坐标（仅对有位置的事件做遮挡检测）
@@ -498,6 +508,9 @@ void ControlImpl::setEnable(bool enable){
 }
 bool ControlImpl::getEnable(void){
     return m_enable;
+}
+void ControlImpl::setContextMenu(shared_ptr<class ContextMenu> menu) {
+    m_contextMenu = menu;
 }
 
 shared_ptr<Control> ControlImpl::getThis(void){
@@ -950,6 +963,15 @@ int ControlImpl::setEnumProperty(const char* prop, const char* value) {
 }
 
 int ControlImpl::setPtrProperty(const char* prop, void* value) {
+    if (prop && strcmp(prop, PropertyNames::kPropContextMenu) == 0) {
+        if (!value) { m_contextMenu.reset(); return 1; }
+        auto* cm = dynamic_cast<ContextMenu*>(reinterpret_cast<Control*>(value));
+        if (cm) {
+            m_contextMenu = std::dynamic_pointer_cast<ContextMenu>(cm->getThis());
+            return 1;
+        }
+        return 0;
+    }
     return 0;
 }
 

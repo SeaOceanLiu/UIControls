@@ -25,6 +25,7 @@ enum class MenuItemType {
 class MenuItem;
 class MenuPanel;
 class MenuBar;
+class ContextMenu;
 
 // ==================== MenuItem 菜单项 ====================
 class MenuItem : public ControlImpl {
@@ -51,6 +52,7 @@ public:
 
     // 点击回调
     void setOnClick(OnClickHandler handler) { m_onClick = handler; }
+    OnClickHandler getOnClick() const { return m_onClick; }
 
     // 子菜单
     void setSubMenu(shared_ptr<MenuPanel> panel);
@@ -114,6 +116,7 @@ private:
 class MenuPanel : public ControlImpl {
     friend class MenuPanelBuilder;
     friend class MenuBar;
+    friend class ContextMenu;
 public:
     MenuPanel(Control *parent, float xScale = 1.0f, float yScale = 1.0f);
     ~MenuPanel() override;

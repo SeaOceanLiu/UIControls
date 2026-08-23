@@ -679,6 +679,7 @@ PROP_CONSTEXPR const char* kControlTypePanel = "panel";
 PROP_CONSTEXPR const char* kControlTypeWinFrame = "win-frame";
 PROP_CONSTEXPR const char* kControlTypeColorPicker = "color-picker";
 PROP_CONSTEXPR const char* kControlTypePopup = "popup";
+PROP_CONSTEXPR const char* kPropContextMenu = "context-menu";
 PROP_CONSTEXPR const char* kControlTypeConfirmPopup = "confirm-popup";
 PROP_CONSTEXPR const char* kControlTypeDialog = "dialog";
 PROP_CONSTEXPR const char* kControlTypeMenuBar = "menu-bar";
