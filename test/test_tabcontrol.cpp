@@ -131,6 +131,8 @@ static void testTabVisualize(Bench* bench) {
     tc->addTab("关于", p2);
     tc->setCurrentIndex(0);
     tc->create();
+    tc->show();                           // 默认 visible=false，显式显示
+    bench->addControl(tc);
     g_tc = tc;
 
     // JSON 解析（tab-control + tabs + currentIndex）

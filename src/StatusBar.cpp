@@ -83,7 +83,7 @@ void StatusBar::ensureFont() {
     if (it == ConstDef::fontFiles.end()) return;
     string fontPath = ConstDef::pathPrefix.string() + "/" + it->second;
     auto data = provider->readFile(fontPath);
-    if (!data || !data->empty()) {
+    if (data && !data->empty()) {
         int scaledSize = static_cast<int>(m_fontSize * getScaleXX());
         m_font = renderer->loadFontFromMemoryWithText(data->data(), data->size(), scaledSize, "W");
     }
@@ -92,6 +92,7 @@ void StatusBar::ensureFont() {
 // ── 布局 ──
 void StatusBar::relayout() {
     if (m_items.empty()) return;
+    ensureFont();
     float leftX = m_padding;
     const float cy = (m_rect.height - m_itemHeight) / 2.f;
     TextRenderer* renderer = getTextRenderer();
@@ -131,6 +132,9 @@ int StatusBar::hitTestIndex(float x) const {
 
 // ── 绘制 ──
 void StatusBar::draw(void) {
+    const bool hadFont = m_font != nullptr;
+    ensureFont();
+    if (!hadFont && m_font && !m_items.empty()) relayout();   // 字体首次就绪→按实测宽度重排
     ControlImpl::beforeDraw();                 // 背景（蓝）/ 边框
     RenderDevice* dev = getRenderDevice();
     TextRenderer* renderer = getTextRenderer();
@@ -171,27 +175,26 @@ void StatusBar::openPopup(int itemIndex) {
     auto& item = m_items[itemIndex];
     if (!item.menuPanel) return;
 
-    if (!m_popupPanel) {
-        m_popupPanel = make_shared<MenuPanel>(this, 1.0f, 1.0f);
+    // 直接挂载并显示该 item 自带的菜单面板（共享复用，免复制菜单项）
+    if (m_popupPanel != item.menuPanel) {
+        if (m_popupPanel) removeControl(m_popupPanel);
+        m_popupPanel = item.menuPanel;
         addControl(m_popupPanel);
         m_popupPanel->setContext(getContext());
         m_popupPanel->create();
     }
 
-    // 清空并复制点击 item 的菜单项
-    // （共享面板复用：逐个 addItem）
     item.menuPanel->recalculateSize();
-    const float panelW = std::max(item.hitRect.width, 120.f);
     const float panelH = item.menuPanel->getRect().height;
 
-    // 向上定位：面板底缘贴 item 顶缘（绝对坐标，RenderDevice 以 bench 原点绘制）
+    // 向上定位：面板底缘贴 item 顶缘。
+    // 坐标系注意：m_popupPanel 是 bar 的子控件，getDrawRect() 会叠加父偏移
+    // （ControlBase.cpp getDrawRect），故此处必须用【bar 相对坐标】。
     float localY = item.hitRect.top - panelH;
-    // 顶部越界钳制（不出窗口顶部）
-    if (localY < -m_rect.top) localY = -m_rect.top;
-    const float absX = m_rect.left + item.hitRect.left;
-    const float absY = m_rect.top + localY;
+    // 顶部越界钳制（不出窗口顶部：相对坐标 < -bar.top 等价绝对越界）
+    if (m_rect.top + localY < 0) localY = -m_rect.top;
 
-    m_popupPanel->setPosition(absX, absY);
+    m_popupPanel->setPosition(item.hitRect.left, localY);
     m_popupPanel->recalculateSize();
     m_popupPanel->show();
 }
