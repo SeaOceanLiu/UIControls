@@ -199,7 +199,7 @@ void RenderDevice::drawEllipse(float cx, float cy, float rx, float ry,
         }
     }
     if (stroke.alpha() > 0 && lineWidth > 0.f)
-        strokePath(this, ellipsePts(cx, cy, rx, ry, kEllipseSegments), false, lineWidth, stroke);
+        strokePath(this, ellipsePts(cx, cy, rx, ry, kEllipseSegments), true, lineWidth, stroke);
 }
 
 // ────────────────────────── 圆角矩形 ──────────────────────────

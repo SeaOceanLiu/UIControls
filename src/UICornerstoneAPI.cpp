@@ -1281,6 +1281,66 @@ int UICornerstone_ShapeSetPoints(UIInstance instance, UIControlHandle sh,
     return 1;
 }
 
+// ── Shape 多图元（组合图形） ──
+static Shape* shapeOf(UIInstance instance, UIControlHandle handle) {
+    if (!instance || !handle) return nullptr;
+    Control* ctl = validateControl(instance, handle);
+    if (!ctl) return nullptr;
+    return dynamic_cast<Shape*>(ctl);
+}
+
+int UICornerstone_ShapeAddPrimitive(UIInstance instance, UIControlHandle sh,
+    const char* type, float x, float y, float w, float h)
+{
+    auto* shape = shapeOf(instance, sh);
+    if (!shape || !type) return -1;
+    ShapeType t;
+    if (!shapeTypeFromString(type, t)) return -1;
+    return shape->addPrimitive(t, SRect(x, y, w, h));
+}
+
+int UICornerstone_ShapeSetPrimitiveColor(UIInstance instance, UIControlHandle sh,
+    int index, const char* prop, UIColor value)
+{
+    auto* shape = shapeOf(instance, sh);
+    if (!shape || !prop) return 0;
+    const SColor c(value.r, value.g, value.b, value.a);
+    if (strcmp(prop, PropertyNames::kFill) == 0)         { shape->setPrimitiveFill(index, c);    return 1; }
+    if (strcmp(prop, PropertyNames::kStroke) == 0)       { shape->setPrimitiveStroke(index, c);  return 1; }
+    return 0;
+}
+
+int UICornerstone_ShapeSetPrimitiveFloat(UIInstance instance, UIControlHandle sh,
+    int index, const char* prop, float value)
+{
+    auto* shape = shapeOf(instance, sh);
+    if (!shape || !prop) return 0;
+    if (strcmp(prop, PropertyNames::kLineWidthProp) == 0) { shape->setPrimitiveLineWidth(index, value); return 1; }
+    if (strcmp(prop, PropertyNames::kRadius) == 0)        { shape->setPrimitiveRadius(index, value);    return 1; }
+    if (strcmp(prop, PropertyNames::kRingWidth) == 0)     { shape->setPrimitiveRingWidth(index, value); return 1; }
+    return 0;
+}
+
+int UICornerstone_ShapeSetPrimitivePoints(UIInstance instance, UIControlHandle sh,
+    int index, int count, const float* xs, const float* ys)
+{
+    auto* shape = shapeOf(instance, sh);
+    if (!shape || count < 0 || (count > 0 && (!xs || !ys))) return 0;
+    std::vector<Shape::SPointF> pts;
+    pts.reserve(count);
+    for (int i = 0; i < count; ++i) pts.push_back({xs[i], ys[i]});
+    shape->setPrimitivePoints(index, pts);
+    return 1;
+}
+
+int UICornerstone_ShapeClearPrimitives(UIInstance instance, UIControlHandle sh)
+{
+    auto* shape = shapeOf(instance, sh);
+    if (!shape) return 0;
+    shape->clearPrimitives();
+    return 1;
+}
+
 int UICornerstone_ShapeMapToDrawPoint(UIInstance instance, UIControlHandle sh,
     float lx, float ly, float* outX, float* outY)
 {

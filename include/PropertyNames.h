@@ -244,6 +244,7 @@ PROP_CONSTEXPR const char* kTreeItemLeadingControl = "item-leading-control";
 
 // -- Shape 形状控件 --
 PROP_CONSTEXPR const char* kShape                  = "shape";             // 枚举属性：形状类型
+PROP_CONSTEXPR const char* kPrimitives             = "primitives";        // Shape 多图元（组合图形）
 PROP_CONSTEXPR const char* kFill                   = "fill";              // 颜色属性：填充色（缺省透明=空心）
 PROP_CONSTEXPR const char* kStroke                 = "stroke";            // 颜色属性：描边色（缺省黑）
 PROP_CONSTEXPR const char* kLineWidthProp          = "line-width";        // 浮点属性：描边宽 px

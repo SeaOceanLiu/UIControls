@@ -144,6 +144,9 @@ public:
     // 获取菜单项
     shared_ptr<MenuItem> getItemAt(float x, float y);
 
+    // 菜单项只读访问（StatusBar 弹窗补 no-op onClick 等场景）
+    const vector<shared_ptr<MenuItem>>& getItems() const { return m_items; }
+
     // 关闭本面板及子面板
     void closeWithChildren();
 

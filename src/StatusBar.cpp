@@ -184,6 +184,13 @@ void StatusBar::openPopup(int itemIndex) {
         m_popupPanel->create();
     }
 
+    // 菜单语义：点击任意项关闭弹窗。MenuItem::handleEvent 仅在 onClick 非空时
+    // 走 closeMenuChain()，故为无回调的项补 no-op onClick（用户回调不受影响）。
+    for (auto& mi : item.menuPanel->getItems()) {
+        if (mi && !mi->getOnClick())
+            mi->setOnClick([](shared_ptr<MenuItem>) {});
+    }
+
     item.menuPanel->recalculateSize();
     const float panelH = item.menuPanel->getRect().height;
 

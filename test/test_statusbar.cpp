@@ -27,6 +27,7 @@ static int g_pass = 0, g_fail = 0;
 
 static shared_ptr<StatusBar> g_probe;   // 数据模型断言探针（不挂树）
 static shared_ptr<StatusBar> g_bar;     // 可视化控件（供 App 阶段点击弹出）
+static bool g_itemClicked = false;      // status item onClick 回调标记
 
 static shared_ptr<Event> makeMouse(EventType type, float x, float y) {
     auto ev = make_shared<Event>(type);
@@ -121,12 +122,22 @@ static void testStatusBarVisualize(Bench* bench) {
     branchMenu->addItem(MenuItemBuilder(u8"feature/login").build());
     bar->setStatusItemMenu("branch", branchMenu);
 
-    // 分支段绑定图标（小 Label）
+    // 分支段绑定图标（带文字的小 Label，可视化可见）
+    // 注意：leadingControl 不在子控件链上，须显式补 context 再 create
     auto icon = make_shared<Label>(nullptr, SRect(0, 0, 16, 16));
+    icon->setCaption(u8"B");
+    icon->setTextStateColor(StateColor(SColor(120, 200, 255), SColor(120, 200, 255),
+                                       SColor(120, 200, 255), SColor(120, 200, 255)));
     bar->setStatusItemLeadingControl("branch", icon);
+
+    // 点击回调（encoding 段）
+    g_itemClicked = false;
+    bar->setStatusItemOnClick("encoding", [](shared_ptr<StatusItem>) { g_itemClicked = true; });
 
     bar->create();
     bench->addControl(bar);
+    icon->setContext(UIContext::getLastInstance());
+    icon->create();
 
     runCabiChecks();
 
@@ -173,7 +184,45 @@ public:
             }
         }
 
-        if (m_frames == 45 && !m_savedPopup) {
+        // 第 30 帧：模拟点击分支段，弹出菜单
+        if (m_frames == 30 && g_bar) {
+            auto* it = g_bar->getStatusItem("branch");
+            if (it) {
+                const float cx = g_bar->getRect().left + it->hitRect.left + it->hitRect.width / 2.f;
+                const float cy = g_bar->getRect().top + it->hitRect.top + it->hitRect.height / 2.f;
+                g_bar->handleEvent(makeMouse(EventType::MouseDown, cx, cy));
+                g_bar->handleEvent(makeMouse(EventType::MouseUp, cx, cy));
+                TestUtil::log("clicked branch at (%.0f,%.0f) popupOpen=%d", cx, cy,
+                              g_bar->isPopupOpen() ? 1 : 0);
+                CHECK(g_bar->isPopupOpen(), "click branch opens popup");
+            }
+        }
+
+        // 第 38 帧：点击弹窗菜单第一项（master）→ 回调 + 关闭
+        if (m_frames == 38 && g_bar && g_bar->isPopupOpen()) {
+            auto* panel = g_bar->getPopupPanel().get();
+            if (panel) {
+                SRect pr = panel->getDrawRect();
+                const float ix = pr.left + 20.f, iy = pr.top + 12.f;
+                panel->handleEvent(makeMouse(EventType::MouseDown, ix, iy));
+                panel->handleEvent(makeMouse(EventType::MouseUp, ix, iy));
+                CHECK(!g_bar->isPopupOpen(), "popup item click closes popup");
+            }
+        }
+
+        // 第 46 帧：点击 encoding 段 → onClick 回调
+        if (m_frames == 46 && g_bar) {
+            auto* it = g_bar->getStatusItem("encoding");
+            if (it) {
+                const float cx = g_bar->getRect().left + it->hitRect.left + it->hitRect.width / 2.f;
+                const float cy = g_bar->getRect().top + it->hitRect.top + it->hitRect.height / 2.f;
+                g_bar->handleEvent(makeMouse(EventType::MouseDown, cx, cy));
+                g_bar->handleEvent(makeMouse(EventType::MouseUp, cx, cy));
+                CHECK(g_itemClicked, "status item onClick fires");
+            }
+        }
+
+        if (m_frames == 55 && !m_savedPopup) {
             const int saved = cap ? UICornerstone_SavePixelsToFile(pixels, w, h, "Temp/statusbar_popup.bmp") : 0;
             TestUtil::log("capture popup: cap=%d saved=%d -> %s", cap, saved, saved ? "Temp/statusbar_popup.bmp" : "FAILED");
             m_savedPopup = true;

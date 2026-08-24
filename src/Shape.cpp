@@ -10,8 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace {
-
+// "rect"/"filled-rect"/... → ShapeType（外部链接：CABI/JSON 共用，声明见 Shape.h）
 bool shapeTypeFromString(const std::string& s, ShapeType& out) {
     if (s == PropertyNames::kShapeRect)        { out = ShapeType::Rect;        return true; }
     if (s == PropertyNames::kShapeFilledRect)  { out = ShapeType::FilledRect;  return true; }
@@ -22,6 +21,8 @@ bool shapeTypeFromString(const std::string& s, ShapeType& out) {
     if (s == PropertyNames::kShapePolygon)     { out = ShapeType::Polygon;     return true; }
     return false;
 }
+
+namespace {
 
 const char* shapeTypeToString(ShapeType t) {
     switch (t) {
@@ -44,6 +45,12 @@ Shape::Shape(Control* parent, const SRect& rect, float xScale, float yScale)
     m_ctlType = ControlType::Shape;
     m_rect = rect;
     m_baseRect = rect;
+    setTransparent(true);   // 缺省无底色（纯图元）；setBackgroundStateColor 显式设色后自动取消透明
+}
+
+void Shape::setBackgroundStateColor(StateColor stateColor) {
+    ControlImpl::setBackgroundStateColor(stateColor);
+    setTransparent(false);  // 显式设背景色即绘制底色
 }
 
 // ── 参数设置（全部触发重算，§4.8） ──
@@ -112,12 +119,111 @@ void Shape::rebuildGeometry() {
     // 此入口为缓存链路统一锚点：未来引入预烘焙顶点缓存时在此重建（设计 §4.8）。
 }
 
+// ── 多图元（组合图形） ──
+
+int Shape::addPrimitive(ShapeType type, const SRect& localRect) {
+    ShapePrimitive pr;
+    pr.type = type;
+    pr.rect = localRect;
+    m_primitives.push_back(std::move(pr));
+    rebuildGeometry();
+    return static_cast<int>(m_primitives.size()) - 1;
+}
+void Shape::clearPrimitives() {
+    if (m_primitives.empty()) return;
+    m_primitives.clear();
+    rebuildGeometry();
+}
+void Shape::setPrimitiveFill(int idx, SColor c) {
+    if (idx < 0 || idx >= static_cast<int>(m_primitives.size())) return;
+    m_primitives[idx].fill = c;
+    rebuildGeometry();
+}
+void Shape::setPrimitiveStroke(int idx, SColor c) {
+    if (idx < 0 || idx >= static_cast<int>(m_primitives.size())) return;
+    m_primitives[idx].stroke = c;
+    rebuildGeometry();
+}
+void Shape::setPrimitiveLineWidth(int idx, float w) {
+    if (idx < 0 || idx >= static_cast<int>(m_primitives.size())) return;
+    m_primitives[idx].lineWidth = std::max(0.f, w);
+    rebuildGeometry();
+}
+void Shape::setPrimitiveRadius(int idx, float r) {
+    if (idx < 0 || idx >= static_cast<int>(m_primitives.size())) return;
+    m_primitives[idx].radius = std::max(0.f, r);
+    rebuildGeometry();
+}
+void Shape::setPrimitiveRingWidth(int idx, float w) {
+    if (idx < 0 || idx >= static_cast<int>(m_primitives.size())) return;
+    m_primitives[idx].ringWidth = std::max(0.f, w);
+    rebuildGeometry();
+}
+void Shape::setPrimitivePoints(int idx, const std::vector<SPointF>& pts) {
+    if (idx < 0 || idx >= static_cast<int>(m_primitives.size())) return;
+    m_primitives[idx].points = pts;
+    rebuildGeometry();
+}
+
 // ── 绘制 ──
 
+void Shape::drawPrimitiveAt(RenderDevice* dev, const ShapePrimitive& pr) {
+    const float ox = m_rect.left, oy = m_rect.top;
+    const SRect r(ox + pr.rect.left, oy + pr.rect.top, pr.rect.width, pr.rect.height);
+    switch (pr.type) {
+    case ShapeType::Rect:
+        if (pr.fill.alpha() > 0) { dev->setDrawColor(pr.fill); dev->fillRect(r); }
+        if (pr.stroke.alpha() > 0 && pr.lineWidth > 0.f) {
+            dev->drawLine(r.left, r.top, r.left + r.width - 1, r.top, pr.lineWidth, pr.stroke);
+            dev->drawLine(r.left, r.top + r.height - 1, r.left + r.width - 1, r.top + r.height - 1, pr.lineWidth, pr.stroke);
+            dev->drawLine(r.left, r.top, r.left, r.top + r.height - 1, pr.lineWidth, pr.stroke);
+            dev->drawLine(r.left + r.width - 1, r.top, r.left + r.width - 1, r.top + r.height - 1, pr.lineWidth, pr.stroke);
+        }
+        break;
+    case ShapeType::FilledRect:
+        if (pr.fill.alpha() > 0) { dev->setDrawColor(pr.fill); dev->fillRect(r); }
+        break;
+    case ShapeType::RoundRect:
+        dev->drawRoundRect(r, pr.radius, pr.fill, pr.stroke, pr.lineWidth);
+        break;
+    case ShapeType::Circle:
+    case ShapeType::Ellipse: {
+        const float rx = r.width * 0.5f, ry = r.height * 0.5f;
+        dev->drawEllipse(r.left + rx, r.top + ry, rx, ry,
+                         pr.fill, pr.stroke, pr.lineWidth, pr.ringWidth);
+        break;
+    }
+    case ShapeType::Polyline: {
+        if (pr.points.size() < 2) break;
+        std::vector<SPoint> g;
+        g.reserve(pr.points.size());
+        for (const auto& p : pr.points) g.push_back({ox + p.x, oy + p.y});
+        dev->drawPolyline(g.data(), static_cast<int>(g.size()), pr.stroke, pr.lineWidth);
+        break;
+    }
+    case ShapeType::Polygon: {
+        if (pr.points.size() < 3) break;
+        std::vector<SPoint> g;
+        g.reserve(pr.points.size());
+        for (const auto& p : pr.points) g.push_back({ox + p.x, oy + p.y});
+        dev->drawPolygon(g.data(), static_cast<int>(g.size()),
+                         pr.fill, pr.stroke, pr.lineWidth);
+        break;
+    }
+    }
+}
+
 void Shape::draw(void) {
-    ControlImpl::draw();
+    ControlImpl::beforeDraw();   // 背景色（非透明时绘制）
     RenderDevice* dev = getRenderDevice();
     if (!dev) return;
+
+    if (!m_primitives.empty()) {
+        for (const auto& pr : m_primitives) drawPrimitiveAt(dev, pr);
+        ControlImpl::draw();         // 子控件
+        ControlImpl::afterDraw();    // 边框 / 焦点环
+        return;
+    }
 
     const SRect r = m_rect;
     switch (m_shape) {
@@ -164,6 +270,8 @@ void Shape::draw(void) {
         break;
     }
     }
+    ControlImpl::draw();         // 子控件
+    ControlImpl::afterDraw();    // 边框 / 焦点环
 }
 
 // ── 属性系统 override ──

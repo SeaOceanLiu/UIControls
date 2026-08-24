@@ -546,6 +546,48 @@ shared_ptr<Control> LayoutParser::parseShape(const json& j, Control* parent) {
         if (!pts.empty()) shape->setPoints(pts);
     }
 
+    // 多图元（组合图形）：非空时替代单图元渲染
+    if (j.contains(PropertyNames::kPrimitives) && j[PropertyNames::kPrimitives].is_array()) {
+        pushJsonPath(PropertyNames::kPrimitives);
+        for (const auto& pj : j[PropertyNames::kPrimitives]) {
+            if (!pj.is_object()) continue;
+            ShapeType t = ShapeType::Rect;
+            const std::string st = pj.value(PropertyNames::kShape, std::string());
+            if (!shapeTypeFromString(st, t)) {
+                logWarn("shape primitive: unknown shape \"" + st + "\", skipped");
+                continue;
+            }
+            SRect lr(0, 0, 0, 0);
+            if (pj.contains(PropertyNames::kJsonRect) && pj[PropertyNames::kJsonRect].is_array() &&
+                pj[PropertyNames::kJsonRect].size() >= 4) {
+                const auto& ra = pj[PropertyNames::kJsonRect];
+                lr = SRect(ra[0].get<float>(), ra[1].get<float>(),
+                           ra[2].get<float>(), ra[3].get<float>());
+            }
+            const int idx = shape->addPrimitive(t, lr);
+            if (pj.contains(PropertyNames::kFill) && pj[PropertyNames::kFill].is_string())
+                shape->setPrimitiveFill(idx, parseColor(pj[PropertyNames::kFill]));
+            if (pj.contains(PropertyNames::kStroke) && pj[PropertyNames::kStroke].is_string())
+                shape->setPrimitiveStroke(idx, parseColor(pj[PropertyNames::kStroke]));
+            if (pj.contains(PropertyNames::kJsonLineWidth) && pj[PropertyNames::kJsonLineWidth].is_number())
+                shape->setPrimitiveLineWidth(idx, pj[PropertyNames::kJsonLineWidth].get<float>());
+            if (pj.contains(PropertyNames::kRadius) && pj[PropertyNames::kRadius].is_number())
+                shape->setPrimitiveRadius(idx, pj[PropertyNames::kRadius].get<float>());
+            if (pj.contains(PropertyNames::kJsonRingWidth) && pj[PropertyNames::kJsonRingWidth].is_number())
+                shape->setPrimitiveRingWidth(idx, pj[PropertyNames::kJsonRingWidth].get<float>());
+            if (pj.contains(PropertyNames::kJsonPoints) && pj[PropertyNames::kJsonPoints].is_array()) {
+                std::vector<Shape::SPointF> pts;
+                for (const auto& p : pj[PropertyNames::kJsonPoints]) {
+                    if (p.is_object() && p.contains("x") && p.contains("y") &&
+                        p["x"].is_number() && p["y"].is_number())
+                        pts.push_back({p["x"].get<float>(), p["y"].get<float>()});
+                }
+                if (!pts.empty()) shape->setPrimitivePoints(idx, pts);
+            }
+        }
+        popJsonPath();
+    }
+
     if (j.contains(PropertyNames::kJsonId) && j[PropertyNames::kJsonId].is_string())
         m_controlsById[j[PropertyNames::kJsonId].get<std::string>()] = shape;
 

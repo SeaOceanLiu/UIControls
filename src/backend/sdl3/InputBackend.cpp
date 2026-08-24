@@ -9,6 +9,21 @@
 #include "TextArea.h"
 
 // ============================================================
+// SDL Mouse Button → Canonical MouseButton mapping
+// （SDL 编号 1=左 2=中 3=右，与 MouseButton 枚举值不同，须显式翻译）
+// ============================================================
+static MouseButton mapSdlButton(uint8_t sdlButton) {
+    switch (sdlButton) {
+        case 1: return MouseButton::Left;
+        case 2: return MouseButton::Middle;
+        case 3: return MouseButton::Right;
+        case 4: return MouseButton::X1;
+        case 5: return MouseButton::X2;
+        default: return MouseButton::None;
+    }
+}
+
+// ============================================================
 // SDL Keycode → Canonical KeyCode mapping
 // ============================================================
 KeyCode SDLKeycodeToKeyCode(int sdlKeycode) {
@@ -355,14 +370,14 @@ public:
                 event.m_type = EventType::MouseDown;
                 event.mouseButton.x = sdlEvent.button.x;
                 event.mouseButton.y = sdlEvent.button.y;
-                event.mouseButton.button = static_cast<MouseButton>(sdlEvent.button.button);
+                event.mouseButton.button = mapSdlButton(sdlEvent.button.button);
                 break;
 
             case SDL_EVENT_MOUSE_BUTTON_UP:
                 event.m_type = EventType::MouseUp;
                 event.mouseButton.x = sdlEvent.button.x;
                 event.mouseButton.y = sdlEvent.button.y;
-                event.mouseButton.button = static_cast<MouseButton>(sdlEvent.button.button);
+                event.mouseButton.button = mapSdlButton(sdlEvent.button.button);
                 break;
         }
 

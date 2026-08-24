@@ -461,6 +461,21 @@ UICORNERSTONE_API int UICornerstone_ShapeSetPoints(UIInstance instance, UIContro
 UICORNERSTONE_API int UICornerstone_ShapeMapToDrawPoint(UIInstance instance, UIControlHandle sh,
     float lx, float ly, float* outX, float* outY);
 
+/* ---- Shape 多图元（组合图形：非空时替代单 shape 渲染） ---- */
+// 添加图元（type 为 kShape* 枚举串；rect 为控件本地坐标）。返回图元索引 / -1 失败。
+UICORNERSTONE_API int UICornerstone_ShapeAddPrimitive(UIInstance instance, UIControlHandle sh,
+    const char* type, float x, float y, float w, float h);
+// 图元颜色（prop: "fill"/"stroke"）
+UICORNERSTONE_API int UICornerstone_ShapeSetPrimitiveColor(UIInstance instance, UIControlHandle sh,
+    int index, const char* prop, UIColor value);
+// 图元数值（prop: "line-width"/"radius"/"ring-width"）
+UICORNERSTONE_API int UICornerstone_ShapeSetPrimitiveFloat(UIInstance instance, UIControlHandle sh,
+    int index, const char* prop, float value);
+// 图元点集（本地像素；polyline/polygon 用）
+UICORNERSTONE_API int UICornerstone_ShapeSetPrimitivePoints(UIInstance instance, UIControlHandle sh,
+    int index, int count, const float* xs, const float* ys);
+UICORNERSTONE_API int UICornerstone_ShapeClearPrimitives(UIInstance instance, UIControlHandle sh);
+
 /* ============ ListView 列表控件 ============ */
 // 属性走通用 setter：SetEnum("mode","multi"/"single")、SetBool("multi-select"/"gridlines"/
 // "horizontal-gridlines"/"hover"/"sort-ascending")、SetFloat("row-height"/"header-height"/

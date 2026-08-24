@@ -14,6 +14,7 @@
 #include "TestUtils.h"
 #include "TestInstance.h"
 #include "UICornerstoneAPI.h"
+#include "LayoutParser.h"
 
 using namespace std;
 
@@ -71,6 +72,25 @@ static void runAssertions() {
     const SPoint gp = probe2->getDrawPoint(0);
     CHECK(fabs(gp.x - 120.f) < 0.01f && fabs(gp.y - 120.f) < 0.01f,
           "getDrawPoint(0)=mapToDrawPoint(scaled[0])");
+
+    // 8) 多图元（组合图形）
+    CHECK(g_probe->addPrimitive(ShapeType::Circle, SRect(0, 0, 20, 20)) == 0, "addPrimitive #0");
+    CHECK(g_probe->addPrimitive(ShapeType::Rect, SRect(10, 10, 20, 20)) == 1, "addPrimitive #1");
+    CHECK(g_probe->getPrimitiveCount() == 2, "getPrimitiveCount == 2");
+    g_probe->setPrimitiveFill(0, SColor(255, 0, 0, 255));
+    g_probe->setPrimitiveStroke(1, SColor(0, 255, 0, 255));
+    g_probe->setPrimitiveLineWidth(1, 2.f);
+    g_probe->setPrimitiveRadius(1, 4.f);
+    g_probe->setPrimitiveRingWidth(0, 3.f);
+    g_probe->setPrimitivePoints(1, {{0.f, 0.f}, {10.f, 10.f}});
+    g_probe->clearPrimitives();
+    CHECK(g_probe->getPrimitiveCount() == 0, "clearPrimitives");
+
+    // 9) 背景色（setBackgroundStateColor 自动取消透明）
+    CHECK(g_probe->getTransparent(), "shape default transparent");
+    g_probe->setBackgroundStateColor(StateColor(SColor(32, 40, 60, 255), SColor(32, 40, 60, 255),
+                                                SColor(32, 40, 60, 255), SColor(32, 40, 60, 255)));
+    CHECK(!g_probe->getTransparent(), "setBackgroundStateColor -> not transparent");
 
     TestUtil::log("---- assertions done: pass=%d fail=%d ----", g_pass, g_fail);
 }
@@ -167,6 +187,78 @@ static void testShapeVisualize(Bench* bench) {
         s->setEnumProperty("shape", "ellipse");
         s->setColorProperty("fill", SColor(34, 197, 94));
         s->setFloatProperty("ring-width", 10.f);
+    }
+
+    // 行5：背景色 / 多图元组合（房子：round-rect 墙 + polygon 屋顶 + circle 窗）/ CABI 图元
+    addCaption(bench, col, row + 110, "bg-color / primitives(house) / CABI primitives");
+    row += 138;
+    {
+        // 背景色
+        auto s = make_shared<Shape>(nullptr, SRect(col, row, 90, 90));
+        s->setShape(ShapeType::Circle);
+        s->setStrokeColor(SColor(30, 41, 59)); s->setLineWidth(2);
+        s->setBackgroundStateColor(StateColor(SColor(32, 40, 60), SColor(32, 40, 60),
+                                              SColor(32, 40, 60), SColor(32, 40, 60)));
+        addShape(bench, s);
+    }
+    {
+        // 组合图形（房子）：墙 round-rect + 屋顶 polygon + 窗 circle + 门 rect
+        auto s = make_shared<Shape>(nullptr, SRect(col + 120, row, 150, 130));
+        const SColor wall(52, 211, 153), roof(239, 68, 68), win(59, 130, 246), door(245, 158, 11);
+        const int w = s->addPrimitive(ShapeType::RoundRect, SRect(10, 50, 130, 75));
+        s->setPrimitiveFill(w, wall); s->setPrimitiveRadius(w, 6.f);
+        const int r = s->addPrimitive(ShapeType::Polygon, SRect(0, 0, 0, 0));
+        s->setPrimitivePoints(r, {{0.f, 52.f}, {75.f, 0.f}, {150.f, 52.f}});
+        s->setPrimitiveFill(r, roof);
+        const int win1 = s->addPrimitive(ShapeType::Circle, SRect(28, 68, 30, 30));
+        s->setPrimitiveFill(win1, win);
+        const int d = s->addPrimitive(ShapeType::FilledRect, SRect(92, 85, 30, 40));
+        s->setPrimitiveFill(d, door);
+        addShape(bench, s);
+    }
+    {
+        // CABI 图元路径：CreateShape + ShapeAddPrimitive + SetPrimitiveColor/Float
+        UIControlHandle h = UICornerstone_CreateShape(g_uiInstance,
+            float(col + 300), float(row), 120.f, 90.f, 1.f, 1.f);
+        CHECK(h != nullptr, "CABI CreateShape");
+        const int p0 = UICornerstone_ShapeAddPrimitive(g_uiInstance, h, "round-rect", 0.f, 0.f, 120.f, 90.f);
+        CHECK(p0 == 0, "CABI ShapeAddPrimitive #0");
+        const int p1 = UICornerstone_ShapeAddPrimitive(g_uiInstance, h, "circle", 15.f, 20.f, 50.f, 50.f);
+        CHECK(p1 == 1, "CABI ShapeAddPrimitive #1");
+        const int p2 = UICornerstone_ShapeAddPrimitive(g_uiInstance, h, "bogus", 0.f, 0.f, 10.f, 10.f);
+        CHECK(p2 == -1, "CABI ShapeAddPrimitive unknown type rejected");
+        UIColor blue{59, 130, 246, 255};
+        CHECK(UICornerstone_ShapeSetPrimitiveColor(g_uiInstance, h, p0, "fill", blue) == 1,
+              "CABI SetPrimitiveColor(fill)");
+        CHECK(UICornerstone_ShapeSetPrimitiveFloat(g_uiInstance, h, p0, "radius", 10.f) == 1,
+              "CABI SetPrimitiveFloat(radius)");
+        UIColor yellow{250, 204, 21, 255};
+        CHECK(UICornerstone_ShapeSetPrimitiveColor(g_uiInstance, h, p1, "fill", yellow) == 1,
+              "CABI SetPrimitiveColor(fill) #1");
+    }
+
+    // JSON：primitives + colors.background 解析
+    {
+        const string json = R"({
+          "controls":[{
+            "type":"shape","id":"comp","rect":[600,40,120,120],
+            "colors":{"background":"#324057FF"},
+            "primitives":[
+              {"shape":"round-rect","rect":[0,0,120,120],"radius":12,"fill":"#1E293B","stroke":"#0F172A","lineWidth":2},
+              {"shape":"circle","rect":[10,10,40,40],"fill":"#EF4444"},
+              {"shape":"polyline","points":[{"x":0,"y":100},{"x":60,"y":60},{"x":120,"y":100}],"stroke":"#F59E0B","lineWidth":3}
+            ]
+          }]
+        })";
+        LayoutParser parser;
+        auto root = parser.parseLayout(json);
+        auto* ci = root ? dynamic_cast<ControlImpl*>(root.get()) : nullptr;
+        auto js = ci ? dynamic_pointer_cast<Shape>(ci->getThis()) : nullptr;
+        CHECK(js != nullptr, "JSON shape+primitives parsed");
+        if (js) {
+            CHECK(js->getPrimitiveCount() == 3, "JSON primitives count == 3");
+            CHECK(!js->getTransparent(), "JSON colors.background -> not transparent");
+        }
     }
 }
 

@@ -86,7 +86,14 @@ static shared_ptr<Label> g_label;         // 右键目标（路径 B）
 static void testContextMenuVisualize(Bench* bench) {
     auto menu = make_shared<ContextMenu>(nullptr, 1.f, 1.f);
 
-    menu->addItem(u8"复制", [&](shared_ptr<MenuItem>) { TestUtil::log("clicked 复制"); });
+    // 「复制」带前置图标（leadingControl 可视化）
+    auto copyIcon = make_shared<Label>(nullptr, SRect(0, 0, 16, 16));
+    copyIcon->setCaption(u8"C");
+    copyIcon->setTextStateColor(StateColor(SColor(120, 200, 255), SColor(120, 200, 255),
+                                           SColor(120, 200, 255), SColor(120, 200, 255)));
+    copyIcon->create();
+    menu->addItem(MenuItemBuilder(u8"复制").setLeadingControl(copyIcon)
+                     .setOnClick([&](shared_ptr<MenuItem>) { TestUtil::log("clicked 复制"); }).build());
     menu->addItem(u8"粘贴", [&](shared_ptr<MenuItem>) {});
     menu->addItem(u8"重命名", [&](shared_ptr<MenuItem>) {});
     menu->addSeparator();
@@ -163,7 +170,7 @@ public:
         if (m_frames == 25 && g_menu && g_menu->isPopupVisible()) {
             auto* panel = g_menu->getMenuPanel().get();
             SRect pr = panel->getDrawRect();
-            float ix = pr.left + 20.f, iy = pr.top + 12.f;
+            float ix = pr.left + 80.f, iy = pr.top + 12.f;   // 避开首项 leadingControl 图标槽
             g_menu->handleEvent(makeMouse(EventType::MouseDown, ix, iy));
             g_menu->handleEvent(makeMouse(EventType::MouseUp, ix, iy));
             TestUtil::log("after item click: popupVisible=%d", g_menu->isPopupVisible() ? 1 : 0);

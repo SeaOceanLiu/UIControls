@@ -21,6 +21,19 @@ enum class ShapeType {
     Polygon      // 多边形（闭合：凸顶点扇/凹耳切 + 描边）
 };
 
+// 多图元（组合图形）：单个 Shape 控件绘制多个图元拼合特定图形。
+// 坐标为控件本地 px（同 points 语义，决策 3.3），不参与 baseRect 等比缩放。
+struct ShapePrimitive {
+    ShapeType type = ShapeType::Rect;
+    SRect rect;                               // 本地坐标
+    SColor fill{0, 0, 0, 0};                  // 透明 = 空心
+    SColor stroke{0, 0, 0, 255};
+    float lineWidth = 1.0f;
+    float radius = 0.0f;
+    float ringWidth = 0.0f;
+    std::vector<SPoint> points;               // 本地坐标（polyline/polygon 用）
+};
+
 class Shape : public ControlImpl {
 public:
     using SPointF = SPoint; // 点 = 本地像素 float 坐标（决策 3.3）
@@ -36,6 +49,18 @@ public:
     void setRingWidth(float width);           // circle/ellipse 生效；0 = 实心；≥内切半径钳制实心
     // points 以当前 rect 为基准写入（决策 3.3）；resize 时按基准等比缩放
     void setPoints(const std::vector<SPointF>& pts);
+
+    // ── 多图元（组合图形）──
+    // 非空时替代单图元 m_shape 渲染；返回图元索引
+    int  addPrimitive(ShapeType type, const SRect& localRect);
+    void clearPrimitives();
+    int  getPrimitiveCount() const { return static_cast<int>(m_primitives.size()); }
+    void setPrimitiveFill(int idx, SColor c);
+    void setPrimitiveStroke(int idx, SColor c);
+    void setPrimitiveLineWidth(int idx, float w);
+    void setPrimitiveRadius(int idx, float r);
+    void setPrimitiveRingWidth(int idx, float w);
+    void setPrimitivePoints(int idx, const std::vector<SPointF>& pts);
 
     // ── 查询 ──
     ShapeType getShape() const { return m_shape; }
@@ -62,8 +87,12 @@ public:
     int getFloatProperty(const char* prop, float& out) override;
     int getColorProperty(const char* prop, SColor& out) override;
 
+    // 背景色：复用 ControlBase 状态色体系；显式设置即取消透明（否则 Shape 缺省无底色）
+    void setBackgroundStateColor(StateColor stateColor) override;
+
 protected:
     void rebuildGeometry();                                   // 参数变更统一入口（§4.8）
+    void drawPrimitiveAt(RenderDevice* dev, const ShapePrimitive& pr);  // 单图元绘制（本地→全局偏移）
 
 private:
     friend class ShapeBuilder;
@@ -77,4 +106,8 @@ private:
     std::vector<SPointF> m_points;              // 基准本地坐标（setPoints 写入时的值）
     SRect m_baseRect;                           // setPoints 时的 rect（缩放基准）
     bool m_hasBaseRect = false;
+    std::vector<ShapePrimitive> m_primitives;   // 多图元（非空时替代单图元渲染）
 };
+
+// "rect"/"filled-rect"/... → ShapeType（CABI/JSON 共用；PropertyNames::kShape* 值域）
+bool shapeTypeFromString(const std::string& s, ShapeType& out);

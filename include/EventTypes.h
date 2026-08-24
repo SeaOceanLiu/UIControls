@@ -144,7 +144,8 @@ inline bool isModSet(KeyMod value, KeyMod mask) {
 }
 
 // ========== Canonical MouseButton ==========
-// Values match SDL button numbering for zero-cost SDL3InputBackend mapping.
+// 注意：各后端原始编号不同（SDL3: 1=左 2=中 3=右；SFML/raylib 另有编号），
+// 后端 InputBackend 必须显式翻译为本枚举，禁止裸 static_cast。
 enum class MouseButton : uint8_t {
     None   = 0,
     Left   = 1,

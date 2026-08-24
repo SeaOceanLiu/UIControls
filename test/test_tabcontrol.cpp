@@ -121,19 +121,38 @@ static void runCabiChecks() {
 // ── 可视化 + JSON ──
 static shared_ptr<TabControl> g_tc;
 
-static void testTabVisualize(Bench* bench) {
-    auto tc = make_shared<TabControl>(bench, SRect(120, 80, 560, 360));
-    auto p0 = make_shared<Panel>(tc.get(), SRect(0, 0, 100, 100)); p0->create();
-    auto p1 = make_shared<Panel>(tc.get(), SRect(0, 0, 100, 100)); p1->create();
-    auto p2 = make_shared<Panel>(tc.get(), SRect(0, 0, 100, 100)); p2->create();
-    tc->addTab("主页", p0);
-    tc->addTab("设置", p1);
-    tc->addTab("关于", p2);
+// 页面：差异化底色 + 名称标签（切换可见性验证）
+static shared_ptr<Panel> makePage(TabControl* tc, const string& name, SColor bg) {
+    auto p = make_shared<Panel>(tc, SRect(0, 0, 100, 100));
+    p->setBackgroundStateColor(StateColor(bg, bg, bg, bg));
+    auto lbl = make_shared<Label>(p.get(), SRect(24, 24, 160, 28));
+    lbl->setCaption(name);
+    lbl->create();
+    p->addControl(lbl);
+    p->create();
+    return p;
+}
+
+// 组装一个 TabControl：3 页（主页/设置/关于），position 四方向
+static shared_ptr<TabControl> makeTab(Bench* bench, const SRect& rect, TabPosition pos) {
+    auto tc = make_shared<TabControl>(bench, rect);
+    tc->setPosition(pos);
+    tc->addTab(u8"主页", makePage(tc.get(), u8"主页内容", SColor(180, 60, 60, 255)));
+    tc->addTab(u8"设置", makePage(tc.get(), u8"设置内容", SColor(60, 160, 80, 255)));
+    tc->addTab(u8"关于", makePage(tc.get(), u8"关于内容", SColor(60, 90, 190, 255)));
     tc->setCurrentIndex(0);
     tc->create();
     tc->show();                           // 默认 visible=false，显式显示
     bench->addControl(tc);
-    g_tc = tc;
+    return tc;
+}
+
+static void testTabVisualize(Bench* bench) {
+    // 四方向矩阵：上（缺省）/ 下 / 左 / 右
+    g_tc = makeTab(bench, SRect(120, 80, 560, 240), TabPosition::Top);
+    makeTab(bench, SRect(720, 80, 560, 240), TabPosition::Bottom);
+    makeTab(bench, SRect(120, 420, 560, 240), TabPosition::Left);
+    makeTab(bench, SRect(720, 420, 560, 240), TabPosition::Right);
 
     // JSON 解析（tab-control + tabs + currentIndex）
     const string json = R"({
