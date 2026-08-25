@@ -68,7 +68,7 @@ private:
     void relayout();
     void updateItem(int index);
     void ensureFont();
-    int hitTestIndex(float x) const;              // 命中 item 索引；-1 未命中
+    int hitTestIndex(float screenX, float screenY) const;  // 屏幕→本地逆变换后按 hitRect 二维命中；-1 未命中
     void openPopup(int itemIndex);
     void closePopup();
 

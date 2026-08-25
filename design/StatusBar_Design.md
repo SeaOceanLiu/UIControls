@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // StatusBar_Design.md -- 状态栏控件设计文档
 // 决策点 1-6 已拍板（2026-08-22 与用户确认）
 // 实现文件：include/StatusBar.h / src/StatusBar.cpp
@@ -26,7 +26,9 @@ VSCode 风格底部状态栏：一条细长的水平条，横向排列若干「�
 - 隐藏：弹出时 `m_popupPanel->setVisible(true)`，否则 `setVisible(false)`。
 
 ## 4. 交互
-- MouseMove：更新 `m_hoveredItem` 并重绘（hover 高亮）。
+- 命中测试：`hitTestIndex(screenX, screenY)`——屏幕坐标经 drawRect 原点与 scale
+  **二维逆变换**到本地布局空间后按 `hitRect` 判定（X/Y 缺一不可）。
+- MouseMove：命中则更新 `m_hoveredItem` 并重绘（hover 高亮）；未命中（含 Y 出界）清除。
 - LMBDown：若命中带菜单段 → openPopup；否则触发 item.onClick。
 - 外部点击：ClosePopup。
 

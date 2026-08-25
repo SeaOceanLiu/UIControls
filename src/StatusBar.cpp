@@ -122,14 +122,18 @@ void StatusBar::relayout() {
     }
 }
 
-int StatusBar::hitTestIndex(float screenX) const {
-    // 命中测试入参为屏幕坐标：逆变换到本地布局空间（drawRect 原点 + 1/scale）
+int StatusBar::hitTestIndex(float screenX, float screenY) const {
+    // 命中测试入参为屏幕坐标：逆变换到本地布局空间（drawRect 原点 + 1/scale），二维判定
     auto* self = const_cast<StatusBar*>(this);      // getDrawRect/getScaleXX 为非 const 接口
     const SRect dr = self->getDrawRect();
-    const float x = (screenX - dr.left) / (self->getScaleXX() != 0.f ? self->getScaleXX() : 1.f);
+    const float sx = self->getScaleXX() != 0.f ? self->getScaleXX() : 1.f;
+    const float sy = self->getScaleYY() != 0.f ? self->getScaleYY() : 1.f;
+    const float x = (screenX - dr.left) / sx;
+    const float y = (screenY - dr.top) / sy;
     for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
         const auto& r = m_items[i].hitRect;
-        if (x >= r.left && x < r.left + r.width) return i;
+        if (x >= r.left && x < r.left + r.width &&
+            y >= r.top && y < r.top + r.height) return i;
     }
     return -1;
 }
@@ -224,12 +228,12 @@ bool StatusBar::handleEvent(shared_ptr<Event> event) {
     if (!m_enable || !m_visible) return false;
 
     if (event->m_type == EventType::MouseMove) {
-        m_hoveredItem = hitTestIndex(event->mousePos.x);
+        m_hoveredItem = hitTestIndex(event->mousePos.x, event->mousePos.y);
     }
 
     if (event->m_type == EventType::MouseDown &&
         event->mouseButton.button == MouseButton::Left) {
-        const int idx = hitTestIndex(event->mouseButton.x);
+        const int idx = hitTestIndex(event->mouseButton.x, event->mouseButton.y);
         if (idx >= 0) {
             auto& item = m_items[idx];
             if (item.menuPanel) {
