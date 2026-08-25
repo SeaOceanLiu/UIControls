@@ -341,17 +341,14 @@
 | 关闭按钮→onClose | onClose | click | SetCallback | SetCallback | ✅ |  |
 | getTitleBar/getTitleLabel/getCloseButton/getClientPanel | — | title-bar/title-label/close-button/client-panel | GetPtr("title-bar"…) | GetPtr("title-bar"…) | ✅ | 属性 |
 
-## 22. Shape(形状)
+## 22. ContextMenu(右键菜单)
 
 | 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
 |---|---|---|---|---|---|---|
-| setShape | shape | shape | SetEnum("shape") | SetEnum | ✅ |  |
-| setFillColor/setStrokeColor | fill/stroke | fill/stroke | SetColor | SetColor | ✅ |  |
-| setLineWidth/setRadius/setRingWidth | lineWidth/radius/ring-width | line-width/radius/ring-width | SetFloat | SetFloat | ✅ |  |
-| setPoints | points | — | ShapeSetPoints | — | 🔧 |  |
-| mapToDrawPoint/getDrawPoint | — | — | ShapeMapToDrawPoint | — | ⛔查询 |  |
-| 多图元 addPrimitive/setPrimitive* | primitives | — | ShapeAddPrimitive/ShapeSetPrimitiveColor/ShapeSetPrimitiveFloat/ShapeSetPrimitivePoints/ShapeClearPrimitives | ShapeBuilder.addPrimitive/setPrimitive* | ✅Builder |  |
-| setBackgroundStateColor | colors.background | background | SetStateColor | SetStateColor | ✅ |  |
+| show/close | — | — | ContextMenuShow/Close | ContextMenuBuilder.build 后同 C++ | 🔧专用 |  |
+| addItem/addSeparator | contextMenu.items[] | — | ContextMenuAddItem/AddSeparator | ContextMenuBuilder.addItem | 🔧专用 |  |
+| setContextMenu（控件绑定） | contextMenu（控件级键） | context-menu | SetPtr("context-menu") | SetPtr | ✅ |  |
+| getMenuPanel | — | — | — | — | ⛔内部 |  |
 
 ## 23. ListView(含单列 ListBox 模式)
 
@@ -367,7 +364,19 @@
 | setColumnSorter/sortByColumn | —（运行时注入） | — | ListViewSetColumnSorter | 同 | 🔧专用 |  |
 | setOnSelectionChanged/setOnItemClick/setOnColumnSort | events.on* | — | SetCallback | SetCallback | ✅ |  |
 
-## 24. StatusBar(VSCode 风格状态栏)
+## 24. Shape(形状)
+
+| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
+|---|---|---|---|---|---|---|
+| setShape | shape | shape | SetEnum("shape") | SetEnum | ✅ |  |
+| setFillColor/setStrokeColor | fill/stroke | fill/stroke | SetColor | SetColor | ✅ |  |
+| setLineWidth/setRadius/setRingWidth | lineWidth/radius/ring-width | line-width/radius/ring-width | SetFloat | SetFloat | ✅ |  |
+| setPoints | points | — | ShapeSetPoints | — | 🔧 |  |
+| mapToDrawPoint/getDrawPoint | — | — | ShapeMapToDrawPoint | — | ⛔查询 |  |
+| 多图元 addPrimitive/setPrimitive* | primitives | — | ShapeAddPrimitive/ShapeSetPrimitiveColor/ShapeSetPrimitiveFloat/ShapeSetPrimitivePoints/ShapeClearPrimitives | ShapeBuilder.addPrimitive/setPrimitive* | ✅Builder |  |
+| setBackgroundStateColor | colors.background | background | SetStateColor | SetStateColor | ✅ |  |
+
+## 25. StatusBar(VSCode 风格状态栏)
 
 | 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
 |---|---|---|---|---|---|---|
@@ -377,15 +386,6 @@
 | setStatusItemLeadingControl | items[].icon | — | StatusBarSetItemIcon | StatusBarBuilder.setStatusItemLeadingControl | 🔧专用 |  |
 | setStatusItemOnClick | items[].onClick | — | — | StatusBarBuilder.setStatusItemOnClick | ⚠️CABI | 回调注册可经 SetCallback |
 | openPopup/closePopup | — | — | — | — | ⛔内部(点击驱动) |  |
-
-## 25. ContextMenu(右键菜单)
-
-| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
-|---|---|---|---|---|---|---|
-| show/close | — | — | ContextMenuShow/Close | ContextMenuBuilder.build 后同 C++ | 🔧专用 |  |
-| addItem/addSeparator | contextMenu.items[] | — | ContextMenuAddItem/AddSeparator | ContextMenuBuilder.addItem | 🔧专用 |  |
-| setContextMenu（控件绑定） | contextMenu（控件级键） | context-menu | SetPtr("context-menu") | SetPtr | ✅ |  |
-| getMenuPanel | — | — | — | — | ⛔内部 |  |
 
 ## 26. TabControl(选项卡)
 

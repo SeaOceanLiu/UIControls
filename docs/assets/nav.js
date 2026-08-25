@@ -26,11 +26,11 @@
     ["controls/textarea.html", "4.19 TextArea"],
     ["controls/winframe.html", "4.20 WinFrame"],
     ["controls/treeview.html", "4.21 TreeView"],
-    ["controls/listview.html", "4.22 ListView（列表）"],
-    ["controls/statusbar.html", "4.23 StatusBar（状态栏）"],
-    ["controls/tabcontrol.html", "4.24 TabControl（选项卡）"],
-    ["controls/contextmenu.html", "4.25 ContextMenu（右键菜单）"],
-    ["controls/shape.html", "4.26 Shape（形状）"]
+    ["controls/contextmenu.html", "4.22 ContextMenu（右键菜单）"],
+    ["controls/listview.html", "4.23 ListView（列表）"],
+    ["controls/shape.html", "4.24 Shape（形状）"],
+    ["controls/statusbar.html", "4.25 StatusBar（状态栏）"],
+    ["controls/tabcontrol.html", "4.26 TabControl（选项卡）"]
   ];
   var NAV = [
     ["", "概述", [

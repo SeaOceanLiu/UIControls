@@ -5,7 +5,7 @@
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.22 ListView（列表） - UICornerstone 用户手册</title>
+<title>4.23 ListView（列表） - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/listview.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.22 ListView（列表）</h1>
+<h1>4.23 ListView（列表）</h1>
 
 <p>ListView 提供多列详情视图（Report）与单列模式（List，ListBox 替代）：列头/排序/网格线/选中高亮/hover/行列图标/滚动。继承链：<code>ListView → ControlImpl → Control</code>。设计文档见 <code>design/ListView_Design.md</code>。</p>
 
-<h2>4.22.1 控件的创建</h2>
+<h2>4.23.1 控件的创建</h2>
 
 <pre><code>// C++
 auto lv = ListViewBuilder(nullptr, SRect(30, 60, 420, 240))
@@ -35,7 +35,7 @@ UICornerstone_ListViewAddRow(g_inst, lv, "f1", 2, cells);
   "rows": [ {"id": "f1", "cells": ["main.cpp", "2.1 KB"]} ],
   "events": { "onSelectionChanged": "onSel" } }</code></pre>
 
-<h2>4.22.2 控件的属性</h2>
+<h2>4.23.2 控件的属性</h2>
 
 <table>
 <tr><th>属性/字段</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -50,7 +50,7 @@ UICornerstone_ListViewAddRow(g_inst, lv, "f1", 2, cells);
 <tr><td><code>sortColumn</code> / <code>sortAscending</code></td><td>Int/Bool</td><td>-1 / true</td><td>初始排序状态</td></tr>
 </table>
 
-<h2>4.22.3 控件的回调 / 事件</h2>
+<h2>4.23.3 控件的回调 / 事件</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>说明</th></tr>
@@ -59,7 +59,7 @@ UICornerstone_ListViewAddRow(g_inst, lv, "f1", 2, cells);
 <tr><td><code>onColumnSort</code></td><td>列头排序点击</td><td>列索引+方向</td></tr>
 </table>
 
-<h2>4.22.4 leadingControl</h2><p>列头图标（<code>setColumnLeadingControl</code>）、行首图标（<code>setRowLeadingControl</code>）、单元格控件（<code>setCellLeadingControl</code>）——任意控件，自动挂树定位。</p>
+<h2>4.23.4 leadingControl</h2><p>列头图标（<code>setColumnLeadingControl</code>）、行首图标（<code>setRowLeadingControl</code>）、单元格控件（<code>setCellLeadingControl</code>）——任意控件，自动挂树定位。</p>
 
 </div>
 </body>

@@ -5,7 +5,7 @@
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.26 Shape（形状） - UICornerstone 用户手册</title>
+<title>4.24 Shape（形状） - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/shape.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.26 Shape（形状）</h1>
+<h1>4.24 Shape（形状）</h1>
 
 <p>Shape 纯绘制控件：七种图元（rect/filled-rect/round-rect/circle/ellipse/polyline/polygon，空心与环带），支持<strong>多图元组合</strong>（单控件拼合复杂图形）与背景色。无事件/无子控件。继承链：<code>Shape → ControlImpl → Control</code>。设计文档见 <code>design/Shape_Design.md</code>。</p>
 
-<h2>4.26.1 控件的创建</h2>
+<h2>4.24.1 控件的创建</h2>
 
 <pre><code>// C++
 auto s = ShapeBuilder(nullptr, SRect(40, 40, 90, 90))
@@ -33,7 +33,7 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
 { "type": "shape", "rect": [40, 40, 90, 90], "shape": "circle",
   "fill": "#3B82F6", "stroke": "#1E293B", "lineWidth": 2 }</code></pre>
 
-<h2>4.26.2 控件的属性</h2>
+<h2>4.24.2 控件的属性</h2>
 
 <table>
 <tr><th>属性/字段</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -48,7 +48,7 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
 <tr><td><code>colors.background</code></td><td>Color</td><td>透明</td><td>控件背景色（设后取消透明）</td></tr>
 </table>
 
-<h2>4.26.3 控件的回调 / 事件</h2>
+<h2>4.24.3 控件的回调 / 事件</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>说明</th></tr>

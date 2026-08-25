@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -36,7 +36,7 @@
 <ul>
   <li><strong>四层后端抽象</strong>：RenderDevice（绘制原语）、Texture（纹理）、TextRenderer（文本）、InputBackend（输入）——换后端零业务代码改动。</li>
   <li><strong>声明式 UI</strong>：JSON 布局文件描述控件树、布局引擎（流式/锚点/网格）、事件绑定与主题样式，支持热加载。</li>
-  <li><strong>20+ 控件</strong>：Button、CheckBox（三态）、EditBox、TextArea（多行）、ComboBox、NumericUpDown、Slider、ScrollBar、ProgressBar、Menu、ColorPicker、Splitter、WinFrame、Dialog/Popup、HandleControl 等。</li>
+  <li><strong>20+ 控件</strong>：Button、CheckBox（三态）、ComboBox、ContextMenu、EditBox、ListView（含单列 ListBox）、NumericUpDown、Panel、ProgressBar、ScrollBar、Shape（七种图元+多图元组合）、Slider、StatusBar、TabControl（四方向页签）、TextArea、TreeView、WinFrame、Dialog/Popup、HandleControl 等。</li>
   <li><strong>LuotiAni 动画引擎</strong>：基于 JSON 关键帧描述（translate/scale/rotate/opacity/visible + 缓动与轨迹），支持多实例共享烘焙帧数据。</li>
   <li><strong>三种集成方式</strong>：C ABI 动态库（纯 C 调用）、C++ Binding（现代 C++ 封装）、核心 + 后端源码混合编译。</li>
   <li><strong>多实例 / 多视口</strong>：一个进程多个独立 UI 实例、多窗口与子视口渲染（按后端能力位条件化）。</li>
@@ -111,6 +111,11 @@
       <li><a href="controls/textarea.html">4.19 TextArea</a></li>
       <li><a href="controls/winframe.html">4.20 WinFrame</a></li>
       <li><a href="controls/treeview.html">4.21 TreeView</a></li>
+      <li><a href="controls/contextmenu.html">4.22 ContextMenu</a></li>
+      <li><a href="controls/listview.html">4.23 ListView</a></li>
+      <li><a href="controls/shape.html">4.24 Shape</a></li>
+      <li><a href="controls/statusbar.html">4.25 StatusBar</a></li>
+      <li><a href="controls/tabcontrol.html">4.26 TabControl</a></li>
     </ul>
   </div>
   <div class="toc-sec">
