@@ -81,3 +81,18 @@ private:
     float m_padding = 12.0f;
     SharedFont m_font;
 };
+
+// ── 声明式 Builder（LabelBuilder 同款惯例）──
+class StatusBarBuilder {
+private:
+    std::shared_ptr<StatusBar> m_bar;
+public:
+    StatusBarBuilder(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+    StatusBarBuilder& setFontSize(float size);
+    StatusBarBuilder& setItemHeight(float px);
+    StatusBarBuilder& addStatusItem(const std::string& id, const std::string& text, bool rightAlign = false);
+    StatusBarBuilder& setStatusItemMenu(const std::string& id, std::shared_ptr<MenuPanel> panel);
+    StatusBarBuilder& setStatusItemLeadingControl(const std::string& id, std::shared_ptr<Control> ctl);
+    StatusBarBuilder& setStatusItemOnClick(const std::string& id, std::function<void(std::shared_ptr<StatusItem>)> cb);
+    std::shared_ptr<StatusBar> build(void);
+};

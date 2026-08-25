@@ -22,6 +22,7 @@ struct TabPage {
 };
 
 class TabControl : public ControlImpl {
+    friend class TabControlBuilder;
 public:
     using OnTabChange = std::function<void(std::shared_ptr<TabControl>, int index)>;
 
@@ -78,4 +79,18 @@ private:
     SRect m_contentRect;              // 内容区（相对控件原点）
     OnTabChange m_onTabChange;
     SharedFont m_font;
+};
+
+// ── 声明式 Builder（LabelBuilder 同款惯例）──
+class TabControlBuilder {
+private:
+    std::shared_ptr<TabControl> m_tc;
+public:
+    TabControlBuilder(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+    TabControlBuilder& setPosition(TabPosition pos);
+    TabControlBuilder& setFontSize(float px);
+    TabControlBuilder& addTab(const std::string& title, std::shared_ptr<Control> page);
+    TabControlBuilder& setCurrentIndex(int index);
+    TabControlBuilder& setOnTabChange(TabControl::OnTabChange cb);
+    std::shared_ptr<TabControl> build(void);
 };

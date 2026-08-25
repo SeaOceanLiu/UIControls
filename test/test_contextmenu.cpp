@@ -111,6 +111,16 @@ static void testContextMenuVisualize(Bench* bench) {
     menu->show(140.f, 160.f);
     g_menu = menu;
 
+    // 缩放可视化：1.5x 菜单（ContextMenuBuilder 路径）
+    auto scaledMenu = ContextMenuBuilder(2.0f, 2.0f)
+                          .addItem(u8"缩放 2.0x", nullptr)
+                          .addItem(u8"第二项", nullptr)
+                          .addSeparator()
+                          .addItem(u8"第三项", nullptr)
+                          .build();
+    scaledMenu->show(860.f, 420.f);   // 2x 面板较大，左移避免溢出窗体
+    CHECK(scaledMenu->getMenuPanel() != nullptr, "scaled menu built (1.5x)");
+
     // 独立 probe 菜单做断言（点项回调 + 关闭）
     auto probe = make_shared<ContextMenu>(nullptr, 1.f, 1.f);
     runAssertions(probe);

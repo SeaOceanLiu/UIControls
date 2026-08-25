@@ -9,8 +9,12 @@ ContextMenu::ContextMenu(Control* parent, float xScale, float yScale)
     : Popup(parent, SRect(0, 0, 10, 10), xScale, yScale)
 {
     m_ctlType = ControlType::Popup;
-    m_menuPanel = make_shared<MenuPanel>(this, xScale, yScale);
+    // 子面板 scale 固定 1：挂树后经 setParent 继承父复合（避免 xScale 双重叠加）
+    m_menuPanel = make_shared<MenuPanel>(this, 1.0f, 1.0f);
     setContent(m_menuPanel);
+    // 菜单视觉由 MenuPanel 全权负责：抑制 Popup 自身底色/边框，避免双层框
+    setTransparent(true);
+    setBorderVisible(false);
 }
 
 void ContextMenu::show(float x, float y) {
@@ -87,4 +91,25 @@ void ContextMenu::layoutContent() {
     m_menuPanel->setRect(SRect(0, 0, m_rect.width, m_rect.height));
     m_menuPanel->layoutItems();
     m_menuPanel->show();
+}
+
+// ── ContextMenuBuilder（声明式构建，LabelBuilder 同款惯例） ──
+
+ContextMenuBuilder::ContextMenuBuilder(float xScale, float yScale)
+    : m_menu(nullptr)
+{
+    m_menu = std::make_shared<ContextMenu>(nullptr, xScale, yScale);
+}
+ContextMenuBuilder& ContextMenuBuilder::addItem(const std::string& caption, ContextMenu::ItemClickHandler onClick) {
+    m_menu->addItem(caption, std::move(onClick)); return *this;
+}
+ContextMenuBuilder& ContextMenuBuilder::addItem(std::shared_ptr<MenuItem> item) {
+    m_menu->addItem(std::move(item)); return *this;
+}
+ContextMenuBuilder& ContextMenuBuilder::addSeparator() {
+    m_menu->addSeparator(); return *this;
+}
+std::shared_ptr<ContextMenu> ContextMenuBuilder::build(void) {
+    m_menu->create();
+    return m_menu;
 }

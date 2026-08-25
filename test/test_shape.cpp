@@ -260,6 +260,23 @@ static void testShapeVisualize(Bench* bench) {
             CHECK(!js->getTransparent(), "JSON colors.background -> not transparent");
         }
     }
+
+    // 缩放可视化：normal vs 1.5x（ShapeBuilder 路径；getDrawRect = rect × scale）
+    addCaption(bench, 480, 570, "scale: normal(80) vs 2.0x(160) (builder)");
+    {
+        auto norm = ShapeBuilder(nullptr, SRect(480, 620, 80, 80))
+                        .setShape(ShapeType::Circle)
+                        .setFillColor(SColor(59, 130, 246))
+                        .build();
+        bench->addControl(norm);
+        auto scaled = ShapeBuilder(nullptr, SRect(620, 600, 80, 80), 2.0f, 2.0f)
+                          .setShape(ShapeType::Circle)
+                          .setFillColor(SColor(239, 68, 68))
+                          .build();
+        bench->addControl(scaled);
+        CHECK(fabs(scaled->getDrawRect().width - 160.f) < 0.01f, "scaled shape drawRect = rect*2.0");
+        CHECK(fabs(scaled->getDrawRect().left - 620.f) < 0.01f, "scaled shape drawRect.left unscaled");
+    }
 }
 
 class ShapeApp : public AppCallbacks {

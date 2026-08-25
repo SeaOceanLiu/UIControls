@@ -8,6 +8,7 @@
 #include "Menu.h"
 
 class ContextMenu : public Popup {
+    friend class ContextMenuBuilder;
 public:
     using ItemClickHandler = std::function<void(shared_ptr<MenuItem>)>;
 
@@ -32,4 +33,16 @@ protected:
 
 private:
     shared_ptr<MenuPanel> m_menuPanel;
+};
+
+// ── 声明式 Builder（LabelBuilder 同款惯例；ContextMenu 无 rect，仅 scale）──
+class ContextMenuBuilder {
+private:
+    std::shared_ptr<ContextMenu> m_menu;
+public:
+    ContextMenuBuilder(float xScale = 1.0f, float yScale = 1.0f);
+    ContextMenuBuilder& addItem(const std::string& caption, ContextMenu::ItemClickHandler onClick = nullptr);
+    ContextMenuBuilder& addItem(std::shared_ptr<MenuItem> item);
+    ContextMenuBuilder& addSeparator();
+    std::shared_ptr<ContextMenu> build(void);
 };

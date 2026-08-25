@@ -111,3 +111,28 @@ private:
 
 // "rect"/"filled-rect"/... → ShapeType（CABI/JSON 共用；PropertyNames::kShape* 值域）
 bool shapeTypeFromString(const std::string& s, ShapeType& out);
+
+// ── 声明式 Builder（LabelBuilder 同款惯例）──
+class ShapeBuilder {
+private:
+    std::shared_ptr<Shape> m_shape;
+public:
+    ShapeBuilder(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+    ShapeBuilder& setShape(ShapeType type);
+    ShapeBuilder& setFillColor(SColor color);
+    ShapeBuilder& setStrokeColor(SColor color);
+    ShapeBuilder& setLineWidth(float width);
+    ShapeBuilder& setRadius(float radius);
+    ShapeBuilder& setRingWidth(float width);
+    ShapeBuilder& setPoints(const std::vector<Shape::SPointF>& pts);
+    ShapeBuilder& setBackgroundStateColor(StateColor stateColor);
+    // 多图元（组合图形）
+    ShapeBuilder& addPrimitive(ShapeType type, const SRect& localRect);
+    ShapeBuilder& setPrimitiveFill(int idx, SColor c);
+    ShapeBuilder& setPrimitiveStroke(int idx, SColor c);
+    ShapeBuilder& setPrimitiveLineWidth(int idx, float w);
+    ShapeBuilder& setPrimitiveRadius(int idx, float r);
+    ShapeBuilder& setPrimitiveRingWidth(int idx, float w);
+    ShapeBuilder& setPrimitivePoints(int idx, const std::vector<Shape::SPointF>& pts);
+    std::shared_ptr<Shape> build(void);
+};

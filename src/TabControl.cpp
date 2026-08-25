@@ -10,6 +10,8 @@
 #include "ConstDef.h"
 #include "PropertyNames.h"
 #include "EventTypes.h"
+#include "FocusManager.h"
+#include "UIContext.h"
 
 TabControl::TabControl(Control* parent, const SRect& rect, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
@@ -17,6 +19,9 @@ TabControl::TabControl(Control* parent, const SRect& rect, float xScale, float y
     m_ctlType = ControlType::TabControl;
     m_rect = rect;
     setFocusable(true);
+    // 焦点作用域边界（FocusSystem_Design §4.3 / TabControl_Design §3.6）：
+    // Tab 在本控件页内循环，Ctrl+Tab 跨作用域
+    setFocusBoundary(true);
     relayout();
 }
 
@@ -194,12 +199,18 @@ void TabControl::relayout() {
     applyCurrentPage();
 }
 
-int TabControl::hitTestTab(float x, float y) const {
-    const float ox = m_rect.left, oy = m_rect.top;
+int TabControl::hitTestTab(float screenX, float screenY) const {
+    // 命中测试入参为屏幕坐标：逆变换到本地布局空间
+    auto* self = const_cast<TabControl*>(this);     // getDrawRect/getScaleXX 为非 const 接口
+    const SRect dr = self->getDrawRect();
+    const float sx = self->getScaleXX() != 0.f ? self->getScaleXX() : 1.f;
+    const float sy = self->getScaleYY() != 0.f ? self->getScaleYY() : 1.f;
+    const float x = (screenX - dr.left) / sx;
+    const float y = (screenY - dr.top) / sy;
     for (int i = 0; i < static_cast<int>(m_tabs.size()); ++i) {
         const auto& r = m_tabs[i].tabRect;
-        if (x >= ox + r.left && x < ox + r.left + r.width &&
-            y >= oy + r.top && y < oy + r.top + r.height)
+        if (x >= r.left && x < r.left + r.width &&
+            y >= r.top && y < r.top + r.height)
             return i;
     }
     return -1;
@@ -208,47 +219,55 @@ int TabControl::hitTestTab(float x, float y) const {
 void TabControl::drawTabBar() {
     RenderDevice* dev = getRenderDevice();
     if (!dev) return;
-    const float ox = m_rect.left, oy = m_rect.top;
+    const SRect dr = getDrawRect();            // 缩放后绘制区
+    const float sx = getScaleXX(), sy = getScaleYY();
+    const float ox = dr.left, oy = dr.top;
     ensureFont();
     TextRenderer* r = getTextRenderer();
 
     for (int i = 0; i < static_cast<int>(m_tabs.size()); ++i) {
         const auto& tp = m_tabs[i];
-        const SRect tr = tp.tabRect;
+        const SRect& tr = tp.tabRect;           // 本地布局坐标
         const bool sel = (i == m_currentIndex);
         const bool hov = (i == m_hoveredTab);
+        const float rx = ox + tr.left * sx, ry = oy + tr.top * sy;
+        const float rw = tr.width * sx, rh = tr.height * sy;
 
         // 页签底色
         if (sel) dev->setDrawColor(SColor(45, 45, 52));
         else if (hov) dev->setDrawColor(SColor(60, 60, 70));
         else dev->setDrawColor(SColor(37, 37, 42));
-        dev->fillRect(SRect(ox + tr.left, oy + tr.top, tr.width, tr.height));
+        dev->fillRect(SRect(rx, ry, rw, rh));
 
-        // 选中指示条（贴页签条内侧）
+        // 选中指示条（贴页签条内侧；厚度随 scale）
         if (sel) {
+            const float ind = 3.f * sx;
             dev->setDrawColor(SColor(0, 122, 204));
             if (m_position == TabPosition::Top)
-                dev->fillRect(SRect(ox + tr.left, oy + tr.top + tr.height - 3.f, tr.width, 3.f));
+                dev->fillRect(SRect(rx, ry + rh - ind, rw, ind));
             else if (m_position == TabPosition::Bottom)
-                dev->fillRect(SRect(ox + tr.left, oy + tr.top, tr.width, 3.f));
+                dev->fillRect(SRect(rx, ry, rw, ind));
             else if (m_position == TabPosition::Left)
-                dev->fillRect(SRect(ox + tr.left + tr.width - 3.f, oy + tr.top, 3.f, tr.height));
+                dev->fillRect(SRect(rx + rw - ind, ry, ind, rh));
             else // Right
-                dev->fillRect(SRect(ox + tr.left, oy + tr.top, 3.f, tr.height));
+                dev->fillRect(SRect(rx, ry, ind, rh));
         }
 
-        // 图标
-        float tx = ox + tr.left + m_padding;
+        // 图标（leadingControl 未挂 tab 子树 → 无父复合）→【绝对坐标】
         if (tp.leadingControl) {
             float isz = m_fontSize * 1.4f;
-            tp.leadingControl->setRect(SRect(tx, oy + tr.top + (tr.height - isz) / 2.f, isz, isz));
+            tp.leadingControl->setRect(SRect(
+                ox + (tr.left + m_padding) * sx,
+                oy + (tr.top + (tr.height - isz) / 2.f) * sy,
+                isz * sx, isz * sy));
             tp.leadingControl->draw();
-            tx += isz + 4.f;
         }
-        // 文字
+        // 文字（字体已随 scale 加载，位置按本地 × scale）
         if (r && m_font) {
-            r->drawText(m_font.get(), tp.title, tx,
-                        oy + tr.top + (tr.height - m_fontSize) / 2.f,
+            const float tx = ox + (tr.left + m_padding
+                                   + (tp.leadingControl ? m_fontSize * 1.4f + 4.f : 0.f)) * sx;
+            const float ty = oy + (tr.top + (tr.height - m_fontSize) / 2.f) * sy;
+            r->drawText(m_font.get(), tp.title, tx, ty,
                         sel ? SColor(235, 235, 235) : SColor(180, 180, 185));
         }
     }
@@ -258,10 +277,13 @@ void TabControl::draw(void) {
     ControlImpl::beforeDraw();   // 整体背景 + 边框
     RenderDevice* dev = getRenderDevice();
     if (dev) {
-        // 内容区底色（浅色）
+        // 内容区底色（浅色）：本地内容区 × scale
+        const SRect dr = getDrawRect();
         dev->setDrawColor(SColor(50, 50, 56));
-        dev->fillRect(SRect(m_rect.left + m_contentRect.left, m_rect.top + m_contentRect.top,
-                            m_contentRect.width, m_contentRect.height));
+        dev->fillRect(SRect(dr.left + m_contentRect.left * getScaleXX(),
+                            dr.top + m_contentRect.top * getScaleYY(),
+                            m_contentRect.width * getScaleXX(),
+                            m_contentRect.height * getScaleYY()));
     }
     drawTabBar();
     ControlImpl::draw();         // 子控件（当前页）
@@ -280,12 +302,17 @@ bool TabControl::handleEvent(shared_ptr<Event> event) {
         event->mouseButton.button == MouseButton::Left) {
         int idx = hitTestTab(event->mouseButton.x, event->mouseButton.y);
         if (idx >= 0) {
+            // 点击页签 → 聚焦本控件（键盘导航只作用于焦点实例，多实例互不干扰）
+            FocusManager* fm = m_context ? m_context->focusManager : nullptr;
+            if (fm) fm->focusControl(this);
             setCurrentIndex(idx);
             return true;
         }
     }
 
     if (event->m_type == EventType::KeyDown) {
+        // 键盘导航门控：仅焦点在自身时响应（否则多实例同屏会一起切换）
+        if (!getFocused()) return ControlImpl::handleEvent(event);
         int n = static_cast<int>(m_tabs.size());
         bool vertical = (m_position == TabPosition::Left || m_position == TabPosition::Right);
         auto nav = [&](int delta) {
@@ -351,4 +378,23 @@ int TabControl::setFloatProperty(const char* prop, float value) {
 int TabControl::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kFontSize) == 0) { out = m_fontSize; return 1; }
     return ControlImpl::getFloatProperty(prop, out);
+}
+
+// ── TabControlBuilder（声明式构建，LabelBuilder 同款惯例） ──
+
+TabControlBuilder::TabControlBuilder(Control* parent, SRect rect, float xScale, float yScale)
+    : m_tc(nullptr)
+{
+    m_tc = std::make_shared<TabControl>(parent, rect, xScale, yScale);
+}
+TabControlBuilder& TabControlBuilder::setPosition(TabPosition pos)  { m_tc->setPosition(pos); return *this; }
+TabControlBuilder& TabControlBuilder::setFontSize(float px)         { m_tc->setFontSize(px); return *this; }
+TabControlBuilder& TabControlBuilder::addTab(const std::string& title, std::shared_ptr<Control> page) {
+    m_tc->addTab(title, std::move(page)); return *this;
+}
+TabControlBuilder& TabControlBuilder::setCurrentIndex(int index)    { m_tc->setCurrentIndex(index); return *this; }
+TabControlBuilder& TabControlBuilder::setOnTabChange(TabControl::OnTabChange cb) { m_tc->setOnTabChange(std::move(cb)); return *this; }
+std::shared_ptr<TabControl> TabControlBuilder::build(void) {
+    m_tc->create();
+    return m_tc;
 }

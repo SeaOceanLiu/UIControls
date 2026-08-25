@@ -106,7 +106,9 @@ std::vector<Shape::SPointF> Shape::getPoints() const {
 }
 
 SPoint Shape::mapToDrawPoint(float lx, float ly) const {
-    return {m_rect.left + lx, m_rect.top + ly};
+    auto* self = const_cast<Shape*>(this);          // getDrawRect/getScaleXX 为非 const 接口
+    const SRect dr = self->getDrawRect();           // 缩放后绘制区（scale>1 时绘制坐标随之放大）
+    return {dr.left + lx * self->getScaleXX(), dr.top + ly * self->getScaleYY()};
 }
 SPoint Shape::getDrawPoint(int index) const {
     auto scaled = getPoints();
@@ -168,8 +170,11 @@ void Shape::setPrimitivePoints(int idx, const std::vector<SPointF>& pts) {
 // ── 绘制 ──
 
 void Shape::drawPrimitiveAt(RenderDevice* dev, const ShapePrimitive& pr) {
-    const float ox = m_rect.left, oy = m_rect.top;
-    const SRect r(ox + pr.rect.left, oy + pr.rect.top, pr.rect.width, pr.rect.height);
+    const SRect dr = getDrawRect();
+    const float sx = getScaleXX(), sy = getScaleYY();
+    const float ox = dr.left, oy = dr.top;
+    const SRect r(ox + pr.rect.left * sx, oy + pr.rect.top * sy,
+                  pr.rect.width * sx, pr.rect.height * sy);
     switch (pr.type) {
     case ShapeType::Rect:
         if (pr.fill.alpha() > 0) { dev->setDrawColor(pr.fill); dev->fillRect(r); }
@@ -197,7 +202,7 @@ void Shape::drawPrimitiveAt(RenderDevice* dev, const ShapePrimitive& pr) {
         if (pr.points.size() < 2) break;
         std::vector<SPoint> g;
         g.reserve(pr.points.size());
-        for (const auto& p : pr.points) g.push_back({ox + p.x, oy + p.y});
+        for (const auto& p : pr.points) g.push_back({ox + p.x * sx, oy + p.y * sy});
         dev->drawPolyline(g.data(), static_cast<int>(g.size()), pr.stroke, pr.lineWidth);
         break;
     }
@@ -205,7 +210,7 @@ void Shape::drawPrimitiveAt(RenderDevice* dev, const ShapePrimitive& pr) {
         if (pr.points.size() < 3) break;
         std::vector<SPoint> g;
         g.reserve(pr.points.size());
-        for (const auto& p : pr.points) g.push_back({ox + p.x, oy + p.y});
+        for (const auto& p : pr.points) g.push_back({ox + p.x * sx, oy + p.y * sy});
         dev->drawPolygon(g.data(), static_cast<int>(g.size()),
                          pr.fill, pr.stroke, pr.lineWidth);
         break;
@@ -225,7 +230,7 @@ void Shape::draw(void) {
         return;
     }
 
-    const SRect r = m_rect;
+    const SRect r = getDrawRect();   // 缩放后绘制区（xScale/yScale 生效）
     switch (m_shape) {
     case ShapeType::Rect:
         if (m_fillColor.alpha() > 0) { dev->setDrawColor(m_fillColor); dev->fillRect(r); }
@@ -310,4 +315,33 @@ int Shape::getColorProperty(const char* prop, SColor& out) {
     if (strcmp(prop, PropertyNames::kFill) == 0)   { out = m_fillColor; return 1; }
     if (strcmp(prop, PropertyNames::kStroke) == 0) { out = m_strokeColor; return 1; }
     return ControlImpl::getColorProperty(prop, out);
+}
+
+// ── ShapeBuilder（声明式构建，LabelBuilder 同款惯例） ──
+
+ShapeBuilder::ShapeBuilder(Control* parent, SRect rect, float xScale, float yScale)
+    : m_shape(nullptr)
+{
+    m_shape = std::make_shared<Shape>(parent, rect, xScale, yScale);
+}
+ShapeBuilder& ShapeBuilder::setShape(ShapeType type)            { m_shape->setShape(type); return *this; }
+ShapeBuilder& ShapeBuilder::setFillColor(SColor color)          { m_shape->setFillColor(color); return *this; }
+ShapeBuilder& ShapeBuilder::setStrokeColor(SColor color)        { m_shape->setStrokeColor(color); return *this; }
+ShapeBuilder& ShapeBuilder::setLineWidth(float width)           { m_shape->setLineWidth(width); return *this; }
+ShapeBuilder& ShapeBuilder::setRadius(float radius)             { m_shape->setRadius(radius); return *this; }
+ShapeBuilder& ShapeBuilder::setRingWidth(float width)           { m_shape->setRingWidth(width); return *this; }
+ShapeBuilder& ShapeBuilder::setPoints(const std::vector<Shape::SPointF>& pts) { m_shape->setPoints(pts); return *this; }
+ShapeBuilder& ShapeBuilder::setBackgroundStateColor(StateColor sc) { m_shape->setBackgroundStateColor(sc); return *this; }
+ShapeBuilder& ShapeBuilder::addPrimitive(ShapeType type, const SRect& localRect) {
+    m_shape->addPrimitive(type, localRect); return *this;
+}
+ShapeBuilder& ShapeBuilder::setPrimitiveFill(int idx, SColor c)       { m_shape->setPrimitiveFill(idx, c); return *this; }
+ShapeBuilder& ShapeBuilder::setPrimitiveStroke(int idx, SColor c)     { m_shape->setPrimitiveStroke(idx, c); return *this; }
+ShapeBuilder& ShapeBuilder::setPrimitiveLineWidth(int idx, float w)   { m_shape->setPrimitiveLineWidth(idx, w); return *this; }
+ShapeBuilder& ShapeBuilder::setPrimitiveRadius(int idx, float r)      { m_shape->setPrimitiveRadius(idx, r); return *this; }
+ShapeBuilder& ShapeBuilder::setPrimitiveRingWidth(int idx, float w)   { m_shape->setPrimitiveRingWidth(idx, w); return *this; }
+ShapeBuilder& ShapeBuilder::setPrimitivePoints(int idx, const std::vector<Shape::SPointF>& pts) { m_shape->setPrimitivePoints(idx, pts); return *this; }
+std::shared_ptr<Shape> ShapeBuilder::build(void) {
+    m_shape->create();
+    return m_shape;
 }

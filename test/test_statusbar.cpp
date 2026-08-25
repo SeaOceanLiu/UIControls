@@ -139,6 +139,15 @@ static void testStatusBarVisualize(Bench* bench) {
     icon->setContext(UIContext::getLastInstance());
     icon->create();
 
+    // 缩放可视化：1.5x 状态栏（StatusBarBuilder 路径；getDrawRect = rect × scale）
+    auto sbScaled = StatusBarBuilder(nullptr, SRect(120, 560, 600, 24), 2.0f, 2.0f)
+                        .addStatusItem("s1", u8"缩放 2.0x", false)
+                        .addStatusItem("s2", u8"右段", true)
+                        .build();
+    bench->addControl(sbScaled);
+    CHECK(fabs(sbScaled->getDrawRect().width - 1200.f) < 0.01f, "scaled statusbar drawRect = rect*2.0");
+    CHECK(fabs(sbScaled->getDrawRect().height - 48.f) < 0.01f, "scaled statusbar drawRect.height = h*2.0");
+
     runCabiChecks();
 
     // 记录控件供 App 阶段模拟点击弹出

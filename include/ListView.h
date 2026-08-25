@@ -236,3 +236,25 @@ private:
 
     std::set<Control*> m_attachedChildren;   // 子控件挂树去重（leadingControl/cellControls）
 };
+
+// ── 声明式 Builder（LabelBuilder 同款惯例）──
+class ListViewBuilder {
+private:
+    std::shared_ptr<ListView> m_lv;
+public:
+    ListViewBuilder(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
+    ListViewBuilder& setMode(ListView::Mode mode);
+    ListViewBuilder& setMultiSelect(bool on);
+    ListViewBuilder& setSelectedRow(int index);
+    ListViewBuilder& setRowHeight(float px);
+    ListViewBuilder& setHeaderHeight(float px);
+    ListViewBuilder& setGridlines(bool on);
+    ListViewBuilder& setHorizontalGridlines(bool on);
+    ListViewBuilder& setHoverHighlight(bool on);
+    ListViewBuilder& setMinColumnWidth(float px);
+    ListViewBuilder& addColumn(const std::string& title, float width, bool sortable = false);
+    ListViewBuilder& addRow(const std::string& id, const std::vector<std::string>& cells = {});
+    ListViewBuilder& setOnSelectionChanged(ListView::OnSelectionChangedHandler h);
+    ListViewBuilder& setOnItemClick(ListView::OnItemClickHandler h);
+    std::shared_ptr<ListView> build(void);
+};

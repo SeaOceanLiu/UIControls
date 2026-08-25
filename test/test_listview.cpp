@@ -195,6 +195,22 @@ static void testListViewVisualize(Bench* bench) {
             lv->getMode()==ListView::Mode::Multi ? "yes" : "no");
     }
 
+    // 缩放可视化：2.0x 列表（ListViewBuilder 路径；getDrawRect = rect × scale）
+    // 独立行绘制：避开 (700,60) 的 CABI 1x 实例
+    addCaption(bench, 760, 430, "scale 2.0x (builder)");
+    {
+        auto lv = ListViewBuilder(nullptr, SRect(760, 460, 280, 180), 2.0f, 2.0f)
+                      .addColumn(u8"名称", 160.f, true)
+                      .addColumn(u8"大小", 90.f)
+                      .addRow("s1", {"scaled.cpp", "12 KB"})
+                      .addRow("s2", {"note.md", "3 KB"})
+                      .setSelectedRow(0)
+                      .build();
+        bench->addControl(lv);
+        CHECK(fabs(lv->getDrawRect().width - 560.f) < 0.01f, "scaled listview drawRect = rect*2.0");
+        CHECK(fabs(lv->getDrawRect().height - 360.f) < 0.01f, "scaled listview drawRect.height = h*2.0");
+    }
+
     runCabiChecks();
 }
 

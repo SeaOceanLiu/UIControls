@@ -107,6 +107,16 @@ bool FocusManager::isInScope(Control* candidate, Control* scope)
     return cs == scope;
 }
 
+bool FocusManager::isEffectivelyVisible(Control* ctl)
+{
+    // 自身 + 任一祖先隐藏 → 视为隐藏（如 TabControl 隐藏页内的控件）
+    while (ctl) {
+        if (!ctl->getVisible()) return false;
+        ctl = ctl->getParent();
+    }
+    return true;
+}
+
 bool FocusManager::isDescendantOf(Control* ancestor, Control* candidate)
 {
     if (!ancestor || !candidate) return false;
@@ -130,7 +140,7 @@ bool FocusManager::focusNext(Control* current)
         if (it == m_controls.end()) it = m_controls.begin();
 
         Control* c = *it;
-        if (isInScope(c, scope) && c->getVisible() && c->getEnable()) {
+        if (isInScope(c, scope) && isEffectivelyVisible(c) && c->getEnable()) {
             if (c != current) {
                 if (current) current->setFocused(false, false);
                 c->setFocused(true, true);
@@ -156,7 +166,7 @@ bool FocusManager::focusPrev(Control* current)
 
     for (size_t i = 0; i < m_controls.size(); i++) {
         Control* c = *it;
-        if (isInScope(c, scope) && c->getVisible() && c->getEnable()) {
+        if (isInScope(c, scope) && isEffectivelyVisible(c) && c->getEnable()) {
             if (c != current) {
                 if (current) current->setFocused(false, false);
                 c->setFocused(true, true);
@@ -198,7 +208,7 @@ bool FocusManager::focusNextScope()
 
     // Fallback: find first visible enabled control in the flat list
     for (Control* c : m_controls) {
-        if (c->getVisible() && c->getEnable()) {
+        if (isEffectivelyVisible(c) && c->getEnable()) {
             if (current && current != c) current->setFocused(false, false);
             c->setFocused(true, true);
             m_currentFocused = c;
@@ -233,7 +243,7 @@ bool FocusManager::focusPrevScope()
     }
 
     for (Control* c : m_controls) {
-        if (c->getVisible() && c->getEnable()) {
+        if (isEffectivelyVisible(c) && c->getEnable()) {
             if (current && current != c) current->setFocused(false, false);
             c->setFocused(true, true);
             m_currentFocused = c;
@@ -249,7 +259,7 @@ bool FocusManager::focusFirstInScope(Control* scope)
     // 键盘/焦点切换激活 scope 时通知（如 WinFrame 提升到顶层）
     scope->onFocusScopeActivated();
     for (Control* c : m_controls) {
-        if (isDescendantOf(scope, c) && c->getVisible() && c->getEnable()) {
+        if (isDescendantOf(scope, c) && isEffectivelyVisible(c) && c->getEnable()) {
             if (m_currentFocused && m_currentFocused != c)
                 m_currentFocused->setFocused(false, false);
             c->setFocused(true, true);

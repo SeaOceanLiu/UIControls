@@ -122,7 +122,11 @@ void StatusBar::relayout() {
     }
 }
 
-int StatusBar::hitTestIndex(float x) const {
+int StatusBar::hitTestIndex(float screenX) const {
+    // 命中测试入参为屏幕坐标：逆变换到本地布局空间（drawRect 原点 + 1/scale）
+    auto* self = const_cast<StatusBar*>(this);      // getDrawRect/getScaleXX 为非 const 接口
+    const SRect dr = self->getDrawRect();
+    const float x = (screenX - dr.left) / (self->getScaleXX() != 0.f ? self->getScaleXX() : 1.f);
     for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
         const auto& r = m_items[i].hitRect;
         if (x >= r.left && x < r.left + r.width) return i;
@@ -138,29 +142,34 @@ void StatusBar::draw(void) {
     ControlImpl::beforeDraw();                 // 背景（蓝）/ 边框
     RenderDevice* dev = getRenderDevice();
     TextRenderer* renderer = getTextRenderer();
-    const float ox = m_rect.left, oy = m_rect.top;
+    const SRect dr = getDrawRect();            // 缩放后绘制区
+    const float sx = getScaleXX(), sy = getScaleYY();
+    const float ox = dr.left, oy = dr.top;
 
     if (dev) {
-        // hover 高亮（浅蓝）
+        // hover 高亮（浅蓝）：本地布局坐标 × scale
         if (m_hoveredItem >= 0 && m_hoveredItem < static_cast<int>(m_items.size())) {
             const auto& r = m_items[m_hoveredItem].hitRect;
             dev->setDrawColor(SColor(36, 142, 222));
-            dev->fillRect(SRect(ox + r.left, oy + r.top, r.width, r.height));
+            dev->fillRect(SRect(ox + r.left * sx, oy + r.top * sy, r.width * sx, r.height * sy));
         }
 
         for (const auto& item : m_items) {
-            float x = ox + item.hitRect.left + 4.f;
-            float iy = oy + item.hitRect.top + (m_itemHeight - m_fontSize * 1.4f) / 2.f;
+            // leadingControl 未挂 bar 子树（无父复合）→ setRect 用【绝对坐标】
+            // = drawRect 原点 + 本地布局 × scale
             if (item.leadingControl) {
                 const float isz = m_fontSize * 1.4f;
-                item.leadingControl->setRect(SRect(ox + item.hitRect.left + 4.f, iy, isz, isz));
+                item.leadingControl->setRect(SRect(
+                    ox + (item.hitRect.left + 4.f) * sx,
+                    oy + (item.hitRect.top + (m_itemHeight - isz) / 2.f) * sy,
+                    isz * sx, isz * sy));
                 item.leadingControl->draw();
-                x += isz + 4.f;
             }
             if (renderer && m_font) {
-                renderer->drawText(m_font.get(), item.text, x,
-                                   oy + item.hitRect.top + (m_itemHeight - m_fontSize) / 2.f,
-                                   SColor(235, 235, 235));
+                const float tx = ox + (item.hitRect.left + 4.f
+                                       + (item.leadingControl ? m_fontSize * 1.4f + 4.f : 0.f)) * sx;
+                const float ty = oy + (item.hitRect.top + (m_itemHeight - m_fontSize) / 2.f) * sy;
+                renderer->drawText(m_font.get(), item.text, tx, ty, SColor(235, 235, 235));
             }
         }
     }
@@ -199,7 +208,7 @@ void StatusBar::openPopup(int itemIndex) {
     // （ControlBase.cpp getDrawRect），故此处必须用【bar 相对坐标】。
     float localY = item.hitRect.top - panelH;
     // 顶部越界钳制（不出窗口顶部：相对坐标 < -bar.top 等价绝对越界）
-    if (m_rect.top + localY < 0) localY = -m_rect.top;
+    if (getDrawRect().top + localY * getScaleYY() < 0) localY = -getDrawRect().top / (getScaleYY() != 0.f ? getScaleYY() : 1.f);
 
     m_popupPanel->setPosition(item.hitRect.left, localY);
     m_popupPanel->recalculateSize();
@@ -215,14 +224,12 @@ bool StatusBar::handleEvent(shared_ptr<Event> event) {
     if (!m_enable || !m_visible) return false;
 
     if (event->m_type == EventType::MouseMove) {
-        const float x = event->mousePos.x - m_rect.left;
-        m_hoveredItem = hitTestIndex(x);
+        m_hoveredItem = hitTestIndex(event->mousePos.x);
     }
 
     if (event->m_type == EventType::MouseDown &&
         event->mouseButton.button == MouseButton::Left) {
-        const float x = event->mouseButton.x - m_rect.left;
-        const int idx = hitTestIndex(x);
+        const int idx = hitTestIndex(event->mouseButton.x);
         if (idx >= 0) {
             auto& item = m_items[idx];
             if (item.menuPanel) {
@@ -256,4 +263,30 @@ int StatusBar::getFloatProperty(const char* prop, float& out) {
     if (strcmp(prop, PropertyNames::kFontSize) == 0)  { out = m_fontSize;  return 1; }
     if (strcmp(prop, PropertyNames::kItemHeight) == 0) { out = m_itemHeight; return 1; }
     return ControlImpl::getFloatProperty(prop, out);
+}
+
+// ── StatusBarBuilder（声明式构建，LabelBuilder 同款惯例） ──
+
+StatusBarBuilder::StatusBarBuilder(Control* parent, SRect rect, float xScale, float yScale)
+    : m_bar(nullptr)
+{
+    m_bar = std::make_shared<StatusBar>(parent, rect, xScale, yScale);
+}
+StatusBarBuilder& StatusBarBuilder::setFontSize(float size)   { m_bar->setFontSize(size); return *this; }
+StatusBarBuilder& StatusBarBuilder::setItemHeight(float px)   { m_bar->setItemHeight(px); return *this; }
+StatusBarBuilder& StatusBarBuilder::addStatusItem(const std::string& id, const std::string& text, bool rightAlign) {
+    m_bar->addStatusItem(id, text, rightAlign); return *this;
+}
+StatusBarBuilder& StatusBarBuilder::setStatusItemMenu(const std::string& id, std::shared_ptr<MenuPanel> panel) {
+    m_bar->setStatusItemMenu(id, std::move(panel)); return *this;
+}
+StatusBarBuilder& StatusBarBuilder::setStatusItemLeadingControl(const std::string& id, std::shared_ptr<Control> ctl) {
+    m_bar->setStatusItemLeadingControl(id, std::move(ctl)); return *this;
+}
+StatusBarBuilder& StatusBarBuilder::setStatusItemOnClick(const std::string& id, std::function<void(std::shared_ptr<StatusItem>)> cb) {
+    m_bar->setStatusItemOnClick(id, std::move(cb)); return *this;
+}
+std::shared_ptr<StatusBar> StatusBarBuilder::build(void) {
+    m_bar->create();
+    return m_bar;
 }

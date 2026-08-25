@@ -8,6 +8,7 @@
 #include <memory>
 #include "TabControl.h"
 #include "Panel.h"
+#include "EditBox.h"
 #include "Label.h"
 #include "MainWindow.h"
 #include "Bench.h"
@@ -30,6 +31,14 @@ static int g_pass = 0, g_fail = 0;
 static shared_ptr<Event> makeKey(KeyCode k) {
     auto ev = make_shared<Event>(EventType::KeyDown);
     ev->keyEvent.keycode = k;
+    ev->keyEvent.mod = KeyMod::None;   // 事件未零化：垃圾 mod 位会被 isModSet 误判
+    return ev;
+}
+
+static shared_ptr<Event> makeMouse(EventType type, float x, float y) {
+    auto ev = make_shared<Event>(type);
+    if (type == EventType::MouseMove) ev->mousePos = {x, y};
+    else ev->mouseButton = {x, y, MouseButton::Left};
     return ev;
 }
 
@@ -44,6 +53,7 @@ static void runAssertions() {
     TestUtil::log("---- TabControl assertions ----");
     auto tc = make_shared<TabControl>(nullptr, SRect(0, 0, 400, 300));
     tc->setVisible(true);
+    tc->setFocused(true);   // 键盘导航仅焦点实例响应
 
     int i0 = tc->addTab("A", makePage("a"));
     int i1 = tc->addTab("B", makePage("b"));
@@ -93,7 +103,8 @@ static void runAssertions() {
 // ── CABI ──
 static void runCabiChecks() {
     TestUtil::log("---- TabControl CABI checks ----");
-    UIControlHandle t = UICornerstone_CreateTabControl(g_uiInstance, 10.f, 10.f, 400.f, 300.f, 1.f, 1.f);
+    // 右下角空位：避免遮挡 g_tc 主页页的 EditBox（后添加者绘制在上层）
+    UIControlHandle t = UICornerstone_CreateTabControl(g_uiInstance, 1080.f, 680.f, 300.f, 200.f, 1.f, 1.f);
     CHECK(t != nullptr, "CreateTabControl");
 
     CHECK(UICornerstone_TabAddPage(g_uiInstance, t, "One") == 0, "TabAddPage #0");
@@ -120,6 +131,7 @@ static void runCabiChecks() {
 
 // ── 可视化 + JSON ──
 static shared_ptr<TabControl> g_tc;
+static shared_ptr<EditBox> g_edit1, g_edit2, g_edit3;   // 页内焦点环验证
 
 // 页面：差异化底色 + 名称标签（切换可见性验证）
 static shared_ptr<Panel> makePage(TabControl* tc, const string& name, SColor bg) {
@@ -149,10 +161,56 @@ static shared_ptr<TabControl> makeTab(Bench* bench, const SRect& rect, TabPositi
 
 static void testTabVisualize(Bench* bench) {
     // 四方向矩阵：上（缺省）/ 下 / 左 / 右
-    g_tc = makeTab(bench, SRect(120, 80, 560, 240), TabPosition::Top);
+    // g_tc 手工创建（主页/设置页内含 EditBox，见下块）；其余三方向用 makeTab
     makeTab(bench, SRect(720, 80, 560, 240), TabPosition::Bottom);
     makeTab(bench, SRect(120, 420, 560, 240), TabPosition::Left);
     makeTab(bench, SRect(720, 420, 560, 240), TabPosition::Right);
+
+    // g_tc 主页/设置页内放 EditBox：验证焦点环经 Tab 在页内控件间切换
+    {
+        g_tc = make_shared<TabControl>(bench, SRect(120, 80, 560, 240));   // Top 缺省
+        auto page1 = make_shared<Panel>(g_tc.get(), SRect(0, 0, 100, 100));
+        page1->setBackgroundStateColor(StateColor(SColor(180, 60, 60), SColor(180, 60, 60),
+                                                  SColor(180, 60, 60), SColor(180, 60, 60)));
+        auto lbl1 = make_shared<Label>(page1.get(), SRect(24, 24, 160, 28));
+        lbl1->setCaption(u8"主页内容"); lbl1->create(); page1->addControl(lbl1);
+        g_edit1 = make_shared<EditBox>(page1.get(), SRect(30, 80, 220, 32));
+        g_edit1->create(); g_edit1->show(); page1->addControl(g_edit1);
+        g_edit2 = make_shared<EditBox>(page1.get(), SRect(30, 130, 220, 32));
+        g_edit2->create(); g_edit2->show(); page1->addControl(g_edit2);
+        page1->create();
+        g_tc->addTab(u8"主页", page1);
+
+        auto page2 = make_shared<Panel>(g_tc.get(), SRect(0, 0, 100, 100));
+        page2->setBackgroundStateColor(StateColor(SColor(60, 160, 80), SColor(60, 160, 80),
+                                                  SColor(60, 160, 80), SColor(60, 160, 80)));
+        g_edit3 = make_shared<EditBox>(page2.get(), SRect(30, 80, 220, 32));
+        g_edit3->create(); g_edit3->show(); page2->addControl(g_edit3);
+        page2->create();
+        g_tc->addTab(u8"设置", page2);
+
+        g_tc->addTab(u8"关于", makePage(g_tc.get(), u8"关于内容", SColor(60, 90, 190, 255)));
+        g_tc->setCurrentIndex(0);
+        g_tc->create();
+        g_tc->show();
+        bench->addControl(g_tc);
+    }
+
+    // 缩放可视化：normal vs 2.0x 对照（TabControlBuilder 路径；getDrawRect = rect × scale）
+    auto normTc = TabControlBuilder(nullptr, SRect(760, 690, 300, 100))
+                      .addTab(u8"主页", makePage(nullptr, u8"主页内容", SColor(180, 60, 60, 255)))
+                      .addTab(u8"设置", makePage(nullptr, u8"设置内容", SColor(60, 160, 80, 255)))
+                      .setCurrentIndex(0)
+                      .build();
+    bench->addControl(normTc);
+    auto scaledTc = TabControlBuilder(nullptr, SRect(120, 690, 300, 100), 2.0f, 2.0f)
+                        .addTab(u8"主页", makePage(nullptr, u8"主页内容", SColor(180, 60, 60, 255)))
+                        .addTab(u8"设置", makePage(nullptr, u8"设置内容", SColor(60, 160, 80, 255)))
+                        .setCurrentIndex(0)
+                        .build();
+    bench->addControl(scaledTc);
+    CHECK(fabs(scaledTc->getDrawRect().width - 600.f) < 0.01f, "scaled tabcontrol drawRect = rect*2.0");
+    CHECK(fabs(scaledTc->getDrawRect().height - 200.f) < 0.01f, "scaled tabcontrol drawRect.height = h*2.0");
 
     // JSON 解析（tab-control + tabs + currentIndex）
     const string json = R"({
@@ -218,6 +276,31 @@ public:
             const int saved = cap ? UICornerstone_SavePixelsToFile(pixels, w, h, "Temp/tab_switched.bmp") : 0;
             TestUtil::log("capture switched: cap=%d saved=%d", cap, saved);
             m_cap1 = true;
+        }
+
+        // ── 焦点环切换：回主页 → 点击 edit1 → Tab → edit2 ──
+        if (m_frames == 44 && g_tc) {
+            g_tc->setCurrentIndex(0);   // 回主页（EditBox 所在页）
+        }
+        if (m_frames == 48 && g_edit1) {
+            SRect r = g_edit1->getDrawRect();
+            BENCH->handleEvent(makeMouse(EventType::MouseDown, r.left + r.width / 2.f, r.top + r.height / 2.f));
+            BENCH->handleEvent(makeMouse(EventType::MouseUp, r.left + r.width / 2.f, r.top + r.height / 2.f));
+        }
+        if (m_frames == 50 && g_edit1 && g_edit2) {
+            // 聚焦→Tab 同帧完成（避免帧间真实失焦事件干扰）；焦点环截图在下一帧 draw 后
+            GET_FOCUSMANAGER->focusControl(g_edit1.get());
+            CHECK(g_edit1->getFocused(), "click focuses edit1");
+            if (cap) UICornerstone_SavePixelsToFile(pixels, w, h, "Temp/tab_focus1.bmp");
+
+            auto ev = make_shared<Event>(EventType::KeyDown);
+            ev->keyEvent.keycode = KeyCode::Tab;
+            ev->keyEvent.mod = KeyMod::None;
+            BENCH->handleEvent(ev);   // Bench 拦截 Tab → focusNext（TabControl 作用域内）
+        }
+        if (m_frames == 52 && g_edit1 && g_edit2) {
+            CHECK(g_edit2->getFocused() && !g_edit1->getFocused(), "Tab moves focus edit1 -> edit2 (in-scope)");
+            if (cap) UICornerstone_SavePixelsToFile(pixels, w, h, "Temp/tab_focus2.bmp");
             TestUtil::log("---- TabControl test result: pass=%d fail=%d ----", g_pass, g_fail);
         }
 

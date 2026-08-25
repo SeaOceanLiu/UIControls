@@ -45,6 +45,7 @@ private:
 
     Control* findFocusScope(Control* ctl);
     bool isInScope(Control* candidate, Control* scope);
+    bool isEffectivelyVisible(Control* ctl);   // 自身或任一祖先隐藏 → false
     bool isDescendantOf(Control* ancestor, Control* candidate);
 };
 
