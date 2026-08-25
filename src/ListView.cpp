@@ -19,6 +19,16 @@ using std::min;
 
 namespace {
 constexpr float kScrollbarW = 14.0f;     // 与 ConstDef::SCROLLBAR_WIDTH 对齐的兜底
+constexpr float kTextLeftPad   = 6.0f;   // 单元格/表头文字左距
+constexpr float kSortArrowW    = 10.0f;  // 排序箭头宽
+constexpr float kSortArrowHalf = 5.0f;   // 排序箭头半高/半宽
+constexpr float kSortArrowTip  = 3.0f;   // 排序箭头尖偏移
+constexpr float kSortArrowRightGap = 14.0f; // 箭头距列右缘
+constexpr float kHeaderLineInset = 2.0f; // 表头分隔线上下内缩
+constexpr float kIconSlotInset   = 4.0f; // 行图标槽内缩
+constexpr float kColResizeHitW   = 4.0f; // 列宽拖拽分隔线命中半宽
+constexpr float kDefaultColumnWidth = 100.0f; // 无列定义时单元格兜底宽
+constexpr float kScrollbarStep   = 20.0f; // 水平滚动条步长
 }
 
 // ── 构造 ──
@@ -86,7 +96,7 @@ void ListView::create(void) {
     m_scrollBarH = ScrollBarBuilder(this,
         SRect(0, m_rect.height - kScrollbarW, m_rect.width, kScrollbarW),
         ScrollBarOrientation::Horizontal, 1.0f, 1.0f)
-        .setStepSize(20.0f)
+        .setStepSize(kScrollbarStep)
         .setPageSize(m_rect.width)
         .setOnPositionChanged([this](shared_ptr<ScrollBar>, float, float, float, float) {
             if (m_scrollBarH) m_hScrollOffset = m_scrollBarH->getValue();
@@ -185,13 +195,13 @@ void ListView::syncChildControls() {
             ctl->setRect(SRect(x, y2, w, h));
         };
 
-        const float slot = m_rowHeight - 8.f;
+        const float slot = m_rowHeight - 2.f * kIconSlotInset;
         if (row.leadingControl && getColumnCount() > 0)
-            attach(row.leadingControl, columnX(0) + 4.f, y + 4.f, slot, slot);
+            attach(row.leadingControl, columnX(0) + kIconSlotInset, y + kIconSlotInset, slot, slot);
         for (auto& [col, ctl] : row.cellControls) {
             if (col >= getColumnCount()) continue;
             const float cw = (m_viewMode == Mode::Single) ? m_rect.width : m_columns[col].width;
-            attach(ctl, columnX(col) + 4.f, y + 4.f, min(slot, cw - 8.f), slot);
+            attach(ctl, columnX(col) + kIconSlotInset, y + kIconSlotInset, min(slot, cw - 2.f * kIconSlotInset), slot);
         }
     }
     // 列头图标（multi）
@@ -206,7 +216,7 @@ void ListView::syncChildControls() {
                 lc->create();
                 m_attachedChildren.insert(lc.get());
             }
-            lc->setRect(SRect(columnX(c) + 6.f, 4.f, hs, hs));
+            lc->setRect(SRect(columnX(c) + kTextLeftPad, kIconSlotInset, hs, hs));
         }
     }
 }
@@ -545,23 +555,23 @@ void ListView::draw(void) {
             const float hfh = renderer->getFontHeight(hf.get());
 
             // 标题文本（leadingControl 槽让位）
-            float tx = x + 6.f * sx;
-            if (m_columns[c].leadingControl) tx += headerH - 4.f * sx;
+            float tx = x + kTextLeftPad * sx;
+            if (m_columns[c].leadingControl) tx += headerH - kIconSlotInset * sx;
             dev->pushClipRect(SRect(x, oy, w, headerH));
             renderer->drawText(hf.get(), m_columns[c].title, tx,
                                oy + (headerH - hfh) / 2.f, m_headerTextColor);
             // 排序箭头（sortable 且当前排序列）
             if (m_columns[c].sortable && c == m_sortColumn) {
-                const float ax = x + w - 14.f * sx, ay = oy + headerH / 2.f;
+                const float ax = x + w - kSortArrowRightGap * sx, ay = oy + headerH / 2.f;
                 if (m_sortAscending)
-                    dev->drawTriangle(ax, ay + 5.f * sx, ax + 10.f * sx, ay + 5.f * sx, ax + 5.f * sx, ay - 3.f * sx, m_headerTextColor);
+                    dev->drawTriangle(ax, ay + kSortArrowHalf * sx, ax + kSortArrowW * sx, ay + kSortArrowHalf * sx, ax + kSortArrowHalf * sx, ay - kSortArrowTip * sx, m_headerTextColor);
                 else
-                    dev->drawTriangle(ax, ay - 5.f * sx, ax + 10.f * sx, ay - 5.f * sx, ax + 5.f * sx, ay + 3.f * sx, m_headerTextColor);
+                    dev->drawTriangle(ax, ay - kSortArrowHalf * sx, ax + kSortArrowW * sx, ay - kSortArrowHalf * sx, ax + kSortArrowHalf * sx, ay + kSortArrowTip * sx, m_headerTextColor);
             }
             dev->popClipRect();
             // 分隔线
             dev->setDrawColor(m_gridlineColor);
-            dev->drawLine(x + w - 1.f, oy + 2.f * sy, x + w - 1.f, oy + headerH - 2.f * sy);
+            dev->drawLine(x + w - 1.f, oy + kHeaderLineInset * sy, x + w - 1.f, oy + headerH - kHeaderLineInset * sy);
         }
     }
 
@@ -592,7 +602,7 @@ void ListView::draw(void) {
         for (int c = 0; c < effCols; ++c) {
             const float x = columnX(c) * sx;
             const float w = (m_viewMode == Mode::Single) ? dr.width
-                            : (c < cols ? m_columns[c].width * sx : 100.f * sx);
+                            : (c < cols ? m_columns[c].width * sx : kDefaultColumnWidth * sx);
             if (x + w < 0 || x > dr.width) continue;
 
             // cellStyle 背景（覆盖高亮之上，差异着色可见）
@@ -605,7 +615,7 @@ void ListView::draw(void) {
             // 文本（首列让位 leadingControl/cellControl 槽）
             const bool hasCtl = (c == 0 && row.leadingControl) ||
                                 row.cellControls.count(c) != 0;
-            float tx = ox + x + 6.f * sx + (hasCtl ? rowH - 4.f * sx : 0.f);
+            float tx = ox + x + kTextLeftPad * sx + (hasCtl ? rowH - kIconSlotInset * sx : 0.f);
             const string text = (c < static_cast<int>(row.cells.size())) ? row.cells[c] : string();
             if (text.empty()) continue;
 
@@ -708,7 +718,7 @@ bool ListView::handleEvent(shared_ptr<Event> event) {
             // 列头区：分隔线拖拽 or 排序点击
             for (int c = 0; c < getColumnCount(); ++c) {
                 const float right = columnX(c) + m_columns[c].width - m_hScrollOffset * 0.f;
-                if (fabs(lx - right) <= 4.f) {
+                if (fabs(lx - right) <= kColResizeHitW) {
                     m_dragCol = c; m_dragStartX = event->mouseButton.x;
                     m_dragStartWidth = m_columns[c].width;
                     return true;

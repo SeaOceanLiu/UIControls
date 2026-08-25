@@ -8,13 +8,19 @@
 #include "RenderDevice.h"
 #include "TextRenderer.h"
 
-#include <algorithm>
-#include <cmath>
-
 using std::string;
 using std::vector;
 using std::shared_ptr;
 using std::function;
+
+// ── 局域常量（design-rules §2：业务常量具名，控件局域文件级 constexpr）──
+static constexpr SColor kVSCodeBlue      = SColor(0, 122, 204);    // 缺省底色
+static constexpr SColor kHoverColor      = SColor(36, 142, 222);   // hover 提亮
+static constexpr SColor kTextColor       = SColor(235, 235, 235);  // 段文字
+static constexpr float kIconFontRatio    = 1.4f;   // 图标槽边长 = 字号×1.4
+static constexpr float kIconLeftPad      = 4.0f;   // 段左缘→图标间距
+static constexpr float kIconTextGap      = 4.0f;   // 图标→文字间距
+static constexpr float kTextEstRatio     = 0.6f;   // 字体未就绪时字宽估算系数
 
 StatusBar::StatusBar(Control* parent, const SRect& rect, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
@@ -22,7 +28,7 @@ StatusBar::StatusBar(Control* parent, const SRect& rect, float xScale, float ySc
     m_ctlType = ControlType::StatusBar;
     m_rect = rect;
     m_itemHeight = rect.height;
-    setNormalStateBGColor(SColor(0, 122, 204));   // VSCode 状态栏蓝
+    setNormalStateBGColor(kVSCodeBlue);            // VSCode 状态栏蓝
 }
 
 // ── 数据操作 ──
@@ -101,9 +107,9 @@ void StatusBar::relayout() {
     for (auto& item : m_items) {
         if (item.rightAlign) continue;
         float w = m_itemHeight;
-        if (item.leadingControl) w += m_fontSize * 1.4f;
+        if (item.leadingControl) w += m_fontSize * kIconFontRatio;
         if (renderer && m_font) w += renderer->measureText(m_font.get(), item.text).width;
-        else w += item.text.length() * m_fontSize * 0.6f;
+        else w += item.text.length() * m_fontSize * kTextEstRatio;
         item.hitRect = SRect(leftX, cy, w + m_spacing, m_itemHeight);
         leftX += w + m_spacing;
     }
@@ -114,9 +120,9 @@ void StatusBar::relayout() {
         auto& item = m_items[i];
         if (!item.rightAlign) continue;
         float w = m_itemHeight;
-        if (item.leadingControl) w += m_fontSize * 1.4f;
+        if (item.leadingControl) w += m_fontSize * kIconFontRatio;
         if (renderer && m_font) w += renderer->measureText(m_font.get(), item.text).width;
-        else w += item.text.length() * m_fontSize * 0.6f;
+        else w += item.text.length() * m_fontSize * kTextEstRatio;
         item.hitRect = SRect(rightX - w, cy, w + m_spacing, m_itemHeight);
         rightX -= w + m_spacing;
     }
@@ -154,7 +160,7 @@ void StatusBar::draw(void) {
         // hover 高亮（浅蓝）：本地布局坐标 × scale
         if (m_hoveredItem >= 0 && m_hoveredItem < static_cast<int>(m_items.size())) {
             const auto& r = m_items[m_hoveredItem].hitRect;
-            dev->setDrawColor(SColor(36, 142, 222));
+            dev->setDrawColor(kHoverColor);
             dev->fillRect(SRect(ox + r.left * sx, oy + r.top * sy, r.width * sx, r.height * sy));
         }
 
@@ -164,18 +170,18 @@ void StatusBar::draw(void) {
             if (item.leadingControl) {
                 // 图标框：槽内几何居中（(itemHeight-isz)/2），内容无关基准；
                 // 文字型图标内容的基线偏移属内容自身特性（Label 行偏移为常量）
-                const float isz = m_fontSize * 1.4f;
+                const float isz = m_fontSize * kIconFontRatio;
                 item.leadingControl->setRect(SRect(
-                    ox + (item.hitRect.left + 4.f) * sx,
+                    ox + (item.hitRect.left + kIconLeftPad) * sx,
                     oy + (item.hitRect.top + (m_itemHeight - isz) / 2.f) * sy,
                     isz * sx, isz * sy));
                 item.leadingControl->draw();
             }
             if (renderer && m_font) {
-                const float tx = ox + (item.hitRect.left + 4.f
-                                       + (item.leadingControl ? m_fontSize * 1.4f + 4.f : 0.f)) * sx;
+                const float tx = ox + (item.hitRect.left + kIconLeftPad
+                                       + (item.leadingControl ? m_fontSize * kIconFontRatio + kIconTextGap : 0.f)) * sx;
                 const float ty = oy + (item.hitRect.top + (m_itemHeight - m_fontSize) / 2.f) * sy;
-                renderer->drawText(m_font.get(), item.text, tx, ty, SColor(235, 235, 235));
+                renderer->drawText(m_font.get(), item.text, tx, ty, kTextColor);
             }
         }
     }

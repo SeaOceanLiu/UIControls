@@ -2,8 +2,10 @@
 // ContextMenu.cpp -- 右键上下文菜单（Popup 浮层 + MenuPanel 内容）
 // ============================================================================
 #include "ContextMenu.h"
-#include "Bench.h"
 #include "MainWindow.h"
+
+// 视口兜底（context 未就绪时的假想视口，仅参与钳制）
+static const SRect kFallbackViewport(0, 0, 1024, 768);   // SRect 构造非 constexpr
 
 ContextMenu::ContextMenu(Control* parent, float xScale, float yScale)
     : Popup(parent, SRect(0, 0, 10, 10), xScale, yScale)
@@ -51,7 +53,7 @@ void ContextMenu::show(float x, float y) {
     float w = m_menuPanel->getRect().width;
     float h = m_menuPanel->getRect().height;
 
-    SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : SRect(0, 0, 1024, 768);
+    SRect vp = GET_CONTEXT ? GET_CONTEXT->viewport : kFallbackViewport;
     float px = x, py = y;
     if (px + w > vp.left + vp.width)  px = vp.left + vp.width  - w;
     if (py + h > vp.top + vp.height)  py = vp.top + vp.height - h;

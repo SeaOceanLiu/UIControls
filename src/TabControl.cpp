@@ -2,8 +2,6 @@
 // TabControl.cpp -- 选项卡控件（四方向页签条 + 内容区，一体自绘）
 // ============================================================================
 #include "TabControl.h"
-#include "Bench.h"
-#include "MainWindow.h"
 #include "RenderDevice.h"
 #include "TextRenderer.h"
 #include "ResourceProvider.h"
@@ -12,6 +10,20 @@
 #include "EventTypes.h"
 #include "FocusManager.h"
 #include "UIContext.h"
+
+// ── 局域常量（design-rules §2：业务常量具名，控件局域文件级 constexpr）──
+static constexpr SColor kSelTabColor     = SColor(45, 45, 52);     // 选中页签底
+static constexpr SColor kHoverTabColor   = SColor(60, 60, 70);     // hover 页签底
+static constexpr SColor kNormTabColor    = SColor(37, 37, 42);     // 常态页签底
+static constexpr SColor kIndicatorColor  = SColor(0, 122, 204);    // 选中指示条
+static constexpr SColor kSelTextColor    = SColor(235, 235, 235);  // 选中页签文字
+static constexpr SColor kNormTextColor   = SColor(180, 180, 185);  // 常态页签文字
+static constexpr SColor kContentBgColor  = SColor(50, 50, 56);     // 内容区底色
+static constexpr float kBarFontRatio     = 1.4f;   // 条厚/图标槽 = 字号×1.4
+static constexpr float kMinBarWidth      = 40.0f;  // Left/Right 条宽下限
+static constexpr float kTextEstRatio     = 0.6f;   // 字体未就绪字宽估算系数
+static constexpr float kIndicatorH       = 3.0f;   // 指示条厚（×scale）
+static constexpr float kIconTextGap      = 4.0f;   // 图标→文字间距
 
 TabControl::TabControl(Control* parent, const SRect& rect, float xScale, float yScale)
     : ControlImpl(parent, xScale, yScale)
@@ -138,7 +150,7 @@ void TabControl::setFontSize(float px) {
 }
 
 void TabControl::relayout() {
-    const float barT = m_fontSize * 1.4f + 2.f * m_padding;  // Top/Bottom 厚度
+    const float barT = m_fontSize * kBarFontRatio + 2.f * m_padding;  // Top/Bottom 厚度
     const float fullW = m_rect.width, fullH = m_rect.height;
     SRect bar, content;
 
@@ -158,16 +170,16 @@ void TabControl::relayout() {
 
     // 左/右侧：按最大标题宽定 bar 宽
     if (m_position == TabPosition::Left || m_position == TabPosition::Right) {
-        float maxW = 40.f;
+        float maxW = kMinBarWidth;
         ensureFont();
         TextRenderer* r = getTextRenderer();
         for (auto& tp : m_tabs) {
-            float w = r && m_font ? r->measureText(m_font.get(), tp.title).width : tp.title.length() * m_fontSize * 0.6f;
+            float w = r && m_font ? r->measureText(m_font.get(), tp.title).width : tp.title.length() * m_fontSize * kTextEstRatio;
             w += 2.f * m_padding;
-            if (tp.leadingControl) w += m_fontSize * 1.4f + 4.f;
+            if (tp.leadingControl) w += m_fontSize * kBarFontRatio + kIconTextGap;
             if (w > maxW) maxW = w;
         }
-        const float tabH = m_fontSize * 1.4f + 2.f * m_padding;
+        const float tabH = m_fontSize * kBarFontRatio + 2.f * m_padding;
         if (m_position == TabPosition::Left) {
             bar = SRect(0, 0, maxW, fullH);
             content = SRect(maxW, 0, fullW - maxW, fullH);
@@ -187,9 +199,9 @@ void TabControl::relayout() {
         ensureFont();
         TextRenderer* r = getTextRenderer();
         for (auto& tp : m_tabs) {
-            float w = r && m_font ? r->measureText(m_font.get(), tp.title).width : tp.title.length() * m_fontSize * 0.6f;
+            float w = r && m_font ? r->measureText(m_font.get(), tp.title).width : tp.title.length() * m_fontSize * kTextEstRatio;
             w += 2.f * m_padding;
-            if (tp.leadingControl) w += m_fontSize * 1.4f + 4.f;
+            if (tp.leadingControl) w += m_fontSize * kBarFontRatio + kIconTextGap;
             tp.tabRect = SRect(x, bar.top, w, bar.height);
             x += w;
         }
@@ -234,15 +246,15 @@ void TabControl::drawTabBar() {
         const float rw = tr.width * sx, rh = tr.height * sy;
 
         // 页签底色
-        if (sel) dev->setDrawColor(SColor(45, 45, 52));
-        else if (hov) dev->setDrawColor(SColor(60, 60, 70));
-        else dev->setDrawColor(SColor(37, 37, 42));
+        if (sel) dev->setDrawColor(kSelTabColor);
+        else if (hov) dev->setDrawColor(kHoverTabColor);
+        else dev->setDrawColor(kNormTabColor);
         dev->fillRect(SRect(rx, ry, rw, rh));
 
         // 选中指示条（贴页签条内侧；厚度随 scale）
         if (sel) {
-            const float ind = 3.f * sx;
-            dev->setDrawColor(SColor(0, 122, 204));
+            const float ind = kIndicatorH * sx;
+            dev->setDrawColor(kIndicatorColor);
             if (m_position == TabPosition::Top)
                 dev->fillRect(SRect(rx, ry + rh - ind, rw, ind));
             else if (m_position == TabPosition::Bottom)
@@ -255,7 +267,7 @@ void TabControl::drawTabBar() {
 
         // 图标（leadingControl 未挂 tab 子树 → 无父复合）→【绝对坐标】
         if (tp.leadingControl) {
-            float isz = m_fontSize * 1.4f;
+            float isz = m_fontSize * kBarFontRatio;
             tp.leadingControl->setRect(SRect(
                 ox + (tr.left + m_padding) * sx,
                 oy + (tr.top + (tr.height - isz) / 2.f) * sy,
@@ -265,10 +277,10 @@ void TabControl::drawTabBar() {
         // 文字（字体已随 scale 加载，位置按本地 × scale）
         if (r && m_font) {
             const float tx = ox + (tr.left + m_padding
-                                   + (tp.leadingControl ? m_fontSize * 1.4f + 4.f : 0.f)) * sx;
+                                   + (tp.leadingControl ? m_fontSize * kBarFontRatio + kIconTextGap : 0.f)) * sx;
             const float ty = oy + (tr.top + (tr.height - m_fontSize) / 2.f) * sy;
             r->drawText(m_font.get(), tp.title, tx, ty,
-                        sel ? SColor(235, 235, 235) : SColor(180, 180, 185));
+                        sel ? kSelTextColor : kNormTextColor);
         }
     }
 }
@@ -279,7 +291,7 @@ void TabControl::draw(void) {
     if (dev) {
         // 内容区底色（浅色）：本地内容区 × scale
         const SRect dr = getDrawRect();
-        dev->setDrawColor(SColor(50, 50, 56));
+        dev->setDrawColor(kContentBgColor);
         dev->fillRect(SRect(dr.left + m_contentRect.left * getScaleXX(),
                             dr.top + m_contentRect.top * getScaleYY(),
                             m_contentRect.width * getScaleXX(),

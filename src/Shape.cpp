@@ -8,7 +8,6 @@
 #include "PropertyNames.h"
 
 #include <algorithm>
-#include <cmath>
 
 // "rect"/"filled-rect"/... → ShapeType（外部链接：CABI/JSON 共用，声明见 Shape.h）
 bool shapeTypeFromString(const std::string& s, ShapeType& out) {
