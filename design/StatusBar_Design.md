@@ -43,7 +43,9 @@ VSCode 风格底部状态栏：一条细长的水平条，横向排列若干「�
 - 背景：`m_bgColor`（默认 #007ACC VSCode 蓝，可通过 fill-color 覆盖）。
 - 文本：`m_fontSize`，左对齐，垂直居中。
 - hover 段：背景略微提亮（alpha 叠加）。
-- 图标：`leadingControl` 作为子控件，draw 时按 hitRect 左对齐绘制。
+- 图标：`leadingControl` **不挂状态栏子树**（无父复合），draw 时 setRect 用绝对坐标；
+  槽内**几何居中**（框 = isz 方形，isz = 字号×1.4）。对齐基准为几何中心，与内容类型无关——
+  文字型图标内容的基线偏移（Label 行偏移为常量）属内容自身特性，建议图标用几何内容或自行补偿。
 
 ## 7. 声明式 UI（status-bar）
 ```json

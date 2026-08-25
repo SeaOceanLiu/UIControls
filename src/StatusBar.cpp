@@ -162,6 +162,8 @@ void StatusBar::draw(void) {
             // leadingControl 未挂 bar 子树（无父复合）→ setRect 用【绝对坐标】
             // = drawRect 原点 + 本地布局 × scale
             if (item.leadingControl) {
+                // 图标框：槽内几何居中（(itemHeight-isz)/2），内容无关基准；
+                // 文字型图标内容的基线偏移属内容自身特性（Label 行偏移为常量）
                 const float isz = m_fontSize * 1.4f;
                 item.leadingControl->setRect(SRect(
                     ox + (item.hitRect.left + 4.f) * sx,

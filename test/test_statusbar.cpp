@@ -8,6 +8,7 @@
 #include <cmath>
 #include "StatusBar.h"
 #include "Menu.h"
+#include "Shape.h"
 #include "Label.h"
 #include "MainWindow.h"
 #include "Bench.h"
@@ -124,10 +125,10 @@ static void testStatusBarVisualize(Bench* bench) {
 
     // 分支段绑定图标（带文字的小 Label，可视化可见）
     // 注意：leadingControl 不在子控件链上，须显式补 context 再 create
-    auto icon = make_shared<Label>(nullptr, SRect(0, 0, 16, 16));
-    icon->setCaption(u8"B");
-    icon->setTextStateColor(StateColor(SColor(120, 200, 255), SColor(120, 200, 255),
-                                       SColor(120, 200, 255), SColor(120, 200, 255)));
+    // 几何图标（Shape 圆点）：验证槽内几何居中；文字型图标受 Label 基线常量偏移影响
+    auto icon = make_shared<Shape>(nullptr, SRect(0, 0, 16, 16));
+    icon->setShape(ShapeType::Circle);
+    icon->setFillColor(SColor(120, 200, 255));
     bar->setStatusItemLeadingControl("branch", icon);
 
     // 点击回调（encoding 段）
