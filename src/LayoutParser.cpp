@@ -331,9 +331,9 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
     popJsonPath();
 
     // 右键上下文菜单（决策点 2-C）：控件级 "contextMenu" 键（内嵌 items，复用 populateMenuPanel）
-    if (result && j.contains("contextMenu") && j["contextMenu"].is_object()) {
+    if (result && j.contains(PropertyNames::kJsonContextMenu) && j[PropertyNames::kJsonContextMenu].is_object()) {
         auto cm = make_shared<ContextMenu>(parent, 1.f, 1.f);
-        const auto& cmj = j["contextMenu"];
+        const auto& cmj = j[PropertyNames::kJsonContextMenu];
         if (cmj.contains(PropertyNames::kJsonItems) && cmj[PropertyNames::kJsonItems].is_array()) {
             populateMenuPanel(cm->getMenuPanel(), cmj[PropertyNames::kJsonItems], 1.f, 1.f);
         }
@@ -539,9 +539,9 @@ shared_ptr<Control> LayoutParser::parseShape(const json& j, Control* parent) {
     if (j.contains(PropertyNames::kJsonPoints) && j[PropertyNames::kJsonPoints].is_array()) {
         std::vector<Shape::SPointF> pts;
         for (const auto& p : j[PropertyNames::kJsonPoints]) {
-            if (p.is_object() && p.contains("x") && p.contains("y") &&
-                p["x"].is_number() && p["y"].is_number())
-                pts.push_back({p["x"].get<float>(), p["y"].get<float>()});
+            if (p.is_object() && p.contains(PropertyNames::kJsonX) && p.contains(PropertyNames::kJsonY) &&
+                p[PropertyNames::kJsonX].is_number() && p[PropertyNames::kJsonY].is_number())
+                pts.push_back({p[PropertyNames::kJsonX].get<float>(), p[PropertyNames::kJsonY].get<float>()});
         }
         if (!pts.empty()) shape->setPoints(pts);
     }
@@ -578,9 +578,9 @@ shared_ptr<Control> LayoutParser::parseShape(const json& j, Control* parent) {
             if (pj.contains(PropertyNames::kJsonPoints) && pj[PropertyNames::kJsonPoints].is_array()) {
                 std::vector<Shape::SPointF> pts;
                 for (const auto& p : pj[PropertyNames::kJsonPoints]) {
-                    if (p.is_object() && p.contains("x") && p.contains("y") &&
-                        p["x"].is_number() && p["y"].is_number())
-                        pts.push_back({p["x"].get<float>(), p["y"].get<float>()});
+                    if (p.is_object() && p.contains(PropertyNames::kJsonX) && p.contains(PropertyNames::kJsonY) &&
+                        p[PropertyNames::kJsonX].is_number() && p[PropertyNames::kJsonY].is_number())
+                        pts.push_back({p[PropertyNames::kJsonX].get<float>(), p[PropertyNames::kJsonY].get<float>()});
                 }
                 if (!pts.empty()) shape->setPrimitivePoints(idx, pts);
             }
@@ -659,8 +659,8 @@ shared_ptr<Control> LayoutParser::parseListView(const json& j, Control* parent) 
         for (const auto& rj : j[PropertyNames::kJsonRows]) {
             const string id = rj.value(PropertyNames::kJsonId, string());
             vector<string> cells;
-            if (rj.contains("cells") && rj["cells"].is_array())
-                for (const auto& c : rj["cells"])
+            if (rj.contains(PropertyNames::kJsonCells) && rj[PropertyNames::kJsonCells].is_array())
+                for (const auto& c : rj[PropertyNames::kJsonCells])
                     cells.push_back(c.is_string() ? c.get<string>() : string());
             if (cells.empty() && !id.empty()) cells.push_back(id);   // 单列兜底
             lv->addRow(id, cells);
@@ -670,10 +670,10 @@ shared_ptr<Control> LayoutParser::parseListView(const json& j, Control* parent) 
             // cellControls: [{"col":0,"control":{...}}]
             if (rj.contains(PropertyNames::kJsonCellControls) && rj[PropertyNames::kJsonCellControls].is_array()) {
                 for (const auto& cc : rj[PropertyNames::kJsonCellControls]) {
-                    if (!cc.is_object() || !cc.contains("col") || !cc["col"].is_number_integer() ||
-                        !cc.contains("control") || !cc["control"].is_object())
+                    if (!cc.is_object() || !cc.contains(PropertyNames::kJsonCol) || !cc[PropertyNames::kJsonCol].is_number_integer() ||
+                        !cc.contains(PropertyNames::kJsonControl) || !cc[PropertyNames::kJsonControl].is_object())
                         continue;
-                    json lcJson = cc["control"];
+                    json lcJson = cc[PropertyNames::kJsonControl];
                     if (!lcJson.contains(PropertyNames::kJsonRect)) {
                         lcJson[PropertyNames::kJsonRect] = {
                             {PropertyNames::kJsonX, 0}, {PropertyNames::kJsonY, 0},
@@ -681,7 +681,7 @@ shared_ptr<Control> LayoutParser::parseListView(const json& j, Control* parent) 
                         };
                     }
                     auto lc = parseControl(lcJson, nullptr, 0);
-                    if (lc) lv->setCellLeadingControl(rowIdx, cc["col"].get<int>(), lc);
+                    if (lc) lv->setCellLeadingControl(rowIdx, cc[PropertyNames::kJsonCol].get<int>(), lc);
                     else logWarn("list-view cellControl parse failed, skipped");
                 }
             }
@@ -1400,8 +1400,8 @@ shared_ptr<Control> LayoutParser::parseStatusBar(const json& j, Control* parent)
             }
 
             // onClick 事件
-            if (ij.contains("onClick") && ij["onClick"].is_string()) {
-                string action = ij["onClick"].get<string>();
+            if (ij.contains(PropertyNames::kJsonOnClick) && ij[PropertyNames::kJsonOnClick].is_string()) {
+                string action = ij[PropertyNames::kJsonOnClick].get<string>();
                 bar->setStatusItemOnClick(id, [action](shared_ptr<StatusItem>){});
             }
         }

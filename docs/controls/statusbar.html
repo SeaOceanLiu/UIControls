@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
+<link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.23 StatusBar（状态栏） - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/statusbar.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.23 StatusBar（状态栏）</h1>
+
+<p>VSCode 风格底部状态栏：左右对齐的「段」，每段可显示文本/图标（任意控件），可点击（回调或弹出 MenuPanel 菜单）。继承链：<code>StatusBar → ControlImpl → Control</code>。设计文档见 <code>design/StatusBar_Design.md</code>。</p>
+
+<h2>4.23.1 控件的创建</h2>
+
+<pre><code>// C++
+auto bar = StatusBarBuilder(nullptr, SRect(0, 876, 1400, 24))
+               .addStatusItem("branch", u8"main", false)
+               .addStatusItem("enc", u8"UTF-8", true).build();
+
+// C ABI
+UIControlHandle bar = UICornerstone_CreateStatusBar(g_inst, 0, 876, 1400, 24, 1, 1);
+UICornerstone_StatusBarAddItem(g_inst, bar, "branch", u8"main", 0);
+
+// JSON
+{ "type": "status-bar", "rect": [0, 876, 1400, 24], "fontSize": 13,
+  "items": [ {"id": "branch", "text": "main"},
+             {"id": "enc", "text": "UTF-8", "align": "right"} ] }</code></pre>
+
+<h2>4.23.2 控件的属性</h2>
+
+<table>
+<tr><th>属性/字段</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>fontSize</code></td><td>Float</td><td>13</td><td>段文字字号</td></tr>
+<tr><td><code>itemHeight</code></td><td>Float</td><td>rect 高</td><td>段高</td></tr>
+<tr><td><code>items[].align</code></td><td>Enum</td><td>left</td><td>left / right</td></tr>
+<tr><td><code>items[].icon</code></td><td>资源引用</td><td>—</td><td>段图标（任意控件/Actor）</td></tr>
+<tr><td><code>items[].menu</code></td><td>MenuPanel id</td><td>—</td><td>点击弹出菜单</td></tr>
+</table>
+
+<h2>4.23.3 控件的回调 / 事件</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>说明</th></tr>
+<tr><td>items[].onClick</td><td>点击无菜单段</td><td>回调/动作</td></tr>
+</table>
+
+<div class="note">图标槽几何居中（内容无关基准）；文字型图标受字体基线偏移影响，建议用 Shape 等几何内容。弹窗菜单点击项自动关闭；外部点击/Esc 关闭为后续增强。</div>
+
+</div>
+</body>
+</html>

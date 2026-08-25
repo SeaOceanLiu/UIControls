@@ -1,4 +1,4 @@
-﻿# UICornerstone
+# UICornerstone
 
 <p align="center">
   <img src="docs/assets/UICornerstone_Logo.svg" alt="UICornerstone Logo" width="200"/>
@@ -10,7 +10,7 @@
 
 ## 功能特性
 
-- **15+ UI 控件**：Label、Button（支持 Actor/LuotiAni）、CheckBox（三态）、EditBox、TextArea（多行+滚动）、ProgressBar、ScrollBar、Slider、Menu、TreeView、WinFrame、ColorPicker、Panel 等
+- **20+ UI 控件**：Label、Button（支持 Actor/LuotiAni）、CheckBox（三态）、EditBox、TextArea（多行+滚动）、ProgressBar、ScrollBar、Slider、Menu、TreeView、WinFrame、ColorPicker、Panel、ListView（含单列 ListBox 模式）、StatusBar（VSCode 风格）、TabControl（四方向页签）、ContextMenu（右键菜单）、Shape（七种图元+多图元组合）等
 - **声明式 UI（JSON 布局）**：通过 JSON 描述控件树和事件绑定，`LayoutParser` 自动解析，无需手写创建代码
 - **三后端切换**：SDL3（主开发后端）、SFML、Raylib，只需改 CMake 变量即可切换
 - **LuotiAni 关键帧动画引擎**（音译"洛蒂"）：JSON 描述 → prepare 一次性烘焙全部帧贴图 → 播放时按毫秒跳帧、运行时零插值；支持平移/缩放/旋转/透明度/可见性多图层动画、loop 循环、多实例共享帧数据

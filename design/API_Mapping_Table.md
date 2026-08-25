@@ -341,7 +341,65 @@
 | 关闭按钮→onClose | onClose | click | SetCallback | SetCallback | ✅ |  |
 | getTitleBar/getTitleLabel/getCloseButton/getClientPanel | — | title-bar/title-label/close-button/client-panel | GetPtr("title-bar"…) | GetPtr("title-bar"…) | ✅ | 属性 |
 
-## 22. 实例/视口/布局/引擎级
+## 22. Shape(形状)
+
+| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
+|---|---|---|---|---|---|---|
+| setShape | shape | shape | SetEnum("shape") | SetEnum | ✅ |  |
+| setFillColor/setStrokeColor | fill/stroke | fill/stroke | SetColor | SetColor | ✅ |  |
+| setLineWidth/setRadius/setRingWidth | lineWidth/radius/ring-width | line-width/radius/ring-width | SetFloat | SetFloat | ✅ |  |
+| setPoints | points | — | ShapeSetPoints | — | 🔧 |  |
+| mapToDrawPoint/getDrawPoint | — | — | ShapeMapToDrawPoint | — | ⛔查询 |  |
+| 多图元 addPrimitive/setPrimitive* | primitives | — | ShapeAddPrimitive/ShapeSetPrimitiveColor/ShapeSetPrimitiveFloat/ShapeSetPrimitivePoints/ShapeClearPrimitives | ShapeBuilder.addPrimitive/setPrimitive* | ✅Builder |  |
+| setBackgroundStateColor | colors.background | background | SetStateColor | SetStateColor | ✅ |  |
+
+## 23. ListView(含单列 ListBox 模式)
+
+| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
+|---|---|---|---|---|---|---|
+| setMode/setMultiSelect/setSelectedRow/setCycleNavigation | mode/multiSelect/selectedIndex/cycleNavigation | mode/multi-select/selected-index/cycle-navigation | SetEnum/SetBool/SetInt | 同 | ✅ |  |
+| setRowHeight/setHeaderHeight/setMinColumnWidth | rowHeight/headerHeight/minColumnWidth | row-height/header-height/min-column-width | SetFloat | SetFloat | ✅ |  |
+| setGridlines/setHorizontalGridlines/setHoverHighlight | gridlines/horizontalGridlines/hover | gridlines/horizontal-gridlines/hover | SetBool | SetBool | ✅ |  |
+| setSortColumn/setSortAscending | sortColumn/sortAscending | sort-column/sort-ascending | SetInt/SetBool | 同 | ✅ |  |
+| addRow/insertRow/removeRow/setRowCells/setCell | rows/cells | — | ListViewAddRow/InsertRow/RemoveRow/SetRowCells/SetCellText/GetCellText | UICornerstone::ListView* | 🔧专用 |  |
+| addColumn/insertColumn/removeColumn/setColumnWidth | columns | — | ListViewAddColumn/InsertColumn/RemoveColumn/SetColumnWidth | 同 | 🔧专用 |  |
+| setRowLeadingControl/setColumnLeadingControl/setCellLeadingControl | icon/columns.icon/cellControls | — | ListViewSetRowLeadingControl/SetColumnIcon/SetCellLeadingControl | 同 | 🔧专用 |  |
+| setColumnSorter/sortByColumn | —（运行时注入） | — | ListViewSetColumnSorter | 同 | 🔧专用 |  |
+| setOnSelectionChanged/setOnItemClick/setOnColumnSort | events.on* | — | SetCallback | SetCallback | ✅ |  |
+
+## 24. StatusBar(VSCode 风格状态栏)
+
+| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
+|---|---|---|---|---|---|---|
+| setFontSize/setItemHeight | fontSize/itemHeight | font-size/item-height | SetFloat/GetFloat | SetFloat/GetFloat | ✅ |  |
+| addStatusItem/updateStatusItemText/removeStatusItem | items[] | — | StatusBarAddItem/SetItemText/RemoveItem | StatusBarBuilder.addStatusItem | 🔧专用 |  |
+| setStatusItemMenu | items[].menu | — | StatusBarSetItemMenu | StatusBarBuilder.setStatusItemMenu | 🔧专用 |  |
+| setStatusItemLeadingControl | items[].icon | — | StatusBarSetItemIcon | StatusBarBuilder.setStatusItemLeadingControl | 🔧专用 |  |
+| setStatusItemOnClick | items[].onClick | — | — | StatusBarBuilder.setStatusItemOnClick | ⚠️CABI | 回调注册可经 SetCallback |
+| openPopup/closePopup | — | — | — | — | ⛔内部(点击驱动) |  |
+
+## 25. ContextMenu(右键菜单)
+
+| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
+|---|---|---|---|---|---|---|
+| show/close | — | — | ContextMenuShow/Close | ContextMenuBuilder.build 后同 C++ | 🔧专用 |  |
+| addItem/addSeparator | contextMenu.items[] | — | ContextMenuAddItem/AddSeparator | ContextMenuBuilder.addItem | 🔧专用 |  |
+| setContextMenu（控件绑定） | contextMenu（控件级键） | context-menu | SetPtr("context-menu") | SetPtr | ✅ |  |
+| getMenuPanel | — | — | — | — | ⛔内部 |  |
+
+## 26. TabControl(选项卡)
+
+| 内部API | JSON | 属性 | CABI | Binding | 缺口 | 补 |
+|---|---|---|---|---|---|---|
+| setPosition | position | position | SetEnum/GetEnum | SetEnum | ✅ |  |
+| setFontSize | fontSize | font-size | SetFloat/GetFloat | SetFloat | ✅ |  |
+| setCurrentIndex/getCurrentIndex | currentIndex | current-index | SetInt/GetInt | SetInt | ✅ |  |
+| addTab/insertTab/removeTab | tabs[] | — | TabAddPage | TabControlBuilder.addTab | 🔧专用 |  |
+| setTabText/setTabPage | tabs[].title/page | — | TabSetTitle/TabSetPage | 同 | 🔧专用 |  |
+| setTabLeadingControl | tabs[].icon | — | TabSetTabLeadingControl | — | ⚠️Binding | Builder 扩展后续 |
+| setOnTabChange | events.onTabChange | — | SetCallback | SetCallback | ✅ |  |
+
+## 27. 实例/视口/布局/引擎级
 
 | 能力 | JSON | 属性 | CABI | Binding | 缺口 | 补 |
 |---|---|---|---|---|---|---|
@@ -353,7 +411,7 @@
 | 事件注入 | — | — | PushUIEvent | PushEvent/PushMouse*/PushKey/PushTextInput | 🔧 |  |
 | 布局加载 | 布局JSON | — | LoadLayout/LoadLayoutFromFile/FindControl | 同 | 🔧 |  |
 | 动作注册 | events.onXxx | — | RegisterAction | RegisterAction | 🔧 |  |
-| 控件工厂 | — | — | CreateButton/CreateLabel/…等25个工厂(含CreateImageButton/CreateAnimatedButton/CreateImage/CreateActor/CreateAnimation/CreateDialog) | 同(24个,无CreateActor) | 🔧 |  |
+| 控件工厂 | — | — | CreateButton/CreateLabel/…等30个工厂(含CreateListView/CreateStatusBar/CreateTabControl/CreateContextMenu/CreateShape/CreateImageButton/CreateAnimatedButton/CreateImage/CreateActor/CreateAnimation/CreateDialog) | 同(24个,无CreateActor) | 🔧 |  |
 | 控件销毁 | — | — | DestroyControl | — | 🔧 | Binding |
 | 后端配置 | — | — | SetBackendConfig/SetBackendConfigInt/SetBackendConfigBool/GetBackendConfig/GetBackendConfigInt/GetBackendConfigBool | SetBackendConfig/SetBackendConfigBool/GetBackendConfigBool | 🔧 |  |
 | 后端能力查询 | — | — | GetBackendCapabilities | GetBackendCapabilities | 🔧 |  |

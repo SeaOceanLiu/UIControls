@@ -127,6 +127,7 @@
         "borderVisible": { "type": "boolean" },
         "colors": { "type": "object", "description": "状态色组：normal/hover/pressed/disabled 子键（值同 color），宽松校验" },
         "enabled": { "type": "boolean", "x-default": "true" },
+        "contextMenu": { "type": "object", "description": "控件级右键菜单（ContextMenu）：{items:[{caption,shortcut,type,icon…}]}（元素宽松校验）" },
         "events": { "type": "object", "description": "事件绑定：onXxx → 动作名（action 注册名，语义层不校验）" },
         "margin": { "$ref": "#/$defs/margin" },
         "rect": { "$ref": "#/$defs/rect" },
@@ -155,6 +156,8 @@
         { "$ref": "#/$defs/scroll-bar" },
         { "$ref": "#/$defs/shape" },
         { "$ref": "#/$defs/splitter" },
+        { "$ref": "#/$defs/status-bar" },
+        { "$ref": "#/$defs/tab-control" },
         { "$ref": "#/$defs/text-area" },
         { "$ref": "#/$defs/tree-view" },
         { "$ref": "#/$defs/win-frame" }
@@ -225,6 +228,7 @@
           "items": {
             "type": "object",
             "properties": {
+              "icon": { "type": "string", "description": "列头图标（资源引用 provider:…）" },
               "title": { "type": "string" },
               "width": { "type": "number", "x-default": "100" },
               "sortable": { "type": "boolean", "x-default": "false" }
@@ -518,6 +522,11 @@
             "additionalProperties": false
           }
         },
+        "primitives": {
+          "type": "array",
+          "description": "多图元组合（非空时替代单 shape 渲染）：[{shape,rect:[x,y,w,h],fill,stroke,lineWidth,radius,ringWidth,points}]（元素宽松校验，本地坐标）",
+          "items": { "type": "object" }
+        },
         "radius": { "type": "number", "x-default": "0" },
         "ringWidth": { "type": "number", "x-default": "0" },
         "shape": {
@@ -576,6 +585,39 @@
         "ratio": { "type": "number", "x-default": "0.5" },
         "secondPanel": { "type": "string", "description": "右侧控件 id" },
         "thickness": { "type": "number" }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "status-bar": {
+      "type": "object",
+      "allOf": [ { "$ref": "#/$defs/common" } ],
+      "properties": {
+        "type": { "const": "status-bar" },
+        "fontSize": { "type": "number", "x-default": "13" },
+        "itemHeight": { "type": "number", "x-default": "24（默认=rect 高）" },
+        "items": {
+          "type": "array",
+          "description": "段定义 [{id,text,align:right,icon,menu,onClick}]（元素宽松校验）",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "tab-control": {
+      "type": "object",
+      "allOf": [ { "$ref": "#/$defs/common" } ],
+      "properties": {
+        "type": { "const": "tab-control" },
+        "currentIndex": { "type": "integer", "x-default": "0" },
+        "fontSize": { "type": "number", "x-default": "13" },
+        "position": { "enum": ["top", "bottom", "left", "right"], "x-default": "top" },
+        "tabs": {
+          "type": "array",
+          "description": "页定义 [{title,icon,page:{控件JSON}}]（page 递归解析，缺 rect 铺满内容区；元素宽松校验）",
+          "items": { "type": "object" }
+        }
       },
       "required": ["type"],
       "additionalProperties": false

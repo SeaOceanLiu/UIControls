@@ -72,6 +72,30 @@
       ] },
     { "type": "shape", "id": "shpRound", "rect": { "x": 740, "y": 196, "w": 140, "h": 56 },
       "shape": "round-rect", "fill": "#10B981", "stroke": "#064E3B", "lineWidth": 3, "radius": 16 },
+    { "type": "shape", "id": "shpHouse", "rect": { "x": 480, "y": 300, "w": 150, "h": 130 },
+      "colors": { "background": "#324057FF" },
+      "primitives": [
+        { "shape": "round-rect", "rect": [10, 50, 130, 75], "radius": 6, "fill": "#34D399" },
+        { "shape": "polygon", "rect": [0, 0, 0, 0], "fill": "#EF4444",
+          "points": [ { "x": 0, "y": 52 }, { "x": 75, "y": 0 }, { "x": 150, "y": 52 } ] },
+        { "shape": "circle", "rect": [28, 68, 30, 30], "fill": "#3B82F6" },
+        { "shape": "filled-rect", "rect": [92, 85, 30, 40], "fill": "#F59E0B" }
+      ] },
+    { "type": "status-bar", "id": "sb", "rect": { "x": 0, "y": 876, "w": 1400, "h": 24 },
+      "fontSize": 13,
+      "items": [
+        { "id": "branch", "text": "main" },
+        { "id": "problems", "text": "0 问题 0 警告" },
+        { "id": "encoding", "text": "UTF-8", "align": "right" },
+        { "id": "eol", "text": "LF", "align": "right" }
+      ] },
+    { "type": "tab-control", "id": "tabs", "rect": { "x": 20, "y": 380, "w": 560, "h": 240 },
+      "position": "top", "fontSize": 13, "currentIndex": 0,
+      "tabs": [
+        { "title": "主页", "page": { "type": "panel" } },
+        { "title": "设置", "page": { "type": "panel" } },
+        { "title": "关于", "page": { "type": "panel" } }
+      ] },
     { "type": "tree-view", "id": "tree", "rect": { "x": 200, "y": 180, "w": 280, "h": 200 },
       "indentWidth": 18, "defaultExpand": true,
       "items": [

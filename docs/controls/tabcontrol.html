@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
+<link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.24 TabControl（选项卡） - UICornerstone 用户手册</title>
+<link rel="stylesheet" href="../css/style.css">
+<script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/tabcontrol.html"></script>
+</head>
+<body>
+<div id="sidebar"></div>
+<div id="content">
+
+<h1>4.24 TabControl（选项卡）</h1>
+
+<p>TabControl 多页签控件：页签条四方向（上/下/左/右），页面为任意控件子树。两层焦点作用域：Tab 在页内控件循环，Ctrl+Tab 在「页签条 ↔ 页内」间切换。继承链：<code>TabControl → ControlImpl → Control</code>。设计文档见 <code>design/TabControl_Design.md</code>。</p>
+
+<h2>4.24.1 控件的创建</h2>
+
+<pre><code>// C++
+auto tc = TabControlBuilder(nullptr, SRect(120, 80, 560, 240))
+              .addTab(u8"主页", page1).addTab(u8"设置", page2).build();
+
+// C ABI
+UIControlHandle tc = UICornerstone_CreateTabControl(g_inst, 120, 80, 560, 240, 1, 1);
+UICornerstone_TabAddPage(g_inst, tc, u8"主页");
+
+// JSON
+{ "type": "tab-control", "rect": {"x":120,"y":80,"w":560,"h":240}, "position": "top",
+  "tabs": [ {"title": "主页", "page": {"type": "panel"}} ],
+  "events": { "onTabChange": "onTab" } }</code></pre>
+
+<h2>4.24.2 控件的属性</h2>
+
+<table>
+<tr><th>属性/字段</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>position</code></td><td>Enum</td><td>top</td><td>top / bottom / left / right</td></tr>
+<tr><td><code>fontSize</code></td><td>Float</td><td>13</td><td>页签文字字号</td></tr>
+<tr><td><code>currentIndex</code></td><td>Int</td><td>0</td><td>当前页（首页自动选中）</td></tr>
+<tr><td><code>tabs[].icon</code></td><td>资源引用</td><td>—</td><td>页签图标</td></tr>
+</table>
+
+<h2>4.24.3 控件的回调 / 事件</h2>
+
+<table>
+<tr><th>事件名</th><th>触发时机</th><th>说明</th></tr>
+<tr><td><code>onTabChange</code></td><td>页签切换</td><td>新页索引</td></tr>
+</table>
+
+<h2>4.24.4 键盘导航</h2><p>页签条获焦：<code>←/→</code>（或竖排 <code>↑/↓</code>）循环切换、<code>Home/End</code> 首尾；<code>Tab</code> 层内循环（页内控件间 / 页签条+外部）；<code>Ctrl+Tab</code> 层切换（页内 ↔ 页签条）。</p>
+
+</div>
+</body>
+</html>
