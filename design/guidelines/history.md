@@ -1,5 +1,47 @@
 ﻿## Session History
 
+### 2026-08-25: 五控件批量实施（ListView/StatusBar/ContextMenu/TabControl/Shape）+ 视觉验收 + 焦点两层作用域 + 缩放体系 + 验收收尾（Complete）
+
+**背景**：用户指示串行实施 5 个新控件（全部完成后统一验收质量）；随后逐轮视觉验收反馈修正、编程规范修正、按 ListView_Design 格式重写设计文档、按 AGENTS 新增控件验收清单（14 项）完成验收收尾。
+
+**1. 四控件实施（四层接入：核心类/LayoutParser JSON/C ABI/C++ 类即 Binding）**：
+
+- **ListView**（13b3b3c）：multi/single 双模式（single=ListBox 替代）、列头排序（stable_sort+自定义比较器+排序后选中按 id 跟随）、列宽拖拽（±4 命中+minColumnWidth 钳制）、双向滚动（可见行窗口化+列头同步）、行/列/单元格三级 leadingControl+cellStyle 稀疏样式、Ctrl 多选、键盘循环；19+28 断言。
+- **StatusBar**（221438f）：VSCode 蓝底左右对齐段（text/icon/onClick/MenuPanel 弹窗），弹窗直接挂载目标段 MenuPanel（共享复用，弃复制方案）+ 无 onClick 项补 no-op onClick 触发 closeMenuChain 自动关闭；20 断言。
+- **ContextMenu**（28e4476）：ContextMenu : Popup + MenuPanel（零新增核心逻辑）；打开三路径（纯 API/控件右键 hook/JSON 控件级 contextMenu 键）；点项包装 onClick 用户回调后自动 close；isContainsPoint 含子菜单防外点误判；18→19 断言。
+- **TabControl**（7fd7343）：四方向一体自绘（指示条贴内侧缘）、页面挂子树切换、键盘导航（方向键循环+Home/End）、removeTab 钳制、onTabChange；40 断言。
+- **Shape**（会话前已存在）：本轮补多图元组合（primitives：单控件拼合图形，C++/JSON/CABI 三层）、colors.background（setBackgroundStateColor 自动取消透明）、空心圆描边闭合修复（drawEllipse 的 strokePath closed 参数误传 false）。
+
+**2. 视觉验收逐轮修正（用户截图反馈驱动，像素级定位）**：
+
+- StatusBar 文字不渲染：ensureFont 从未被调用 + `!data || !data->empty()` 条件写反；字体首次就绪后 relayout 自愈估算宽度。
+- StatusBar 弹窗不可见：子控件 getDrawRect 会复合父偏移，绝对坐标定位实际画到屏幕外 → 改父相对坐标 + 复用 item.menuPanel（原空面板未装项）。
+- ContextMenu 真实右键不弹出：SDL3 InputBackend 裸 static_cast 鼠标键（SDL 1=左/2=中/3=右）与 MouseButton 枚举（Right=2）错位 → mapSdlButton 显式翻译；修正 EventTypes.h 误导注释。
+- TabControl 多实例键盘一起动作：KeyDown 无焦点门控 → 仅 getFocused() 响应 + 点击页签 focusControl(this)。
+- ContextMenu 双框线（底/右 1px 错位）：诊断色定位法（品红/青）锁定 = Popup::create() 无条件重置 chrome（transparent=false/borderVisible=true）冲掉 ctor 抑制，默认边框(83,83,90)与 MenuPanel 圆角描边(69,69,69)在底/右错开 1px → ContextMenu 重写 create()+applyChromeSuppression() 三点防御（ctor/create/show-open 后）。
+- StatusBar leadingControl 偏低：像素实测 Label 行偏移为常量 ≈+8（基线特性）→ 对齐基准回归槽内几何居中（内容无关），测试图标改 Shape 几何内容；StatusBar 命中补 Y 轴二维判定。
+- ListView 图标被行背景覆盖：ControlImpl::draw()（子控件）原在 draw() 开头调用 → 移至 popClipRect 后。
+
+**3. 缩放体系（三层规则，2.0x 对照验收）**：布局本地化（relayout 与 scale 无关）/ 自绘 = drawRect 原点+local×scale（字体按 fontSize×scaleXX 加载）/ 命中 = 屏幕坐标二维逆变换。五控件全量修正（原自绘误用 m_rect）+ 各测试补 normal vs 2.0x 对照行。leadingControl 特例：未挂树无父复合 → setRect 用绝对坐标；未挂树控件须显式 setContext+create 使 RenderDevice 就绪。
+
+**4. 焦点两层作用域（用户拍板，FocusSystem_Design §4.3 精确化）**：TabControl = focus boundary 且**边界容器自身归父作用域**（findFocusScope 自父级起查）——Tab=层内循环（页内控件间 / 页签条+外部）、Ctrl+Tab=层切换（页内↔页签条，focusNextScope/PrevScope 层规则重写）；Bench 为根边界；FocusManager 新增 isEffectivelyVisible（任一祖先隐藏即不可达，修隐藏页控件可被 Tab 聚焦缺口）；setFocusBoundary 落地注册 m_boundaries。测试时序坑：合成 KeyDown 必须置 mod=KeyMod::None（事件未零化，垃圾 mod 被 Bench 误判 Shift→focusPrev）；焦点断言与 Tab 派发同帧（窗口后台化真实失焦事件会清焦）。
+
+**5. 编程规范修正（用户指示）**：五控件魔鬼数字全部具名化（文件级 constexpr k 前缀，kScrollbarW 先例——TabControl 7 色+5 系数、StatusBar 3 色+4 系数、ListView 10 项、ContextMenu 视口兜底）；无用导入清理（StatusBar algorithm/cmath、Shape cmath、TabControl Bench.h/MainWindow.h、ContextMenu Bench.h）。
+
+**6. 设计文档按 ListView_Design 格式重写（6018021）**：StatusBar/ContextMenu/TabControl 三份统一为 ListView 格式（修订注记版本史/现状调研行号/架构决策对比表/缩放三层/焦点系统/属性四层矩阵/JSON/CABI/Binding/文件清单/测试策略/决策点/边界）；修正 StatusBar 文档 JSON 键错误（实际 camelCase fontSize/itemHeight、align:right）；Shape_Design.md 多图元/背景色/缩放回写仍待下轮（唯一遗留）。
+
+**7. 验收收尾（d6a9d3e，AGENTS 14 项清单）**：PropertyNames 补 kJsonContextMenu/kJsonCells/kJsonControl/kJsonOnClick + LayoutParser 裸字面量全常量化；JSON Schema 新增 status-bar/tab-control $defs + shape primitives + list-view columns.icon + common.contextMenu（JSON 无 BOM），tools 重构建 validate_layout --strict PASS；layouts/all_controls.json 追加房子组合/状态栏/选项卡样例；README 控件清单 20+；用户手册 docs/controls 新增 5 页（checkbox 骨架同款）+ nav.js 4.22-4.26；API_Mapping_Table 新增 §22-26 五节（原 §22 顺延 §27）+ 工厂 25→30；**三后端回归**：sdl3/sfml/raylib 五控件测试全绿（shape 17 / listview 19+28 / statusbar 20 / contextmenu 19 / tabcontrol 40）。
+
+**8. 手册导航修复（338989c + d1d0066）**：nav.js 追加条目缺尾逗号致整站导航失效（JS 语法错误）→ 补逗号 + node --check；首页 docs/index.html TOC 补 4.22-4.26；新控件条目全文档**字母序**统一（ContextMenu/ListView/Shape/StatusBar/TabControl，手册页编号 4.22-4.26 重排、API_Mapping §22-26 重排）；全站 367 href 逐一定位 0 断链；controls/index.html 继承树与 declarative-ui.html 控件类型速查补五控件。
+
+**9. 关键教训**：① 源文件必须 UTF-8 with BOM（MSVC 按 GBK 误析中文注释致类定义崩溃，本会话 Shape/TabControl/测试文件多次踩坑）；② 子控件 getDrawRect 复合父偏移——挂树子控件用父相对坐标、未挂树辅助控件用绝对坐标，二者不可混淆；③ 事件结构体未零化（mod 垃圾位）与 printf %d 读 float 都会造成"假数据"误导排查；④ 改 JS/JSON 等格式敏感文件必须整文件语法校验（nav.js 缺逗号、JSON BOM 两次教训）；⑤ 诊断色定位法（品红/青临时着色）对"框线来源"类问题高效；⑥ 自动化测试窗口后台化会收到真实失焦事件——焦点断言须与按键派发同帧。
+
+**验证**：sdl3/sfml/raylib 三后端五控件测试全绿（shape 17+7CABI / listview 19+28CABI / statusbar 20 / contextmenu 19 / tabcontrol 40）；validate_layout --strict PASS；全站手册 367 链接 0 断链；node --check nav.js 通过。
+
+**相关文件**：include/{Shape,ListView,StatusBar,ContextMenu,TabControl,Menu,FocusManager,ControlBase,PropertyNames,UICornerstoneAPI,EventTypes}.h、src/{Shape,ListView,StatusBar,ContextMenu,TabControl,LayoutParser,UICornerstoneAPI,FocusManager,ControlBase,Bench,RenderDevice}.cpp、src/backend/sdl3/InputBackend.cpp、test/test_{shape,listview,statusbar,contextmenu,tabcontrol}.cpp、test/CMakeLists.txt、layouts/all_controls.json、docs/schema/declarative-ui.schema.json、docs/controls/{5 新页}.html、docs/assets/nav.js、docs/{index,declarative-ui}.html、design/{Shape,StatusBar,ContextMenu,TabControl}_Design.md、design/API_Mapping_Table.md、README.md。
+
+---
+
 ### 2026-08-17: TreeView 行前置控件容器 + 逐 Item 字体 + GetControlType 机制重构（Complete）
 
 **背景**：TreeView 增强设计（v7）实施收尾：Item 行前置控件容器（图片/CheckBox 等）、逐 Item 字体（JSON + CABI），并重构控件类型查询机制。
