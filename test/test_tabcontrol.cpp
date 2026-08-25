@@ -299,8 +299,55 @@ public:
             BENCH->handleEvent(ev);   // Bench 拦截 Tab → focusNext（TabControl 作用域内）
         }
         if (m_frames == 52 && g_edit1 && g_edit2) {
-            CHECK(g_edit2->getFocused() && !g_edit1->getFocused(), "Tab moves focus edit1 -> edit2 (in-scope)");
+            CHECK(g_edit2->getFocused() && !g_edit1->getFocused(), "Tab moves focus edit1 -> edit2 (in-page)");
             if (cap) UICornerstone_SavePixelsToFile(pixels, w, h, "Temp/tab_focus2.bmp");
+        }
+        // ── Ctrl+Tab 层级切换：页内 → 页签条 → 页内 ──
+        if (m_frames == 54 && g_tc) {
+            auto ev = make_shared<Event>(EventType::KeyDown);
+            ev->keyEvent.keycode = KeyCode::Tab;
+            ev->keyEvent.mod = KeyMod::LCtrl;
+            BENCH->handleEvent(ev);
+        }
+        if (m_frames == 56 && g_tc && g_edit2) {
+            CHECK(g_tc->getFocused() && !g_edit1->getFocused() && !g_edit2->getFocused(),
+                  "Ctrl+Tab exits page to tab bar");
+        }
+        if (m_frames == 58 && g_tc) {
+            auto ev = make_shared<Event>(EventType::KeyDown);
+            ev->keyEvent.keycode = KeyCode::Tab;
+            ev->keyEvent.mod = KeyMod::LCtrl;
+            BENCH->handleEvent(ev);
+        }
+        if (m_frames == 60 && g_edit1) {
+            CHECK(g_edit1->getFocused() && !g_tc->getFocused(), "Ctrl+Tab enters page (edit1)");
+        }
+        if (m_frames == 62 && g_edit1) {
+            auto ev = make_shared<Event>(EventType::KeyDown);
+            ev->keyEvent.keycode = KeyCode::Tab;
+            ev->keyEvent.mod = KeyMod::None;
+            BENCH->handleEvent(ev);
+        }
+        if (m_frames == 64 && g_edit2) {
+            CHECK(g_edit2->getFocused(), "Tab cycles in-page again");
+        }
+        if (m_frames == 66 && g_tc && g_edit2) {
+            auto ev = make_shared<Event>(EventType::KeyDown);
+            ev->keyEvent.keycode = KeyCode::Tab;
+            ev->keyEvent.mod = KeyMod::LCtrl;
+            BENCH->handleEvent(ev);   // e2 → 页签条
+        }
+        if (m_frames == 68 && g_tc) {
+            CHECK(g_tc->getFocused(), "Ctrl+Tab exit again");
+            // 页签条上按 Tab → 外层循环（不进页内）
+            auto ev = make_shared<Event>(EventType::KeyDown);
+            ev->keyEvent.keycode = KeyCode::Tab;
+            ev->keyEvent.mod = KeyMod::None;
+            BENCH->handleEvent(ev);
+        }
+        if (m_frames == 70 && g_edit1 && g_edit2 && g_tc) {
+            CHECK(!g_edit1->getFocused() && !g_edit2->getFocused(),
+                  "Tab on tab bar cycles outer scope (not into page)");
             TestUtil::log("---- TabControl test result: pass=%d fail=%d ----", g_pass, g_fail);
         }
 

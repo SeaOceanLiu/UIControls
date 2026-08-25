@@ -93,6 +93,9 @@ bool FocusManager::focusControl(Control* ctl) {
 
 Control* FocusManager::findFocusScope(Control* ctl)
 {
+    // 从父级起查：边界容器自身（如 TabControl 页签条）属于【父作用域】，
+    // 其内部控件才属于以该容器为边界的子作用域（Tab=层内循环，Ctrl+Tab=跨层）
+    ctl = ctl ? ctl->getParent() : nullptr;
     while (ctl) {
         if (ctl->isFocusBoundary()) return ctl;
         ctl = ctl->getParent();
@@ -185,7 +188,32 @@ bool FocusManager::focusPrev(Control* current)
 bool FocusManager::focusNextScope()
 {
     Control* current = m_currentFocused;
-    Control* currentScope = current ? findFocusScope(current) : nullptr;
+    if (!current) return focusFirstBoundaryInteriorNext(nullptr);
+
+    // 层 1→2：当前在边界容器自身（如 TabControl 页签条）→ 进入其内部第一控件
+    if (std::find(m_boundaries.begin(), m_boundaries.end(), current) != m_boundaries.end()) {
+        if (focusFirstInScope(current)) return true;
+    }
+
+    Control* currentScope = findFocusScope(current);
+
+    // 层 2→1：当前在某非根作用域内部 → 退出到该作用域的边界容器自身（页签条）
+    if (currentScope && findFocusScope(currentScope) != nullptr) {
+        // 非根边界容器：退出到容器自身
+        if (current) current->setFocused(false, false);
+        currentScope->setFocused(true, true);
+        m_currentFocused = currentScope;
+        return true;
+    }
+
+    // 根作用域（外部控件）→ 进入下一个边界容器内部
+    return focusFirstBoundaryInteriorNext(currentScope);
+}
+
+bool FocusManager::focusFirstBoundaryInteriorNext(Control* fromScope)
+{
+    Control* current = m_currentFocused;
+    Control* currentScope = fromScope;
 
     // Find current scope's index in boundaries
     int startIdx = -1;
@@ -221,7 +249,30 @@ bool FocusManager::focusNextScope()
 bool FocusManager::focusPrevScope()
 {
     Control* current = m_currentFocused;
-    Control* currentScope = current ? findFocusScope(current) : nullptr;
+    if (!current) return focusFirstBoundaryInteriorPrev(nullptr);
+
+    // 边界容器自身 → 进入其内部（反向：末个控件场景暂同向，取首控件）
+    if (std::find(m_boundaries.begin(), m_boundaries.end(), current) != m_boundaries.end()) {
+        if (focusFirstInScope(current)) return true;
+    }
+
+    Control* currentScope = findFocusScope(current);
+
+    // 非根作用域内部 → 退出到容器自身
+    if (currentScope && findFocusScope(currentScope) != nullptr) {
+        if (current) current->setFocused(false, false);
+        currentScope->setFocused(true, true);
+        m_currentFocused = currentScope;
+        return true;
+    }
+
+    return focusFirstBoundaryInteriorPrev(currentScope);
+}
+
+bool FocusManager::focusFirstBoundaryInteriorPrev(Control* fromScope)
+{
+    Control* current = m_currentFocused;
+    Control* currentScope = fromScope;
 
     int startIdx = -1;
     for (size_t i = 0; i < m_boundaries.size(); i++) {

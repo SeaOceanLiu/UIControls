@@ -784,6 +784,17 @@ void ControlImpl::setFocused(bool focused, bool byKeyboard) {
     if (fm) fm->notifyControlFocused(this, byKeyboard);
 }
 
+void ControlImpl::setFocusBoundary(bool boundary) {
+    if (m_isFocusBoundary == boundary) return;
+    m_isFocusBoundary = boundary;
+    // 与 setFocusable 同款：context 就绪时同步注册/注销边界表（Ctrl+Tab 作用域轮转依据）
+    FocusManager* fm = m_context ? m_context->focusManager : nullptr;
+    if (fm) {
+        if (boundary) fm->registerBoundary(this);
+        else          fm->unregisterBoundary(this);
+    }
+}
+
 void ControlImpl::setFocusable(bool focusable) {
     if (m_focusable == focusable) return;
     m_focusable = focusable;

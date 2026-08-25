@@ -29,6 +29,8 @@ Bench::Bench(UIContext* ctx):
     m_onInitial(nullptr)
 {
     setTransparent(true);
+    // 根作用域边界（FocusSystem_Design §4.3）：外层 Tab 循环不含任何边界容器内部
+    setFocusBoundary(true);
 
     Platform::Log("Loading resources.....................................");
     m_isLoading = false;

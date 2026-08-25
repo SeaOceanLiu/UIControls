@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // TabControl_Design.md -- 选项卡控件设计文档
 // 上游决策：design/TabControl_Analysis.md（决策点 1-8 已拍板，含 v1/v2 修订）
 // 实现文件：include/TabControl.h / src/TabControl.cpp / src/LayoutParser.cpp(parseTabControl)
@@ -13,6 +13,7 @@
 |---|---|---|
 | v1 | 2026-08-21 | 按 Analysis 决策初版实施 |
 | v2 | 2026-08-25 | **重写**：回写实施期验证的关键决策（坐标系与缩放体系、焦点作用域边界、命中逆变换、leadingControl 坐标语义、Builder）；补"架构选择"章节；对照源码自检 2 遍 |
+| v2.1 | 2026-08-25 | 焦点语义精确化（用户拍板）：**边界容器自身归父作用域**——Tab=层内循环、Ctrl+Tab=层切换（页内↔页签条）；Bench 为根边界；FocusManager isEffectivelyVisible 过滤隐藏页控件 |
 
 ## 1. 架构选择（关键设计决策）
 
@@ -26,14 +27,25 @@
 页面挂载采用 **WinFrame::addToClient 同款模式**：页面控件挂 TabControl 子树（`setParent`+`addControl`），
 切换 = `setVisible` + `setRect(内容区)`，不销毁重建。
 
-### 1.2 焦点模型：TabControl 为焦点作用域边界
+### 1.2 焦点模型：两层作用域（Tab=层内循环，Ctrl+Tab=跨层）
 
 | 方案 | 行为 | 结论 |
 |---|---|---|
-| **A. TabControl = focus boundary**（`setFocusBoundary(true)`） | Tab 在本控件页内控件循环；Ctrl+Tab 跨到其它作用域；方向键只作用于焦点实例 | ✅ 采纳（FocusSystem_Design §4.3 作用域规则 + TabControl_Analysis §3.6） |
-| B. 无边界（全局 Tab 环） | 多实例同屏时 Tab 环互相穿插；键盘导航无法定位实例 | ❌ 排除（实测多实例一起动作缺陷） |
+| **A. 两层作用域**：TabControl = focus boundary，且**边界容器自身属于父作用域** | 见下方键位表 | ✅ 采纳（FocusSystem_Design §4.3/§4.5 + 用户语义拍板） |
+| B. 无边界（全局 Tab 环） | 多实例同屏 Tab 环互相穿插；键盘导航无法定位实例 | ❌ 排除（实测多实例一起动作缺陷） |
+| C. 边界容器自身属于自己的内层环 | Tab 从页内会绕到页签条再回页内，页签条无法与外部控件同环 | ❌ 排除（v2 实施评审否决） |
 
-依据：TabControl_Analysis §3.6"TabControl 为 focus scope：焦点在页签条或页面控件内均属该 scope"。
+**键位语义（v2.1 拍板）**：
+
+| 焦点位置 | Tab | Ctrl+Tab |
+|---|---|---|
+| 页内控件（EditBox 等） | 页内循环（edit1↔edit2） | **退出**到页签条（TabControl 获焦） |
+| 页签条（TabControl 自身） | **外层循环**（页签条 + TabControl 外部控件，不进页内） | **进入**页内（首个页内控件） |
+| 外部控件 | 外层循环 | 进入下一边界容器内部（focusNextScope 轮转） |
+
+框架支撑：`findFocusScope` 自**父级**起查（边界容器自身归父作用域）；`setFocusBoundary`
+自动注册 `m_boundaries`；Bench 为根作用域边界（外层环不含任何容器内部）；
+`FocusManager::isEffectivelyVisible` 过滤隐藏页控件（任一祖先隐藏即不可达）。
 
 ### 1.3 缩放体系：布局本地化 + 绘制/命中双变换
 
@@ -129,12 +141,13 @@ beforeDraw（整体底色/边框，框架默认）
 - **MouseDown 左键命中页签**：`focusControl(this)`（键盘导航跟随焦点实例）→ `setCurrentIndex` →
   `onTabChange` 回调 → 消费事件；未命中页签 → 透传子控件（页面交互不受影响）
 
-### 6.2 键盘（焦点门控）
-- **仅 `getFocused()` 时响应**（多实例互不干扰；未焦点则透传）
-- Top/Bottom：`←/→` 循环切换；Left/Right：`↑/↓` 循环切换；`Home`/`End` 首/尾
+### 6.2 键盘（焦点门控 + 两层作用域）
+- **方向键仅 `getFocused()`（页签条获焦）时响应**（多实例互不干扰；未焦点则透传）
+  - Top/Bottom：`←/→` 循环切换；Left/Right：`↑/↓` 循环切换；`Home`/`End` 首/尾
+- **Tab**：层内循环——页内控件间（edit1↔edit2…），或页签条+外部控件间；不跨层
+- **Ctrl+Tab**：层切换——页内 → 页签条；页签条 → 页内（focusFirstInScope）；
+  外部 → 按作用域轮转进入（focusNextScope/focusPrevScope）
 - 焦点在页面控件内时方向键由该控件处理（EditBox 等），TabControl 不截获
-- `Tab`：Bench 拦截 → focusNext **限制在本作用域**（页内控件循环：页签条 ↔ 页内 EditBox 等）
-- `Ctrl+Tab`：跨作用域（FocusSystem_Design §4.5）
 
 ### 6.3 焦点环（页内控件）
 页面内 EditBox 等可聚焦控件获焦后，焦点环由引擎 `drawFocusRing` 绘制（基于

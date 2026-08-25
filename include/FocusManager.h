@@ -35,6 +35,8 @@ public:
     void clearFocus();
     bool focusControl(Control* ctl);
     bool focusNextScope();
+    bool focusFirstBoundaryInteriorNext(Control* fromScope);   // 进入下一边界容器内部
+    bool focusFirstBoundaryInteriorPrev(Control* fromScope);   // 进入上一边界容器内部
     bool focusPrevScope();
     bool focusFirstInScope(Control* scope);
 

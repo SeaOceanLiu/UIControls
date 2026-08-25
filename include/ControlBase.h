@@ -404,7 +404,7 @@ public:
     SColor getFocusRingColor() const override { return m_focusRingColor; }
     FocusRingStyle getFocusRingStyle() const override { return m_focusRingStyle; }
     bool isFocusBoundary() const override { return m_isFocusBoundary; }
-    void setFocusBoundary(bool boundary) override { m_isFocusBoundary = boundary; }
+    void setFocusBoundary(bool boundary) override;
     void drawFocusRing();
 
     void setId(int id) override { m_id = id; }
