@@ -509,7 +509,6 @@ int ListView::hitTestColumn(float x) const {
 
 // ── 绘制 ──
 void ListView::draw(void) {
-    ControlImpl::draw();
     RenderDevice* dev = getRenderDevice();
     TextRenderer* renderer = getTextRenderer();
     if (!dev || !renderer) return;
@@ -647,8 +646,9 @@ void ListView::draw(void) {
 
     dev->popClipRect();
 
-    // 子控件（cellControls/leadingControl/滚动条）由 ControlImpl::draw 遍历 children 绘制；
-    // 本类已在上方画行背景，子控件位于其上 —— 无需在此重复。
+    // 子控件（leadingControl/cellControls/滚动条）最后绘制：
+    // 必须位于行背景/表头背景之上（此前在函数开头绘制会被选中/hover 行背景覆盖）
+    ControlImpl::draw();
 }
 
 // ── 事件 ──

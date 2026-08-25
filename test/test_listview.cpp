@@ -7,6 +7,7 @@
 #include <memory>
 #include <cmath>
 #include "ListView.h"
+#include "Shape.h"
 #include "Label.h"
 #include "MainWindow.h"
 #include "Bench.h"
@@ -173,6 +174,23 @@ static void testListViewVisualize(Bench* bench) {
         lv->addRow("f3", {"logo.svg", u8"矢量图", "8 KB"});
         lv->addRow("f4", {"readme.md", u8"文档", "3 KB"});
         lv->addRow("f5", {"app.exe", u8"可执行", "96 KB"});
+        // leadingControl 视觉：列头图标 + 行首图标（几何 Shape，attach 机制自动挂树定位）
+        {
+            auto colIcon = make_shared<Shape>(nullptr, SRect(0, 0, 12, 12));
+            colIcon->setShape(ShapeType::Circle);
+            colIcon->setFillColor(SColor(96, 165, 250));
+            lv->setColumnLeadingControl(0, colIcon);
+
+            auto rowIcon0 = make_shared<Shape>(nullptr, SRect(0, 0, 12, 12));
+            rowIcon0->setShape(ShapeType::FilledRect);
+            rowIcon0->setFillColor(SColor(74, 222, 128));
+            lv->setRowLeadingControl(0, rowIcon0);
+
+            auto rowIcon1 = make_shared<Shape>(nullptr, SRect(0, 0, 12, 12));
+            rowIcon1->setShape(ShapeType::Circle);
+            rowIcon1->setFillColor(SColor(251, 146, 60));
+            lv->setRowLeadingControl(1, rowIcon1);
+        }
         lv->setSelectedRow(0);
         lv->create();
         bench->addControl(lv);

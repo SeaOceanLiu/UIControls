@@ -9,6 +9,7 @@
 #include "TabControl.h"
 #include "Panel.h"
 #include "EditBox.h"
+#include "Shape.h"
 #include "Label.h"
 #include "MainWindow.h"
 #include "Bench.h"
@@ -190,6 +191,21 @@ static void testTabVisualize(Bench* bench) {
         g_tc->addTab(u8"设置", page2);
 
         g_tc->addTab(u8"关于", makePage(g_tc.get(), u8"关于内容", SColor(60, 90, 190, 255)));
+
+        // leadingControl 视觉：页签图标（几何 Shape，颜色区分）
+        // 图标未挂树：须显式 setContext + create 使 RenderDevice 就绪（同 StatusBar 惯例）
+        auto makeTabIcon = [&](SColor c, bool circle) {
+            auto ic = make_shared<Shape>(nullptr, SRect(0, 0, 14, 14));
+            ic->setShape(circle ? ShapeType::Circle : ShapeType::FilledRect);
+            ic->setFillColor(c);
+            ic->setContext(UIContext::getLastInstance());
+            ic->create();
+            return ic;
+        };
+        g_tc->setTabLeadingControl(0, makeTabIcon(SColor(96, 165, 250), true));
+        g_tc->setTabLeadingControl(1, makeTabIcon(SColor(74, 222, 128), false));
+        g_tc->setTabLeadingControl(2, makeTabIcon(SColor(251, 146, 60), true));
+
         g_tc->setCurrentIndex(0);
         g_tc->create();
         g_tc->show();
