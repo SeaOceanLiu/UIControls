@@ -16,7 +16,7 @@ public:
 
     // ── 打开（x,y 为 bench 本地坐标，通常取右键事件的鼠标坐标）──
     void show(float x, float y);
-    void close(DialogResult result = DialogResult::Cancelled) override;
+    void create() override;                     // Popup::create 后恢复 chrome 抑制
 
     // ── 数据操作（包装 onClick：用户回调执行后自动关闭菜单）──
     void addItem(shared_ptr<MenuItem> item);
@@ -28,7 +28,10 @@ public:
     // ── 重写：覆盖子菜单区域，避免点击子菜单被误判为外部点击 ──
     bool isContainsPoint(float x, float y) override;
 
+    void close(DialogResult result = DialogResult::Cancelled) override;
+
 protected:
+    void applyChromeSuppression();              // 菜单视觉全权由 MenuPanel 负责
     void layoutContent() override;
 
 private:

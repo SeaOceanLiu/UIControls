@@ -12,9 +12,24 @@ ContextMenu::ContextMenu(Control* parent, float xScale, float yScale)
     // 子面板 scale 固定 1：挂树后经 setParent 继承父复合（避免 xScale 双重叠加）
     m_menuPanel = make_shared<MenuPanel>(this, 1.0f, 1.0f);
     setContent(m_menuPanel);
-    // 菜单视觉由 MenuPanel 全权负责：抑制 Popup 自身底色/边框，避免双层框
+    applyChromeSuppression();
+}
+
+// 菜单视觉由 MenuPanel 全权负责。Popup::create()（含 setContext→recreate 链）
+// 会无条件重置为 Dialog 默认视觉（transparent=false / borderVisible=true），
+// 其默认边框色 (83,83,90) 与 MenuPanel 圆角描边 (69,69,69) 在底/右边错开 1px
+// 形成双框线——每次创建/显示后须重新抑制。
+void ContextMenu::applyChromeSuppression() {
     setTransparent(true);
     setBorderVisible(false);
+    // focusFirstContent 兜底会聚焦 Popup 自身 → 焦点环方框与圆角边框叠加；
+    // 菜单是瞬态浮层，焦点环无意义，关闭
+    setShowFocusRing(false);
+}
+
+void ContextMenu::create() {
+    Popup::create();
+    applyChromeSuppression();   // Popup::create 重置了 chrome，恢复抑制
 }
 
 void ContextMenu::show(float x, float y) {
@@ -29,6 +44,7 @@ void ContextMenu::show(float x, float y) {
     m_menuPanel->recalculateSize();     // 第一遍（可能走兜底估算宽度）
 
     Popup::open();                      // 挂树 + 创建 + 布局 + 显示 + 注册 watcher
+    applyChromeSuppression();           // setContext→recreate→Popup::create 重置后恢复
 
     // 第二遍：context 就绪后按真实字体重算尺寸，并据视口钳制
     m_menuPanel->recalculateSize();
