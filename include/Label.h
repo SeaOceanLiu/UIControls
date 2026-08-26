@@ -132,6 +132,7 @@ public:
     void setClickable(bool clickable);
 
     void SetFontStyle(int fontStyle);
+    int  GetFontStyle() const { return m_fontStyle; }
 
     // ── Property system overrides ──
     int setBoolProperty(const char* prop, int value) override;

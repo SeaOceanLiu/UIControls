@@ -319,6 +319,9 @@ public:
                    static_cast<float>(rf->getSize()), 0, c);
     }
 
+    void setFontStyle(Font* font, int style) override {
+        // raylib 原生不支持字体样式（粗体/斜体等），无操作
+    }
     void drawText(void* text, float x, float y, float wrapWidth, SColor color) override {
         if (!text) return;
         m_device->flush();

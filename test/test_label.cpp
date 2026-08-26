@@ -211,6 +211,42 @@ void testBenchInitialize(shared_ptr<Bench>) {
         .build();
     BENCH->addControl(g_label19);
 
+    // ── 字体样式断言（锁住 SetFontStyle 修复：属性回环 + 渲染无崩溃）──
+    {
+        static int g_pass = 0, g_fail = 0;
+#define CHECK(cond, msg) do { if (cond) { ++g_pass; TestUtil::log("OK   %s", msg); } \
+                                  else { ++g_fail; TestUtil::log("FAIL %s", msg); } } while (0)
+
+        // 属性系统回环：setEnumProperty("font-style","bold") 返回 1 且 get 读回 "bold"
+        auto probe = LabelBuilder(nullptr, SRect(120, 780, 200, 40)).setCaption(u8"font-style").build();
+        probe->create();
+        BENCH->addControl(probe);
+        CHECK(probe->setEnumProperty(PropertyNames::kFontStyle, PropertyNames::kFontStyleBold) == 1,
+              "setEnumProperty(font-style, bold) accepted");
+        const char* got = nullptr;
+        CHECK(probe->getEnumProperty(PropertyNames::kFontStyle, got) == 1 && got && strcmp(got, PropertyNames::kFontStyleBold) == 0,
+              "getEnumProperty(font-style) round-trip = bold");
+
+        // 非法样式值拒绝
+        CHECK(probe->setEnumProperty(PropertyNames::kFontStyle, "superbold") == 0,
+              "setEnumProperty(font-style, superbold) rejected");
+
+        // SetFontStyle 组合样式（3 = 粗体|斜体）加载后渲染不崩溃（粗体 Label 已在矩阵）
+        probe->SetFontStyle(3);
+        CHECK(probe->GetFontStyle() == 3, "SetFontStyle(3) stored");
+
+        // 可视化：粗体 Label（矩阵中区分于普通文本）
+        auto bold = LabelBuilder(nullptr, SRect(560, 780, 240, 40))
+            .setCaption(u8"L20: 粗体 Bold")
+            .setId(20)
+            .build();
+        bold->setEnumProperty(PropertyNames::kFontStyle, PropertyNames::kFontStyleBold);
+        BENCH->addControl(bold);
+
+        TestUtil::log("---- font-style assertions: pass=%d fail=%d ----", g_pass, g_fail);
+#undef CHECK
+    }
+
     TestUtil::log("Label test controls created");
 }
 

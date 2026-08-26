@@ -115,6 +115,9 @@ public:
         TTF_DrawRendererText(t, x, y);
     }
 
+    void setFontStyle(Font* font, int style) override {
+        if (font) TTF_SetFontStyle(static_cast<SDL3Font*>(font)->get(), style);
+    }
     void drawText(void* text, float x, float y, float wrapWidth, SColor color) override {
         if (!text) return;
         TTF_Text* t = static_cast<TTF_Text*>(text);

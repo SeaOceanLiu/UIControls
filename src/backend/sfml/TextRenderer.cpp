@@ -15,9 +15,12 @@ public:
     ~SFMLFont() override { delete m_font; }
     int getSize() const override { return m_size; }
     sf::Font* get() const { return m_font; }
+    void setStyle(int s) { m_style = s; }
+    int getStyle() const { return m_style; }
 private:
     sf::Font* m_font;
     int m_size;
+    int m_style = 0;
 };
 
 // Font cache key: content hash + pixel size.
@@ -102,6 +105,9 @@ public:
         return SSize(w, h);
     }
 
+    void setFontStyle(Font* font, int style) override {
+        if (font) static_cast<SFMLFont*>(font)->setStyle(style);
+    }
     void drawText(void* text, float x, float y, SColor color) override {
         if (!text) return;
         m_device->flush();
@@ -164,6 +170,7 @@ public:
         float lineY = y;
         for (const auto& line : lines) {
             sf::Text lineText(*font, sf::String::fromUtf8(line.begin(), line.end()), charSize);
+            lineText.setStyle(sfmlText->getStyle());
             lineText.setPosition(sf::Vector2f(x, lineY));
             lineText.setFillColor(sfmlText->getFillColor());
             target->draw(lineText);

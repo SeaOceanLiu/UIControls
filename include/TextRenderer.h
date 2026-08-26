@@ -30,6 +30,7 @@ public:
     virtual void destroyText(void* text) = 0;
     virtual SSize measureText(void* text) = 0;
     virtual void drawText(void* text, float x, float y, SColor color) = 0;
+    virtual void setFontStyle(Font* font, int style) {}
     virtual void drawText(void* text, float x, float y, float wrapWidth, SColor color) = 0;
 
     virtual SSize measureText(Font* font, const std::string& text) = 0;
