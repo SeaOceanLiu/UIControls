@@ -182,7 +182,9 @@ Label 不再直接使用 SDL3_ttf。所有字体操作通过 `TextRenderer` 抽�
 | 绘制文本 | `TextRenderer::drawText(void* handle, x, y, color)` | 按后端绘制 |
 | 字体样式 | `TextRenderer::setFontStyle(font, style)` | SDL3→`TTF_SetFontStyle`, SFML→`sf::Text::setStyle`, Raylib→无操作（不支持） |
 
-**字体样式**：`style` 为位标志（0 普通 / 1 粗体 / 2 斜体 / 4 下划线 / 8 删除线，可组合如 3=粗斜体）——SDL3_ttf 与 SFML 的样式枚举数值一致，可直接共用。`Label::SetFontStyle`（属性键 `"font-style"`，枚举 normal/bold/italic/underline/strikethrough）存储 `m_fontStyle` 后经 `renderer->setFontStyle(m_font, style)` 应用；字体加载路径（`loadFromResource`）在 `m_font` 就绪后同步应用。raylib 原生不支持字体样式，`setFontStyle` 为空操作（无效果）。
+**字体样式**：`style` 为位标志（0 普通 / 1 粗体 / 2 斜体 / 4 下划线 / 8 删除线，可组合如 3=粗斜体）——SDL3_ttf 与 SFML 的样式枚举数值一致，可直接共用。`Label::SetFontStyle`（属性键 `"font-style"`，单值枚举 normal/bold/italic/underline/strikethrough）存储 `m_fontStyle` 后经 `renderer->setFontStyle(m_font, style)` 应用；字体加载路径（`loadFromResource`）在 `m_font` 就绪后同步应用。raylib 原生不支持字体样式，`setFontStyle` 为空操作（无效果）。
+
+**JSON 组合表达**：`"font": { "name": "...", "size": 28, "style": ["bold","italic"] }`——`font.style` 为**数组**时各元素位 OR（组合）；字符串时按单值（向后兼容）。`parseFontStyle(json)` 统一处理两种形态（`LayoutParser.cpp`），解析结果经 `SetFontStyle(int)` 位组合应用。Schema `$defs/font-spec`（name/size/style，style 为 array|string oneOf）。
 
 字体数据生命周期由 `m_fontData`（`shared_ptr<vector<char>>`）保持，防止 TTF 回调延迟读取时悬垂指针。
 

@@ -146,7 +146,7 @@ private:
     StateColor parseStateColor(const json& j, StateColor::Type type);
     FontName   parseFontName(const string& name);
     AlignmentMode parseAlignment(const string& align);
-    int parseFontStyle(const string& style);
+    int parseFontStyle(const json& styleNode);
     GridSize parseGridSize(const json& j);
 };
 

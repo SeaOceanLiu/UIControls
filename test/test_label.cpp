@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include <memory>
 #include "Label.h"
+#include "LayoutParser.h"
 #include "MainWindow.h"
 #include "Bench.h"
 #include "AppCallbacks.h"
@@ -242,6 +243,33 @@ void testBenchInitialize(shared_ptr<Bench>) {
             .build();
         bold->setEnumProperty(PropertyNames::kFontStyle, PropertyNames::kFontStyleBold);
         BENCH->addControl(bold);
+
+        // JSON font.style 数组组合（["bold","italic"] → 位 3 = 粗斜体）
+        {
+            const string styleJson = R"({
+              "controls":[{
+                "type":"label","id":"boldItalic","rect":[30,780,200,30],
+                "font":{"name":"HarmonyOS_Sans_SC_Regular","size":14,"style":["bold","italic"]}
+              }]
+            })";
+            LayoutParser parser;
+            auto root = parser.parseLayout(styleJson);
+            auto* ci = root ? dynamic_cast<ControlImpl*>(root.get()) : nullptr;
+            auto clabel = ci ? std::dynamic_pointer_cast<Label>(ci->getThis()) : nullptr;
+            CHECK(clabel != nullptr, "JSON font.style array label parsed");
+            if (clabel) CHECK(clabel->GetFontStyle() == 3, "font.style [bold,italic] -> style 3 (bold|italic)");
+
+            const string singleJson = R"({
+              "controls":[{
+                "type":"label","id":"lblItalic","rect":[60,780,200,30],
+                "font":{"name":"HarmonyOS_Sans_SC_Regular","size":14,"style":"italic"}
+              }]
+            })";
+            auto root2 = parser.parseLayout(singleJson);
+            auto* ci2 = root2 ? dynamic_cast<ControlImpl*>(root2.get()) : nullptr;
+            auto clabel2 = ci2 ? std::dynamic_pointer_cast<Label>(ci2->getThis()) : nullptr;
+            if (clabel2) CHECK(clabel2->GetFontStyle() == 2, "font.style \"italic\" (string) -> style 2");
+        }
 
         TestUtil::log("---- font-style assertions: pass=%d fail=%d ----", g_pass, g_fail);
 #undef CHECK

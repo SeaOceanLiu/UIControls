@@ -198,6 +198,19 @@
       "required": ["type"],
       "additionalProperties": false
     },
+    "font-spec": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/$defs/font-name" },
+        "size": { "type": "integer", "description": "字号" },
+        "style": {
+          "oneOf": [
+            { "type": "array", "items": { "enum": ["normal", "bold", "italic", "underline", "strikethrough"] }, "uniqueItems": true, "description": "字体样式组合（如 [bold,italic]；raylib 不支持样式）" },
+            { "enum": ["normal", "bold", "italic", "underline", "strikethrough"], "description": "单样式（向后兼容）" }
+          ]
+        }
+      }
+    },
     "font-name": {
       "enum": ["asul-bold", "asul-regular", "harmonyos-sans-condensed-regular", "harmonyos-sans-condensed-thin", "harmonyos-sans-sc-black", "harmonyos-sans-sc-bold", "harmonyos-sans-sc-light", "harmonyos-sans-sc-medium", "harmonyos-sans-sc-regular", "harmonyos-sans-sc-thin", "maplemono-nf-cn-bold", "maplemono-nf-cn-bolditalic", "maplemono-nf-cn-extrabold", "maplemono-nf-cn-extrabolditalic", "maplemono-nf-cn-extralight", "maplemono-nf-cn-extralightitalic", "maplemono-nf-cn-italic", "maplemono-nf-cn-light", "maplemono-nf-cn-lightitalic", "maplemono-nf-cn-medium", "maplemono-nf-cn-mediumitalic", "maplemono-nf-cn-regular", "maplemono-nf-cn-semibold", "maplemono-nf-cn-semibolditalic", "maplemono-nf-cn-thin", "maplemono-nf-cn-thinitalic", "muyao-softbrush", "quando-regular"]
     },
@@ -266,7 +279,7 @@
         "caption": { "type": "string", "description": "text 别名" },
         "debugDraw": { "type": "boolean", "x-default": "false" },
         "enableExpand": { "type": "boolean", "x-default": "false" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "fontFile": { "type": "string", "description": "字体文件路径（覆盖 font 枚举）" },
         "fontResource": { "type": "string", "description": "内存字体资源 ID" },
         "lineHeight": { "type": "integer" },

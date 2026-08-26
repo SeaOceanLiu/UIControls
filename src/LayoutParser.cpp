@@ -384,8 +384,8 @@ shared_ptr<Label> LayoutParser::parseLabel(const json& j, Control* parent) {
         if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
             label->setFontSize(font[PropertyNames::kJsonSize].get<int>());
         }
-        if (font.contains(PropertyNames::kJsonStyle) && font[PropertyNames::kJsonStyle].is_string()) {
-            label->SetFontStyle(parseFontStyle(font[PropertyNames::kJsonStyle].get<string>()));
+        if (font.contains(PropertyNames::kJsonStyle) && (font[PropertyNames::kJsonStyle].is_string() || font[PropertyNames::kJsonStyle].is_array())) {
+            label->SetFontStyle(parseFontStyle(font[PropertyNames::kJsonStyle]));
         }
         popJsonPath();
     }
@@ -860,8 +860,8 @@ shared_ptr<Button> LayoutParser::parseButton(const json& j, Control* parent) {
             if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
                 builder.setFontSize(font[PropertyNames::kJsonSize].get<int>());
             }
-            if (font.contains(PropertyNames::kJsonStyle) && font[PropertyNames::kJsonStyle].is_string()) {
-                builder.SetFontStyle(parseFontStyle(font[PropertyNames::kJsonStyle].get<string>()));
+            if (font.contains(PropertyNames::kJsonStyle) && (font[PropertyNames::kJsonStyle].is_string() || font[PropertyNames::kJsonStyle].is_array())) {
+                builder.SetFontStyle(parseFontStyle(font[PropertyNames::kJsonStyle]));
             }
         }
 
@@ -3101,7 +3101,7 @@ AlignmentMode LayoutParser::parseAlignment(const string& align) {
     return AlignmentMode::AM_TOP_LEFT;
 }
 
-int LayoutParser::parseFontStyle(const string& style) {
+int LayoutParser::parseFontStyle(const json& styleNode) {
     static const unordered_map<string, int> styleMap = {
         {PropertyNames::kFontStyleNormal,        0},
         {PropertyNames::kFontStyleBold,          1},
@@ -3110,9 +3110,20 @@ int LayoutParser::parseFontStyle(const string& style) {
         {PropertyNames::kFontStyleStrikethrough, 8},
     };
 
-    auto it = styleMap.find(style);
-    if (it != styleMap.end()) return it->second;
+    auto toBits = [&](const string& s) -> int {
+        auto it = styleMap.find(s);
+        return it != styleMap.end() ? it->second : 0;
+    };
 
+    // 数组（组合，如 ["bold","italic"]）：各元素位 OR
+    if (styleNode.is_array()) {
+        int bits = 0;
+        for (const auto& e : styleNode)
+            if (e.is_string()) bits |= toBits(e.get<string>());
+        return bits;
+    }
+    // 字符串（单值，向后兼容 "bold"）
+    if (styleNode.is_string()) return toBits(styleNode.get<string>());
     return 0;
 }
 
