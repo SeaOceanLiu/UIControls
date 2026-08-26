@@ -834,6 +834,7 @@ int ListView::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kHorizontalGridlines) == 0){ setHorizontalGridlines(value != 0); return 1; }
     if (strcmp(prop, PropertyNames::kHoverHighlight) == 0)     { setHoverHighlight(value != 0);    return 1; }
     if (strcmp(prop, PropertyNames::kSortAscending) == 0)      { setSortAscending(value != 0);     return 1; }
+    if (strcmp(prop, PropertyNames::kCycleNavigation) == 0)    { setCycleNavigation(value != 0);   return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 int ListView::setFloatProperty(const char* prop, float value) {
@@ -862,6 +863,7 @@ int ListView::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kHorizontalGridlines) == 0){ out = m_horizontalGridlines ? 1 : 0;     return 1; }
     if (strcmp(prop, PropertyNames::kHoverHighlight) == 0)     { out = m_hoverHighlight ? 1 : 0;          return 1; }
     if (strcmp(prop, PropertyNames::kSortAscending) == 0)      { out = m_sortAscending ? 1 : 0;           return 1; }
+    if (strcmp(prop, PropertyNames::kCycleNavigation) == 0)    { out = m_cycleNavigation ? 1 : 0;         return 1; }
     return ControlImpl::getBoolProperty(prop, out);
 }
 int ListView::getFloatProperty(const char* prop, float& out) {

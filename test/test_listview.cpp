@@ -113,6 +113,13 @@ static void runAssertions() {
     int ii = -2;
     CHECK(g_probe->getIntProperty("selected-index", ii) == 1 && ii == 0, "selected-index roundtrip 0");
 
+    // cycle-navigation 属性回环（C ABI/Binding 属性系统通道）
+    g_probe->setBoolProperty("cycle-navigation", 1);
+    int cn = -1;
+    CHECK(g_probe->getBoolProperty("cycle-navigation", cn) == 1 && cn == 1, "cycle-navigation roundtrip true");
+    g_probe->setBoolProperty("cycle-navigation", 0);
+    CHECK(g_probe->getBoolProperty("cycle-navigation", cn) == 1 && cn == 0, "cycle-navigation roundtrip false");
+
     TestUtil::log("---- assertions done: pass=%d fail=%d ----", g_pass, g_fail);
 }
 
