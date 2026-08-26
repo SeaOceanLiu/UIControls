@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 120" width="720" height="120">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#4A90D9"/>
+    </marker>
+    <linearGradient id="box1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2D3748;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1A202C;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="box2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2B6CB0;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1A365D;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="box3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#276749;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1A4731;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="180" height="100" rx="10" ry="10" fill="url(#box1)" stroke="#4A5568" stroke-width="2"/>
+  <text x="90" y="30" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#E2E8F0">JSON 描述</text>
+  <text x="90" y="50" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#A0AEC0">(jsonc 文件)</text>
+  <text x="90" y="72" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#A0AEC0">关键帧、缓动、轨迹</text>
+
+  <line x1="180" y1="50" x2="250" y2="50" stroke="#4A90D9" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="260" y="0" width="220" height="100" rx="10" ry="10" fill="url(#box2)" stroke="#3182CE" stroke-width="2"/>
+  <text x="370" y="30" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#E2E8F0">prepare 一次性烘焙</text>
+  <text x="370" y="50" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#A0AEC0">解析 → 渲染全部帧贴图</text>
+  <text x="370" y="72" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#A0AEC0">帧数据缓存，运行零插值</text>
+
+  <line x1="480" y1="50" x2="550" y2="50" stroke="#4A90D9" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="560" y="0" width="160" height="100" rx="10" ry="10" fill="url(#box3)" stroke="#38A169" stroke-width="2"/>
+  <text x="640" y="30" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#E2E8F0">按帧播放</text>
+  <text x="640" y="50" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#A0AEC0">毫秒精度跳帧</text>
+  <text x="640" y="72" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#A0AEC0">循环 / 事件回调</text>
+</svg>

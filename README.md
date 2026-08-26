@@ -4,22 +4,33 @@
   <img src="docs/assets/UICornerstone_Logo.svg" alt="UICornerstone Logo" width="200"/>
 </p>
 
-基于 C++17 的多后端跨平台 UI 控件库，适用于游戏和图形应用。
-
-支持 **SDL3 / SFML / Raylib** 三种渲染后端，提供 C ABI 接口可被纯 C / C++ / 动态加载等多种集成方式调用；另附 **C++ Binding**（`binding/`，纯动态加载封装）与 4 个可直接修改的样例程序。
+**UICornerstone** 是一个从零构建的跨后端 GUI 库，采用「核心库 + 后端插件」架构：核心实现全部与图形后端无关（渲染经 `RenderDevice / Texture / TextRenderer / InputBackend` 四层抽象），同一套代码可在 **SDL3**、**SFML**、**raylib** 三种后端上运行。
 
 ## 功能特性
 
-- **20+ UI 控件**：Label、Button（支持 Actor/LuotiAni）、CheckBox（三态）、EditBox、TextArea（多行+滚动）、ProgressBar、ScrollBar、Slider、Menu、TreeView、WinFrame、ColorPicker、Panel、ListView（含单列 ListBox 模式）、StatusBar（VSCode 风格）、TabControl（四方向页签）、ContextMenu（右键菜单）、Shape（七种图元+多图元组合）等
-- **声明式 UI（JSON 布局）**：通过 JSON 描述控件树和事件绑定，`LayoutParser` 自动解析，无需手写创建代码
-- **三后端切换**：SDL3（主开发后端）、SFML、Raylib，只需改 CMake 变量即可切换
-- **LuotiAni 关键帧动画引擎**（音译"洛蒂"）：JSON 描述 → prepare 一次性烘焙全部帧贴图 → 播放时按毫秒跳帧、运行时零插值；支持平移/缩放/旋转/透明度/可见性多图层动画、loop 循环、多实例共享帧数据
-- **Actor 图片系统**：控件可绑定多状态图片（normal/hover/pressed/disabled），支持缩放模式/锚点/透明度/匹配父矩形；LuotiAni 每帧动画即为一个帧 Actor
-- **多实例 / 多视口**：`UIContext` 承载实例状态，单进程可创建多个独立窗口实例（`CreateInstance`/`CreateViewport`），事件、Action、控件 ID、资源根目录、焦点系统逐实例隔离，Ctrl+Tab 跨视口导航；**后端能力位机制**（`UICornerstone_GetBackendCapabilities`）声明各后端能力，调用方按能力决定行为（如 raylib 单窗口架构下第二实例为 headless，多窗口渲染需按 `MULTI_WINDOW` 能力位条件化）
-- **四层抽象架构**：`RenderDevice` → `Texture/Surface` → `TextRenderer` → `InputBackend`，完全不直接依赖后端 API
-- **C ABI 公开接口**：纯 C 兼容的 `UICornerstone_*` 函数，支持静态链接、DLL 隐式加载、显式 `LoadLibrary`
-- **C++ Binding**：纯动态加载封装（零链接期依赖，核心/后端 DLL 全部 `LoadLibrary` 运行时解析），类型安全的事件/属性/控件工厂 + Hosted/Embedded 双模式循环
-- **缩放感知**：内置 `dpiScale` 机制，布局和渲染自动适配高 DPI 显示
+- **四层后端抽象**：RenderDevice（绘制原语）、Texture（纹理）、TextRenderer（文本）、InputBackend（输入）——换后端零业务代码改动。
+- **声明式 UI**：JSON 布局文件描述控件树、布局引擎（流式/锚点/网格）、事件绑定与主题样式，支持热加载。
+- **20+ 控件**：Button、CheckBox（三态）、ComboBox、ContextMenu、EditBox、ListView（含单列 ListBox 模式）、NumericUpDown、Panel、ProgressBar、ScrollBar、Shape（七种图元+多图元组合）、Slider、StatusBar（VSCode 风格）、TabControl（四方向页签）、TextArea、TreeView、WinFrame、Dialog/Popup、HandleControl 等。
+- **LuotiAni 动画引擎**：基于 JSON 关键帧描述（translate/scale/rotate/opacity/visible + 缓动与轨迹），支持多实例共享烘焙帧数据。
+- **Actor 图片系统**：控件可绑定多状态图片（normal/hover/pressed/disabled），支持缩放模式/锚点/透明度/匹配父矩形；LuotiAni 每帧动画即为一个帧 Actor。
+- **三种集成方式**：C ABI 动态库（纯 C 调用）、C++ Binding（现代 C++ 封装）、核心 + 后端源码混合编译。
+- **多实例 / 多视口**：一个进程多个独立 UI 实例、多窗口与子视口渲染（按后端能力位条件化）。
+- **焦点系统**：Tab 环、焦点边界（WinFrame 内循环）、Ctrl+Tab 焦点作用域切换、焦点环绘制。
+- **高 DPI**：内置 `dpiScale` 机制，布局与渲染自动适配。
+
+## 架构总览
+
+| 层 | 职责 | 目录 |
+|---|---|---|
+| 核心库 | 控件树、事件系统、焦点管理、布局引擎、JSON 解析、动画引擎 | `include/` + `src/` |
+| 后端插件 | SDL3 / SFML / raylib 各自的窗口、输入、渲染适配 | `src/backend/` |
+| C ABI | 纯 C 接口：实例管理、布局加载、控件工厂、属性系统、回调 | `include/UICornerstoneAPI.h` |
+| C++ Binding | 类型安全封装：`UICornerstone`、`Control`、`Event` | `binding/` |
+| 样例与测试 | 4 种集成模式样例、全量自动化测试 | `samples/`、`test/` |
+
+![UICornerstone 分层架构图](docs/assets/architecture.svg)
+
+支持 **SDL3 / SFML / Raylib** 三种渲染后端，提供 C ABI 接口可被纯 C / C++ / 动态加载等多种集成方式调用；另附 **C++ Binding**（`binding/`，纯动态加载封装）与 4 个可直接修改的样例程序。
 
 ## 环境要求
 
@@ -41,13 +52,7 @@ UICornerstone 支持单进程内创建多个独立窗口实例：
 
 LuotiAni 是内置的关键帧动画引擎，采用"JSON 描述 → 一次性烘焙 → 按帧播放"三段式流水线：
 
-```
-jsonc 描述文件          prepare() 烘焙            play() 播放
-┌──────────────┐   ┌──────────────────────┐   ┌──────────────────┐
-│ overview     │ → │ 图层贴图加载/缩放      │ → │ update() 按毫秒   │
-│ layers       │   │ 关键帧→全帧 OpData    │   │ 推进帧号          │
-│ keyFrames    │   │ 逐帧合成画布贴图       │ → │ draw() 直接贴帧图 │
-└──────────────┘   └──────────────────────┘   └──────────────────┘
+![LuotiAni 三段式流水线](docs/assets/luotiani_arch.svg)
 ```
 
 - **运行时零插值**：所有帧在加载时全部烘焙为贴图，播放只做跳帧，CPU 开销极低
