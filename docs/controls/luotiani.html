@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.11 LuotiAni（关键帧动画）- UICornerstone 用户手册</title>
+<title>4.13 LuotiAni（关键帧动画）- UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/luotiani.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.11 LuotiAni（关键帧动画控件）</h1>
+<h1>4.13 LuotiAni（关键帧动画控件）</h1>
 
 <p>LuotiAni 是播放关键帧动画的控件：JSON 描述动画（见 <a href="../luotiani.html">3.7 洛蒂动画</a>），运行时<strong>烘焙为帧贴图</strong>，播放按毫秒查表。多实例共享烘焙帧数据。继承链：<code>LuotiAni → Material → ControlImpl → Control</code>。</p>
 
-<h2>4.11.1 控件的创建</h2>
+<h2>4.13.1 控件的创建</h2>
 
 <pre><code>// C++（构造不加载）
 LuotiAni(Control* parent, float xScale = 1.0f, float yScale = 1.0f);
@@ -33,7 +33,7 @@ UIControlHandle ani = UICornerstone_CreateAnimation(g_inst, "tA1.jsonc", 20, 20,
 Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0);</code></pre>
 
 
-<h2>4.11.2 控件的属性</h2>
+<h2>4.13.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -44,7 +44,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 </table>
 
 
-<h2>4.11.3 控件的回调</h2>
+<h2>4.13.3 控件的回调</h2>
 
 <table>
 <tr><th>事件</th><th>触发时机</th><th>说明</th></tr>
@@ -52,7 +52,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 </table>
 
 
-<h2>4.11.4 JSON 动画文件语法</h2>
+<h2>4.13.4 JSON 动画文件语法</h2>
 
 <p>真实键名是 <code>layer / keyFrames / frame / operation</code>（不存在 track/target/property 这类键）：</p>
 
@@ -85,7 +85,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 </table>
 
 
-<h2>4.11.5 C++ Binding / C ABI 样例</h2>
+<h2>4.13.5 C++ Binding / C ABI 样例</h2>
 
 <pre><code>// C ABI
 UIControlHandle h = UICornerstone_CreateAnimation(g_uiInstance, "tA1.jsonc", 20, 20, 256, 256, 1.0f, 1.0f);
@@ -110,7 +110,7 @@ Control aniBtn = ui-&gt;CreateAnimatedButton("animations/breath/breath.jsonc", 4
 
 
 <details class="methods">
-<summary>4.11.6 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.13.6 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -136,9 +136,11 @@ Control aniBtn = ui-&gt;CreateAnimatedButton("animations/breath/breath.jsonc", 4
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="label.html">← 4.10 Label</a>
-  <a href="menu.html">下一节：4.12 Menu →</a>
+  <a href="listview.html">← 4.12 ListView（列表）</a>
+  <a href="menu.html">下一节：4.14 Menu →</a>
 </div>
 
 </div>

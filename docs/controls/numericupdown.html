@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.13 NumericUpDown - UICornerstone 用户手册</title>
+<title>4.15 NumericUpDown - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/numericupdown.html"></script>
 </head>
@@ -13,13 +13,13 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.13 NumericUpDown（数值微调框）</h1>
+<h1>4.15 NumericUpDown（数值微调框）</h1>
 
 <p>NumericUpDown 是数值输入控件：编辑框 + 上下箭头按钮，支持范围钳位、步长/页步长、小数精度、只读模式与长按自动步进。继承链：<code>NumericUpDown → EditBox → ControlImpl → Control</code>。</p>
 
 <div class="note">缩放联动：编辑文本继承 EditBox 字体链路，置于缩放画布（fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6 视口画布缩放</a>）时字号随复合缩放系数重建。</div>
 
-<h2>4.13.1 控件的创建</h2>
+<h2>4.15.1 控件的创建</h2>
 
 <pre><code>// C++
 NumericUpDown(Control* parent, const SRect& rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -38,7 +38,7 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
   "events": { "onValueChanged": "onPosXChanged" } }</code></pre>
 
 
-<h2>4.13.2 控件的属性</h2>
+<h2>4.15.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -54,7 +54,7 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 </table>
 
 
-<h2>4.13.3 控件的回调</h2>
+<h2>4.15.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -62,7 +62,7 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 </table>
 
 
-<h2>4.13.4 JSON 语法</h2>
+<h2>4.15.4 JSON 语法</h2>
 
 <pre><code>{
   "id": "nudInteger",
@@ -80,7 +80,7 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 }</code></pre>
 
 
-<h2>4.13.5 C++ Binding 样例</h2>
+<h2>4.15.5 C++ Binding 样例</h2>
 
 <pre><code>Control nud = ui->CreateNumericUpDown(20, 78, 180, 32);
 nud.SetFloat(PropertyNames::kValue, 50.0f);
@@ -100,7 +100,7 @@ auto nud2b = NumericUpDownBuilder(BENCH.get(), {220, 90, 150, 24})
 BENCH->addControl(nud2b);</code></pre>
 
 
-<h2>4.13.6 C ABI 调用样例</h2>
+<h2>4.15.6 C ABI 调用样例</h2>
 
 <pre><code>UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 20, 120, 26, 1.0f, 1.0f);
 
@@ -114,7 +114,7 @@ static void onValueChanged(UIControlHandle ctl, const UIEventData* ev, void* ud)
 }
 UICornerstone_SetCallback(g_inst, nud, "value-changed", onValueChanged, NULL);</code></pre>
 <details class="methods">
-<summary>4.13.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.15.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -134,9 +134,11 @@ UICornerstone_SetCallback(g_inst, nud, "value-changed", onValueChanged, NULL);</
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="menu.html">← 4.12 Menu</a>
-  <a href="panel.html">下一节：4.14 Panel →</a>
+  <a href="menu.html">← 4.14 Menu</a>
+  <a href="panel.html">下一节：4.16 Panel →</a>
 </div>
 
 </div>

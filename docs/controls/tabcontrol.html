@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.26 TabControl（选项卡） - UICornerstone 用户手册</title>
+<title>4.23 TabControl（选项卡） - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/tabcontrol.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.26 TabControl（选项卡）</h1>
+<h1>4.23 TabControl（选项卡）</h1>
 
 <p>TabControl 多页签控件：页签条四方向（上/下/左/右），页面为任意控件子树。两层焦点作用域：Tab 在页内控件循环，Ctrl+Tab 在「页签条 ↔ 页内」间切换。继承链：<code>TabControl → ControlImpl → Control</code>。设计文档见 <code>design/TabControl_Design.md</code>。</p>
 
-<h2>4.26.1 控件的创建</h2>
+<h2>4.23.1 控件的创建</h2>
 
 <pre><code>// C++
 auto tc = TabControlBuilder(nullptr, SRect(120, 80, 560, 240))
@@ -32,7 +32,7 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
   "tabs": [ {"title": "主页", "page": {"type": "panel"}} ],
   "events": { "onTabChange": "onTab" } }</code></pre>
 
-<h2>4.26.2 控件的属性</h2>
+<h2>4.23.2 控件的属性</h2>
 
 <table>
 <tr><th>属性/字段</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -42,14 +42,72 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
 <tr><td><code>tabs[].icon</code></td><td>资源引用</td><td>—</td><td>页签图标</td></tr>
 </table>
 
-<h2>4.26.3 控件的回调 / 事件</h2>
+<h2>4.23.3 控件的回调 / 事件</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>说明</th></tr>
 <tr><td><code>onTabChange</code></td><td>页签切换</td><td>新页索引</td></tr>
 </table>
 
-<h2>4.26.4 键盘导航</h2><p>页签条获焦：<code>←/→</code>（或竖排 <code>↑/↓</code>）循环切换、<code>Home/End</code> 首尾；<code>Tab</code> 层内循环（页内控件间 / 页签条+外部）；<code>Ctrl+Tab</code> 层切换（页内 ↔ 页签条）。</p>
+<h2>4.23.4 键盘导航</h2><p>页签条获焦：<code>←/→</code>（或竖排 <code>↑/↓</code>）循环切换、<code>Home/End</code> 首尾；<code>Tab</code> 层内循环（页内控件间 / 页签条+外部）；<code>Ctrl+Tab</code> 层切换（页内 ↔ 页签条）。</p>
+
+
+
+
+
+
+<h2>4.23.5 JSON 语法</h2>
+
+<pre><code>{
+  "type": "tab-control", "id": "tabs", "rect": { "x": 120, "y": 80, "w": 560, "h": 240 },
+  "position": "top", "fontSize": 13, "currentIndex": 0,
+  "tabs": [
+    { "title": "主页", "icon": "provider:icons/home", "page": { "type": "panel" } },
+    { "title": "设置", "page": { "type": "panel" } }
+  ],
+  "events": { "onTabChange": "onTab" }
+}</code></pre>
+
+<h2>4.23.6 C++ Binding 样例</h2>
+
+<pre><code>auto tc = ui->CreateTabControl(120, 80, 560, 240);
+tc.SetEnum(PropertyNames::kPosition, "top");
+tc.SetInt(PropertyNames::kCurrentIndex, 0);
+tc.SetCallback(PropertyNames::kEventTabChange, onTab);</code></pre>
+
+<h2>4.23.7 C ABI 调用样例</h2>
+
+<pre><code>UIControlHandle tc = UICornerstone_CreateTabControl(g_inst, 120, 80, 560, 240, 1.0f, 1.0f);
+int idx = UICornerstone_TabAddPage(g_inst, tc, u8"主页");
+UIControlHandle pg = UICornerstone_CreatePanel(g_inst, 0, 0, 100, 100, 1.0f, 1.0f);
+UICornerstone_TabSetPage(g_inst, tc, idx, pg);
+UICornerstone_SetEnum(g_inst, tc, "position", "top");</code></pre>
+
+</div>
+</body>
+</html>
+
+<details>
+<summary>4.23.8 控件的方法（核心引擎内部 API，点击展开）</summary>
+
+<table>
+<tr><th>方法</th><th>说明</th></tr>
+<tr><td><code>addTab(title, page)</code> / <code>insertTab(index, …)</code> / <code>removeTab(index)</code></td><td>页写（removeTab 钳制 currentIndex）</td></tr>
+<tr><td><code>getTabCount()</code> / <code>getTabs()</code></td><td>页只读访问</td></tr>
+<tr><td><code>setCurrentIndex(i)</code> / <code>getCurrentIndex()</code></td><td>切换（触发 onTabChange + 页面显隐）</td></tr>
+<tr><td><code>setTabText(i, title)</code> / <code>setTabPage(i, page)</code> / <code>setTabLeadingControl(i, ctl)</code></td><td>页内容（触发 relayout）</td></tr>
+<tr><td><code>setPosition(TabPosition)</code> / <code>getPosition()</code></td><td>四方向（触发 relayout）</td></tr>
+<tr><td><code>setFontSize(px)</code> / <code>getFontSize()</code></td><td>页签字号（重建字体 + relayout）</td></tr>
+<tr><td><code>setOnTabChange(cb)</code></td><td>切换回调 (shared_ptr&lt;TabControl&gt;, int)</td></tr>
+<tr><td><code>setXxxProperty / getXxxProperty</code>（override）</td><td>属性分发（position/current-index/font-size）</td></tr>
+</table>
+
+</details>
+
+<div class="chapter-nav">
+  <a href="splitter.html">← 4.22 Splitter</a>
+  <a href="textarea.html">下一节：4.24 TextArea →</a>
+</div>
 
 </div>
 </body>

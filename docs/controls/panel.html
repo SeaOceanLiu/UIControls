@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.14 Panel - UICornerstone 用户手册</title>
+<title>4.16 Panel - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/panel.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.14 Panel（容器）</h1>
+<h1>4.16 Panel（容器）</h1>
 
 <p>Panel 是最基本的容器控件：管理子控件、分发事件、绘制背景/边框，并可挂载<strong>布局引擎</strong>（流式 / 锚点 / 网格）。所有容器（Bench、WinFrame、Dialog 等）都继承自它。继承链：<code>Panel → ControlImpl → Control</code>。</p>
 
-<h2>4.14.1 控件的创建</h2>
+<h2>4.16.1 控件的创建</h2>
 
 <pre><code>// C++
 Panel(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -34,7 +34,7 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200, 1.0
                   "caption": "Submit", "events": { "onClick": "onSubmitClick" } } ] }</code></pre>
 
 
-<h2>4.14.2 控件的属性</h2>
+<h2>4.16.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
@@ -42,15 +42,15 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200, 1.0
 <tr><td><code>visible</code> / <code>enabled</code> / <code>transparent</code> / <code>border-visible</code></td><td>Bool</td><td>通用属性</td></tr>
 </table>
 
-<p>JSON 键（<code>design/LayoutSystem_Design.md</code> §4.5）：<code>bgColor</code>（单色）、<code>borderColor</code>（单色）、<code>transparent</code>、<code>borderVisible</code>、<code>layout</code>（引擎配置）、<code>children</code>、<code>scale</code>、<code>margin</code>、<code>colors</code>。</p>
+<p>JSON 键（<code>design/LayoutSystem_Design.md</code> §4.16）：<code>bgColor</code>（单色）、<code>borderColor</code>（单色）、<code>transparent</code>、<code>borderVisible</code>、<code>layout</code>（引擎配置）、<code>children</code>、<code>scale</code>、<code>margin</code>、<code>colors</code>。</p>
 
 
-<h2>4.14.3 控件的回调</h2>
+<h2>4.16.3 控件的回调</h2>
 
 <p>无专有回调（子控件的事件由其自身处理）。</p>
 
 
-<h2>4.14.4 JSON 语法（含布局引擎）</h2>
+<h2>4.16.4 JSON 语法（含布局引擎）</h2>
 
 <pre><code>// h-flow / v-flow（子控件用 flowWeight 弹性分配）
 { "type": "panel", "id": "formPanel",
@@ -75,7 +75,7 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200, 1.0
                 "grid": { "row": 0, "col": 1, "rowSpan": 1, "colSpan": 1 } } ]</code></pre>
 
 
-<h2>4.14.5 C++ Binding 样例</h2>
+<h2>4.16.5 C++ Binding 样例</h2>
 
 <pre><code>auto panel = ui->CreatePanel(50, 112, 400, 200);
 auto btn   = ui->CreateButton("Submit", 280, 140, 100, 35);
@@ -86,7 +86,7 @@ btn.SetCallback(PropertyNames::kEventClick, [](const Event&) { /* ... */ });</co
 <div class="tip">布局引擎（flow/anchor/grid）的完整 JSON 语法见 <a href="../appendix/declarative-syntax.html">6 声明式 UI 语法速查表</a>。</div>
 
 
-<h2>4.14.6 C ABI 调用样例</h2>
+<h2>4.16.6 C ABI 调用样例</h2>
 
 <pre><code>// 容器：创建后经 AddChildControl 挂子控件
 UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 20, 20, 400, 300, 1.0f, 1.0f);
@@ -95,7 +95,7 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 10, 10, 100, 32, 
 UICornerstone_AddChildControl(g_inst, panel, btn);   // 挂树（经 Bench 或父容器）
 UICornerstone_SetBool(g_inst, panel, "transparent", 1);</code></pre>
 <details class="methods">
-<summary>4.14.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.16.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -116,9 +116,11 @@ UICornerstone_SetBool(g_inst, panel, "transparent", 1);</code></pre>
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="numericupdown.html">← 4.13 NumericUpDown</a>
-  <a href="progressbar.html">下一节：4.15 ProgressBar →</a>
+  <a href="numericupdown.html">← 4.15 NumericUpDown</a>
+  <a href="progressbar.html">下一节：4.17 ProgressBar →</a>
 </div>
 
 </div>

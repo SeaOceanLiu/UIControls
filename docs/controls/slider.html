@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.17 Slider - UICornerstone 用户手册</title>
+<title>4.20 Slider - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/slider.html"></script>
 </head>
@@ -13,13 +13,13 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.17 Slider（滑块）</h1>
+<h1>4.20 Slider（滑块）</h1>
 
 <p>Slider 是拖拽取值控件：水平 / 垂直方向、反向模式、步长吸附（松手 Snap-on-Release）、刻度标记、可选数值标签（内部 Label，支持自定义格式）。继承链：<code>Slider → ControlImpl → Control</code>。</p>
 
 <div class="note">缩放联动：刻度字体随复合缩放系数懒加载重建（字体数据复用，无重复 IO）；数值标签为内部 Label 随树自动重建。详见 <a href="../advanced/canvas-scale.html">5.6.6</a>。</div>
 
-<h2>4.17.1 控件的创建</h2>
+<h2>4.20.1 控件的创建</h2>
 
 <pre><code>// C++
 Slider(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -40,7 +40,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
   "events": { "onValueChanged": "onColorChange" } }</code></pre>
 
 
-<h2>4.17.2 控件的属性</h2>
+<h2>4.20.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -61,7 +61,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 </table>
 
 
-<h2>4.17.3 控件的回调</h2>
+<h2>4.20.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -69,7 +69,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 </table>
 
 
-<h2>4.17.4 JSON 语法</h2>
+<h2>4.20.4 JSON 语法</h2>
 
 <pre><code>{
   "id": "rSlider",
@@ -90,7 +90,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 }</code></pre>
 
 
-<h2>4.17.5 C++ Binding 样例</h2>
+<h2>4.20.5 C++ Binding 样例</h2>
 
 <pre><code>Control slider = ui->CreateSlider(20, 20, 300, 30, 0, 100, 50);
 slider.SetFloat(PropertyNames::kValue, 50.0f);
@@ -111,7 +111,7 @@ auto s1 = SliderBuilder(nullptr, SRect(HX, 40, 250, 20))
 BENCH->addControl(s1);</code></pre>
 
 
-<h2>4.17.6 C ABI 调用样例</h2>
+<h2>4.20.6 C ABI 调用样例</h2>
 
 <pre><code>// 创建即带 min / max / 当前值
 UIControlHandle sl = UICornerstone_CreateSlider(g_inst, 20, 20, 260, 20, 0, 100, 50, 1.0f, 1.0f);
@@ -125,7 +125,7 @@ static void onSlide(UIControlHandle ctl, const UIEventData* ev, void* ud) {
 }
 UICornerstone_SetCallback(g_inst, sl, "value-changed", onSlide, NULL);</code></pre>
 <details class="methods">
-<summary>4.17.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.20.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -147,9 +147,11 @@ UICornerstone_SetCallback(g_inst, sl, "value-changed", onSlide, NULL);</code></p
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="scrollbar.html">← 4.16 ScrollBar</a>
-  <a href="splitter.html">下一节：4.18 Splitter →</a>
+  <a href="shape.html">← 4.19 Shape（形状）</a>
+  <a href="statusbar.html">下一节：4.21 StatusBar（状态栏） →</a>
 </div>
 
 </div>

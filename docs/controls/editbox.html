@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.8 EditBox - UICornerstone 用户手册</title>
+<title>4.9 EditBox - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/editbox.html"></script>
 </head>
@@ -13,13 +13,13 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.8 EditBox（单行输入框）</h1>
+<h1>4.9 EditBox（单行输入框）</h1>
 
-<p>EditBox 是单行文本输入控件：支持光标、选区、剪贴板（Ctrl+C/X/V）、密码模式、占位符与焦点管理。多行输入请用 <a href="textarea.html">TextArea</a>（4.19）。继承链：<code>EditBox → ControlImpl → Control</code>。</p>
+<p>EditBox 是单行文本输入控件：支持光标、选区、剪贴板（Ctrl+C/X/V）、密码模式、占位符与焦点管理。多行输入请用 <a href="textarea.html">TextArea</a>（4.9）。继承链：<code>EditBox → ControlImpl → Control</code>。</p>
 
 <div class="note">缩放联动：置于缩放画布（fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6 视口画布缩放</a>）时，字号随复合缩放系数重建；不可见时延后重建，变为可见的当帧自动补重建。</div>
 
-<h2>4.8.1 控件的创建</h2>
+<h2>4.9.1 控件的创建</h2>
 
 <pre><code>// C++
 EditBox(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -36,7 +36,7 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0
   "colors": { "background": { "normal": "#404040FF" }, "border": { "normal": "#606060FF" } } }</code></pre>
 
 
-<h2>4.8.2 控件的属性</h2>
+<h2>4.9.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -51,7 +51,7 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0
 <p>通用：<code>background / border / text</code>（StateColor）、<code>visible / enabled / transparent / border-visible</code>。</p>
 
 
-<h2>4.8.3 控件的回调</h2>
+<h2>4.9.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -60,7 +60,7 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0
 </table>
 
 
-<h2>4.8.4 JSON 语法</h2>
+<h2>4.9.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "edit-box", "id": "nameEdit",
@@ -73,7 +73,7 @@ UIControlHandle edit = UICornerstone_CreateEditBox(g_inst, 20, 193, 240, 95, 1.0
 }</code></pre>
 
 
-<h2>4.8.5 C++ Binding 样例</h2>
+<h2>4.9.5 C++ Binding 样例</h2>
 
 <pre><code>auto edit = ui->CreateEditBox(20, 193, 240, 95);
 edit.SetString(PropertyNames::kPlaceholder, "Type here...");
@@ -86,7 +86,7 @@ edit.SetCallback(PropertyNames::kEventEnter, [](const Event&) {
 });</code></pre>
 
 
-<h2>4.8.6 C ABI 调用样例</h2>
+<h2>4.9.6 C ABI 调用样例</h2>
 
 <pre><code>UIControlHandle box = UICornerstone_CreateEditBox(g_inst, 20, 20, 200, 30, 1.0f, 1.0f);
 
@@ -99,7 +99,7 @@ static void onTextChanged(UIControlHandle ctl, const UIEventData* ev, void* ud) 
 }
 UICornerstone_SetCallback(g_inst, box, "text-changed", onTextChanged, NULL);</code></pre>
 <details class="methods">
-<summary>4.8.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.9.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -120,9 +120,11 @@ UICornerstone_SetCallback(g_inst, box, "text-changed", onTextChanged, NULL);</co
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="dialog.html">← 4.7 Dialog / Popup</a>
-  <a href="handlecontrol.html">下一节：4.9 HandleControl →</a>
+  <a href="dialog.html">← 4.8 Dialog / Popup</a>
+  <a href="handlecontrol.html">下一节：4.10 HandleControl →</a>
 </div>
 
 </div>

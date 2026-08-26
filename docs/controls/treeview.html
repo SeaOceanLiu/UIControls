@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.21 TreeView - UICornerstone 用户手册</title>
+<title>4.25 TreeView - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/treeview.html"></script>
 </head>
@@ -13,12 +13,12 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.21 TreeView（树形视图）</h1>
+<h1>4.25 TreeView（树形视图）</h1>
 
 <p>TreeView 是层级数据展示控件：节点（TreeNode）支持展开/折叠、选中、滚动（垂直 + 水平）、键盘环行导航与选中项滚动定位。
 继承链：<code>TreeView → ControlImpl → Control</code>。字号随复合缩放重建；行高独立不随字号（见 <a href="../advanced/canvas-scale.html">5.6.6</a>）。</p>
 
-<h2>4.21.1 控件的创建</h2>
+<h2>4.25.1 控件的创建</h2>
 
 <pre><code>// C++
 TreeView(Control* parent, const SRect& rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -39,7 +39,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
   "events": { "onSelect": "onTreeSelect" } }</code></pre>
 
 
-<h2>4.21.2 控件的属性</h2>
+<h2>4.25.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -58,7 +58,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 <tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
 </table>
 
-<h3>4.21.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
+<h3>4.25.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
 
 <p>TreeNode 不是 Control，item 级属性经 TreeView 按 <code>item-id</code> 定位目标节点后再读写
 （先 <code>SetString("item-id", id)</code>，随后 set/get 作用于该节点）：</p>
@@ -74,7 +74,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 </table>
 
 
-<h2>4.21.3 控件的回调</h2>
+<h2>4.25.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -88,7 +88,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 （负载 <code>UIEventData.data.intVal</code> 为新状态）。</p>
 
 
-<h2>4.21.4 JSON 语法</h2>
+<h2>4.25.4 JSON 语法</h2>
 
 <pre><code>{
   "id": "tree",
@@ -106,7 +106,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
               "onCollapse": "onTreeCollapse" }
 }</code></pre>
 
-<h3>4.21.4.1 item 增强（行前置控件容器 + 逐 Item 字体）</h3>
+<h3>4.25.4.25 item 增强（行前置控件容器 + 逐 Item 字体）</h3>
 
 <pre><code>"items": [
   { "id": "cb1", "label": "带勾选框的行",
@@ -129,7 +129,7 @@ check-box / image）。rect 由 TreeView 自适应（高 = 行内文字高度，
 </ul>
 
 
-<h2>4.21.5 C++ Binding 样例</h2>
+<h2>4.25.5 C++ Binding 样例</h2>
 
 <pre><code>Control tree = ui-&gt;CreateTreeView(20, 20, 240, 300);
 tree.SetString("items",
@@ -140,7 +140,7 @@ tree.SetCallback(PropertyNames::kEventSelect, [](const Event&amp; e) {
 });</code></pre>
 
 
-<h2>4.21.6 C ABI 调用样例</h2>
+<h2>4.25.6 C ABI 调用样例</h2>
 
 <pre><code>UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.0f, 1.0f);
 
@@ -175,7 +175,7 @@ UICornerstone_SetBool(  g_inst, lc, "checked", 1);                   // 反向�
 void* cb = UICornerstone_FindControl(g_inst, "cb_n2");</code></pre>
 
 <details class="methods">
-<summary>4.21.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.25.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -190,15 +190,17 @@ void* cb = UICornerstone_FindControl(g_inst, "cb_n2");</code></pre>
 <tr><td><code>setItems(vector&lt;shared_ptr&lt;TreeNode&gt;&gt;) / getItems()</code></td><td>整树替换 / 根节点列表（<code>makeNode(id, label, expanded, children)</code> / <code>cloneNode</code> 辅助）</td></tr>
 <tr><td><code>setNodeLabel(id, label) / setNodeUserData(id, void*) / findNodeById(id)</code></td><td>节点编辑 / 查找</td></tr>
 <tr><td><code>setOnSelect / setOnSelectData / setOnExpand / setOnCollapse / setOnClearNode</code></td><td>回调注册（SelectData 携带节点 userData）</td></tr>
-<tr><td><code>TreeNode::leadingControl / leadingGap / fontName / fontSize</code></td><td>行前置控件容器（shared_ptr&lt;Control&gt;，行绘制时自适应 rect）+ 容器与文本间隔 + 逐 Item 字体（C++ 集成直接赋值；C ABI 走 <code>item-*</code> 属性，见 4.21.2.1）</td></tr>
+<tr><td><code>TreeNode::leadingControl / leadingGap / fontName / fontSize</code></td><td>行前置控件容器（shared_ptr&lt;Control&gt;，行绘制时自适应 rect）+ 容器与文本间隔 + 逐 Item 字体（C++ 集成直接赋值；C ABI 走 <code>item-*</code> 属性，见 4.25.2.1）</td></tr>
 </table>
 
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="winframe.html">← 4.20 WinFrame</a>
-  <a href="../advanced.html">下一章：5 进阶主题 →</a>
+  <a href="textarea.html">← 4.24 TextArea</a>
+  <a href="winframe.html">下一节：4.26 WinFrame →</a>
 </div>
 
 </div>

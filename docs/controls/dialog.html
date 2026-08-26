@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.7 Dialog / Popup - UICornerstone 用户手册</title>
+<title>4.8 Dialog / Popup - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/dialog.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.7 Dialog / Popup（弹窗族）</h1>
+<h1>4.8 Dialog / Popup（弹窗族）</h1>
 
 <p>三层弹窗族：<code>Popup</code>（无按钮）→ <code>ConfirmPopup</code>（+确定按钮，Enter 确认）→ <code>Dialog</code>（+取消按钮，ESC/外部点击走取消）。三者均为<strong>非模态</strong>（事件驱动，不阻塞主循环）。继承链：<code>Dialog → ConfirmPopup → Popup → Panel</code>。</p>
 
-<h2>4.7.1 控件的创建</h2>
+<h2>4.8.1 控件的创建</h2>
 
 <pre><code>// C++
 Dialog(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -31,7 +31,7 @@ auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);   // 居中弹窗
 dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code></pre>
 
 
-<h2>4.7.2 控件的属性</h2>
+<h2>4.8.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -46,7 +46,7 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 </table>
 
 
-<h2>4.7.3 控件的回调</h2>
+<h2>4.8.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -56,7 +56,7 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 </table>
 
 
-<h2>4.7.4 JSON 语法（顶层 dialogs 数组）</h2>
+<h2>4.8.4 JSON 语法（顶层 dialogs 数组）</h2>
 
 <pre><code>{
   "type": "dialog", "id": "colorDlg",
@@ -79,7 +79,7 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 <p>通用子键：<code>buttonHeight</code> / <code>buttonGap</code> / <code>padding</code>；<code>confirmButton</code> / <code>cancelButton</code> 支持 <code>text</code> / <code>rect</code> / <code>visible</code>。默认隐藏；C ABI 侧 <code>SetBool(inst, dlg, "visible", 1)</code> 打开。</p>
 
 
-<h2>4.7.5 C++ Binding 样例</h2>
+<h2>4.8.5 C++ Binding 样例</h2>
 
 <pre><code>auto dialog = vp->CreateDialog("OK", "", 0, 0, 280, 120);   // 居中
 auto label  = vp->CreateLabel("Delete this file?", 14.0f, 20, 30, 240, 60);
@@ -95,7 +95,7 @@ dialog.SetBool("visible", true);   // 打开弹窗</code></pre>
 <div class="note">数据取回：内容控件经 <code>getContent()</code> + <code>dynamic_pointer_cast</code> 读取。一次只弹一个弹窗，嵌套需自行管理。</div>
 
 
-<h2>4.7.6 C ABI 调用样例</h2>
+<h2>4.8.6 C ABI 调用样例</h2>
 
 <pre><code>UIControlHandle dlg = UICornerstone_CreateDialog(g_inst, "确定", "取消", 200, 150, 320, 180, 1.0f, 1.0f);
 
@@ -111,7 +111,7 @@ static void onCancel(UIControlHandle ctl, const UIEventData* ev, void* ud) {
 UICornerstone_SetCallback(g_inst, dlg, "confirm", onConfirm, NULL);
 UICornerstone_SetCallback(g_inst, dlg, "cancel", onCancel, NULL);</code></pre>
 <details class="methods">
-<summary>4.7.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.8.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -133,9 +133,11 @@ UICornerstone_SetCallback(g_inst, dlg, "cancel", onCancel, NULL);</code></pre>
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="combobox.html">← 4.6 ComboBox</a>
-  <a href="editbox.html">下一节：4.8 EditBox →</a>
+  <a href="contextmenu.html">← 4.7 ContextMenu（右键菜单）</a>
+  <a href="editbox.html">下一节：4.9 EditBox →</a>
 </div>
 
 </div>

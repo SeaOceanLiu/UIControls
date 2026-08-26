@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.18 Splitter - UICornerstone 用户手册</title>
+<title>4.22 Splitter - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/splitter.html"></script>
 </head>
@@ -13,11 +13,11 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.18 Splitter（分割条）</h1>
+<h1>4.22 Splitter（分割条）</h1>
 
 <p>Splitter 是可拖拽的分割条：关联两侧 sibling 控件，拖拽时实时调整两侧尺寸，支持最小尺寸约束与分割比例。继承链：<code>Splitter → ControlImpl → Control</code>。</p>
 
-<h2>4.18.1 控件的创建</h2>
+<h2>4.22.1 控件的创建</h2>
 
 <pre><code>// C++
 Splitter(Control* parent, const SRect& rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -40,7 +40,7 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 <div class="note">JSON 中 <code>orientation: "vertical"</code> → 垂直分割（左右分栏），其余为水平；rect 可省略，由 first/second 控件边界自动推导。<strong>Splitter 节点必须排在关联面板之后</strong>。</div>
 
 
-<h2>4.18.2 控件的属性</h2>
+<h2>4.22.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -54,7 +54,7 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 </table>
 
 
-<h2>4.18.3 控件的回调</h2>
+<h2>4.22.3 控件的回调</h2>
 
 <table>
 <tr><th>回调 / 事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -62,7 +62,7 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 </table>
 
 
-<h2>4.18.4 JSON 语法</h2>
+<h2>4.22.4 JSON 语法</h2>
 
 <pre><code>{
   "id": "mySplitter",
@@ -79,7 +79,7 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 }</code></pre>
 
 
-<h2>4.18.5 C++ Binding 样例</h2>
+<h2>4.22.5 C++ Binding 样例</h2>
 
 <pre><code>auto splitter = ui->CreateSplitter(244, 60, 6, 200, 1 /*orientation*/);
 splitter.SetFloat(PropertyNames::kRatio, 0.4f);
@@ -90,7 +90,7 @@ splitter.SetCallback(PropertyNames::kEventMoved, [](const Event& e) {
 // 关联控件经 "first-linked" / "second-linked" 属性或 AddChild 顺序管理</code></pre>
 
 
-<h2>4.18.6 C ABI 调用样例</h2>
+<h2>4.22.6 C ABI 调用样例</h2>
 
 <pre><code>// orientation: 0=垂直分割, 1=水平分割；first/second 为被分割控件
 UIControlHandle left  = UICornerstone_CreatePanel(g_inst, 20, 20, 200, 300, 1.0f, 1.0f);
@@ -104,7 +104,7 @@ UICornerstone_SetFloat(g_inst, sp, "ratio", 0.4f);
 static void onMoved(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
 UICornerstone_SetCallback(g_inst, sp, "moved", onMoved, NULL);</code></pre>
 <details class="methods">
-<summary>4.18.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.22.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -125,9 +125,11 @@ UICornerstone_SetCallback(g_inst, sp, "moved", onMoved, NULL);</code></pre>
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="slider.html">← 4.17 Slider</a>
-  <a href="textarea.html">下一节：4.19 TextArea →</a>
+  <a href="statusbar.html">← 4.21 StatusBar（状态栏）</a>
+  <a href="tabcontrol.html">下一节：4.23 TabControl（选项卡） →</a>
 </div>
 
 </div>

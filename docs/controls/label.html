@@ -1,11 +1,11 @@
-﻿ï»¿ï»¿<!DOCTYPE html>
+ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.10 Label - UICornerstone 用户手册</title>
+<title>4.11 Label - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/label.html"></script>
 </head>
@@ -13,13 +13,13 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.10 Label（文本标签）</h1>
+<h1>4.11 Label（文本标签）</h1>
 
 <p>Label 是文本显示控件：支持单行 / 多行（\n）、9 种对齐、阴影、自动扩展、行高与行距调节，可设为可点击（clickable）。继承链：<code>Label → ControlImpl → Control</code>。</p>
 
 <div class="note">缩放联动：置于缩放画布（fit / stretch，见 <a href="../advanced/canvas-scale.html">5.6 视口画布缩放</a>）时，字号随复合缩放系数重建（显示字号 = 设定字号 × 复合系数）；不可见时延后重建，变为可见的当帧自动补重建。</div>
 
-<h2>4.10.1 控件的创建</h2>
+<h2>4.11.1 控件的创建</h2>
 
 <pre><code>// C++
 Label(Control* parent, SRect rect, float xScale = 1.0f, float yScale = 1.0f);
@@ -38,7 +38,7 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
   "shadow": { "enabled": true, "offset": { "x": 2, "y": 2 } } }</code></pre>
 
 
-<h2>4.10.2 控件的属性</h2>
+<h2>4.11.2 控件的属性</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
@@ -58,7 +58,7 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 <p>通用：<code>text / text-shadow</code>（StateColor，可带 .hover/.pressed/.disabled）、<code>visible / enabled / transparent / border-visible</code>。</p>
 
 
-<h2>4.10.3 控件的回调</h2>
+<h2>4.11.3 控件的回调</h2>
 
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
@@ -67,7 +67,7 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 </table>
 
 
-<h2>4.10.4 JSON 语法</h2>
+<h2>4.11.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "label", "id": "titleLabel",
@@ -80,7 +80,7 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 }</code></pre>
 
 
-<h2>4.10.5 C++ Binding 样例</h2>
+<h2>4.11.5 C++ Binding 样例</h2>
 
 <pre><code>auto label = ui->CreateLabel("Hello", 24.0f, 20, 20, 240, 40);
 label.SetString(PropertyNames::kCaption, "Clicked 0");
@@ -98,7 +98,7 @@ auto l = LabelBuilder(nullptr, SRect(450, 450, 200, 90), 2.0f, 2.0f)
 BENCH->addControl(l);</code></pre>
 
 
-<h2>4.10.6 C ABI 调用样例</h2>
+<h2>4.11.6 C ABI 调用样例</h2>
 
 <pre><code>// fontSize 为创建参数
 UIControlHandle lbl = UICornerstone_CreateLabel(g_inst, "Title", 18, 20, 20, 200, 30, 1.0f, 1.0f);
@@ -115,7 +115,7 @@ UICornerstone_SetEnum(g_inst, lbl, "font", "maplemono-nf-cn-regular");  // 内�
 UICornerstone_SetString(g_inst, lbl, "font-file", "fonts/MyCustom.ttf"); // 任意路径（相对 resourceRoot，可带 provider:）
 UICornerstone_SetString(g_inst, lbl, "font-resource", "maple-font");     // 内存注册的资源 ID</code></pre>
 <details class="methods">
-<summary>4.10.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.11.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
@@ -139,9 +139,11 @@ UICornerstone_SetString(g_inst, lbl, "font-resource", "maple-font");     // 内�
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="handlecontrol.html">← 4.9 HandleControl</a>
-  <a href="luotiani.html">下一节：4.11 LuotiAni →</a>
+  <a href="handlecontrol.html">← 4.10 HandleControl</a>
+  <a href="listview.html">下一节：4.12 ListView（列表） →</a>
 </div>
 
 </div>

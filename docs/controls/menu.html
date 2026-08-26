@@ -1,11 +1,11 @@
-﻿ï»¿<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4.12 Menu - UICornerstone 用户手册</title>
+<title>4.14 Menu - UICornerstone 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="controls/menu.html"></script>
 </head>
@@ -13,13 +13,13 @@
 <div id="sidebar"></div>
 <div id="content">
 
-<h1>4.12 Menu（菜单：MenuBar / MenuPanel / MenuItem）</h1>
+<h1>4.14 Menu（菜单：MenuBar / MenuPanel / MenuItem）</h1>
 
 <p>菜单系统由三件套组成：<strong>MenuBar</strong>（顶级菜单栏）、<strong>MenuPanel</strong>（下拉面板，支持嵌套子菜单）、<strong>MenuItem</strong>（菜单项，支持 Normal / Separator / SubMenu）。三者均继承 <code>ControlImpl</code>。支持「菜单模式」：点击展开后鼠标移动自动切换顶级菜单。</p>
 
 <div class="note">缩放联动：MenuBar 与下拉面板字号随复合缩放系数重建（Bar 变化经共享字体传播到各面板、嵌套子菜单）。详见 <a href="../advanced/canvas-scale.html">5.6.6</a>。</div>
 
-<h2>4.12.1 控件的创建</h2>
+<h2>4.14.1 控件的创建</h2>
 
 <pre><code>// C++（三件套 + Builder）
 MenuItem(Control* parent, MenuItemType type = MenuItemType::Normal, float xScale = 1.0f, float yScale = 1.0f);
@@ -41,7 +41,7 @@ UIControlHandle bar   = UICornerstone_CreateMenuBar(g_inst, 0, 0, 800, 32, 1.0f,
 UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 
 
-<h2>4.12.2 控件的属性（C ABI 属性系统）</h2>
+<h2>4.14.2 控件的属性（C ABI 属性系统）</h2>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
@@ -55,7 +55,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
 </table>
 
-<h3>4.12.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
+<h3>4.14.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
 <p>Menu 的逐项增强属性挂在 <strong>MenuPanel</strong> 上：先 <code>SetString("item-id", id)</code> 定位目标菜单项，随后 item 级属性作用于该菜单项。MenuItem 自身也支持 <code>SetString("item-id", id)</code> 设置其定位 id（编程式创建时便于后续定位）。</p>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th><th>说明</th></tr>
@@ -67,7 +67,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 </table>
 
 
-<h2>4.12.3 控件的回调</h2>
+<h2>4.14.3 控件的回调</h2>
 
 <table>
 <tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
@@ -75,7 +75,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 </table>
 
 
-<h2>4.12.4 JSON 语法</h2>
+<h2>4.14.4 JSON 语法</h2>
 
 <pre><code>{
   "type": "menu-bar",
@@ -99,7 +99,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
   ]
 }</code></pre>
 
-<h3>4.12.4.1 item 增强（行前置控件容器 + 逐 Item 字号/行高）</h3>
+<h3>4.14.4.14 item 增强（行前置控件容器 + 逐 Item 字号/行高）</h3>
 <p>Menu 二期增强（2026-08 实施）支持：</p>
 <ul>
 <li><strong>行前置控件容器</strong>：JSON 键 <code>leadingControl</code>（任意控件类型，如 <code>check-box</code> / <code>image</code>）。容器正方形、边长 = 该行字体高度、水平居中于 icon 区、垂直居中于行；面板有容器行时保留 icon 区（宽 = max(各行字体高度, 20)），无容器时 icon 区宽为 0（文本起点 = 左内边距 20，无 gap 预留）。</li>
@@ -114,7 +114,7 @@ UICornerstone_SetInt(g_inst, panel, "item-font-size", 18);          // 逐项字
 UICornerstone_SetFloat(g_inst, panel, "item-leading-gap", 10);      // 逐项 gap</code></pre>
 
 
-<h2>4.12.5 C++ Binding / 核心库样例</h2>
+<h2>4.14.5 C++ Binding / 核心库样例</h2>
 
 <pre><code>// 核心库（Builder 链式组装）
 g_filePanel = MenuPanelBuilder()
@@ -142,7 +142,7 @@ item.SetString("caption", "Open");
 item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
 
 
-<h2>4.12.6 C ABI 调用样例</h2>
+<h2>4.14.6 C ABI 调用样例</h2>
 
 <pre><code>// Menu 三件套：MenuBar + MenuPanel + MenuItem（type: 0=Normal, 1=Separator, 2=SubMenu）
 UIControlHandle file = UICornerstone_CreateMenuPanel(g_inst, 1.0f, 1.0f);
@@ -160,7 +160,7 @@ UICornerstone_SetString(g_inst, open, "shortcut", "Ctrl+O");
 static void onOpen(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
 UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 <details class="methods">
-<summary>4.12.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.14.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 
@@ -204,9 +204,11 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 </details>
 
 
+
+
 <div class="chapter-nav">
-  <a href="luotiani.html">← 4.11 LuotiAni</a>
-  <a href="numericupdown.html">下一节：4.13 NumericUpDown →</a>
+  <a href="luotiani.html">← 4.13 LuotiAni（动画）</a>
+  <a href="numericupdown.html">下一节：4.15 NumericUpDown →</a>
 </div>
 
 </div>
