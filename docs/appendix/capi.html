@@ -124,6 +124,9 @@ UICornerstone_SetFloat( inst, tree, "item-leading-gap", 10.0f);
 UICornerstone_SetInt(   inst, tree, "item-font-size", 18);
 UICornerstone_SetEnum(  inst, tree, "item-font", "harmonyos-sans-sc-bold");
 UICornerstone_SetEnum(  inst, tree, "item-leading-align", "bottom-left");   // 槽位贴行底
+
+// Label 字体样式（normal/bold/italic/underline/strikethrough；raylib 不支持，静默无效果）
+UICornerstone_SetEnum(  inst, lbl, "font-style", "bold");
 UICornerstone_GetPtr(   inst, tree, "item-leading-control", &amp;lc);  // 借用手柄（生命周期由调用方保证）
 // SetPtr 可运行时挂载容器（立即挂树）；传 NULL 解除容器并摘树：
 UICornerstone_SetPtr(   inst, tree, "item-leading-control", lc);

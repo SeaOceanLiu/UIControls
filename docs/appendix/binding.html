@@ -129,6 +129,9 @@ tree.SetFloat( "item-leading-gap", 10.0f);         // 容器与文本间隔
 tree.SetInt(   "item-font-size", 18);
 tree.SetEnum(  "item-font", "harmonyos-sans-sc-bold");   // 粗体
 tree.SetEnum(  "item-leading-align", "bottom-left");     // 槽位贴行底
+
+// Label 字体样式（normal/bold/italic/underline/strikethrough）
+lbl.SetEnum( PropertyNames::kFontStyle, PropertyNames::kFontStyleBold );
 float gap = tree.GetFloat("item-leading-gap");
 
 // 行前置控件容器：借出手柄 → FromHandle 包装 → GetType 判断类型 → 通用属性操作
