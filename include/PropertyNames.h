@@ -770,6 +770,10 @@ PROP_CONSTEXPR const char* kFontStyleBold          = "bold";
 PROP_CONSTEXPR const char* kFontStyleItalic        = "italic";
 PROP_CONSTEXPR const char* kFontStyleUnderline     = "underline";
 PROP_CONSTEXPR const char* kFontStyleStrikethrough = "strikethrough";
+PROP_CONSTEXPR const char* kFontBold          = "font-bold";             // 字体样式--粗体（Bool 属性，可组合）
+PROP_CONSTEXPR const char* kFontItalic        = "font-italic";           // 斜体
+PROP_CONSTEXPR const char* kFontUnderline     = "font-underline";        // 下划线
+PROP_CONSTEXPR const char* kFontStrikethrough = "font-strikethrough";    // 删除线
 
 // 绑定模式
 PROP_CONSTEXPR const char* kBindModeOneWay         = "oneway";

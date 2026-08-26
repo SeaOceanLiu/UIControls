@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -127,6 +127,9 @@ UICornerstone_SetEnum(  inst, tree, "item-leading-align", "bottom-left");   // �
 
 // Label 字体样式（normal/bold/italic/underline/strikethrough；raylib 不支持，静默无效果）
 UICornerstone_SetEnum(  inst, lbl, "font-style", "bold");
+// 组合：分位 Bool 开关（bold + italic = 粗斜体）
+UICornerstone_SetBool(  inst, lbl, "font-bold", 1);
+UICornerstone_SetBool(  inst, lbl, "font-italic", 1);
 UICornerstone_GetPtr(   inst, tree, "item-leading-control", &amp;lc);  // 借用手柄（生命周期由调用方保证）
 // SetPtr 可运行时挂载容器（立即挂树）；传 NULL 解除容器并摘树：
 UICornerstone_SetPtr(   inst, tree, "item-leading-control", lc);

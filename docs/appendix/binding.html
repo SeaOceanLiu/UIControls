@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -132,6 +132,9 @@ tree.SetEnum(  "item-leading-align", "bottom-left");     // 槽位贴行底
 
 // Label 字体样式（normal/bold/italic/underline/strikethrough）
 lbl.SetEnum( PropertyNames::kFontStyle, PropertyNames::kFontStyleBold );
+// 组合：分位 Bool 开关（bold + italic = 粗斜体）
+lbl.SetBool( PropertyNames::kFontBold, true );
+lbl.SetBool( PropertyNames::kFontItalic, true );
 float gap = tree.GetFloat("item-leading-gap");
 
 // 行前置控件容器：借出手柄 → FromHandle 包装 → GetType 判断类型 → 通用属性操作

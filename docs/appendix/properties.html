@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -161,7 +161,8 @@
 <tr><td><code>line-height</code> / <code>line-spacing-ratio</code></td><td>Int / Float</td><td>字体默认</td></tr>
 <tr><td><code>shadow</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>shadow-offset-x</code> / <code>shadow-offset-y</code></td><td>Float</td><td>阴影偏移分量</td></tr>
-<tr><td><code>font-style</code></td><td>Enum</td><td><code>normal</code> / <code>bold</code> / <code>italic</code> / <code>underline</code> / <code>strikethrough</code></td></tr>
+<tr><td><code>font-style</code></td><td>Enum</td><td><code>normal</code> / <code>bold</code> / <code>italic</code> / <code>underline</code> / <code>strikethrough</code>（单值）</td></tr>
+<tr><td><code>font-bold</code> / <code>font-italic</code> / <code>font-underline</code> / <code>font-strikethrough</code></td><td>Bool</td><td>false</td><td>字体样式分位开关（可组合；JSON <code>font.style</code> 数组等价）</td></tr>
 </table>
 
 <h3>ListView（类型 <code>list-view</code>）</h3>

@@ -236,6 +236,17 @@ void testBenchInitialize(shared_ptr<Bench>) {
         probe->SetFontStyle(3);
         CHECK(probe->GetFontStyle() == 3, "SetFontStyle(3) stored");
 
+        // 4 个 Bool 属性组合：font-bold + font-italic → 位 3（属性系统组合通道）
+        probe->setBoolProperty(PropertyNames::kFontBold, 1);
+        probe->setBoolProperty(PropertyNames::kFontItalic, 1);
+        CHECK(probe->GetFontStyle() == 3, "font-bold + font-italic (Bool) -> style 3");
+        int bitOut = 0;
+        CHECK(probe->getBoolProperty(PropertyNames::kFontBold, bitOut) == 1 && bitOut == 1, "getBool(font-bold) readback");
+        CHECK(probe->getBoolProperty(PropertyNames::kFontItalic, bitOut) == 1 && bitOut == 1, "getBool(font-italic) readback");
+        // 关闭斜体 → 仅粗体（位 1）
+        probe->setBoolProperty(PropertyNames::kFontItalic, 0);
+        CHECK(probe->GetFontStyle() == 1, "clear font-italic -> style 1");
+
         // 可视化：粗体 Label（矩阵中区分于普通文本）
         auto bold = LabelBuilder(nullptr, SRect(560, 780, 240, 40))
             .setCaption(u8"L20: 粗体 Bold")

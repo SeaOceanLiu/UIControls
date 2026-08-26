@@ -161,7 +161,7 @@
 | setCaption | caption/text | caption | SetString | SetString | ✅ |  |
 | setFont | font | font | SetEnum | SetEnum | ✅ |  |
 | setFontSize | size | font-size | SetInt | SetInt | ✅ |  |
-| SetFontStyle | — | font-style | SetEnum("font-style") | SetEnum("font-style") | ✅ | JSON/属性 |
+| SetFontStyle | font.style（数组组合） | font-style + font-bold/font-italic/font-underline/font-strikethrough | SetEnum("font-style") / SetBool("font-bold")… | 同（SetEnum/SetBool） | ✅ | 组合=JSON数组或 Bool 分位 |
 | setAlignmentMode | alignment | align | SetEnum | SetEnum | ✅ |  |
 | setShadow | shadow | shadow | SetBool | SetBool | ✅ |  |
 | setShadowOffset | — | shadow-offset-x/shadow-offset-y | SetFloat | SetFloat | ✅ | JSON/属性 |

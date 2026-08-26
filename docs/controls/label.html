@@ -1,4 +1,4 @@
-ï»¿ï»¿<!DOCTYPE html>
+﻿ï»¿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -50,7 +50,8 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 <tr><td><code>font-file</code></td><td>String</td><td>空</td><td>任意字体文件路径（相对 resourceRoot，支持 <code>provider:</code> 前缀）</td></tr>
 <tr><td><code>font-resource</code></td><td>String</td><td>空</td><td>内存注册的字体资源 ID（MemoryResourceProvider）</td></tr>
 <tr><td><code>font-size</code></td><td>Int</td><td>16</td><td>字号</td></tr>
-<tr><td><code>font-style</code></td><td>Enum</td><td>normal</td><td>normal / bold / italic / underline / strikethrough（C ABI/Binding 走单值枚举；组合用 JSON <code>font.style</code> 数组，如 <code>["bold","italic"]</code>；粗体/斜体依赖后端字体引擎：SDL3 <code>TTF_SetFontStyle</code>、SFML <code>setStyle</code>；raylib 不支持样式，静默无效果）</td></tr>
+<tr><td><code>font-style</code></td><td>Enum</td><td>normal</td><td>normal / bold / italic / underline / strikethrough（单值；组合用 Json <code>font.style</code> 数组或 4 个 Bool 键，见下）</td></tr>
+<tr><td><code>font-bold</code> / <code>font-italic</code> / <code>font-underline</code> / <code>font-strikethrough</code></td><td>Bool</td><td>false</td><td>字体样式分位开关（可组合，如 bold+italic 都设 true）——属性系统组合通道；粗体/斜体依赖后端字体引擎：SDL3 <code>TTF_SetFontStyle</code>、SFML <code>setStyle</code>；raylib 不支持样式，静默无效果</td></tr>
 <tr><td><code>line-height</code></td><td>Int</td><td>字体默认行高</td><td>行高</td></tr>
 <tr><td><code>line-spacing-ratio</code></td><td>Float</td><td>默认行距比例</td><td>行距比例</td></tr>
 <tr><td><code>shadow</code></td><td>Bool</td><td>false</td><td>阴影开关</td></tr>

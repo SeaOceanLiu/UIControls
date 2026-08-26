@@ -612,6 +612,11 @@ int Label::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kExpand) == 0)    { setEnableExpand(value != 0); return 1; }
     if (strcmp(prop, PropertyNames::kClickable) == 0)  { setClickable(value != 0);   return 1; }
     if (strcmp(prop, PropertyNames::kDebugDraw) == 0)  { setDebugDraw(value != 0);   return 1; }
+    // 字体样式分位开关（可组合）：font-bold/italic/underline/strikethrough → 位 1/2/4/8
+    if (strcmp(prop, PropertyNames::kFontBold) == 0)          { SetFontStyle(value ? (m_fontStyle | 0x01) : (m_fontStyle & ~0x01)); return 1; }
+    if (strcmp(prop, PropertyNames::kFontItalic) == 0)        { SetFontStyle(value ? (m_fontStyle | 0x02) : (m_fontStyle & ~0x02)); return 1; }
+    if (strcmp(prop, PropertyNames::kFontUnderline) == 0)     { SetFontStyle(value ? (m_fontStyle | 0x04) : (m_fontStyle & ~0x04)); return 1; }
+    if (strcmp(prop, PropertyNames::kFontStrikethrough) == 0) { SetFontStyle(value ? (m_fontStyle | 0x08) : (m_fontStyle & ~0x08)); return 1; }
     return ControlImpl::setBoolProperty(prop, value);
 }
 int Label::setIntProperty(const char* prop, int value) {
@@ -681,6 +686,10 @@ int Label::getBoolProperty(const char* prop, int& out) {
     if (strcmp(prop, PropertyNames::kExpand) == 0)    { out = m_enableExpand ? 1 : 0;       return 1; }
     if (strcmp(prop, PropertyNames::kClickable) == 0)  { out = m_clickable ? 1 : 0;          return 1; }
     if (strcmp(prop, PropertyNames::kDebugDraw) == 0) { out = m_debugDraw ? 1 : 0;          return 1; }
+    if (strcmp(prop, PropertyNames::kFontBold) == 0)          { out = (m_fontStyle & 0x01) ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kFontItalic) == 0)        { out = (m_fontStyle & 0x02) ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kFontUnderline) == 0)     { out = (m_fontStyle & 0x04) ? 1 : 0; return 1; }
+    if (strcmp(prop, PropertyNames::kFontStrikethrough) == 0) { out = (m_fontStyle & 0x08) ? 1 : 0; return 1; }
     return ControlImpl::getBoolProperty(prop, out);
 }
 int Label::getIntProperty(const char* prop, int& out) {
