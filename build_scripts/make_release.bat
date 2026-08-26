@@ -1,63 +1,90 @@
-@echo off
+Ôªø@echo off
+chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 rem ============================================================
-rem make_release.bat - ππΩ®»˝∫Û∂À Release ≤¢◊È◊∞¥˝∑¢≤º release ƒø¬º
+rem make_release.bat - ÁîüÊàê UICornerstone Release ÂèëÂ∏ÉÂåÖ
 rem
-rem ”√∑®:
-rem   make_release.bat            °˙  ‰≥ˆµΩ <≤÷ø‚∏˘>/release
-rem   make_release.bat D:\out     °˙  ‰≥ˆµΩ÷∏∂®ƒø¬º
+rem Áî®Ê≥ï:
+rem   make_release.bat              -> ÁîüÊàê <‰ªìÂ∫ì>/release
+rem   make_release.bat D:\out       -> ÁîüÊàêÊåáÂÆöÁõÆÂΩï
+rem   make_release.bat [dir] -y     -> Ë∑≥Ëøá‰∫§‰∫íÊöÇÂÅú
 rem
-rem  ‰≥ˆƒ⁄»›:
-rem   UICornerstone.dll           ∫À–ƒø‚£®»Œ“‚∫Û∂ÀππΩ®≤˙ŒÔ£¨»˝∂À“ª÷¬£©
-rem   UIBackend_{sdl3,sfml,raylib}.dll
-rem   SDL3.dll / SDL3_ttf.dll / SDL3_image.dll      £®subModules/libs£¨≤ª∫¨ DebugInfoX64.dll£©
-rem   sfml-graphics-3.dll / sfml-window-3.dll / sfml-system-3.dll   £®subModules/SFML/bin£©
-rem   raylib.dll                                        £®subModules/raylib/lib£©
-rem   assets/                      ‘À–– ±◊ ‘¥£®subModules/assets »´¡ø£©
-rem   binding/                      C++ Binding ‘¥¬Î£®∫¨∫À–ƒÕ∑ UICornerstoneAPI.h / PropertyNames.h£©
+rem ‰∫ßÁâ©:
+rem   UICornerstone.dll / UIBackend_{sdl3,sfml,raylib}.dll
+rem   SDL3.dll / SDL3_ttf.dll / SDL3_image.dll
+rem   sfml-graphics-3.dll / sfml-window-3.dll / sfml-system-3.dll
+rem   raylib.dll
+rem   assets/ / binding/ / tools/(validate_layout.exe + schema)
 rem ============================================================
 
 set "UICORNERSTONE_ROOT=%~dp0.."
 set "RELEASE_DIR=%~1"
 if "%RELEASE_DIR%"=="" set "RELEASE_DIR=%UICORNERSTONE_ROOT%\release"
 if /i "%~2"=="-y" set "NO_PAUSE=1"
-set "PATH=%SystemRoot%\System32;%PATH%"   rem xcopy µ»œµÕ≥√¸¡Ó∂µµ◊
+set "PATH=%SystemRoot%\System32;%PATH%"
+
+echo [%date% %time%] ============================================
+echo [%date% %time%] make_release start
+echo [%date% %time%] root: %UICORNERSTONE_ROOT%
+echo [%date% %time%] release dir: %RELEASE_DIR%
+echo [%date% %time%] ============================================
 
 set "CORE_DLL=%UICORNERSTONE_ROOT%\build\sdl3_dll\Release\UICornerstone.dll"
 
 rem ============================================================
-rem 1. ππΩ®»˝∫Û∂À Release£®“—”–≈‰÷√‘Ú‘ˆ¡ø£©
+rem 0. Ê∏ÖÁêÜ build ÁõÆÂΩïÔºàÈÄíÂΩíÂà†Èô§ÈùûÁ©∫ÔºåÂº∫Âà∂ÂÖ®Êñ∞ÊûÑÂª∫ÔºåÈò≤ÊóßÁâàÊú¨ÊÆãÁïôÔºâ
 rem ============================================================
-for %%B in (sdl3 SFML RAYLIB) do call :build_backend %%B
-if errorlevel 1 (
-    echo [ERROR] build failed.
-    if not defined NO_PAUSE pause
-    exit /b 1
+echo [%time%] [0/6] Cleaning build dirs (sdl3_dll sfml_dll raylib_dll tools)...
+for %%D in (sdl3_dll sfml_dll raylib_dll tools) do (
+    if exist "%UICORNERSTONE_ROOT%\build\%%D" (
+        rd /s /q "%UICORNERSTONE_ROOT%\build\%%D"
+        if exist "%UICORNERSTONE_ROOT%\build\%%D" (
+            echo [ERROR] failed to remove build\%%D
+            goto :fail
+        )
+    )
 )
+echo [%time%] [0/6] Clean done.
 
 rem ============================================================
-rem 2. ÷ÿΩ® release ƒø¬º£®Ωˆ«Â¿Ì“—÷™≤˙ŒÔ£©
+rem 1. ÊûÑÂª∫‰∏âÂêéÁ´Ø Release DLLÔºà‰ªÖÊ†∏ÂøÉ DLL + ÂêéÁ´ØÊèí‰ª∂Ôºå‰∏çÁºñËØë test/CABI/sampleÔºâ
 rem ============================================================
+call :build_backend sdl3
+if errorlevel 1 goto :fail
+call :build_backend SFML
+if errorlevel 1 goto :fail
+call :build_backend RAYLIB
+if errorlevel 1 goto :fail
+echo [%time%] [1/6] Backends (sdl3/sfml/raylib) DLL built.
+
+rem ============================================================
+rem 2. ÊûÑÂª∫ toolsÔºàvalidate_layout ReleaseÔºâ
+rem ============================================================
+call :build_tools
+if errorlevel 1 goto :fail
+echo [%time%] [2/6] tools (validate_layout) built.
+
+rem ============================================================
+rem 3. ÈáçÂª∫ release ÁõÆÂΩï
+rem ============================================================
+echo [%time%] [3/6] Assembling release into: %RELEASE_DIR%
 if exist "%RELEASE_DIR%" rd /s /q "%RELEASE_DIR%"
-mkdir "%RELEASE_DIR%" || (echo [ERROR] cannot create %RELEASE_DIR% & pause & exit /b 1)
+mkdir "%RELEASE_DIR%" 2>nul || (echo [ERROR] cannot create %RELEASE_DIR% & goto :fail)
 mkdir "%RELEASE_DIR%\binding"
-
-echo.
-echo ============================================================
-echo Assembling release into: %RELEASE_DIR%
-echo ============================================================
+mkdir "%RELEASE_DIR%\tools" 2>nul
 
 rem ============================================================
-rem 3. ∫À–ƒø‚ + »˝∫Û∂À DLL
+rem 4. Â§çÂà∂ Ê†∏ÂøÉ DLL + ÂêéÁ´Ø DLL
 rem ============================================================
 copy /y "%CORE_DLL%" "%RELEASE_DIR%\" >nul || goto :fail
-copy /y "%UICORNERSTONE_ROOT%\build\sdl3_dll\Release\UIBackend_sdl3.dll"  "%RELEASE_DIR%\" >nul || goto :fail
-copy /y "%UICORNERSTONE_ROOT%\build\sfml_dll\Release\UIBackend_sfml.dll"  "%RELEASE_DIR%\" >nul || goto :fail
+copy /y "%UICORNERSTONE_ROOT%\build\sdl3_dll\Release\UIBackend_sdl3.dll"   "%RELEASE_DIR%\" >nul || goto :fail
+copy /y "%UICORNERSTONE_ROOT%\build\sfml_dll\Release\UIBackend_sfml.dll"   "%RELEASE_DIR%\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\build\raylib_dll\Release\UIBackend_raylib.dll" "%RELEASE_DIR%\" >nul || goto :fail
+echo [%time%] [4/6] Core + backend DLLs copied.
 
 rem ============================================================
-rem 4. ‘À–– ± DLL£®≤ªøΩ±¥ DebugInfoX64.dll£©
+rem 5. Â§çÂà∂ ËøêË°åÊó∂ DLL
 rem ============================================================
 copy /y "%UICORNERSTONE_ROOT%\subModules\libs\SDL3.dll"        "%RELEASE_DIR%\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\subModules\libs\SDL3_ttf.dll"    "%RELEASE_DIR%\" >nul || goto :fail
@@ -66,68 +93,84 @@ copy /y "%UICORNERSTONE_ROOT%\subModules\SFML\bin\sfml-graphics-3.dll" "%RELEASE
 copy /y "%UICORNERSTONE_ROOT%\subModules\SFML\bin\sfml-window-3.dll"   "%RELEASE_DIR%\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\subModules\SFML\bin\sfml-system-3.dll"   "%RELEASE_DIR%\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\subModules\raylib\lib\raylib.dll" "%RELEASE_DIR%\" >nul || goto :fail
+echo [%time%] [5/6] Runtime DLLs copied.
 
 rem ============================================================
-rem 5. ‘À–– ±◊ ‘¥£®assets »´¡ø£©
+rem 6. Â§çÂà∂ assets + binding + tools
 rem ============================================================
 xcopy /y /e /i "%UICORNERSTONE_ROOT%\subModules\assets" "%RELEASE_DIR%\assets" >nul || goto :fail
-
-rem ============================================================
-rem 6. C++ Binding ‘¥¬Î£®∫¨ππΩ®À˘–Ëµƒ¡Ω∏ˆ∫À–ƒÕ∑£©
-rem     binding/include/ ∏Ω»Î UICornerstoneAPI.h + PropertyNames.h£¨
-rem      π∑¢≤º∞¸ø…∂¿¡¢±‡“Î Binding£®¥ø∂ØÃ¨º”‘ÿ£¨Œﬁ–Ë∫À–ƒππΩ® ˜£©£ª¡Ì∏Ω∂¿¡¢ππΩ® CMakeLists —˘¿˝°£
-rem ============================================================
 xcopy /y /e /i "%UICORNERSTONE_ROOT%\binding" "%RELEASE_DIR%\binding" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\include\UICornerstoneAPI.h" "%RELEASE_DIR%\binding\include\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\include\PropertyNames.h"    "%RELEASE_DIR%\binding\include\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\build_scripts\CMakeLists.binding_sample.txt" "%RELEASE_DIR%\binding\CMakeLists.example.txt" >nul || goto :fail
+copy /y "%UICORNERSTONE_ROOT%\build\tools\Release\validate_layout.exe" "%RELEASE_DIR%\tools\" >nul || goto :fail
+copy /y "%UICORNERSTONE_ROOT%\include\PropertyNames.h"    "%RELEASE_DIR%\tools\" >nul || goto :fail
+xcopy /y /e /i "%UICORNERSTONE_ROOT%\docs\schema" "%RELEASE_DIR%\tools\schema" >nul || goto :fail
+echo [%time%] [6/6] assets + binding + tools copied.
 
 rem ============================================================
-rem 7. –£—È«Âµ•
+rem 7. Ê†°È™åÊ∏ÖÂçï
 rem ============================================================
 set "MISSING="
+if not exist "%RELEASE_DIR%\tools\validate_layout.exe" set "MISSING=!MISSING! tools/validate_layout.exe"
+if not exist "%RELEASE_DIR%\tools\PropertyNames.h" set "MISSING=!MISSING! tools/PropertyNames.h"
+if not exist "%RELEASE_DIR%\tools\schema\declarative-ui.schema.json" set "MISSING=!MISSING! tools/schema"
 for %%F in (UICornerstone.dll UIBackend_sdl3.dll UIBackend_sfml.dll UIBackend_raylib.dll SDL3.dll SDL3_ttf.dll SDL3_image.dll sfml-graphics-3.dll sfml-window-3.dll sfml-system-3.dll raylib.dll) do (
     if not exist "%RELEASE_DIR%\%%F" set "MISSING=!MISSING! %%F"
 )
-if not exist "%RELEASE_DIR%\assets"       set "MISSING=!MISSING! assets"
-if not exist "%RELEASE_DIR%\binding\include\UICornerstone.h"   set "MISSING=!MISSING! binding/include/UICornerstone.h"
+if not exist "%RELEASE_DIR%\assets"         set "MISSING=!MISSING! assets"
+if not exist "%RELEASE_DIR%\binding\include\UICornerstone.h"     set "MISSING=!MISSING! binding/include/UICornerstone.h"
 if not exist "%RELEASE_DIR%\binding\include\UICornerstoneAPI.h" set "MISSING=!MISSING! binding/include/UICornerstoneAPI.h"
-if not exist "%RELEASE_DIR%\binding\include\PropertyNames.h"   set "MISSING=!MISSING! binding/include/PropertyNames.h"
-if not exist "%RELEASE_DIR%\binding\src\UICornerstone.cpp"     set "MISSING=!MISSING! binding/src/UICornerstone.cpp"
-if not exist "%RELEASE_DIR%\binding\CMakeLists.example.txt"    set "MISSING=!MISSING! binding/CMakeLists.example.txt"
+if not exist "%RELEASE_DIR%\binding\include\PropertyNames.h"     set "MISSING=!MISSING! binding/include/PropertyNames.h"
+if not exist "%RELEASE_DIR%\binding\src\UICornerstone.cpp"       set "MISSING=!MISSING! binding/src/UICornerstone.cpp"
+if not exist "%RELEASE_DIR%\binding\CMakeLists.example.txt"      set "MISSING=!MISSING! binding/CMakeLists.example.txt"
 
 if not "%MISSING%"=="" (
     echo [ERROR] missing:%MISSING%
-    if not defined NO_PAUSE pause
-    exit /b 1
+    goto :fail
 )
 
-echo.
-echo ============================================================
-echo Release ready: %RELEASE_DIR%
-echo   ∫À–ƒø‚ + »˝∫Û∂À DLL + ‘À–– ± DLL + assets + binding ‘¥¬Î
-echo ============================================================
+echo [%date% %time%] ============================================
+echo [%date% %time%] Release ready: %RELEASE_DIR%
+echo [%date% %time%]   core + backend DLLs + runtime DLLs + assets + binding + tools
+echo [%date% %time%]   tools: validate_layout.exe + PropertyNames.h + schema
+echo [%date% %time%]   usage(in release dir): tools\validate_layout.exe <layout.json> --strict --schema=tools\schema\declarative-ui.schema.json --property-names=tools\PropertyNames.h
+echo [%date% %time%] make_release done
+echo [%date% %time%] ============================================
 if not defined NO_PAUSE pause
 exit /b 0
 
 :fail
-echo [ERROR] copy failed.
+echo [%time%] [ERROR] make_release failed.
 if not defined NO_PAUSE pause
 exit /b 1
 
 :build_backend
 set "BNAME=%~1"
-if /i "%BNAME%"=="sdl3"  (set "BDIR=sdl3_dll"   & set "BOPT=SDL3")
-if /i "%BNAME%"=="SFML"  (set "BDIR=sfml_dll"   & set "BOPT=SFML")
-if /i "%BNAME%"=="RAYLIB" (set "BDIR=raylib_dll" & set "BOPT=RAYLIB")
+set "BLOWER="
+if /i "%BNAME%"=="sdl3"   (set "BDIR=sdl3_dll"   & set "BOPT=SDL3"   & set "BLOWER=sdl3")
+if /i "%BNAME%"=="SFML"   (set "BDIR=sfml_dll"   & set "BOPT=SFML"   & set "BLOWER=sfml")
+if /i "%BNAME%"=="RAYLIB" (set "BDIR=raylib_dll" & set "BOPT=RAYLIB" & set "BLOWER=raylib")
 set "BUILD_DIR=%UICORNERSTONE_ROOT%\build\%BDIR%"
 
-echo.
-echo Building UICornerstone [%BOPT% Release]...
+echo [%time%] Building UICornerstone [%BOPT% Release DLL]...
 if not exist "%BUILD_DIR%\CMakeCache.txt" (
-    cmake -B "%BUILD_DIR%" -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DUICORNERSTONE_BACKEND=%BOPT% >nul 2>&1
+    cmake -B "%BUILD_DIR%" -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DUICORNERSTONE_BACKEND=%BOPT% -DUICORNERSTONE_BUILD_DLL=ON >nul 2>&1
     if errorlevel 1 (echo [ERROR] cmake configure %BOPT% failed & exit /b 1)
 )
-cmake --build "%BUILD_DIR%" --config Release --target ALL_BUILD
+cmake --build "%BUILD_DIR%" --config Release --target UICornerstone_dll UIBackend_%BLOWER%
 if errorlevel 1 (echo [ERROR] cmake build %BOPT% failed & exit /b 1)
+echo [%time%]   %BOPT% DLL built.
+exit /b 0
+
+:build_tools
+set "TOOLS_DIR=%UICORNERSTONE_ROOT%\build\tools"
+echo [%time%] Building validate_layout [Release]...
+if not exist "%TOOLS_DIR%\CMakeCache.txt" (
+    cmake -S "%UICORNERSTONE_ROOT%\tools" -B "%TOOLS_DIR%" -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release >nul 2>&1
+    if errorlevel 1 (echo [ERROR] cmake configure tools failed & exit /b 1)
+)
+cmake --build "%TOOLS_DIR%" --config Release --target validate_layout
+if errorlevel 1 (echo [ERROR] cmake build validate_layout failed & exit /b 1)
+echo [%time%]   validate_layout built.
 exit /b 0
