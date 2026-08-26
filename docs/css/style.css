@@ -121,6 +121,8 @@ details.methods table { margin-top: 8px; }
 
 .img-frame { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 14px 0; background: #111; }
 .img-frame img { display: block; width: 100%; }
+.img-frame-s { width: min(62%, 640px); }
+.img-frame-s { width: min(62%, 640px); }
 .img-caption { text-align: center; color: var(--text-dim); font-size: 13px; padding: 6px 0 10px; }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

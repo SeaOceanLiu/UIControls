@@ -109,6 +109,13 @@
 <tr><td><code>text</code></td><td>String</td><td>空</td></tr>
 </table>
 
+<h3>ContextMenu（右键菜单，绑定在任意控件的 <code>contextMenu</code> 键上）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>contextMenu</code>（JSON 控件级键）</td><td>Object</td><td>—</td></tr>
+<tr><td><code>context-menu</code>（C ABI / Binding 键）</td><td>Ptr</td><td>—</td></tr>
+</table>
+<p>ContextMenu 为行为型浮层无独立属性；菜单项内容/样式由 MenuPanel/MenuItem 体系承载（<code>items[].caption / shortcut / type / icon</code> 等）。</p>
 <h3>Dialog / Popup / ConfirmPopup（类型 <code>dialog</code> / <code>popup</code> / <code>confirm-popup</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
@@ -157,6 +164,20 @@
 <tr><td><code>font-style</code></td><td>Enum</td><td><code>normal</code> / <code>bold</code> / <code>italic</code> / <code>underline</code> / <code>strikethrough</code></td></tr>
 </table>
 
+<h3>ListView（类型 <code>list-view</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>mode</code></td><td>Enum</td><td>multi（multi / single）</td></tr>
+<tr><td><code>multi-select</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>selected-index</code></td><td>Int</td><td>-1</td></tr>
+<tr><td><code>row-height</code> / <code>header-height</code></td><td>Float</td><td>24 / 28</td></tr>
+<tr><td><code>gridlines</code> / <code>horizontal-gridlines</code></td><td>Bool</td><td>true / false</td></tr>
+<tr><td><code>hover</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>min-column-width</code></td><td>Float</td><td>20</td></tr>
+<tr><td><code>cycle-navigation</code></td><td>Bool</td><td>true</td></tr>
+<tr><td><code>sort-column</code> / <code>sort-ascending</code></td><td>Int / Bool</td><td>-1 / true</td></tr>
+</table>
+<p>JSON 数据：<code>columns[]</code>（title / width / sortable / icon）、<code>rows[]</code>（id / cells / icon / cellControls[]）；C ABI 专用函数 <code>ListViewAddRow / ListViewAddColumn</code> 等见 8.3.1。</p>
 <h3>LuotiAni（类型 <code>animation</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
@@ -220,6 +241,15 @@
 <tr><td><code>value</code></td><td>Float</td><td>0</td></tr>
 </table>
 
+<h3>Shape（类型 <code>shape</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>shape</code></td><td>Enum</td><td>rect（rect / filled-rect / round-rect / circle / ellipse / polyline / polygon）</td></tr>
+<tr><td><code>fill</code> / <code>stroke</code></td><td>Color</td><td>透明 / 黑</td></tr>
+<tr><td><code>line-width</code> / <code>radius</code> / <code>ring-width</code></td><td>Float</td><td>1 / 0 / 0</td></tr>
+<tr><td><code>background</code>（colors.background）</td><td>Color</td><td>透明（设后取消透明）</td></tr>
+</table>
+<p>多图元走 JSON <code>primitives[]</code> / C ABI <code>ShapeAddPrimitive</code> 等；顶点走 <code>ShapeSetPoints</code>（见 8.3.1）。</p>
 <h3>Slider（类型 <code>slider</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>
@@ -248,6 +278,20 @@
 <tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td></tr>
 </table>
 
+<h3>StatusBar（类型 <code>status-bar</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>font-size</code> / <code>item-height</code></td><td>Float</td><td>13 / rect 高</td></tr>
+</table>
+<p>段数据经 JSON <code>items[]</code>（id / text / align / icon / menu / onClick）；C ABI 专用函数 <code>StatusBarAddItem</code> 等见 8.3.1。</p>
+<h3>TabControl（类型 <code>tab-control</code>）</h3>
+<table>
+<tr><th>属性</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>position</code></td><td>Enum</td><td>top（top / bottom / left / right）</td></tr>
+<tr><td><code>font-size</code></td><td>Float</td><td>13</td></tr>
+<tr><td><code>current-index</code></td><td>Int</td><td>0（首页自动选中）</td></tr>
+</table>
+<p>页数据经 JSON <code>tabs[]</code>（title / icon / page）；C ABI 专用函数 <code>TabAddPage / TabSetPage</code> 等见 8.3.1。</p>
 <h3>TextArea（类型 <code>text-area</code>）</h3>
 <table>
 <tr><th>属性</th><th>类型</th><th>默认</th></tr>

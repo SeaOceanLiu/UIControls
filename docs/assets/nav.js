@@ -1,4 +1,4 @@
-﻿/* UICornerstone 用户手册 —— 全局侧栏导航注入脚本 */
+/* UICornerstone 用户手册 —— 全局侧栏导航注入脚本 */
 (function () {
   var PREFIX = "";
   var SCRIPT = document.getElementById("nav-data");
@@ -25,8 +25,8 @@
     ["controls/scrollbar.html", "4.18 ScrollBar"],
     ["controls/shape.html", "4.19 Shape（形状）"],
     ["controls/slider.html", "4.20 Slider"],
-    ["controls/statusbar.html", "4.21 StatusBar（状态栏）"],
-    ["controls/splitter.html", "4.22 Splitter"],
+    ["controls/splitter.html", "4.21 Splitter"],
+    ["controls/statusbar.html", "4.22 StatusBar（状态栏）"],
     ["controls/tabcontrol.html", "4.23 TabControl（选项卡）"],
     ["controls/textarea.html", "4.24 TextArea"],
     ["controls/treeview.html", "4.25 TreeView"],

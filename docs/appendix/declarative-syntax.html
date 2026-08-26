@@ -46,11 +46,11 @@
 <tr><td><code>margin</code></td><td>object</td><td><code>{"left","top","right","bottom"}</code></td></tr>
 <tr><td><code>rect</code></td><td>object</td><td><code>{"x","y","w","h"}</code>；支持百分比字符串 <code>"50%"</code></td></tr>
 <tr><td><code>scale</code></td><td>object</td><td><code>{"x":1.0,"y":1.0}</code>；内容按系数缩放，布局矩形不变</td></tr>
-<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 22 种：<code>label / button / image / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view</code></td></tr>
+<tr><td><code>type</code></td><td>string</td><td>必填。kebab 小写，全部 27 种：<code>label / button / image / image-button / animation / edit-box / combo-box / text-area / check-box / progress-bar / slider / scroll-bar / panel / win-frame / color-picker / popup / confirm-popup / dialog / menu-bar / numeric-up-down / splitter / tree-view / context-menu（控件级 contextMenu 键，非独立控件）/ list-view / status-bar / tab-control / shape</code></td></tr>
 <tr><td><code>visible</code> / <code>enabled</code></td><td>bool</td><td>可见 / 启用</td></tr>
 </table>
 
-<h2>6.3 各控件专用键（全部 22 种）</h2>
+<h2>6.3 各控件专用键（全部 27 种）</h2>
 
 <h3>animation（LuotiAni 动画控件）</h3>
 <pre><code>{ "type":"animation", "id":"ani1x", "rect":{"x":1100,"y":80,"w":256,"h":256},
@@ -99,6 +99,13 @@
   "items":[ { "label":"Beijing","value":"beijing" },
             { "label":"Wuhan","value":"wuhan","disabled":true } ] }</code></pre>
 
+<h3>context-menu（右键菜单，控件级 contextMenu 键）</h3>
+<pre><code>{ "type":"label", "id":"lbl", "rect":[10,10,120,24], "caption":"t",
+  "contextMenu": { "items": [
+    { "caption":"Open", "shortcut":"Ctrl+O" }, { "type":"separator" },
+    { "caption":"Delete" } ] } }</code></pre>
+<p>控件级 <code>contextMenu</code> 键：<code>items[]</code> 字段复用 MenuPanel 解析（caption / shortcut / type:separator / icon / leading 等）。</p>
+
 <h3>edit-box</h3>
 <pre><code>{ "type":"edit-box", "id":"nameEdit",
   "rect":{"x":110,"y":20,"w":250,"h":30},
@@ -122,6 +129,17 @@
   "shadow":{"enabled":true,"offset":{"x":2,"y":2}},
   "clickable":false,                                        // 可点击（onClick）
   "lineHeight":28, "lineSpacingRatio":1.2 }</code></pre>
+
+<h3>list-view（含单列 ListBox 模式）</h3>
+<pre><code>{ "type":"list-view", "id":"lv", "rect":[30,60,420,240], "mode":"multi",
+  "multiSelect":true, "selectedIndex":0, "rowHeight":28, "headerHeight":28,
+  "gridlines":true, "hover":true, "minColumnWidth":20, "cycleNavigation":true,
+  "sortColumn":0, "sortAscending":true,
+  "columns": [ { "title":"名称", "width":180, "sortable":true, "icon":"provider:icons/name" } ],
+  "rows": [ { "id":"f1", "cells":["main.cpp","2.1 KB"], "icon":"provider:icons/file",
+              "cellControls":[ { "col":1, "control":{ "type":"check-box" } } ] } ],
+  "events": { "onSelectionChanged":"onSel", "onColumnSort":"onSort" } }</code></pre>
+<p>属性键：<code>mode</code>（multi/single）/ <code>multiSelect</code> / <code>selectedIndex</code> / <code>rowHeight</code> / <code>headerHeight</code> / <code>gridlines</code> / <code>horizontalGridlines</code> / <code>hover</code> / <code>minColumnWidth</code> / <code>cycleNavigation</code> / <code>sortColumn</code> / <code>sortAscending</code>；<code>columns[]</code>/<code>rows[]</code> 见样例（<code>c</code>… <code>columns.icon</code> / <code>rows.icon</code> / <code>rows.cellControls[]</code>）。</p>
 
 <h3>menu-bar（不挂控件树，顶层独立）</h3>
 <pre><code>{ "type":"menu-bar", "id":"mainMenu",
@@ -170,6 +188,15 @@
   "value":30, "range":{"min":0,"max":100},
   "pageSize":20, "stepSize":5, "thickness":16 }</code></pre>
 
+<h3>shape（七种图元 + 多图元组合）</h3>
+<pre><code>{ "type":"shape", "id":"house", "rect":[40,300,150,130],
+  "colors":{ "background":"#324057FF" },
+  "primitives": [
+    { "shape":"round-rect", "rect":[10,50,130,75], "radius":6, "fill":"#34D399" },
+    { "shape":"polygon", "fill":"#EF4444",
+      "points":[ {"x":0,"y":52},{"x":75,"y":0},{"x":150,"y":52} ] } ] }</code></pre>
+<p>单图元键：<code>shape</code>（rect / filled-rect / round-rect / circle / ellipse / polyline / polygon）/ <code>fill</code> / <code>stroke</code> / <code>lineWidth</code> / <code>radius</code> / <code>ringWidth</code> / <code>points[]</code>；多图元 <code>primitives[]</code> 非空时替代单图元（每项同上 + <code>rect:[x,y,w,h]</code> 本地坐标）。</p>
+
 <h3>slider</h3>
 <pre><code>{ "type":"slider", "id":"rSlider",
   "rect":{"x":29,"y":224,"w":257,"h":20},
@@ -185,6 +212,19 @@
   "firstPanel":"panelFirst", "secondPanel":"panelSecond",  // 两侧面板 id
   "thickness":6, "ratio":0.4, "minFirst":50, "minSecond":50,
   "colors":{"line":{"normal":"#808080FF"}} }</code></pre>
+
+<h3>status-bar（VSCode 风格状态栏）</h3>
+<pre><code>{ "type":"status-bar", "id":"sb", "rect":[0,876,1400,24], "fontSize":13,
+  "items":[ { "id":"branch","text":"main","icon":"provider:icons/git","menu":"#branchMenu" },
+            { "id":"enc","text":"UTF-8","align":"right" } ] }</code></pre>
+<p>属性键：<code>fontSize</code> / <code>itemHeight</code>；<code>items[]</code>：<code>id</code> / <code>text</code> / <code>align</code>（left/right）/ <code>icon</code> / <code>menu</code> / <code>onClick</code>。</p>
+
+<h3>tab-control（四方向选项卡）</h3>
+<pre><code>{ "type":"tab-control", "id":"tabs", "rect":[120,80,560,240], "position":"top",
+  "fontSize":13, "currentIndex":0,
+  "tabs":[ { "title":"主页", "icon":"provider:icons/home", "page":{ "type":"panel" } } ],
+  "events": { "onTabChange":"onTab" } }</code></pre>
+<p>属性键：<code>position</code>（top/bottom/left/right）/ <code>fontSize</code> / <code>currentIndex</code>；<code>tabs[]</code>：<code>title</code> / <code>icon</code> / <code>page</code>（任意控件 JSON，递归解析，缺 rect 铺满内容区）。</p>
 
 <h3>text-area</h3>
 <pre><code>{ "type":"text-area", "id":"notes",

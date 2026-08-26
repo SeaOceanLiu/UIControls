@@ -63,23 +63,39 @@
 <tr><td><code>UICornerstone_CreateCheckBox(inst, text, x, y, w, h, xScale, yScale)</code></td><td>CheckBox</td></tr>
 <tr><td><code>UICornerstone_CreateColorPicker(inst, x, y, w, h, color, xScale, yScale)</code></td><td>ColorPicker</td></tr>
 <tr><td><code>UICornerstone_CreateComboBox(inst, x, y, w, h, xScale, yScale)</code></td><td>ComboBox</td></tr>
+<tr><td><code>UICornerstone_CreateContextMenu(inst, x, y, w, h, xScale, yScale)</code></td><td>ContextMenu（右键菜单；项经 ContextMenuAddItem，绑定经 SetPtr("context-menu")）</td></tr>
 <tr><td><code>UICornerstone_CreateDialog(inst, confirmText, cancelText, x, y, w, h, xScale, yScale)</code></td><td>Dialog（创建即打开）</td></tr>
 <tr><td><code>UICornerstone_CreateEditBox(inst, x, y, w, h, xScale, yScale)</code></td><td>EditBox</td></tr>
 <tr><td><code>UICornerstone_CreateHandleControl(inst, target, x, y, w, h, xScale, yScale)</code></td><td>HandleControl</td></tr>
 <tr><td><code>UICornerstone_CreateImage(inst, image, x, y, w, h, xScale, yScale)</code></td><td>Image（Actor）</td></tr>
 <tr><td><code>UICornerstone_CreateImageButton(inst, normal, hover, pressed, x, y, w, h, xScale, yScale)</code></td><td>ImageButton（3 态图片按钮，图片可 NULL）</td></tr>
 <tr><td><code>UICornerstone_CreateLabel(inst, text, fontSize, x, y, w, h, xScale, yScale)</code></td><td>Label</td></tr>
+<tr><td><code>UICornerstone_CreateListView(inst, x, y, w, h, xScale, yScale)</code></td><td>ListView（列/行经 ListViewAddColumn / ListViewAddRow 等）</td></tr>
 <tr><td><code>UICornerstone_CreateMenuBar / CreateMenuPanel / CreateMenuItem(inst, caption, type)</code></td><td>Menu 三件套</td></tr>
 <tr><td><code>UICornerstone_CreateNumericUpDown(inst, x, y, w, h, xScale, yScale)</code></td><td>NumericUpDown</td></tr>
 <tr><td><code>UICornerstone_CreatePanel(inst, x, y, w, h, xScale, yScale)</code></td><td>Panel</td></tr>
 <tr><td><code>UICornerstone_CreateProgressBar(inst, x, y, w, h, xScale, yScale)</code></td><td>ProgressBar</td></tr>
 <tr><td><code>UICornerstone_CreateScrollBar(inst, x, y, w, h, orientation, xScale, yScale)</code></td><td>ScrollBar</td></tr>
+<tr><td><code>UICornerstone_CreateShape(inst, x, y, w, h, xScale, yScale)</code></td><td>Shape（图元经 ShapeAddPrimitive 等）</td></tr>
 <tr><td><code>UICornerstone_CreateSlider(inst, x, y, w, h, min, max, value, xScale, yScale)</code></td><td>Slider</td></tr>
-<tr><td><code>UICornerstone_CreateSplitter(inst, x, y, w, h, orientation, xScale, yScale)</code></td><td>Splitter</td></tr>
+
+<tr><td><code>UICornerstone_CreateSplitter(inst, x, y, w, h, orientation, xScale, yScale)</code></td><td>Splitter</td></tr><tr><td><code>UICornerstone_CreateStatusBar(inst, x, y, w, h, xScale, yScale)</code></td><td>StatusBar（段经 StatusBarAddItem 等）</td></tr>
+<tr><td><code>UICornerstone_CreateTabControl(inst, x, y, w, h, xScale, yScale)</code></td><td>TabControl（页经 TabAddPage / TabSetPage 等）</td></tr>
 <tr><td><code>UICornerstone_CreateTextArea(inst, x, y, w, h, xScale, yScale)</code></td><td>TextArea</td></tr>
 <tr><td><code>UICornerstone_CreateTreeView(inst, x, y, w, h, xScale, yScale)</code></td><td>TreeView（节点经 <code>SetString("items", json)</code> 填充，见 7 TreeView）</td></tr>
 <tr><td><code>UICornerstone_CreateWinFrame(inst, title, x, y, w, h, xScale, yScale)</code></td><td>WinFrame</td></tr>
 <tr><td><code>UICornerstone_MenuBarAddMenu / MenuPanelAddItem / MenuPanelAddSeparator / MenuItemSetSubMenu</code></td><td>菜单组装</td></tr>
+</table>
+
+<h3>8.3.1 新控件专用函数（数据 / 对象类，需句柄定位）</h3>
+
+<table>
+<tr><th>函数</th><th>作用</th></tr>
+<tr><td><code>ListViewAddRow / ListViewInsertRow / ListViewRemoveRow / ListViewSetRowCells / ListViewSetCellText / ListViewGetCellText / ListViewAddColumn / ListViewInsertColumn / ListViewRemoveColumn / ListViewSetColumnWidth / ListViewSetColumnIcon / ListViewSetRowLeadingControl / ListViewSetCellLeadingControl / ListViewSetCellStyle / ListViewSetColumnSorter</code></td><td>ListView 数据/列/样式/排序专用</td></tr>
+<tr><td><code>ContextMenuAddItem / ContextMenuAddSeparator / ContextMenuShow / ContextMenuClose</code> + <code>SetPtr("context-menu")</code></td><td>ContextMenu 组装与显示/绑定</td></tr>
+<tr><td><code>StatusBarAddItem / StatusBarSetItemText / StatusBarRemoveItem / StatusBarSetItemMenu / StatusBarSetItemIcon</code></td><td>StatusBar 段操作</td></tr>
+<tr><td><code>TabAddPage / TabSetTitle / TabSetPage / TabSetTabLeadingControl</code></td><td>TabControl 页操作</td></tr>
+<tr><td><code>ShapeSetPoints / ShapeMapToDrawPoint / ShapeAddPrimitive / ShapeSetPrimitiveColor / ShapeSetPrimitiveFloat / ShapeSetPrimitivePoints / ShapeClearPrimitives</code></td><td>Shape 顶点/映射/多图元</td></tr>
 </table>
 
 <h2>8.4 属性系统</h2>

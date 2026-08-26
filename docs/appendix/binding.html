@@ -73,12 +73,14 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>CreateCheckBox(text, x, y, w, h, xScale, yScale)</code></td><td>CheckBox</td></tr>
 <tr><td><code>CreateColorPicker(x, y, w, h, color, xScale, yScale)</code></td><td>ColorPicker</td></tr>
 <tr><td><code>CreateComboBox(x, y, w, h, xScale, yScale)</code></td><td>ComboBox</td></tr>
+<tr><td><code>CreateContextMenu(x, y, w, h, xScale, yScale)</code></td><td>ContextMenu（项经 UICornerstone::ContextMenuAddItem，绑定经 SetPtr("context-menu")）</td></tr>
 <tr><td><code>CreateDialog(confirmText, cancelText, x, y, w, h, xScale, yScale)</code></td><td>Dialog</td></tr>
 <tr><td><code>CreateEditBox(x, y, w, h, xScale, yScale)</code></td><td>EditBox</td></tr>
 <tr><td><code>CreateHandleControl(target, x, y, w, h, xScale, yScale)</code></td><td>HandleControl</td></tr>
 <tr><td><code>CreateImage(image, x, y, w, h, xScale, yScale)</code></td><td>Image</td></tr>
 <tr><td><code>CreateImageButton(normal, hover, pressed, x, y, w, h, xScale, yScale)</code></td><td>ImageButton</td></tr>
 <tr><td><code>CreateLabel(text, fontSize, x, y, w, h, xScale, yScale)</code></td><td>Label</td></tr>
+<tr><td><code>CreateListView(x, y, w, h, xScale, yScale)</code></td><td>ListView（数据/列/样式经 UICornerstone::ListView* 专用）</td></tr>
 <tr><td><code>CreateMenuBar(x, y, w, h, xScale, yScale)</code></td><td>MenuBar</td></tr>
 <tr><td><code>CreateMenuItem(caption, type, xScale, yScale)</code></td><td>MenuItem</td></tr>
 <tr><td><code>CreateMenuPanel(xScale, yScale)</code></td><td>MenuPanel</td></tr>
@@ -86,8 +88,11 @@ static std::unique_ptr&lt;UICornerstone&gt; Create(const UIBackendCallbacks* cal
 <tr><td><code>CreatePanel(x, y, w, h, xScale, yScale)</code></td><td>Panel</td></tr>
 <tr><td><code>CreateProgressBar(x, y, w, h, xScale, yScale)</code></td><td>ProgressBar</td></tr>
 <tr><td><code>CreateScrollBar(x, y, w, h, orientation, xScale, yScale)</code></td><td>ScrollBar</td></tr>
+<tr><td><code>CreateShape(x, y, w, h, xScale, yScale)</code></td><td>Shape（图元经 UICornerstone::Shape* 专用）</td></tr>
 <tr><td><code>CreateSlider(x, y, w, h, min, max, value, xScale, yScale)</code></td><td>Slider</td></tr>
-<tr><td><code>CreateSplitter(x, y, w, h, orientation, xScale, yScale)</code></td><td>Splitter</td></tr>
+
+<tr><td><code>CreateSplitter(x, y, w, h, orientation, xScale, yScale)</code></td><td>Splitter</td></tr><tr><td><code>CreateStatusBar(x, y, w, h, xScale, yScale)</code></td><td>StatusBar</td></tr>
+<tr><td><code>CreateTabControl(x, y, w, h, xScale, yScale)</code></td><td>TabControl（页经 UICornerstone::Tab* 专用）</td></tr>
 <tr><td><code>CreateTextArea(x, y, w, h, xScale, yScale)</code></td><td>TextArea</td></tr>
 <tr><td><code>CreateTreeView(x, y, w, h, xScale, yScale)</code></td><td>TreeView</td></tr>
 <tr><td><code>CreateWinFrame(title, x, y, w, h, xScale, yScale)</code></td><td>WinFrame</td></tr>
@@ -191,6 +196,34 @@ item 级属性（<code>item-id</code> / <code>item-leading-gap</code> /
 <tr><td><code>CaptureControl(ctl, pixels, w, h)</code></td><td>截取控件范围</td></tr>
 <tr><td><code>SavePixelsToFile(pixels, w, h, filePath)</code>（静态）</td><td>保存 RGBA8888 像素为 BMP 文件</td></tr>
 </table>
+
+<h3>11.5.7 新控件专用操作（与 C ABI 同名，UICornerstone:: 直达）</h3>
+
+<pre><code>// ListView：行/列
+auto lv = ui->CreateListView(30, 60, 420, 240);
+UICornerstone::ListViewAddColumn(inst, lv.GetThis(), u8"名称", 180, 1);
+const char* cells[] = { u8"main.cpp", u8"2.1 KB" };
+UICornerstone::ListViewAddRow(inst, lv.GetThis(), "f1", 2, cells);
+
+// StatusBar：段
+auto bar = ui->CreateStatusBar(0, 876, 1400, 24);
+UICornerstone::StatusBarAddItem(inst, bar.GetThis(), "branch", u8"main", 0);
+UICornerstone::StatusBarSetItemText(inst, bar.GetThis(), "branch", u8"dev");
+
+// TabControl：页
+auto tc = ui->CreateTabControl(120, 80, 560, 240);
+int i = UICornerstone::TabAddPage(inst, tc.GetThis(), u8"主页");
+UICornerstone::TabSetPage(inst, tc.GetThis(), i, page.GetThis());
+
+// Shape：多图元
+auto sh = ui->CreateShape(40, 40, 90, 90);
+int p = UICornerstone::ShapeAddPrimitive(inst, sh.GetThis(), "circle", 10, 10, 40, 40);
+UICornerstone::ShapeSetPrimitiveColor(inst, sh.GetThis(), p, "fill", color);
+
+// ContextMenu：组装 + 控件右键绑定
+auto menu = ui->CreateContextMenu(0, 0, 10, 10);
+UICornerstone::ContextMenuAddItem(inst, menu.GetThis(), u8"复制", "Ctrl+C");
+lbl.SetPtr(PropertyNames::kPropContextMenu, menu.GetThis());</code></pre>
 
 <h2>11.6 事件访问器（Event 类）</h2>
 
