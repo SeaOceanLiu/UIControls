@@ -1,6 +1,8 @@
-# Shape（形状控件）设计文档
+﻿# Shape（形状控件）设计文档
 
-> 状态：**设计定稿，待审核（审核通过后方可实施）**
+> 状态：**设计定稿 · 已实施（对照源码自检）**
+> 修订注记：v1（2026-08-19）——按 Analysis 决策初版设计
+> 修订注记：v2（2026-08-25）——**实施期决策回写**：多图元组合（addPrimitive/primitives JSON/CABI 五函数）、背景色（setBackgroundStateColor 自动取消透明）、缩放三层规则（drawRect/local×scale/命中逆变换）、空心圆描边闭合修复（strokePath closed 参数 false→true）、ShapeBuilder；补测试策略（26 项）；对照源码自检 2 遍
 > 前身：[Shape_Analysis.md](Shape_Analysis.md)（需求分析，决策点 1-11 已拍板，本文档为其设计化改写）
 > 关联：[ListView_Analysis.md](ListView_Analysis.md)（属性四层一致性矩阵规则 §5.6）、[CABI_Property_Design.md](CABI_Property_Design.md)（通用属性系统）、[API_Mapping_Table.md](API_Mapping_Table.md)（验收交叉核对）
 > 效果图：[Shape_Preview.svg](Shape_Preview.svg)（嵌入 §5.2）
@@ -10,7 +12,11 @@
 - [1. 需求概述](#1-需求概述)
 - [2. 现状盘点与口径统一](#2-现状盘点与口径统一)
 - [3. 关键设计决策（含结论）](#3-关键设计决策含结论)
-- [4. 详细设计](#4-详细设计)
+- [4. 详细设计
+- [4.9 多图元组合（组合图形）](#49-多图元组合组合图形)
+- [4.10 背景色](#410-背景色)
+- [4.11 缩放方案（三层规则）](#411-缩放方案三层规则)
+- [4.12 Builder（声明式构建）](#412-builder声明式构建)](#4-详细设计)
 - [5. 涉及文件清单](#5-涉及文件清单)
 - [6. 测试策略](#6-测试策略)
 - [7. 现状限制](#7-现状限制)
@@ -121,6 +127,10 @@ JSON `"type":"shape"` + CABI `UICornerstone_CreateShape` + 通用属性 setter +
 耳切三角剖分 **Phase A（凸性检测 + 简单凹多边形：无自交无洞）随一期交付**，实现在 `drawPolygon` 基类默认实现内（非 Shape 私有）——polygon 凹输入一期即可正确绘制。Phase B（自交）/Phase C(带洞) 后续按需。
 
 ## 4. 详细设计
+- [4.9 多图元组合（组合图形）](#49-多图元组合组合图形)
+- [4.10 背景色](#410-背景色)
+- [4.11 缩放方案（三层规则）](#411-缩放方案三层规则)
+- [4.12 Builder（声明式构建）](#412-builder声明式构建)
 
 ### 4.1 架构与成员
 
@@ -207,6 +217,46 @@ Shape : ControlImpl
 
 ### 4.8 缓存与重算链路
 
+### 4.9 多图元组合（组合图形，v2 实施新增）
+
+单个 Shape 控件可绘制多个图元拼合复杂图形（如房子：圆角矩形墙 + 多边形屋顶 + 圆形窗）。
+
+```cpp
+struct ShapePrimitive {
+    ShapeType type = ShapeType::Rect;
+    SRect rect;
+    SColor fill{0,0,0,0};
+    SColor stroke{0,0,0,255};
+    float lineWidth=1, radius=0, ringWidth=0;
+    vector<SPoint> points;
+};
+```
+
+- 非空时替代单图元渲染（`m_primitives` 判空分派）
+- 坐标本地化：`drawPrimitiveAt` 内 本地×scale + drawRect 原点
+- JSON `"primitives":[{shape,rect,fill,stroke,lineWidth,radius,ringWidth,points}]`
+- CABI：`ShapeAddPrimitive` / `ShapeSetPrimitiveColor` / `ShapeSetPrimitiveFloat` / `ShapeSetPrimitivePoints` / `ShapeClearPrimitives`
+
+### 4.10 背景色（v2 实施新增）
+
+复用 `setBackgroundStateColor`（ControlBase 状态色体系），override 自动 `setTransparent(false)`（缺省透明）。`draw()` 调用 `ControlImpl::beforeDraw()`（非透明时绘制底色）。
+
+### 4.11 缩放方案（三层规则，v2 实施验证）
+
+| 层 | 规则 | 实现 |
+|---|---|---|
+| 布局 | 本地空间（rect/points 与 scale 无关） | `relayout` 无缩放逻辑 |
+| 自绘 | 绘制坐标 = drawRect 原点 + 本地×scale | `draw()` 单图元用 `getDrawRect()`；`drawPrimitiveAt` 本地×scale |
+| 命中 | 本地 = (屏幕 - drawRect 原点) / scale | `mapToDrawPoint(lx,ly)` 返回 `drawRect.left + lx×scaleXX` |
+
+- `mapToDrawPoint` 扩展为缩放映射（v1 为裸 `m_rect.left + lx`，v2 修正）
+- 空心圆描边闭合：`drawEllipse` 的 `strokePath` 第三参数 `closed` 误传 `false`（椭圆为闭合曲线）→ 改 `true`（v2 修复，角度 0 处缺口消失）
+
+### 4.12 Builder（声明式构建，v2 实施新增）
+
+`ShapeBuilder(parent,rect,xScale,yScale)`（LabelBuilder 同款惯例）：
+`setShape` / `setFillColor` / `setStrokeColor` / `setLineWidth` / `setRadius` / `setRingWidth` / `setPoints` / `setBackgroundStateColor` / `addPrimitive` / `setPrimitive*` → `build()`（内部 create）。
+
 重算触发：setShape/setRect/resized/setPoints/setRadius/setRingWidth → rebuildGeometry()（顶点缓存）；绘制期零计算只提交。resize 链路覆盖布局引擎驱动的 resized 回调（决策 3.7 补充语义）。
 
 ### 4.9 图元受益方（一期价值佐证）
@@ -242,7 +292,13 @@ Phase A（随一期，进 drawPolygon 默认实现）：O(n) 凸性检测（叉�
 | `test/test_shape.cpp`（新）+ test/CMakeLists.txt | 见 §6 |
 | AGENTS.md 验收链 | README/用户手册/API_Mapping_Table 同步（验收清单 11/12/14 条） |
 
-## 6. 测试策略
+## 6. 测试策略（test_shape.cpp，26 项全过）
+
+1. **CPU 断言**（探针不挂树）：setShape/getShape 回环 / setEnumProperty("shape") / 负例拒绝 / setColorProperty/getColorProperty / lineWidth/radius/ringWidth 钳制 / points 缩放（setRect 后等比） / mapToDrawPoint/getDrawPoint / 多图元 API（addPrimitive/clearPrimitives/setPrimitive*） / 背景色（setBackgroundStateColor 自动取消透明）
+2. **CABI**：CreateShape / ShapeAddPrimitive / SetPrimitiveColor / SetPrimitiveFloat / SetPrimitivePoints / 未知类型拒绝（-1）
+3. **JSON**：primitives 解析（3 个图元）+ colors.background 取消透明
+4. **可视化矩阵**：7 种图元（空心圆闭合）+ 多图元组合（房子：圆角墙+多边形屋顶+圆窗+方门）+ 背景色 + 缩放对照 2.0x（ShapeBuilder 构建，drawRect 断言+截图）
+5. **截图**：帧内 CaptureViewport → Temp/shape_capture.bmp，SDL3 优先逐像素核对
 
 1. **单元断言**（test_shape.cpp）：7 形状创建/属性四层读写回环（setShape/SetEnum("shape")/JSON shape 三路一致）；points 缩放（setRect 后 getDrawPoint 等比验证）；ringWidth 钳制（≥内切半径→实心）；mapToDrawPoint 数值断言
 2. **可视化挂树**：7 形状 × 空心/实心/环矩阵目视（auto=N 截图人工核对 Shape_Preview.svg）
