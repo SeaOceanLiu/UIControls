@@ -77,7 +77,7 @@
     if (!side) return;
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem("uicsNavCollapsed") || "{}") || {}; } catch (e) {}
-    var html = '<div class="brand"><a href="' + PREFIX + 'index.html"><img src="' + PREFIX + 'assets/UICornerstone_Logo_256.png" alt="logo"><span>UICornerstone</span></a></div>';
+    var html = '<div class="brand"><a href="' + PREFIX + 'index.html"><img src="' + PREFIX + 'assets/UICornerstone_Logo_256.png" alt="logo"><span>UICornerstone v1.1.0</span></a></div>';
     for (var i = 0; i < NAV.length; i++) {
       var sec = NAV[i];
       var collapsed = saved[i] === false ? "" : " collapsed";
