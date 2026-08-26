@@ -87,9 +87,10 @@ UICornerstone_SetEnum(g_inst, tc, "position", "top");</code></pre>
 </body>
 </html>
 
-<details>
+<details class="methods">
 <summary>4.23.8 控件的方法（核心引擎内部 API，点击展开）</summary>
 
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addTab(title, page)</code> / <code>insertTab(index, …)</code> / <code>removeTab(index)</code></td><td>页写（removeTab 钳制 currentIndex）</td></tr>
@@ -103,6 +104,8 @@ UICornerstone_SetEnum(g_inst, tc, "position", "top");</code></pre>
 </table>
 
 </details>
+
+
 
 <div class="chapter-nav">
   <a href="splitter.html">← 4.22 Splitter</a>

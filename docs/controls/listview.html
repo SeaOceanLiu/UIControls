@@ -102,9 +102,10 @@ UICornerstone_SetInt(g_inst, lv, "selected-index", 0);</code></pre>
 </body>
 </html>
 
-<details>
+<details class="methods">
 <summary>4.12.8 控件的方法（核心引擎内部 API，点击展开）</summary>
 
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addRow(id, cells)</code> / <code>insertRow(index, …)</code> / <code>removeRow(index)</code> / <code>removeRowById(id)</code></td><td>行写（自动补足列数）</td></tr>
@@ -122,6 +123,8 @@ UICornerstone_SetInt(g_inst, lv, "selected-index", 0);</code></pre>
 </table>
 
 </details>
+
+
 
 <div class="chapter-nav">
   <a href="label.html">← 4.11 Label</a>

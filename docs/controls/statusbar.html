@@ -88,9 +88,10 @@ UICornerstone_SetFloat(g_inst, bar, "font-size", 13.0f);</code></pre>
 </body>
 </html>
 
-<details>
+<details class="methods">
 <summary>4.21.7 控件的方法（核心引擎内部 API，点击展开）</summary>
 
+<div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
 <tr><th>方法</th><th>说明</th></tr>
 <tr><td><code>addStatusItem(id, text, rightAlign)</code></td><td>添加段</td></tr>
@@ -106,6 +107,8 @@ UICornerstone_SetFloat(g_inst, bar, "font-size", 13.0f);</code></pre>
 </table>
 
 </details>
+
+
 
 <div class="chapter-nav">
   <a href="slider.html">← 4.20 Slider</a>
