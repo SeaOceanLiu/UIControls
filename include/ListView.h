@@ -251,10 +251,12 @@ public:
     ListViewBuilder& setGridlines(bool on);
     ListViewBuilder& setHorizontalGridlines(bool on);
     ListViewBuilder& setHoverHighlight(bool on);
+    ListViewBuilder& setCycleNavigation(bool on);
     ListViewBuilder& setMinColumnWidth(float px);
     ListViewBuilder& addColumn(const std::string& title, float width, bool sortable = false);
     ListViewBuilder& addRow(const std::string& id, const std::vector<std::string>& cells = {});
     ListViewBuilder& setOnSelectionChanged(ListView::OnSelectionChangedHandler h);
     ListViewBuilder& setOnItemClick(ListView::OnItemClickHandler h);
+    ListViewBuilder& setOnColumnSort(ListView::OnColumnSortHandler h);
     std::shared_ptr<ListView> build(void);
 };

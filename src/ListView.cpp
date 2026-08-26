@@ -893,6 +893,7 @@ ListViewBuilder& ListViewBuilder::setHeaderHeight(float px)           { m_lv->se
 ListViewBuilder& ListViewBuilder::setGridlines(bool on)               { m_lv->setGridlines(on); return *this; }
 ListViewBuilder& ListViewBuilder::setHorizontalGridlines(bool on)     { m_lv->setHorizontalGridlines(on); return *this; }
 ListViewBuilder& ListViewBuilder::setHoverHighlight(bool on)          { m_lv->setHoverHighlight(on); return *this; }
+ListViewBuilder& ListViewBuilder::setCycleNavigation(bool on)         { m_lv->setCycleNavigation(on); return *this; }
 ListViewBuilder& ListViewBuilder::setMinColumnWidth(float px)         { m_lv->setMinColumnWidth(px); return *this; }
 ListViewBuilder& ListViewBuilder::addColumn(const std::string& title, float width, bool sortable) {
     m_lv->addColumn(title, width, sortable); return *this;
@@ -902,6 +903,7 @@ ListViewBuilder& ListViewBuilder::addRow(const std::string& id, const std::vecto
 }
 ListViewBuilder& ListViewBuilder::setOnSelectionChanged(ListView::OnSelectionChangedHandler h) { m_lv->setOnSelectionChanged(std::move(h)); return *this; }
 ListViewBuilder& ListViewBuilder::setOnItemClick(ListView::OnItemClickHandler h)               { m_lv->setOnItemClick(std::move(h)); return *this; }
+ListViewBuilder& ListViewBuilder::setOnColumnSort(ListView::OnColumnSortHandler h)                 { m_lv->setOnColumnSort(std::move(h)); return *this; }
 std::shared_ptr<ListView> ListViewBuilder::build(void) {
     m_lv->create();
     return m_lv;
