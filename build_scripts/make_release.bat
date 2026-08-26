@@ -98,8 +98,19 @@ echo [%time%] [5/6] Runtime DLLs copied.
 rem ============================================================
 rem 6. 复制 assets + binding + tools
 rem ============================================================
-xcopy /y /e /i "%UICORNERSTONE_ROOT%\subModules\assets" "%RELEASE_DIR%\assets" >nul || goto :fail
-xcopy /y /e /i "%UICORNERSTONE_ROOT%\binding" "%RELEASE_DIR%\binding" >nul || goto :fail
+rem assets: 仅运行时所需子集（排除 background/config/music/saved/sounds）
+mkdir "%RELEASE_DIR%\assets" 2>nul
+copy /y "%UICORNERSTONE_ROOT%\subModules\assets\Windows.jsonc" "%RELEASE_DIR%\assets\" >nul || goto :fail
+for %%A in (animations fonts images) do (
+    xcopy /y /e /i "%UICORNERSTONE_ROOT%\subModules\assets\%%A" "%RELEASE_DIR%\assets\%%A" >nul || goto :fail
+)
+
+rem binding: 仅源码（排除 build 编译产物）
+copy /y "%UICORNERSTONE_ROOT%\binding\CMakeLists.txt" "%RELEASE_DIR%\binding\" >nul || goto :fail
+copy /y "%UICORNERSTONE_ROOT%\binding\LICENSE"        "%RELEASE_DIR%\binding\" >nul || goto :fail
+for %%B in (src include cmake samples) do (
+    xcopy /y /e /i "%UICORNERSTONE_ROOT%\binding\%%B" "%RELEASE_DIR%\binding\%%B" >nul || goto :fail
+)
 copy /y "%UICORNERSTONE_ROOT%\include\UICornerstoneAPI.h" "%RELEASE_DIR%\binding\include\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\include\PropertyNames.h"    "%RELEASE_DIR%\binding\include\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\build_scripts\CMakeLists.binding_sample.txt" "%RELEASE_DIR%\binding\CMakeLists.example.txt" >nul || goto :fail
