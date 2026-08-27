@@ -233,6 +233,7 @@ public:
 
     void draw() override;
     bool handleEvent(shared_ptr<Event> event) override;
+    bool beforeEventHandlingWatcher(shared_ptr<Event> event) override;
     bool isContainsPoint(float x, float y) override;
     void setParent(Control *parent) override;
     void setRect(SRect rect) override;
@@ -280,6 +281,15 @@ private:
         SRect hitRect;
         shared_ptr<MenuPanel> panel;
     };
+
+    // 下拉面板顶层挂载：打开时挂 BENCH（位于所有控件之上），关闭时摘回父链
+    void attachMenuPanel(int index);
+    void detachMenuPanel(int index);
+
+    // 全局 watcher：菜单打开期间注册，点击/ESC 在任何控件消费事件之前先关闭（Popup 同款）
+    void registerMenuWatcher();
+    void unregisterMenuWatcher();
+    bool m_watcherRegistered = false;
 
     vector<MenuEntry> m_entries;
     float m_barHeight;

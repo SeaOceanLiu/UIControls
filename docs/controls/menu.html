@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+﻿ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -18,6 +18,8 @@
 <p>菜单系统由三件套组成：<strong>MenuBar</strong>（顶级菜单栏）、<strong>MenuPanel</strong>（下拉面板，支持嵌套子菜单）、<strong>MenuItem</strong>（菜单项，支持 Normal / Separator / SubMenu）。三者均继承 <code>ControlImpl</code>。支持「菜单模式」：点击展开后鼠标移动自动切换顶级菜单。</p>
 
 <div class="note">缩放联动：MenuBar 与下拉面板字号随复合缩放系数重建（Bar 变化经共享字体传播到各面板、嵌套子菜单）。详见 <a href="../advanced/canvas-scale.html">5.6.6</a>。</div>
+
+<p><strong>布局模式（v1.1.1 增强）</strong>：MenuBar 有两种定位模式——<strong>顶层模式</strong>（默认，挂到画布顶层 Bench 时全宽贴顶）与<strong>容器内模式</strong>（挂入 panel / v-flow 等布局引擎容器时自动切换手动定位，participant 由布局引擎重排，无需 JSON 显式 <code>manual-position</code>）。弹出下拉面板始终挂到顶层（不被容器遮挡），详见 <a href="#4-14-7">4.14.7（v1.1.1 新增）</a>。</p>
 
 <h2>4.14.1 控件的创建</h2>
 
@@ -50,7 +52,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
 <tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
 <tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
-<tr><td><code>manual-position</code></td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比）（Set/GetBool）</td></tr>
+<tr><td><code>manual-position</code></td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比；<strong>挂入 v-flow 等布局引擎容器时自动置 true</strong>，无需显式设置）（Set/GetBool）</td></tr>
 <tr><td><code>hovered-index</code></td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
 <tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
 </table>
@@ -98,6 +100,14 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
     }
   ]
 }</code></pre>
+
+<p>示例为<strong>顶层模式</strong>（缺省菜单栏放顶层即全宽贴顶）。容器内用法：把 <code>menu-bar</code> 作为布局容器（如 v-flow）的普通子项，<strong>无需</strong> <code>manual-position</code>——挂入容器时自动切换，参与引擎重排：</p>
+<pre><code>{ "type": "panel", "layout": { "type": "v-flow", "gap": 8 },
+  "children": [
+    { "type": "menu-bar", "id": "flowMenu", "barHeight": 28,
+      "menus": [ { "caption": "文件(F)", "items": [ { "caption": "新建" } ] } ] },
+    { "type": "button", "id": "belowBtn", "caption": "OK", "rect": { "w": 0, "h": 32 } }
+  ] }</code></pre>
 
 <h3>4.14.4.14 item 增强（行前置控件容器 + 逐 Item 字号/行高）</h3>
 <p>Menu 二期增强（2026-08 实施）支持：</p>
@@ -159,8 +169,29 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", file);
 UICornerstone_SetString(g_inst, open, "shortcut", "Ctrl+O");
 static void onOpen(UIControlHandle ctl, const UIEventData* ev, void* ud) { }
 UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
+<h2>4.14.7 布局模式与弹出置顶（v1.1.1 增强）</h2>
+
+<p><strong>布局模式</strong>：MenuBar 挂到画布顶层（Bench）时 = <em>顶层模式</em>，全宽贴顶（宽=父宽、顶部=0、高=barHeight）。挂入 panel / v-flow 等布局引擎容器时，<code>setParent</code> 自动切换为手动定位——放弃全宽重置，rect 完全由布局引擎驱动，可作为 v-flow 内的一行（多菜单栏 / 工具栏式布局），<strong>无需显式 <code>manual-position</code></strong>。</p>
+
+<p><strong>弹出置顶</strong>：打开下拉面板时，MenuPanel 临时挂到画布<b>顶层</b>（Bench 子列表末尾），保证：
+<ul>
+<li>绘制 / 事件层次高于所有容器控件，不被 v-flow 等布局容器的兄弟控件遮挡或裁剪；</li>
+<li>弹出位置 = 菜单栏绘制矩形 + 条目命中区×复合缩放（保持"条正下方"局部定位语义），尺寸为无缩放逻辑尺寸×面板自身复合（与 Popup 顶层弹出缩放语义一致）；</li>
+<li>关闭（点击其它地方 / ESC / 关闭菜单链）时摘回 MenuBar 父链。</li>
+</ul></p>
+
+<p><strong>全局关闭</strong>：菜单打开期间注册全局事件前置监视（before watcher，同 Popup）：
+<ul>
+<li>点击<b>菜单栏或打开面板（含子菜单）内</b> → 正常交互；</li>
+<li>点击<b>其它任何地方</b>（其它 MenuBar / 控件 / 空白）→ 先关闭本菜单再放行事件，目标控件随后打开自己的菜单（"全局单菜单"交互语义）；</li>
+<li>按 <kbd>Esc</kbd> → 直接关闭菜单并吸收按键。</li>
+</ul></p>
+
+
+
+
 <details class="methods">
-<summary>4.14.7 控件的方法（核心引擎内部 API，点击展开）</summary>
+<summary>4.14.8 控件的方法（核心引擎内部 API，点击展开）</summary>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 
@@ -199,11 +230,10 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 <tr><td><code>isInMenuMode()</code> / <code>enterMenuMode(int index)</code> / <code>exitMenuMode()</code></td><td>菜单模式（点击展开后鼠标移动自动切换）</td></tr>
 <tr><td><code>setBarHeight(float)</code> / <code>getBarHeight()</code></td><td>菜单栏高度</td></tr>
 <tr><td><code>setItemHeightRatio(float)</code> / <code>getItemHeightRatio()</code>、<code>setFontSize(float)</code> / <code>getFontSize()</code></td><td>尺寸 / 字号（默认 20）</td></tr>
+<tr><td><code>setManualPosition(bool)</code> / <code>getManualPosition()</code></td><td>手动定位开关（挂入布局引擎容器自动开启；顶层模式默认关闭）</td></tr>
 </table>
 
 </details>
-
-
 
 
 <div class="chapter-nav">

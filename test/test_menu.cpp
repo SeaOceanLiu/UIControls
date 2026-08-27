@@ -10,6 +10,8 @@
 #include "MainWindow.h"
 #include "AppCallbacks.h"
 #include "Bench.h"
+#include "LayoutEngine.h"
+#include "Panel.h"
 #include "Button.h"
 #include "Actor.h"
 #include "GraphTool.h"
@@ -307,11 +309,11 @@ static void runMenuEnhAssertions(shared_ptr<MenuPanel> panel) {
 
     // 视觉演示：打开“文件(F)”菜单，展示增强项（checkbox 容器/变行高/icon 区）
     {
-        SRect mb = g_menuBar->getRect();
+                SRect mb = g_menuBar->getRect();
         float fx = mb.left + 55.0f, fy = mb.top + mb.height / 2.0f;
         g_menuBar->handleEvent(makeMouse(EventType::MouseDown, fx, fy));
-        g_menuBar->handleEvent(makeMouse(EventType::MouseUp, fx, fy));
-    }
+                g_menuBar->handleEvent(makeMouse(EventType::MouseUp, fx, fy));
+            }
 }
 
 
@@ -487,10 +489,12 @@ void testBenchInitialize(shared_ptr<Bench>) {
         ENH_CHECK(p2item != nullptr, u8"2x 菜单面板内条目存在");
         ENH_CHECK(fabsf(pdr.left - 700.0f) < 0.01f && fabsf(pdr.top - 200.0f) < 0.01f,
             u8"2x 面板绘制于条正下方 (700,200)");
-        ENH_CHECK(fabsf(p2item->getDrawRect().height - p2item->getRect().height * 2.0f) < 0.01f,
-            u8"2x 菜单条目绘制高度 = 逻辑 × 2（hover 色块/文字区域）");
-        ENH_CHECK(fabsf(pdr.width - p2->getRect().width * 2.0f) < 0.01f,
-            u8"2x 面板区域 = 逻辑 × 2");
+        // 弹出面板现属画布顶层复合（Popup 语义：显示 = 逻辑 × 面板自身复合），
+        // 不再乘 MenuBar 复合——面板缩放完全由面板自身 scale 承载（解析路径同 bar scale）
+        ENH_CHECK(fabsf(p2item->getDrawRect().height - p2item->getRect().height * p2->getScaleXX()) < 0.01f,
+            u8"弹出菜单条目显示高 = 逻辑 × 面板复合（Popup 语义）");
+        ENH_CHECK(fabsf(pdr.width - p2->getRect().width * p2->getScaleXX()) < 0.01f,
+            u8"弹出面板显示宽 = 逻辑 × 面板复合（Popup 语义）");
 
         // 面板 hover/命中（绘制坐标→逻辑换算）：面板绘制于 (700,200)，条目行绘制高 64
         ENH_CHECK(p2->hitTest(750, 210) == 0, u8"2x 面板命中第 0 项（绘制坐标→逻辑换算）");
@@ -499,6 +503,96 @@ void testBenchInitialize(shared_ptr<Bench>) {
         ENH_CHECK(p2->getHoveredIndex() == 0, u8"2x 面板 hover 命中第 0 项");
         bar2x->closeAllMenus();   // 收起，避免干扰视觉演示
     }
+
+    // ── v-flow 内 MenuBar（CornerstoneDesigner 场景）：自动 manual + 参与重排 + 弹出挂 BENCH 顶层 ──
+    {
+                auto flowPanel = make_shared<Panel>(nullptr, SRect(40, 440, 400, 160));
+        flowPanel->setLayoutEngine(make_shared<VFlowLayout>(8.0f, Margin(8, 8, 8, 8)));
+        BENCH->addControl(flowPanel);
+
+        // 不置 manual-position：挂入 v-flow 时自动切换
+        auto fMenu = MenuBarBuilder(BENCH)
+            .setBarHeight(26)
+            .build();
+        fMenu->addMenu(u8"访问(F)", MenuPanelBuilder().addItem(MenuItemBuilder(u8"打开").build()).build());
+                flowPanel->addControl(fMenu);
+                ENH_CHECK(fMenu->getManualPosition(), u8"v-flow 内 MenuBar 自动 manual-position（JSON 无需显式）");
+        ENH_CHECK(fMenu->getParent() == flowPanel.get(), u8"v-flow 内 MenuBar 父 = v-flow 容器");
+
+        auto fBtn = ButtonBuilder(BENCH, {0, 0, 0, 24})
+            .setCaption("Flow After")
+            .build();
+        flowPanel->addControl(fBtn);
+                flowPanel->reflowChildren();
+        
+        // 布局引擎驱动 rect：首位 (8,8) 内宽 384（padding 8×2），列在栏之下
+        SRect mr = fMenu->getRect();
+        SRect br = fBtn->getRect();
+        ENH_CHECK(fabsf(mr.left - 8.0f) < 0.01f && fabsf(mr.top - 8.0f) < 0.01f,
+            u8"v-flow 重排 menu-bar 随流定位 (8,8)");
+        ENH_CHECK(fabsf(mr.width - 384.0f) < 0.01f, u8"v-flow 内 menu-bar 宽 = 流内宽 384");
+        ENH_CHECK(br.top > mr.top + mr.height, u8"v-flow 后续项在 menu-bar 之下不重叠");
+
+        // 弹出：自动挂 BENCH 顶层（z 最上），坐标保持"条正下方"局部语义
+        SRect bd = fMenu->getDrawRect();   // (48,448,384,26)
+        ENH_CHECK(fabsf(bd.left - 48.0f) < 0.01f && fabsf(bd.top - 448.0f) < 0.01f,
+            u8"v-flow 内 menu-bar 绘制矩形随布局下落 (48,448)");
+                bool handled = fMenu->handleEvent(makeMouse(EventType::MouseDown, bd.left + 5.0f, bd.top + 13.0f));
+                ENH_CHECK(handled, u8"v-flow 内点击 menu-bar 条目");
+        auto fp = fMenu->getMenuPanel(0);
+        ENH_CHECK(fp != nullptr && fp->getVisible(), u8"v-flow 内菜单面板已弹出");
+        ENH_CHECK(fp->getParent() == BENCH, u8"弹出面板挂 BENCH 顶层（z 序最上）");
+        SRect pd = fp->getDrawRect();
+        ENH_CHECK(fabsf(pd.left - bd.left) < 0.01f && fabsf(pd.top - (bd.top + 26.0f)) < 0.01f,
+            u8"面板绘制于条正下方");
+        // 兄弟遮挡防御验证：面板为 BENCH 子列表末尾（后加 = 绘制/事件最上层）
+        {
+            auto& kids = BENCH->getChildren();
+            int lastPos = -1;
+            for (size_t i = 0; i < kids.size(); ++i)
+                if (kids[i].get() == fp.get()) lastPos = (int)i;
+            ENH_CHECK(lastPos == (int)kids.size() - 1, u8"面板位于 BENCH 子列表末尾（未被兄弟遮挡）");
+        }
+
+        // 全局 watcher：点击其它控件区域（事件不到 MenuBar）也先关闭
+        // （面板外且栏外的点：栏右外侧 (bd 右侧 +60, 栏下方 +40)）
+        {
+            auto evOutside = makeMouse(EventType::MouseDown,
+                bd.left + bd.width + 60.0f, bd.top + 40.0f);
+                        BENCH->getContext()->eventQueue->notifyBeforeEventHandlingWatchers(evOutside);
+                        ENH_CHECK(!fp->getVisible(), u8"点击其它控件区域 → watcher 全局先关闭菜单");
+            ENH_CHECK(fp->getParent() == fMenu.get(), u8"watcher 关闭后摘回父链");
+        }
+
+        // 全局 watcher（全链路 pushEvent→eventLoopEntry）：点击其它 MenuBar →
+        // 原菜单先关（事件被本栏消费前），新栏随后打开自身菜单（单菜单交互语义）
+        {
+            g_menuBar->closeAllMenus();   // 清场：顶层 g_menuBar 保持关闭态
+            auto barOther = MenuBarBuilder(BENCH)
+                .setBarHeight(30)
+                .build();
+            barOther->addMenu(u8"其它(T)", MenuPanelBuilder().addItem(MenuItemBuilder(u8"条目").build()).build());
+            BENCH->addControl(barOther);
+            fMenu->handleEvent(makeMouse(EventType::MouseDown, bd.left + 5.0f, bd.top + 13.0f));
+            ENH_CHECK(fp->getVisible(), u8"前置：flow 菜单再次打开");
+            SRect obd = barOther->getDrawRect();
+            BENCH->getContext()->eventQueue->pushEventIntoQueue(
+                makeMouse(EventType::MouseDown, obd.left + 5.0f, obd.top + 15.0f));
+            BENCH->eventLoopEntry();
+            ENH_CHECK(!fp->getVisible(), u8"点击其它 MenuBar → 原菜单先关闭（watcher 全局）");
+            auto otherPanel = barOther->getMenuPanel(0);
+            ENH_CHECK(otherPanel != nullptr && otherPanel->getVisible(), u8"其它 MenuBar 随后打开自身菜单");
+            ENH_CHECK(otherPanel->getParent() == BENCH, u8"其它 MenuBar 菜单面板也挂 BENCH 顶层");
+            g_menuBar->closeAllMenus();
+            barOther->closeAllMenus();
+        }
+
+        fMenu->closeAllMenus();
+        ENH_CHECK(!fp->getVisible(), u8"closeAllMenus 后面板关闭");
+        ENH_CHECK(fp->getParent() == fMenu.get(), u8"关闭后面板摘回 MenuBar 父链");
+        ENH_CHECK(fMenu->getRect().width > 0 && fMenu->isContainsPoint(bd.left + 5.0f, bd.top + 13.0f),
+            u8"关闭后 menu-bar 仍随流布局、命中正常");
+            }
 
     BENCH->addControl(g_Button = ButtonBuilder(BENCH, {400, 100, 100, 50})
                     .setCaption("Button")
@@ -511,7 +605,7 @@ void testBenchInitialize(shared_ptr<Bench>) {
                     })
                     .build()
                 );
-}
+    }
 
 void testGraphToolInitialize(void){
     TestUtil::log("testGraphToolInitialize");
@@ -540,7 +634,7 @@ public:
         SSize displaySize = MAINWIN->getDisplaySize();
         BENCH->setOnInitial(testBenchInitialize);
         testGraphToolInitialize();
-        return true;
+                return true;
     }
 
     void onUpdate() override {

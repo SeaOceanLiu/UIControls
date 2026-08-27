@@ -5,6 +5,7 @@
 
 #include "Menu.h"
 #include "PropertyNames.h"
+#include "Bench.h"
 
 // ==================== VSCode Dark主题颜色 ====================
 namespace MenuColors {
@@ -854,7 +855,13 @@ MenuBar::MenuBar(Control *parent, float xScale, float yScale)
     setBorderVisible(false);
 }
 
-MenuBar::~MenuBar() = default;
+MenuBar::~MenuBar() {
+    // 若下拉面板正挂在 BENCH 顶层，析构前须摘回，避免父链/子列表悬垂；
+    // 仅实例存活期执行（退出期 m_context 可能已随 Instance 释放，BENCH 宏将解引用悬垂指针）
+    if (UIContext::isActive(m_context)) {
+        closeAllMenus();
+    }
+}
 
 void MenuBar::setContext(UIContext* ctx) {
     ControlImpl::setContext(ctx);
@@ -884,7 +891,11 @@ void MenuBar::refreshScaleWith(float parentXX, float parentYY) {
         if (m_isCreated) ensureFont();
         layoutEntries();
     }
+    Control* bench = BENCH;
     for (auto& e : m_entries) {
+        // 已挂到 BENCH 顶层的面板不随 MenuBar 复合刷新（其复合由 Bench 决定，
+        // attach/detach 时经 setParent 重新对齐，避免双重缩放）
+        if (bench != nullptr && e.panel->getParent() == bench) continue;
         e.panel->refreshScaleWith(m_xxScale, m_yyScale);
     }
 }
@@ -906,6 +917,12 @@ void MenuPanel::setParent(Control* parent) {
 void MenuBar::setParent(Control *parent) {
     ControlImpl::setParent(parent);
     if (parent) {
+        // 顶层独立语义：仅挂到 Bench（画布顶层）时保持默认全宽贴顶布局；
+        // 挂到普通容器（v-flow 等布局引擎容器）时自动切换为手动定位，
+        // 放弃全宽重置、rect 完全由外部（布局引擎）驱动，从而实现流内重排
+        if (dynamic_cast<Bench*>(parent) == nullptr) {
+            m_manualPosition = true;
+        }
         // 挂树时 parent 链已可解析 renderer：补加载字体（parseLayout 创建的菜单栏
         // 挂树前 ensureFont 失败，缺字体时 layoutEntries 的 hitRect 宽度为 0，
         // 导致点击菜单栏条目无法打开面板），再按父宽布局（手动定位模式跳过全宽重置）
@@ -980,16 +997,12 @@ int MenuBar::hitTest(float x, float y) {
 void MenuBar::openMenu(int index) {
     // 关闭当前打开的菜单
     if (m_activeIndex >= 0 && m_activeIndex < (int)m_entries.size()) {
-        m_entries[m_activeIndex].panel->hide();
+        detachMenuPanel(m_activeIndex);
     }
 
     m_activeIndex = index;
     if (index >= 0 && index < (int)m_entries.size()) {
-        auto& entry = m_entries[index];
-        SRect hitRect = entry.hitRect;
-        // MenuPanel 是 MenuBar 子控件：局部逻辑坐标即可（绘制时自动乘复合缩放 + 父绘制位置）
-        entry.panel->setPosition(hitRect.left, hitRect.top + hitRect.height);
-        entry.panel->show();
+        attachMenuPanel(index);
     }
 }
 
@@ -1006,7 +1019,7 @@ void MenuBar::enterMenuMode(int index) {
 void MenuBar::exitMenuMode() {
     m_menuMode = false;
     if (m_activeIndex >= 0 && m_activeIndex < (int)m_entries.size()) {
-        m_entries[m_activeIndex].panel->hide();
+        detachMenuPanel(m_activeIndex);
     }
     m_activeIndex = -1;
     m_hoveredIndex = -1;
@@ -1015,9 +1028,89 @@ void MenuBar::exitMenuMode() {
 void MenuBar::closeAllMenus() {
     if (m_activeIndex >= 0 && m_activeIndex < (int)m_entries.size()) {
         m_entries[m_activeIndex].panel->closeWithChildren();
-        m_entries[m_activeIndex].panel->hide();
+        detachMenuPanel(m_activeIndex);
     }
     m_activeIndex = -1;
+}
+
+void MenuBar::attachMenuPanel(int index) {
+    auto& entry = m_entries[index];
+    Control* bench = BENCH;
+    if (bench != nullptr) {
+        // 与 Popup::open 同款语序：先挂树（继承根复合）再计算位置——
+        // 弹层作为画布内容，复合 = 面板自身缩放 × 根变换；挂树后
+        // getScaleXX 才能给出目标绝对矩形所需的复合基准
+        if (entry.panel->getParent() != bench) {
+            entry.panel->setParent(bench);
+            bench->addControl(entry.panel);  // 追加到 Bench 子列表末尾 = 绘制/事件最顶层
+        }
+        // recalc 在挂树后运行：内部 measureText ÷ getScaleXX（面板复合），
+        // 产出的即"逻辑（无缩放）尺寸"；显示尺寸 = 逻辑 × 面板复合，
+        // 与挂 MenuBar 子级时代一致，此处不再乘复合（否则双重缩放）
+        entry.panel->recalculateSize();
+        SRect barDraw = getDrawRect();
+        float sx = getScaleXX(), sy = getScaleYY();
+        SRect logicSize = entry.panel->getRect();
+        // 绝对坐标 = MenuBar 绘制矩形 + hitRect×复合缩放（hitRect 为菜单栏局部逻辑坐标）
+        entry.panel->setRect(SRect(
+            barDraw.left + entry.hitRect.left * sx,
+            barDraw.top + (entry.hitRect.top + entry.hitRect.height) * sy,
+            logicSize.width,
+            logicSize.height));
+        entry.panel->show();
+        registerMenuWatcher();
+    } else {
+        // 无实例（离线/单测）：退化为 MenuBar 子级局部定位，由 MenuBar::draw 手动绘制
+        entry.panel->setPosition(entry.hitRect.left, entry.hitRect.top + entry.hitRect.height);
+        entry.panel->show();
+    }
+}
+
+void MenuBar::detachMenuPanel(int index) {
+    auto& entry = m_entries[index];
+    entry.panel->hide();
+    Control* bench = BENCH;
+    if (bench != nullptr && entry.panel->getParent() == bench) {
+        bench->removeControl(entry.panel);
+        entry.panel->setParent(this);  // 还原父链，供下次 attachMenuPanel 复用
+    }
+    unregisterMenuWatcher();
+}
+
+void MenuBar::registerMenuWatcher() {
+    if (m_watcherRegistered) return;
+    if (!m_context || !m_context->eventQueue) return;
+    m_context->eventQueue->addBeforeEventHandlingWatcher(EventType::KeyDown, getThis());
+    m_context->eventQueue->addBeforeEventHandlingWatcher(EventType::MouseDown, getThis());
+    m_watcherRegistered = true;
+}
+
+void MenuBar::unregisterMenuWatcher() {
+    if (!m_watcherRegistered) return;
+    if (m_context && m_context->eventQueue) {
+        m_context->eventQueue->removeBeforeEventHandlingWatcher(EventType::KeyDown, getThis());
+        m_context->eventQueue->removeBeforeEventHandlingWatcher(EventType::MouseDown, getThis());
+    }
+    m_watcherRegistered = false;
+}
+
+bool MenuBar::beforeEventHandlingWatcher(shared_ptr<Event> event) {
+    // 事件分发入口的最前置拦截：打开菜单期间，任何位于本 MenuBar
+    // （含打开的面板/子菜单区域）之外的点击/ESC 都先关闭——事件随后仍
+    // 正常流向目标控件（其它 MenuBar 可打开自己的菜单）。
+    if (m_activeIndex < 0 || m_activeIndex >= (int)m_entries.size()) return false;
+
+    if (event->m_type == EventType::KeyDown && event->keyEvent.keycode == KeyCode::Escape) {
+        exitMenuMode();
+        return true;
+    }
+    if (event->m_type != EventType::MouseDown) return false;
+
+    SPoint mp(event->mouseButton.x, event->mouseButton.y);
+    if (ControlImpl::isContainsPoint(mp.x, mp.y)) return false;   // 本栏内正常交互
+    if (m_entries[m_activeIndex].panel->isContainsPoint(mp.x, mp.y)) return false;  // 面板/子菜单内
+    exitMenuMode();                                               // 其它位置：先关，放行事件
+    return false;
 }
 
 void MenuBar::setBarHeight(float height) {
@@ -1135,9 +1228,12 @@ void MenuBar::draw() {
     GET_RENDERDEVICE->drawLine(drawRect.left, drawRect.top + drawRect.height - 1,
                                drawRect.left + drawRect.width, drawRect.top + drawRect.height - 1);
 
-    // 4. 绘制打开的下拉菜单
+    // 4. 绘制打开的下拉菜单（已挂 BENCH 顶层的面板由 Bench 绘制，仅离线退路手动画）
     if (m_activeIndex >= 0 && m_activeIndex < (int)m_entries.size()) {
-        m_entries[m_activeIndex].panel->draw();
+        Control* bench = BENCH;
+        if (bench == nullptr || m_entries[m_activeIndex].panel->getParent() != bench) {
+            m_entries[m_activeIndex].panel->draw();
+        }
     }
 }
 

@@ -345,7 +345,8 @@
         "barHeight": { "type": "number" },
         "font": { "$ref": "#/$defs/font-name" },
         "itemHeightRatio": { "type": "number", "x-default": "1.6" },
-        "manualPosition": { "type": "boolean", "x-default": "false" },
+        "manualPosition": { "type": "boolean", "x-default": "false",
+          "description": "手动定位。缺省 false = 全宽贴顶（Bench 顶层模式）；挂入 panel / v-flow 等布局引擎容器时运行时自动置 true，用户无需显式设置" },
         "menus": {
           "type": "array",
           "description": "顶级菜单 [{caption, items:[{caption,shortcut,checked,type,items,font,size,leadingGap,leadingControl}]}]（元素键走全局层）",

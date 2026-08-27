@@ -53,7 +53,17 @@ ControlImpl
 
 ### 2.2 MenuBar 菜单栏
 
-菜单栏是水平排列的顶级菜单容器，固定在窗口顶部。
+    菜单栏是水平排列的顶级菜单容器。有两种布局模式（v1.1.1 增强，2026-08）：
+
+    - **顶层模式（默认）**：MenuBar 直接挂到画布顶层 `BENCH` → 全宽贴顶布局。
+      `layoutEntries()` 中 `!m_manualPosition && getParent()` 时强制
+      `setRect(0, 0, 父宽, barHeight)`，位置/宽度由自身全宽策略决定。
+    - **容器内模式（自动）**：`MenuBar::setParent` 时父**不是** Bench
+      （即挂在 panel / v-flow 等布局引擎容器内）→ 自动 `m_manualPosition=true`，
+      **放弃全宽重置**，rect 完全由外部（布局引擎 `setRect`）驱动——
+      用作 v-flow 内某一行（如工具栏式菜单栏），无需 JSON 显式 `manual-position`。
+
+    下拉面板弹出采用**画布顶层浮层模型**（与 Popup 一致，见 3.5 节）。
 
 ```cpp
 class MenuBar : public ControlImpl {
@@ -94,6 +104,8 @@ private:
     int m_hoveredIndex;     // 当前hover的菜单项索引，-1表示无
     int m_activeIndex;      // 当前激活（展开下拉）的菜单项索引，-1表示无
     bool m_menuMode;        // 是否处于菜单模式（点击展开后，鼠标移动自动切换菜单）
+    bool m_manualPosition;  // 手动定位：父为 Bench 顶层时默认 false（全宽贴顶）；
+                            // 挂入布局引擎容器（v-flow 等）时 setParent 自动置 true
 
     SharedFont m_font;      // 菜单栏标题共享字体（直接绘制，无内嵌 Label）
     FontName m_fontName;    // 字体名称（可经 setEnumProperty("font", ...) 修改）
@@ -226,7 +238,8 @@ VSCode菜单的核心交互是"菜单模式"：
 3. **退出菜单模式**：
    - 点击菜单项执行操作
    - 点击菜单外部区域
-   - 按ESC键（**规划中未实施**：Menu.cpp 无任何 KeyDown/ESC 处理——`MenuPanel::handleEvent` 仅处理 MouseMove/MouseDown/MouseUp，`MenuBar::handleEvent` 同理；已核对源码）
+   - 按ESC键（v1.1.1 实施：`MenuBar::beforeEventHandlingWatcher` 拦截 KeyDown/Escape，
+     与 Popup 一致；退出后 ESC 事件被吸收不传递）
 
 ### 3.2 控件生命周期
 
@@ -265,7 +278,8 @@ MouseMove (mousePos):
   └─ 在子菜单项上hover → 延迟展开子菜单
 
 KeyDown (keyEvent):
-  └─ ESC → 关闭当前子菜单，或退出菜单模式（**规划中未实施**：Menu.cpp 无 KeyDown 分支，键盘退出菜单模式未实现；已核对源码 Menu.cpp:760-806）
+  └─ ESC → 关闭当前子菜单，或退出菜单模式（v1.1.1 实施：全局 watcher 拦截 KeyDown/Escape，
+       见 3.5；吸收事件不传递）
 ```
 
 ### 3.4 子菜单展开
@@ -273,6 +287,32 @@ KeyDown (keyEvent):
 - 鼠标hover到子菜单项时，延迟200ms展开子菜单（**规划中未实施**：实际为 `setHoveredIndex` 内**立即展开**——命中子菜单项直接 `setOpenSubMenu`，无延迟定时器，Menu.cpp:537-558；已核对源码）
 - 鼠标从子菜单项移向子菜单面板时，不关闭子菜单
 - 子菜单面板位置：在父菜单项的右侧展开
+
+### 3.5 弹出置顶与全局关闭（v1.1.1 增强）
+
+本机制解决两个问题（均为 CornerstoneDesigner 场景驱动）：
+
+1. **弹出面板的 Z-ORDER（保证在最上层）**
+   - 打开菜单时 `attachMenuPanel`（Menu.cpp）将 MenuPanel 从 MenuBar 父链摘下，
+     挂到 `BENCH`（画布顶层）子列表**末尾**：
+     - 绘制/事件顺序上位于所有控件之上，不被所在布局容器（如 v-flow 内
+       MenuBar 的兄弟控件）裁剪或遮挡；
+     - 坐标采用**绝对定位**（同 `Popup::open` 语序）：先挂树继承复合，
+      `recalculateSize` 于挂树后执行（内部 ÷ 面板复合），`getRect` 即无缩放
+      逻辑尺寸，显示尺寸 = 逻辑 × 面板自身复合——弹出面板缩放由面板自身
+      scale 承载，解析路径面板与 MenuBar 同 scale、视觉不变；
+     - 关闭（`detachMenuPanel`）后摘回 MenuBar 父链（父控件子列表回收，
+      `MenuBar::draw`/事件路径还原）。
+2. **全局关闭（点击其它任何地方 / ESC）**
+   - `MenuBar` 打开菜单时注册 beforeEventHandlingWatcher（KeyDown + MouseDown），
+     关闭时注销；不依赖"事件恰好流到 MenuBar"：
+     - 点击点在**本栏或打开面板/子菜单区域**内 → 放行（正常交互）；
+     - 点击其它任何位置（其它 MenuBar、其它面板/控件、空白）→ 先
+       `exitMenuMode()` 再放行事件——目标控件（如另一个 MenuBar）
+       随后打开自己的菜单，形成"全局单菜单"交互语义；
+     - KeyDown/Escape → 退出菜单模式并吸收事件（与 `Popup::closeOnEsc` 一致）。
+   - 与 Popup 同款的注册方式：`addBeforeEventHandlingWatcher`（queue），
+     回调加锁快照遍历（notify 在锁外执行回调，回调内注销不锁死/失效）。
 
 ## 4. 视觉规格
 

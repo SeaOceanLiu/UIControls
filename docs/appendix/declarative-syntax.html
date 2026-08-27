@@ -142,7 +142,8 @@
   "events": { "onSelectionChanged":"onSel", "onColumnSort":"onSort" } }</code></pre>
 <p>属性键：<code>mode</code>（multi/single）/ <code>multiSelect</code> / <code>selectedIndex</code> / <code>rowHeight</code> / <code>headerHeight</code> / <code>gridlines</code> / <code>horizontalGridlines</code> / <code>hover</code> / <code>minColumnWidth</code> / <code>cycleNavigation</code> / <code>sortColumn</code> / <code>sortAscending</code>；<code>columns[]</code>/<code>rows[]</code> 见样例（<code>c</code>… <code>columns.icon</code> / <code>rows.icon</code> / <code>rows.cellControls[]</code>）。</p>
 
-<h3>menu-bar（不挂控件树，顶层独立）</h3>
+<h3>menu-bar（默认顶层独立；v1.1.1 起支持挂入布局容器作为普通子项）</h3>
+<p>顶层用法（缺省）：菜单栏全宽贴顶（挂到 Bench 时自动布置）。容器内用法（v1.1.1）：作为 panel / v-flow 子项时挂入即自动切换手动定位、参与引擎重排，无需 <code>manual-position</code>。</p>
 <pre><code>{ "type":"menu-bar", "id":"mainMenu",
   "font":{"size":16}, "barHeight":32,
   "menus":[ { "caption":"文件(F)",

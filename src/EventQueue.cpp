@@ -80,19 +80,26 @@ bool EventQueue::removeBeforeEventHandlingWatcher(EventType eventType, shared_pt
 bool EventQueue::notifyBeforeEventHandlingWatchers(shared_ptr<Event> event){
     if (event->m_type == EventType::None) return false;
 
-    m_mtxForBeforeEventHandlingWatcher.lock();
+    // 锁内仅拷贝快照；回调在锁外执行——watcher 回调可能注销自身/他人
+    // 注册（如菜单点击关闭），锁内回调会与注销锁互斥死锁，
+    // 且遍历期间修改 vector 会迭代器失效
+    vector<weak_ptr<Control>> snapshots;
+    {
+        m_mtxForBeforeEventHandlingWatcher.lock();
+        auto it = m_beforeEventHandlingWatcherMap.find(event->m_type);
+        if (it != m_beforeEventHandlingWatcherMap.end()){
+            snapshots = it->second;
+        }
+        m_mtxForBeforeEventHandlingWatcher.unlock();
+    }
     bool consumed = false;
-    auto it = m_beforeEventHandlingWatcherMap.find(event->m_type);
-    if (it != m_beforeEventHandlingWatcherMap.end()){
-        for (auto& weakControl : it->second){
-            auto control = weakControl.lock();
-            if (control && control->beforeEventHandlingWatcher(event)){
-                consumed = true;
-                break;
-            }
+    for (auto& weakControl : snapshots){
+        auto control = weakControl.lock();
+        if (control && control->beforeEventHandlingWatcher(event)){
+            consumed = true;
+            break;
         }
     }
-    m_mtxForBeforeEventHandlingWatcher.unlock();
     return consumed;
 }
 
@@ -139,14 +146,19 @@ bool EventQueue::removeAfterEventHandlingWatcher(EventType eventType, shared_ptr
 void EventQueue::notifyAfterEventHandlingWatchers(shared_ptr<Event> event){
     if (event->m_type == EventType::None) return;
 
-    m_mtxForAfterEventHandlingWatcher.lock();
-    auto it = m_afterEventHandlingWatcherMap.find(event->m_type);
-    if (it != m_afterEventHandlingWatcherMap.end()){
-        for (auto& weakControl : it->second){
-            auto control = weakControl.lock();
-            if (control && control->afterEventHandlingWatcher(event))
-                break;
+    vector<weak_ptr<Control>> snapshots;
+    {
+        m_mtxForAfterEventHandlingWatcher.lock();
+        auto it = m_afterEventHandlingWatcherMap.find(event->m_type);
+        if (it != m_afterEventHandlingWatcherMap.end()){
+            snapshots = it->second;
         }
+        m_mtxForAfterEventHandlingWatcher.unlock();
     }
-    m_mtxForAfterEventHandlingWatcher.unlock();
+    // 回调在锁外执行（同 notifyBefore：回调内注销注册不锁死、不改坏遍历）
+    for (auto& weakControl : snapshots){
+        auto control = weakControl.lock();
+        if (control && control->afterEventHandlingWatcher(event))
+            break;
+    }
 }

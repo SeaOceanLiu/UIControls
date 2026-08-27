@@ -1,5 +1,23 @@
 ﻿## Session History
 
+### 2026-08-27: MenuBar 容器布局 + 下拉弹出置顶 + 全局关闭（v1.1.1 增强，Complete）
+
+**背景**：CornerstoneDesigner（v1.1.1）开发中发现：menu-bar 原为"不挂控件树、顶层独立"控件，不参与 v-flow 布局——v-flow 内放 menu-bar 不被正确重排。用户拍板方案 A：容器内自动手动定位 + 弹出面板挂顶层（缩放与 Popup 一致）+ 全局点击/ESC 关闭；文档随后刷新。
+
+**1. 自动手动定位（容器内模式）**：`MenuBar::setParent` 父非 Bench（挂入 panel/v-flow 等布局引擎容器）→ 自动 `m_manualPosition=true`，放弃 `layoutEntries` 全宽贴顶重置，rect 完全由布局引擎驱动（JSON 无需显式 manual-position）。
+
+**2. 下拉弹出置顶（Popup 同款浮层模型）**：`openMenu→attachMenuPanel` 将 MenuPanel 摘离 MenuBar 父链、挂 BENCH 顶层（子列表末尾=绘制/事件最上，不被 v-flow 兄弟遮挡）；坐标=MenuBar 绘制矩形+hitRect×复合缩放；`recalculateSize` 在挂树后执行（÷面板复合），显示尺寸=逻辑×面板自身复合（解析路径面板与栏同 scale、视觉不变）；`detachMenuPanel` 关闭时摘回父链。`MenuBar::refreshScaleWith` 跳过已挂 Bench 面板（防双重缩放）；`MenuBar::draw` 挂顶层面板不再手动绘制（Bench 负责）仅离线退路手绘；析构经 `UIContext::isActive` 防护后 closeAllMenus（修复退出期析构 segv）。
+
+**3. 全局关闭（单菜单交互语义）**：MenuBar 打开时注册 beforeEventHandlingWatcher（KeyDown+MouseDown，同 Popup），关闭注销：点击栏/面板（含子菜单）内放行；其它任何位置（其它 MenuBar/控件/空白）先 `exitMenuMode` 再放行（目标控件随后打开自身菜单）；KeyDown ESC 关闭并吸收。不依赖"事件恰好流到 MenuBar"。
+
+**4. EventQueue 两个潜在 bug 修复**：`notifyBefore/AfterEventHandlingWatchers` 遍历期间 watcher 回调注销自身 → ①回调内锁重入同一互斥锁（死锁）；②遍历中改 vector（迭代器失效 UB）。改为"锁内快照拷贝 + 锁外执行回调"。
+
+**5. 测试（test_menu.cpp）**：v-flow 用例——自动 manual、随流定位 (8,8)/宽384、后续项不重叠、弹出挂 Bench 顶层+子列表末尾（未被遮挡）、watcher 全链路（pushEvent→eventLoopEntry）点击其它 MenuBar 先关后开、ESC、关闭摘回；既有 2 乘断言语义按 Popup 语义更新（显示=逻辑×面板复合）。三后端（sdl3/sfml/raylib）各 2 轮 exit=0 全过；test_dialog/test_contextmenu/test_layout 回归 exit=0。
+
+**6. 文档刷新**：`design/Menu_Design.md`（2.2 布局模式、类成员 m_manualPosition、3.1/3.3 ESC 实施状态、3.5 新增弹出置顶与全局关闭）；`docs/controls/menu.html`（4.14 说明布局模式、manual-position 属性补充、4.14.4 JSON v-flow 容器内示例、4.14.8 新增小节、4.14.7 方法表补 set/getManualPosition）；`docs/appendix/declarative-syntax.html`（menu-bar 标题与说明）。README.md 无需变更。
+
+**相关文件**：src/Menu.cpp / include/Menu.h（attach/detachMenuPanel、register/unregisterMenuWatcher、beforeEventHandlingWatcher、setParent 自动 manual、~MenuBar、refreshScaleWith、draw）、src/EventQueue.cpp（watcher 快照遍历）、test/test_menu.cpp（v-flow 用例+watcher 全链路断言）。
+
 ### 2026-08-25: 五控件批量实施（ListView/StatusBar/ContextMenu/TabControl/Shape）+ 视觉验收 + 焦点两层作用域 + 缩放体系 + 验收收尾（Complete）
 
 **背景**：用户指示串行实施 5 个新控件（全部完成后统一验收质量）；随后逐轮视觉验收反馈修正、编程规范修正、按 ListView_Design 格式重写设计文档、按 AGENTS 新增控件验收清单（14 项）完成验收收尾。
