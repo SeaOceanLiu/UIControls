@@ -33,6 +33,14 @@ typedef void* UITextureHandle;
 /* 实例句柄：一个 UICornerstone 实例（窗口或视口）。不透明指针。 */
 typedef struct UIContext* UIInstance;
 
+/* 跨后端统一窗口标志（值对齐 SDL_WINDOW_*，UIWindowFlags 的单一事实来源：
+   Window.h / C++ Binding 的 UIWindowFlags 成员值均引用此处宏，改动不致漂移。
+   raylib 按 SDL_WINDOW_RESIZABLE=0x20 约定，sfml 按 0x01=Fullscreen 约定） */
+#define UICORN_WINDOW_FLAG_NONE        0x00000000u
+#define UICORN_WINDOW_FLAG_FULLSCREEN  0x00000001u /* SDL_WINDOW_FULLSCREEN */
+#define UICORN_WINDOW_FLAG_RESIZABLE   0x00000020u /* SDL_WINDOW_RESIZABLE */
+#define UICORN_WINDOW_FLAG_VSYNC       0x40000000u /* 应用层保留位：请求垂直同步（raylib 创建期有效） */
+
 /* 实例配置：可选项，全部可 NULL/0 表示默认。structSize 用于 C API 版本兼容检查。 */
 typedef struct {
     uint32_t    structSize;         /* 必须填 sizeof(UIInstanceConfig) */

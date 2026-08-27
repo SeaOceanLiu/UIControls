@@ -3,17 +3,18 @@
 
 #include <string>
 #include "Utility.h"
+#include "UICornerstoneAPI.h"   // UICORN_WINDOW_FLAG_*（UIWindowFlags 唯一值来源）
 
 class RenderDevice;
 
 // 跨后端统一窗口标志（值对齐 SDL_WINDOW_*，各后端自行映射：
 // raylib 按 SDL_WINDOW_RESIZABLE=0x20 约定，sfml 按 0x01=Fullscreen 约定）
 namespace UIWindowFlags {
-    constexpr uint32_t None       = 0x00000000;
-    constexpr uint32_t Fullscreen = 0x00000001; // SDL_WINDOW_FULLSCREEN
-    constexpr uint32_t Resizable  = 0x00000020; // SDL_WINDOW_RESIZABLE
-    constexpr uint32_t Vsync      = 0x40000000; // 应用层保留位：请求垂直同步（raylib 创建期有效）
-}
+    constexpr uint32_t None       = UICORN_WINDOW_FLAG_NONE;
+    constexpr uint32_t Fullscreen = UICORN_WINDOW_FLAG_FULLSCREEN;
+    constexpr uint32_t Resizable  = UICORN_WINDOW_FLAG_RESIZABLE;
+    constexpr uint32_t Vsync      = UICORN_WINDOW_FLAG_VSYNC;
+}   // 值引用 UICornerstoneAPI.h 宏（单一事实来源）
 
 class Window {
 public:

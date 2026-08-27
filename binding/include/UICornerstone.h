@@ -10,6 +10,18 @@
 #include <vector>
 #include "UICornerstoneAPI.h"
 
+// 窗口标志（语义命名）。与核心 include/Window.h 的 UIWindowFlags 值保持
+// 一致（Binding 独立发布、不引用核心头，故在此复刻，供 C++ Binding 用户
+// 以 UIWindowFlags::Fullscreen 等命名而非硬编码数值）。
+// 值引用 UICornerstoneAPI.h 的 UICORN_WINDOW_FLAG_* 宏（与核心 Window.h 同源，
+// 消除两处定义漂移风险）
+namespace UIWindowFlags {
+    constexpr uint32_t None       = UICORN_WINDOW_FLAG_NONE;
+    constexpr uint32_t Fullscreen = UICORN_WINDOW_FLAG_FULLSCREEN; // SDL_WINDOW_FULLSCREEN
+    constexpr uint32_t Resizable  = UICORN_WINDOW_FLAG_RESIZABLE;  // SDL_WINDOW_RESIZABLE
+    constexpr uint32_t Vsync      = UICORN_WINDOW_FLAG_VSYNC;      // 应用层保留位（raylib 创建期有效）
+}
+
 class Control;
 class Event;
 
@@ -28,7 +40,7 @@ public:
         std::string windowTitle    = "UICornerstone";
         int windowWidth  = 1024;
         int windowHeight = 768;
-        uint32_t windowFlags = 0;                 // 对齐 UIWindowFlags
+        uint32_t windowFlags = 0;                 // UIWindowFlags 位组合（WithWindowFlags(UIWindowFlags::Fullscreen) 等）
 
         Config& WithBackend(const std::string& name)          { backend = name; return *this; }
         Config& WithBackendSearchPath(const std::string& p)   { backendSearchPath = p; return *this; }
