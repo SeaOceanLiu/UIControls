@@ -145,7 +145,7 @@ echo [%date% %time%] ============================================
 echo [%date% %time%] Release ready: %RELEASE_DIR%
 echo [%date% %time%]   core + backend DLLs + runtime DLLs + assets + binding + tools
 echo [%date% %time%]   tools: validate_layout.exe + PropertyNames.h + schema
-echo [%date% %time%]   usage(in release dir): tools\validate_layout.exe <layout.json> --strict --schema=tools\schema\declarative-ui.schema.json --property-names=tools\PropertyNames.h
+echo [%date% %time%]   usage(in release dir): tools\validate_layout.exe <layout.json> --strict   (缺省从 exe 同目录找 PropertyNames.h、下一级 schema/ 找 schema)
 echo [%date% %time%] make_release done
 echo [%date% %time%] ============================================
 if not defined NO_PAUSE pause
