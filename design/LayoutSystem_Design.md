@@ -237,7 +237,7 @@
 {
     "type": "label",
     "caption": "Hello World\n第二行",              // \n 换行
-    "alignment": "TOP_LEFT",                       // 见下方 AlignmentMode 枚举值
+    "alignment": "top-left",                       // 见下方 AlignmentMode 枚举值
     "font": {
         "name": "HarmonyOS_Sans_SC_Regular",      // FontName 枚举字符串
         "size": 16,                                // 字体大小 (px)
@@ -259,15 +259,15 @@
 
 | JSON 字符串       | C++ 枚举值                        |
 | ----------------- | --------------------------------- |
-| `"TOP_LEFT"`      | `AlignmentMode::AM_TOP_LEFT`      |
-| `"TOP_CENTER"`    | `AlignmentMode::AM_TOP_CENTER`    |
-| `"TOP_RIGHT"`     | `AlignmentMode::AM_TOP_RIGHT`     |
-| `"MID_LEFT"`      | `AlignmentMode::AM_MID_LEFT`      |
+| `"top-left"`      | `AlignmentMode::AM_top-left`      |
+| `"top-center"`    | `AlignmentMode::AM_top-center`    |
+| `"top-right"`     | `AlignmentMode::AM_top-right`     |
+| `"mid-left"`      | `AlignmentMode::AM_mid-left`      |
 | `"CENTER"`        | `AlignmentMode::AM_CENTER`        |
-| `"MID_RIGHT"`     | `AlignmentMode::AM_MID_RIGHT`     |
-| `"BOTTOM_LEFT"`   | `AlignmentMode::AM_BOTTOM_LEFT`   |
-| `"BOTTOM_CENTER"` | `AlignmentMode::AM_BOTTOM_CENTER` |
-| `"BOTTOM_RIGHT"`  | `AlignmentMode::AM_BOTTOM_RIGHT`  |
+| `"mid-right"`     | `AlignmentMode::AM_mid-right`     |
+| `"bottom-left"`   | `AlignmentMode::AM_bottom-left`   |
+| `"bottom-center"` | `AlignmentMode::AM_bottom-center` |
+| `"bottom-right"`  | `AlignmentMode::AM_bottom-right`  |
 
 **FontName 枚举字符串对应表**（节选常用，完整见 `ConstDef.h`）：
 
@@ -440,7 +440,7 @@ Button 可额外挂载粒子动画（在 Actor 之上、标题文字之下绘制
         "name": "HarmonyOS_Sans_SC_Regular",
         "size": 16
     },
-    "alignment": "MID_LEFT",                        // 文字对齐方式
+    "alignment": "mid-left",                        // 文字对齐方式
     "margin": { "left": 4, "top": 4, "right": 4, "bottom": 4 }  // 内边距
 }
 ```
@@ -483,7 +483,7 @@ TextArea 继承自 EditBox，支持所有 EditBox 属性，并额外  支持多�
         "name": "HarmonyOS_Sans_SC_Regular",
         "size": 16
     },
-    "alignment": "TOP_LEFT",
+    "alignment": "top-left",
     "margin": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
 }
 ```
@@ -1007,7 +1007,7 @@ Anchor 布局将子控件锚定到容器的特定边角或中心，支持偏移�
         {
             "type": "button",
             "rect": { "x": 0, "y": 0, "w": 80, "h": 30 },
-            "anchor": "TOP_RIGHT",                       // 锚点模式
+            "anchor": "top-right",                       // 锚点模式
             "anchorOffset": { "left": 0, "top": 0, "right": 4, "bottom": 0 },  // 偏移量
             "caption": "Close"
         }
@@ -1020,27 +1020,27 @@ Anchor 布局将子控件锚定到容器的特定边角或中心，支持偏移�
 
 | 模式             | 定位方式   | 说明                                                        |
 | ---------------- | ---------- | ----------------------------------------------------------- |
-| `TOP_LEFT`       | 左上角固定 | 默认模式，`offset.left` / `offset.top` 决定距离左上角的偏移 |
-| `TOP_CENTER`     | 顶部居中   | 水平居中，`offset.left` 提供额外水平偏移                    |
-| `TOP_RIGHT`      | 右上角固定 | `offset.right` 决定距离右侧的偏移                           |
-| `MID_LEFT`       | 左方居中   | 垂直居中，`offset.top` 提供额外垂直偏移                     |
+| `top-left`       | 左上角固定 | 默认模式，`offset.left` / `offset.top` 决定距离左上角的偏移 |
+| `top-center`     | 顶部居中   | 水平居中，`offset.left` 提供额外水平偏移                    |
+| `top-right`      | 右上角固定 | `offset.right` 决定距离右侧的偏移                           |
+| `mid-left`       | 左方居中   | 垂直居中，`offset.top` 提供额外垂直偏移                     |
 | `CENTER`         | 正中心     | 水平和垂直均居中                                            |
-| `MID_RIGHT`      | 右方居中   | 垂直居中，靠右对齐                                          |
-| `BOTTOM_LEFT`    | 左下角固定 | `offset.bottom` 决定距离底部的偏移                          |
-| `BOTTOM_CENTER`  | 底部居中   | 水平居中，靠底部对齐                                        |
-| `BOTTOM_RIGHT`   | 右下角固定 | `offset.right` / `offset.bottom` 决定距离右下角的偏移       |
-| `TOP_STRETCH`    | 顶部拉伸   | 宽度填满容器（减去`offset.left+offset.right`），顶部固定    |
-| `BOTTOM_STRETCH` | 底部拉伸   | 宽度填满容器，底部固定                                      |
-| `LEFT_STRETCH`   | 左侧拉伸   | 高度填满容器（减去`offset.top+offset.bottom`），左侧固定    |
-| `RIGHT_STRETCH`  | 右侧拉伸   | 高度填满容器，右侧固定                                      |
+| `mid-right`      | 右方居中   | 垂直居中，靠右对齐                                          |
+| `bottom-left`    | 左下角固定 | `offset.bottom` 决定距离底部的偏移                          |
+| `bottom-center`  | 底部居中   | 水平居中，靠底部对齐                                        |
+| `bottom-right`   | 右下角固定 | `offset.right` / `offset.bottom` 决定距离右下角的偏移       |
+| `top-stretch`    | 顶部拉伸   | 宽度填满容器（减去`offset.left+offset.right`），顶部固定    |
+| `bottom-stretch` | 底部拉伸   | 宽度填满容器，底部固定                                      |
+| `left-stretch`   | 左侧拉伸   | 高度填满容器（减去`offset.top+offset.bottom`），左侧固定    |
+| `right-stretch`  | 右侧拉伸   | 高度填满容器，右侧固定                                      |
 | `FILL`           | 填满容器   | 宽高均填满容器（减去四边偏移量）                            |
 
 ##### 偏移量说明
 
 `anchorOffset` 是可选字段，使用 `{left, top, right, bottom}` 结构，语义取决于锚点模式：
 
-- **`TOP_LEFT`**：使用 `offset.left` 和 `offset.top`（距左上角的距离）
-- **`TOP_RIGHT`**：使用 `offset.right` 和 `offset.top`（距右上角的距离）
+- **`top-left`**：使用 `offset.left` 和 `offset.top`（距左上角的距离）
+- **`top-right`**：使用 `offset.right` 和 `offset.top`（距右上角的距离）
 - **`CENTER`**：使用 `offset.left` 和 `offset.top`（居中后的额外位移）
 - **`FILL`**：四边偏移量都使用，控制与容器边缘的间距
 
@@ -1055,12 +1055,12 @@ Anchor 布局将子控件锚定到容器的特定边角或中心，支持偏移�
         "padding": { "left": 4, "top": 4, "right": 4, "bottom": 4 }
     },
     "children": [
-        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "TOP_LEFT",      "caption": "TL" },
-        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "TOP_RIGHT",     "caption": "TR",
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "top-left",      "caption": "TL" },
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "top-right",     "caption": "TR",
           "anchorOffset": { "right": 4 } },
-        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "BOTTOM_LEFT",   "caption": "BL",
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "bottom-left",   "caption": "BL",
           "anchorOffset": { "bottom": 4 } },
-        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "BOTTOM_RIGHT",  "caption": "BR",
+        { "type": "button", "rect": { "w": 80, "h": 30 }, "anchor": "bottom-right",  "caption": "BR",
           "anchorOffset": { "right": 4, "bottom": 4 } },
         { "type": "button", "rect": { "w": 100, "h": 30 }, "anchor": "CENTER",       "caption": "CENTER" },
         { "type": "button", "rect": { "w": 100, "h": 30 }, "anchor": "FILL",         "caption": "FILL bar",
@@ -1999,22 +1999,22 @@ FontName LayoutParser::parseFontName(const string& name) {
 ```cpp
 AlignmentMode LayoutParser::parseAlignment(const string& align) {
     static const unordered_map<string, AlignmentMode> alignMap = {
-        {"TOP_LEFT",      AlignmentMode::AM_TOP_LEFT},
-        {"TOP_CENTER",    AlignmentMode::AM_TOP_CENTER},
-        {"TOP_RIGHT",     AlignmentMode::AM_TOP_RIGHT},
-        {"MID_LEFT",      AlignmentMode::AM_MID_LEFT},
+        {"top-left",      AlignmentMode::AM_top-left},
+        {"top-center",    AlignmentMode::AM_top-center},
+        {"top-right",     AlignmentMode::AM_top-right},
+        {"mid-left",      AlignmentMode::AM_mid-left},
         {"CENTER",        AlignmentMode::AM_CENTER},
-        {"MID_RIGHT",     AlignmentMode::AM_MID_RIGHT},
-        {"BOTTOM_LEFT",   AlignmentMode::AM_BOTTOM_LEFT},
-        {"BOTTOM_CENTER", AlignmentMode::AM_BOTTOM_CENTER},
-        {"BOTTOM_RIGHT",  AlignmentMode::AM_BOTTOM_RIGHT},
+        {"mid-right",     AlignmentMode::AM_mid-right},
+        {"bottom-left",   AlignmentMode::AM_bottom-left},
+        {"bottom-center", AlignmentMode::AM_bottom-center},
+        {"bottom-right",  AlignmentMode::AM_bottom-right},
     };
 
     auto it = alignMap.find(align);
     if (it != alignMap.end()) return it->second;
 
-    logWarn("unknown alignment \"" + align + "\", using TOP_LEFT");
-    return AlignmentMode::AM_TOP_LEFT;
+    logWarn("unknown alignment \"" + align + "\", using top-left");
+    return AlignmentMode::AM_top-left;
 }
 ```
 
@@ -2833,7 +2833,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             "id": "nameLabel",
                             "rect": { "x": 20, "y": 20, "w": 80, "h": 30 },
                             "caption": "姓名：",
-                            "alignment": "MID_LEFT",
+                            "alignment": "mid-left",
                             "font": { "size": 16 }
                         },
                         {
@@ -2852,7 +2852,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             "id": "descLabel",
                             "rect": { "x": 20, "y": 70, "w": 360, "h": 20 },
                             "caption": "这是一个编辑框，输入文本后会触发 onTextChanged",
-                            "alignment": "TOP_LEFT",
+                            "alignment": "top-left",
                             "font": { "size": 12 },
                             "colors": {
                                 "text": { "normal": "#A0A0A0FF" }
@@ -2906,7 +2906,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                             "id": "previewContent",
                             "rect": { "x": 10, "y": 45, "w": 230, "h": 140 },
                             "caption": "姓名：\n年龄：\n备注：",
-                            "alignment": "TOP_LEFT",
+                            "alignment": "top-left",
                             "font": { "size": 14 },
                             "colors": {
                                 "text": { "normal": "#C0C0C0FF" }
@@ -2919,7 +2919,7 @@ add_custom_command(TARGET test_layout POST_BUILD
                     "id": "statusLabel",
                     "rect": { "x": 0, "y": 560, "w": 800, "h": 25 },
                     "caption": "状态：就绪",
-                    "alignment": "TOP_LEFT",
+                    "alignment": "top-left",
                     "font": { "size": 14 },
                     "colors": {
                         "text": { "normal": "#808080FF" }
@@ -3027,7 +3027,7 @@ testLayoutInitialize()
 void testBenchInitialize() {
     g_label1 = LabelBuilder(nullptr, SRect(20, 30, 130, 30))
         .setCaption("L1: Left")
-        .setAlignmentMode(AlignmentMode::AM_TOP_LEFT)
+        .setAlignmentMode(AlignmentMode::AM_top-left)
         .setBorderStateColor(redBorder)
         .build();
     BENCH->addControl(g_label1);

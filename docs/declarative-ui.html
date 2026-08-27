@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -95,10 +95,23 @@ ui->LoadLayout(layoutJson);</code></pre>
 // 子控件：
 { "type": "button", "id": "okBtn",
   "rect": { "w": 100, "h": 32 },
-  "anchor": "TOP_RIGHT",
+  "anchor": "top-right",
   "anchorOffset": { "left": 10, "top": 10, "right": 0, "bottom": 0 } }</code></pre>
 
-<p>锚点值：<code>TOP_LEFT / TOP_CENTER / TOP_RIGHT / MID_LEFT / CENTER / MID_RIGHT / BOTTOM_LEFT / BOTTOM_CENTER / BOTTOM_RIGHT / TOP_STRETCH / BOTTOM_STRETCH / LEFT_STRETCH / RIGHT_STRETCH / FILL</code>。</p>
+<p>锚点值：<code>top-left / top-center / top-right / mid-left / center / mid-right / bottom-left / bottom-center / bottom-right / top-stretch / bottom-stretch / left-stretch / right-stretch / fill</code>。</p>
+
+<h3>anchor 取值含义</h3>
+<table>
+<tr><th>取值（小写连字符）</th><th>含义</th></tr>
+<tr><td><code>top-left</code> / <code>top-center</code> / <code>top-right</code></td><td>靠顶部：左/中/右对齐（<code>top-left/top-right</code> 用 <code>offset.left+top</code> / <code>offset.right+top</code> 定距）</td></tr>
+<tr><td><code>mid-left</code> / <code>center</code> / <code>mid-right</code></td><td>垂直居中：左/中/右对齐（<code>center</code> 居中后 <code>offset.left+top</code> 额外位移）</td></tr>
+<tr><td><code>bottom-left</code> / <code>bottom-center</code> / <code>bottom-right</code></td><td>靠底部：左/中/右对齐（<code>offset.bottom</code> 定底距）</td></tr>
+<tr><td><code>top-stretch</code></td><td>顶部拉伸：宽度填满容器（扣 <code>offset.left+right</code>），顶部固定</td></tr>
+<tr><td><code>bottom-stretch</code></td><td>底部拉伸：宽度填满容器，底部固定</td></tr>
+<tr><td><code>left-stretch</code></td><td>左侧拉伸：高度填满容器（扣 <code>offset.top+bottom</code>），左侧固定</td></tr>
+<tr><td><code>right-stretch</code></td><td>右侧拉伸：高度填满容器，右侧固定</td></tr>
+<tr><td><code>fill</code></td><td>填满容器内边距区域（宽高均填满，扣四边 <code>offset</code> 与布局 <code>padding</code>）</td></tr>
+</table>
 
 <h3>网格（grid）</h3>
 
