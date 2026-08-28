@@ -301,14 +301,19 @@ shared_ptr<Control> LayoutParser::parseControl(const json& j, Control* parent, i
     } else if (type == PropertyNames::kControlTypeDialog) {
         result = parseDialog(j, parent);
     } else if (type == PropertyNames::kControlTypeMenuBar) {
-        // MenuBar 不加入控件树（会被父容器裁剪），独立存储后再由调用方加入 BENCH 顶层
         auto menuBar = parseMenuBar(j, parent);
         if (menuBar) {
-            m_menuBars.push_back(menuBar);
+            // 容器 children 内（parent 非空，如 v-flow 布局）：正常返回挂树，
+            // setParent 自动切换手动定位参与布局引擎重排（弹出面板顶层挂载机制保证不被裁剪）；
+            // 顶层裸用（parent 为 null）：保持"独立存储 + 调用方挂 BENCH 顶层"的旧语义（兼容 test_layout 等）
+            if (parent == nullptr) {
+                m_menuBars.push_back(menuBar);
+                result = nullptr;
+                popJsonPath();
+                return nullptr;
+            }
+            result = menuBar;
         }
-        result = nullptr;
-        popJsonPath();
-        return nullptr;
     } else if (type == PropertyNames::kControlTypeNumericUpDown) {
         result = parseNumericUpDown(j, parent);
     } else if (type == PropertyNames::kControlTypeSplitter) {
@@ -1296,7 +1301,9 @@ shared_ptr<Panel> LayoutParser::parsePanel(const json& j, Control* parent) {
         }
         panel->setLayoutEngine(engine);
 
-        // Per-child layout properties
+        // Per-child layout properties——children 与 panelChildren 一一对应
+        // （menu-bar 在容器 children 内现已正常挂树；若将来出现别的"跳过挂树"特判类型，
+        // 需在此恢复"实际挂树计数"匹配，避免 flowWeight 等按 JSON 下标错绑）
         if (j.contains(PropertyNames::kJsonChildren) && j[PropertyNames::kJsonChildren].is_array()) {
             const json& children = j[PropertyNames::kJsonChildren];
             auto& panelChildren = panel->getChildren();
@@ -1550,15 +1557,30 @@ shared_ptr<MenuBar> LayoutParser::parseMenuBar(const json& j, Control* parent) {
     m_theme.applyCommonColors(menuBar, PropertyNames::kThemeCatMenuBar);
     parseCommonProperties(menuBar, j);
 
+    // rect：MenuBar 一直未解析通用 rect（历史遗留），容器内模式（自动手动定位）下
+    // rect 生效（x/y/宽/高），顶层模式高度仍以 barHeight 为准（全宽贴顶布局覆盖 rect）
+    if (j.contains(PropertyNames::kJsonRect) && j[PropertyNames::kJsonRect].is_object()) {
+        pushJsonPath(PropertyNames::kJsonRect);
+        menuBar->setRect(parseRect(j[PropertyNames::kJsonRect]));
+        popJsonPath();
+    }
+
     // font.size (static global setting)
     if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
         pushJsonPath(PropertyNames::kJsonFont);
         if (j[PropertyNames::kJsonFont].contains(PropertyNames::kJsonSize) && j[PropertyNames::kJsonFont][PropertyNames::kJsonSize].is_number()) {
             float fontSize = (float)j[PropertyNames::kJsonFont][PropertyNames::kJsonSize].get<int>();
             menuBar->setFontSize(fontSize);
-            // auto-recalculate barHeight if not explicitly set
+            // auto-recalculate barHeight if not explicitly set。
+            // 若 JSON 显式给出 rect.h（容器内优先经 rect 控高），则尊重 rect.h：
+            // 容器内模式（自动手动定位）下 rect 生效，覆盖 auto（font.size×1.6）而非反向覆盖
             if (!j.contains(PropertyNames::kJsonBarHeight)) {
-                menuBar->setBarHeight(fontSize * 1.6f);
+                bool rectHasH = j.contains(PropertyNames::kJsonRect) &&
+                                j[PropertyNames::kJsonRect].is_object() &&
+                                j[PropertyNames::kJsonRect].contains(PropertyNames::kJsonH);
+                if (!rectHasH) {
+                    menuBar->setBarHeight(fontSize * 1.6f);
+                }
             }
         }
         popJsonPath();
