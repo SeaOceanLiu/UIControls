@@ -194,6 +194,42 @@ uint32_t UICornerstone::GetBackendCapabilities() const {
         ? Dyn::API().fnGetBackendCapabilities(m_impl->instance) : 0;
 }
 
+// ============================================================
+// 运行期窗口 API
+// ============================================================
+bool UICornerstone::GetWindowSize(float& w, float& h) const {
+    w = 0.0f; h = 0.0f;
+    if (!m_impl->instance || !Dyn::API().fnGetWindowSize) return false;
+    return Dyn::API().fnGetWindowSize(m_impl->instance, &w, &h) != 0;
+}
+
+bool UICornerstone::SetWindowSize(float w, float h) {
+    if (!m_impl->instance || !Dyn::API().fnSetWindowSize) return false;
+    return Dyn::API().fnSetWindowSize(m_impl->instance, w, h) != 0;
+}
+
+void* UICornerstone::GetNativeWindowHandle() const {
+    if (!m_impl->instance || !Dyn::API().fnGetNativeWindowHandle) return nullptr;
+    return Dyn::API().fnGetNativeWindowHandle(m_impl->instance);
+}
+
+static void WindowResizeThunk(int width, int height, void* userData) {
+    auto* cb = static_cast<UICornerstone::WindowResizeCallback*>(userData);
+    if (cb) (*cb)(width, height);
+}
+
+void UICornerstone::SetWindowResizeCallback(WindowResizeCallback callback) {
+    if (!m_impl->instance || !Dyn::API().fnSetWindowResizeCallback) return;
+    if (callback) {
+        m_impl->windowResize = std::make_shared<WindowResizeCallback>(std::move(callback));
+        Dyn::API().fnSetWindowResizeCallback(
+            m_impl->instance, &WindowResizeThunk, m_impl->windowResize.get());
+    } else {
+        m_impl->windowResize = nullptr;
+        Dyn::API().fnSetWindowResizeCallback(m_impl->instance, nullptr, nullptr);
+    }
+}
+
 void UICornerstone::Shutdown() {
     if (m_impl->instance) {
         if (m_impl->ownsInstance) Dyn::API().fnDestroyInstance(m_impl->instance);

@@ -53,6 +53,7 @@ BackendAPI g_raylibBackend = {
     // raylib 单窗口架构（全局 CORE 只跟踪最近 InitWindow 的窗口）：多实例时
     // 所有渲染/输入 API 作用于同一窗口，无法多窗口独立显示 → 不声明 MULTI_WINDOW
     UICORN_BACKEND_CAP_RENDER_TARGET | UICORN_BACKEND_CAP_CLIP_RECT | UICORN_BACKEND_CAP_READBACK
+    | UICORN_BACKEND_CAP_WINDOW_SET_SIZE
 };
 
 // ============================================================
@@ -94,6 +95,7 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
 
     cb.version = 1;
     cb.capabilities = UICORN_BACKEND_CAP_RENDER_TARGET | UICORN_BACKEND_CAP_CLIP_RECT
+                    | UICORN_BACKEND_CAP_READBACK | UICORN_BACKEND_CAP_WINDOW_SET_SIZE
                     | UICORN_BACKEND_CAP_READBACK;   // 无 MULTI_WINDOW：单窗口架构
     cb.readPixels = [](UIRenderDeviceHandle dev, void* buffer, int l, int t, int w, int h) {
         if (dev) static_cast<RenderDevice*>(dev)->readPixels(buffer, SRect((float)l, (float)t, (float)w, (float)h));
@@ -125,6 +127,7 @@ extern "C" BACKEND_PLUGIN_EXPORT UIBackendCallbacks* GetUIBackendCallbacks(void)
     cb.getDisplayHeight     = bridge_getDisplayHeight;
     cb.getDpiScale          = bridge_getDpiScale;
     cb.setWindowTitle       = bridge_setWindowTitle;
+    cb.setWindowSize        = bridge_setWindowSize;
     cb.getMousePosition     = bridge_getMousePosition;
 
     // RenderDevice

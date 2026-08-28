@@ -82,6 +82,18 @@ public:
     uint32_t GetBackendCapabilities() const;
     void Shutdown();
 
+    // ── 运行期窗口 API（见设计 §21）──
+    // 窗口尺寸查询（headless 实例返回 0×0）；false = 无窗口实例。
+    bool GetWindowSize(float& w, float& h) const;
+    // 请求窗口 resize（实现经后端 Window::setSize，尺寸变化经 WindowResize
+    // 事件回流并触发 SetWindowResizeCallback）。false = headless/无窗口。
+    bool SetWindowSize(float w, float h);
+    // 原生窗口句柄（嵌入/hosted 场景）；无窗口返回 nullptr。
+    void* GetNativeWindowHandle() const;
+    using WindowResizeCallback = std::function<void(int width, int height)>;
+    // 窗口尺寸变化回调（ProcessEvents 处理 WindowResize 时分发，替代帧内轮询）。
+    void SetWindowResizeCallback(WindowResizeCallback callback);
+
     // ── 子视口 ──
     std::unique_ptr<UICornerstone> CreateViewport(float x, float y, float w, float h);
 

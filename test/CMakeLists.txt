@@ -117,6 +117,7 @@ set(UI_TEST_EXECUTABLES
     test_multi_instance
     test_multiviewport
     test_viewport_scale
+    test_window
     test_luotiani
     test_animation
     test_aniviewer
@@ -131,7 +132,7 @@ foreach(test_name ${UI_TEST_EXECUTABLES})
         target_include_directories(${test_name} PRIVATE ${TEST_INCLUDES})
         target_link_libraries(${test_name} PRIVATE ${TEST_LIBS})
 
-        if(${test_name} STREQUAL "test_aniviewer")
+        if(${test_name} STREQUAL "test_aniviewer" OR ${test_name} STREQUAL "test_window")
             # 命令行视觉校验工具：CreateInstanceFromPlugin 需要后端名
             string(TOLOWER "${UICORNERSTONE_BACKEND}" _BACKEND_LOWER)
             target_compile_definitions(${test_name} PRIVATE

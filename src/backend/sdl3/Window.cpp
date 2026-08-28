@@ -64,6 +64,10 @@ public:
         if (m_window) SDL_SetWindowResizable(m_window, resizable);
     }
 
+    void setSize(int width, int height) override {
+        if (m_window) SDL_SetWindowSize(m_window, width, height);
+    }
+
     bool getMousePosition(float& x, float& y) override {
         if (!m_window) return false;
         // SDL_GetMouseState 返回的是鼠标相对"当前鼠标焦点窗口"的坐标：

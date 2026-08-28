@@ -83,6 +83,10 @@ bool MainWindow::processEvents(AppCallbacks* app) {
                 m_lastResizeArrival = Platform::GetTicks();
                 onWindowResized(w, h);
                 if (m_context->window) m_context->window->onResized(w, h);
+                // 实例级 resize 用户回调（运行期窗口 API，§21；与 API.cpp 两通路语义一致）
+                if (m_context->windowResizeCb) {
+                    m_context->windowResizeCb(w, h, m_context->windowResizeCbUserData);
+                }
                 break;
             }
             case EventType::WindowMoved:

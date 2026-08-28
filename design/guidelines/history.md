@@ -1,5 +1,23 @@
 ﻿## Session History
 
+### 2026-08-28（下午）: 运行期窗口 API（Size 查询/设置 + Resize 回调）+ CornerstoneDesigner v-flow 问题根治（Complete）
+
+**背景**：CornerstoneDesigner 的 App::SdlApi 动态解析 SDL3.dll 三函数（GetWindowSize/SetWindowSize/GetWindows）做窗口 resize 同步——绕过后端抽象（跨后端失效、headless 语义丢失）；设计评审定案：统一提供运行期窗口 API（§21 文档先行）。
+
+**1. 文档先行**：`design/BackendAbstraction_Design.md` §21（动机/API 清单/三后端差异表/能力位/验证）——sdl3=SDL_SetWindowSize、sfml=setSize、raylib=SetWindowSize（headless 空操作+句柄 NULL）。
+
+**2. 核心+后端**：`Window` 抽象加 `virtual setSize(w,h)`（sdl3/sfml/raylib 覆写；raylib headless guard）；`UIBackendCallbacks` Window 组加 `setWindowSize`（可选）→ `BackendBridge.h` `bridge_setWindowSize` + 三后端 cb 注册；`CallbackWindow::setSize` 转发（插件模式损坏点：此前无协议入口）。
+
+**3. C ABI**：`GetWindowSize / SetWindowSize / GetNativeWindowHandle / SetWindowResizeCallback`（4 函数）；`UIContext` 加回调存储；统一 `DispatchWindowResize`（pumpInstanceEvents+注入队列两通路）并在 MainWindow 分发；能力位 `UICORN_BACKEND_CAP_WINDOW_SET_SIZE (1u<<4)` 三后端声明。
+
+**4. Binding**：4 方法（GetWindowSize/SetWindowSize/GetNativeWindowHandle/SetWindowResizeCallback<std::function>，C thunk+Impl 持 shared_ptr 保活）+ DynamicApi RESOLVE×4。
+
+**5. 测试**：`test_window.cpp`（新，10 断言）：初值 1200×800、cap 位、nativeHandle、SetWindowSize 900×700 读回（±1）、注入 WindowResize→回调≥1 且值对、取消后不再触发；三后端 PASS（sdl3/sfml 10/10、raylib 9/9 无 MULTI_WINDOW 断言）；test_menu/test_dialog/test_multi_instance 回归 exit=0。
+
+**6. 文档**：capi.html 8.1 与 binding.html 速查表补 4+1 条目（v1.1.1 增）。
+
+**相关文件**：include/Window.h、include/UICornerstoneAPI.h、include/UIContext.h、src/UICornerstoneAPI.cpp、src/MainWindow.cpp、src/CallbackAdapters.h/.cpp、src/backend/BackendBridge.h、src/backend/{sdl3,sfml,raylib}/Window.cpp/BackendPlugin.cpp、binding/src/(DynamicApi.h/.cpp、Impl.h、UICornerstone.cpp)、binding/include/UICornerstone.h、test/test_window.cpp、test/CMakeLists.txt、design/BackendAbstraction_Design.md（§21）、docs/appendix/{capi,binding}.html、design/guidelines/history.md（本条）。
+
 ### 2026-08-27: MenuBar 容器布局 + 下拉弹出置顶 + 全局关闭（v1.1.1 增强，Complete）
 
 **背景**：CornerstoneDesigner（v1.1.1）开发中发现：menu-bar 原为"不挂控件树、顶层独立"控件，不参与 v-flow 布局——v-flow 内放 menu-bar 不被正确重排。用户拍板方案 A：容器内自动手动定位 + 弹出面板挂顶层（缩放与 Popup 一致）+ 全局点击/ESC 关闭；文档随后刷新。

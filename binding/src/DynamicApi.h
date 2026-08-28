@@ -40,6 +40,12 @@ struct Api {
     int (*fnGetViewportScale)(UIInstance, float*, float*) = nullptr;
     int (*fnSetViewportAnchor)(UIInstance, float, float) = nullptr;
 
+    // 运行期窗口 API
+    int (*fnGetWindowSize)(UIInstance, float*, float*) = nullptr;
+    int (*fnSetWindowSize)(UIInstance, float, float) = nullptr;
+    void* (*fnGetNativeWindowHandle)(UIInstance) = nullptr;
+    void (*fnSetWindowResizeCallback)(UIInstance, UIWindowResizeCallback, void*) = nullptr;
+
     // 帧循环
     int (*fnProcessEvents)(UIInstance) = nullptr;   // 返回是否处理了事件（多实例调度）
     void (*fnUpdate)(UIInstance, double) = nullptr;

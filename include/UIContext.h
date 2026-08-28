@@ -75,6 +75,10 @@ struct UIContext {
     std::unordered_map<std::string, std::pair<UIActionCallback, void*>> actions;
     std::unordered_map<std::string, UIControlHandle> controlsById;
 
+    // ── 窗口 resize 用户回调（运行期窗口 API，§21）──
+    UIWindowResizeCallback windowResizeCb = nullptr;
+    void* windowResizeCbUserData = nullptr;
+
     // ── 注入事件队列 ──
     // 跨线程（scheduleAutoQuit 的定时线程 → UICornerstone_PushUIEvent）与
     // 主线程（帧循环消费）访问，必须互斥保护。

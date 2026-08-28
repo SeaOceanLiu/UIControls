@@ -116,6 +116,9 @@ typedef struct {
 #define UICORN_BACKEND_CAP_RENDER_TARGET (1u << 1)
 #define UICORN_BACKEND_CAP_CLIP_RECT     (1u << 2)
 #define UICORN_BACKEND_CAP_READBACK      (1u << 3)
+/* WINDOW_SET_SIZE：运行期 SetWindowSize 生效（有真实窗口的后端声明；
+   raylib 多实例 headless 实例无窗口，调用方按此位守卫以免空操作或越界） */
+#define UICORN_BACKEND_CAP_WINDOW_SET_SIZE (1u << 4)
 
 typedef struct {
     int version;  // 必须设为 1
@@ -129,6 +132,8 @@ typedef struct {
     float           (*getDisplayHeight)(UIWindowHandle);
     float           (*getDpiScale)(UIWindowHandle);
     void            (*setWindowTitle)(UIWindowHandle, const char*);
+    /* 请求窗口 resize（可选，可 NULL；运行期窗口 API SetWindowSize 的后端实现入口） */
+    void            (*setWindowSize)(UIWindowHandle, int w, int h);
     int             (*getMousePosition)(UIWindowHandle, float* x, float* y);
 
     // --- RenderDevice (必须) ---
@@ -271,6 +276,20 @@ UICORNERSTONE_API int UICornerstone_SetCanvasSize(UIInstance instance, float w, 
 UICORNERSTONE_API int UICornerstone_GetViewportScale(UIInstance instance, float* sx, float* sy);
 /* 手动锚点偏移（增量叠加，off 模式手动平移用） */
 UICORNERSTONE_API int UICornerstone_SetViewportAnchor(UIInstance instance, float ax, float ay);
+
+/* ============ 运行期窗口 API ============ */
+/* 窗口尺寸查询：headless 实例（见 CAP_MULTI_WINDOW）返回 0×0。返回 1 = ok。 */
+UICORNERSTONE_API int UICornerstone_GetWindowSize(UIInstance instance, float* w, float* h);
+/* 请求窗口 resize（实现经后端 Window::setSize，尺寸变化经 WindowResize 事件回流）。
+   headless / 无窗口实例返回 0。 */
+UICORNERSTONE_API int UICornerstone_SetWindowSize(UIInstance instance, float w, float h);
+/* 原生窗口句柄（嵌入/hosted 场景）；无窗口返回 NULL。 */
+UICORNERSTONE_API void* UICornerstone_GetNativeWindowHandle(UIInstance instance);
+
+typedef void (*UIWindowResizeCallback)(int width, int height, void* userData);
+/* 窗口尺寸变化用户回调（ProcessEvents 处理 WindowResize 事件时分发，替代用户帧内轮询）。 */
+UICORNERSTONE_API void UICornerstone_SetWindowResizeCallback(UIInstance instance,
+    UIWindowResizeCallback cb, void* userData);
 
 /* ============ 帧循环 ============ */
 UICORNERSTONE_API int UICornerstone_ProcessEvents(UIInstance instance);

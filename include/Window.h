@@ -30,6 +30,11 @@ public:
     virtual RenderDevice* renderDevice() = 0;
     virtual bool getMousePosition(float& x, float& y) = 0;
     virtual void setResizable(bool resizable) { (void)resizable; }
+    // 请求窗口 resize（后端实现：sdl3=SDL_SetWindowSize、sfml=setSize、
+    // raylib=SetWindowSize（headless 实例空操作，由调用方按
+    // UICORN_BACKEND_CAP_WINDOW_SET_SIZE 守卫））。尺寸变化经后端事件
+    // 回流 WindowResize 见 §21（运行期窗口 API）。
+    virtual void setSize(int width, int height) { (void)width; (void)height; }
     virtual void onResized(int width, int height) {}
     // 无原生窗口（headless）查询：单窗口架构后端（raylib）的多实例中，
     // 非首个实例不创建真实窗口（防止覆盖全局窗口状态），据此跳过

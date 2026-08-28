@@ -619,6 +619,48 @@ uint32_t UICornerstone_GetBackendCapabilities(UIInstance instance) {
 }
 
 // ============================================================
+// 运行期窗口 API
+// ============================================================
+int UICornerstone_GetWindowSize(UIInstance instance, float* w, float* h) {
+    if (!instance || !instance->window) return 0;
+    SSize sz = instance->window->getSize();
+    if (w) *w = sz.width;
+    if (h) *h = sz.height;
+    return 1;
+}
+
+int UICornerstone_SetWindowSize(UIInstance instance, float w, float h) {
+    if (!instance || !instance->window) return 0;
+    auto* win = instance->window;
+    if (win->isHeadless()) return 0;
+    int iw = w > 0 ? (int)(w + 0.5f) : 0;
+    int ih = h > 0 ? (int)(h + 0.5f) : 0;
+    win->setSize(iw, ih);
+    return 1;
+}
+
+void* UICornerstone_GetNativeWindowHandle(UIInstance instance) {
+    if (!instance || !instance->window) return nullptr;
+    return instance->window->nativeHandle();
+}
+
+void UICornerstone_SetWindowResizeCallback(UIInstance instance,
+    UIWindowResizeCallback cb, void* userData) {
+    if (!instance) return;
+    instance->windowResizeCb = cb;
+    instance->windowResizeCbUserData = userData;
+}
+
+// WindowResize 分发（pumpInstanceEvents 与注入队列两通路共用）
+static void DispatchWindowResize(UIInstance instance, const EventResize& ev) {
+    instance->viewport = SRect(0, 0, (float)ev.width, (float)ev.height);
+    instance->bench->resized(instance->viewport);
+    if (instance->windowResizeCb) {
+        instance->windowResizeCb(ev.width, ev.height, instance->windowResizeCbUserData);
+    }
+}
+
+// ============================================================
 // 帧循环
 // ============================================================
 void UICornerstone_PushUIEvent(UIInstance instance, const UIEvent* ue) {
@@ -706,9 +748,7 @@ static bool pumpInstanceEvents(UIInstance instance) {
             if (evt.m_type == EventType::WindowClose) {
                 instance->quit = true;
             } else if (evt.m_type == EventType::WindowResize) {
-                instance->viewport = SRect(0, 0,
-                    (float)evt.resizeEvent.width, (float)evt.resizeEvent.height);
-                instance->bench->resized(instance->viewport);
+                DispatchWindowResize(instance, evt.resizeEvent);
             }
             break;
         }
@@ -748,9 +788,7 @@ int UICornerstone_ProcessEvents(UIInstance instance) {
         if (event.m_type == EventType::WindowClose) {
             instance->quit = true;
         } else if (event.m_type == EventType::WindowResize) {
-            instance->viewport = SRect(0, 0,
-                (float)event.resizeEvent.width, (float)event.resizeEvent.height);
-            instance->bench->resized(instance->viewport);
+            DispatchWindowResize(instance, event.resizeEvent);
         } else if (event.m_type == EventType::FocusLost) {
             // 与轮询通路（pumpInstanceEvents）语义一致：窗口失去系统焦点
             // → 清除本实例焦点（含活动子视口），避免跨实例焦点环并存

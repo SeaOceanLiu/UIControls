@@ -49,6 +49,10 @@ inline float bridge_getDpiScale(UIWindowHandle h) {
 inline void bridge_setWindowTitle(UIWindowHandle h, const char* t) {
     static_cast<Window*>(h)->setTitle(t ? t : "");
 }
+inline void bridge_setWindowSize(UIWindowHandle h, int w, int hh) {
+    // handle 为 BackendWindow（Window* 位模式）；headless 实例 createWindow 返回 0
+    if (h) static_cast<Window*>(h)->setSize(w, hh);
+}
 inline int bridge_getMousePosition(UIWindowHandle h, float* x, float* y) {
     return static_cast<Window*>(h)->getMousePosition(*x, *y) ? 1 : 0;
 }

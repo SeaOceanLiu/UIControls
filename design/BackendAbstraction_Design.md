@@ -2094,3 +2094,56 @@ virtual bool isHeadless() const { return false; }   // raylib 覆写返回 !m_ha
 - **样例/测试**：`sample_cpp_multiinstance`、`test_multiinstance_visual_cabi`、`test_multi_instance_cabi` 均按能力位条件化第二实例渲染；非 MULTI_WINDOW 后端渲染冒烟打印 SKIP。
 
 **验证（2026-08-08）**：raylib 多实例测试 auto=3 渲染冒烟 SKIP + exit=0；人工模式主实例窗口正常无闪动；三后端全量回归 exit=0；4 个 binding 样例 UICORN_AUTO=1 全过。
+
+## 21. 运行期窗口 API（Size 查询/设置 + Resize 用户回调）
+
+### 21.1 动机（CornerstoneDesigner 场景）
+
+工具类应用（Designer 等）需响应窗口尺寸变化（如同步 root 布局）。
+此前 C ABI / Binding **未暴露任何运行期窗口 API**（只有 `Config::WithWindow` 创建时尺寸、
+视口类 Get/SetViewport 是"画布"非 OS 窗口），用户被迫绕过抽象层动态解析后端 SDK：
+CornerstoneDesigner 的 `App::SdlApi` 通过 LoadLibrary("SDL3.dll") + GetProcAddress
+解析 `SDL_GetWindowSize / SDL_SetWindowSize / SDL_GetWindows`。该写法三个损失：
+跨后端失效（sfml/raylib 需另写一套，raylib 无多窗口语义）、发布环境中 SDK 路径假设埋雷、
+核心 `Window::onResized → WindowResize 事件` 内部链被绕过（用户也拦截不到该事件）。
+
+### 21.2 API 清单（C ABI）与 Binding 封装
+
+| C ABI | Binding | 说明 |
+|---|---|---|
+| `UICornerstone_GetWindowSize(inst, w*, h*)` | `GetWindowSize(w,h)` | 运行期窗口尺寸（headless 返回 0×0，cap MULTI_WINDOW 可预判） |
+| `UICornerstone_SetWindowSize(inst, w, h)` | `SetWindowSize(w,h)` | 请求窗口 resize（实现经 `Window::setSize`；真实 resize 由后端触发，随后走 WindowResize 事件链） |
+| `UICornerstone_GetNativeWindowHandle(inst)` | `GetNativeWindowHandle()` | 原生窗口句柄（嵌入/hosted 场景；无窗口时 nullptr） |
+| `UICornerstone_SetWindowResizeCallback(inst, cb, userData)` | `SetWindowResizeCallback(std::function<void(int,int)>)` | 窗口尺寸变化用户回调（在 ProcessEvents 的 WindowResize 分发处触发，替代用户帧循环轮询） |
+
+能力位新增：`UICORN_BACKEND_CAP_WINDOW_SET_SIZE (1u << 4)` —— 仅**真实窗口后端**声明
+（raylib 首个实例声明、headless 实例不声明；sfml/sdl3 声明）。
+
+### 21.3 三后端差异表
+
+| 维度 | sdl3 | sfml | raylib |
+|---|---|---|---|
+| 查询尺寸 | `SDL_GetWindowSize`（窗口实体，非 DPI 分辨率） | `sf::Window::getSize()` | `GetScreenWidth/Height`（首实例真实窗口有效） |
+| 设置尺寸 | `SDL_SetWindowSize`（触发 WindowResize 事件） | `sf::Window::setSize()`（变化时产生 resize 事件，v3 语义） | `SetWindowSize`（单窗口，headless 实例**禁止调用**——无窗口，必须由调用方按 cap 位守卫） |
+| 原生句柄 | `SDL_GetWindowWMInfo` 返回 void* | `sf::Window::getNativeHandle` | 无通用窗口句柄（raylib 窗口 API 内部封装）→ 返回 nullptr 约定 |
+| headless 特例 | 无（Sdl3 多窗口独立） | 无 | `isHeadless()` 实例：getSize 0×0 / setSize 空操作 / 无句柄 |
+| resize 事件 | WindowResize（内部已有） | WindowResize | WindowResize（raylib 单实例 OK；headless 无事件） |
+
+### 21.4 实施要点
+
+- `Window` 抽象新增 `virtual void setSize(int w, int h) {}`（每后端覆写；headless 空操作）；
+- C ABI 三个函数 + resize 回调注册均挂在实例（`UICornerstoneAPI.cpp` 经
+  `instance->window`（`BackendWindow*` 或 `UIContext` 路径）→ Window 抽象；
+- Binding：`DynamicApi`/`StaticApi` 双路径 RESOLVE 四个导出 + `SetWindowResizeCallback`
+  的 std::function 包装（内部静态 thunk + 实例级回调存储）；
+- 事件链复用：`MainWindow::processEvents` 的 WindowResize 分支（既有 `onWindowResized`
+  + viewport 自适应）→ API 层补分发用户回调（回调在 notify 线程安全语义下执行——
+  同 ProcessEvents 调用线程）。
+
+### 21.5 验证
+
+`test_window.cpp`（三后端）：Create(1200×800) → GetWindowSize==1200×800 →
+SetWindowSize(800,600) → 轮询/经回调断言新尺寸；cap 位断言
+（`& UICORN_BACKEND_CAP_WINDOW_SET_SIZE` 与后端符合）。multi-instance 回归不受影响。
+
+**（2026-08-28 实施）**。

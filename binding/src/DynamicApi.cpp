@@ -55,6 +55,11 @@ static Api& LoadInto(Api& api, void* handle) {
     RESOLVE(GetViewportScale);
     RESOLVE(SetViewportAnchor);
 
+    RESOLVE(GetWindowSize);
+    RESOLVE(SetWindowSize);
+    RESOLVE(GetNativeWindowHandle);
+    RESOLVE(SetWindowResizeCallback);
+
     RESOLVE(ProcessEvents);
     RESOLVE(Update);
     RESOLVE(PushUIEvent);

@@ -110,6 +110,12 @@ public:
             ClearWindowState(FLAG_WINDOW_RESIZABLE);
     }
 
+    void setSize(int width, int height) override {
+        // headless 实例（多窗口后端的多实例非首实例）无真实窗口：空操作
+        if (!m_hasOwnWindow) return;
+        SetWindowSize(width, height);
+    }
+
     void onResized(int width, int height) override {
         // raylib handles internal resize automatically via GLFW callback
         (void)width;

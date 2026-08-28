@@ -25,7 +25,11 @@
 <tr><td><code>UICornerstone_CreateInstanceFromPlugin(name, config)</code></td><td>从后端插件名创建（"sdl3"/"sfml"/"raylib"）</td></tr>
 <tr><td><code>UICornerstone_CreateViewport(inst, x, y, w, h)</code></td><td>在当前窗口内创建子视口（单窗口多视口，见 <a href="../advanced/multiwindow.html">5.2</a>）</td></tr>
 <tr><td><code>UICornerstone_DestroyInstance(inst)</code></td><td>销毁实例</td></tr>
-<tr><td><code>UICornerstone_GetBackendCapabilities(inst)</code></td><td>能力位（UICORN_BACKEND_CAP_*）</td></tr>
+<tr><td><code>UICornerstone_GetBackendCapabilities(inst)</code></td><td>能力位（UICORN_BACKEND_CAP_*，含 WINDOW_SET_SIZE：运行期 SetWindowSize 可用）</td></tr>
+<tr><td><code>UICornerstone_GetWindowSize(inst, &amp;w, &amp;h)</code></td><td>运行期窗口尺寸（headless 返回 0×0；v1.1.1 增）</td></tr>
+<tr><td><code>UICornerstone_SetWindowSize(inst, w, h)</code></td><td>请求窗口 resize（真实调整经后端，尺寸变化经 WindowResize 事件回流；headless 返回 0；v1.1.1 增）</td></tr>
+<tr><td><code>UICornerstone_GetNativeWindowHandle(inst)</code></td><td>原生窗口句柄（嵌入/hosted 场景；无窗口返回 NULL；v1.1.1 增）</td></tr>
+<tr><td><code>UICornerstone_SetWindowResizeCallback(inst, cb, ud)</code></td><td>窗口尺寸变化回调 (w,h,ud)，替代帧内轮询（v1.1.1 增）</td></tr>
 <tr><td><code>UICornerstone_GetViewport(inst, &amp;x, &amp;y, &amp;w, &amp;h)</code></td><td>查询当前视口</td></tr>
 <tr><td><code>UICornerstone_GetViewportScale(inst, &amp;sx, &amp;sy)</code></td><td>当前复合缩放系数</td></tr>
 <tr><td><code>UICornerstone_GetViewportScaleMode(inst, &amp;mode)</code></td><td>查询当前缩放模式</td></tr>

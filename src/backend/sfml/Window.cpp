@@ -54,6 +54,12 @@ public:
         if (m_window) m_window->setTitle(sf::String::fromUtf8(title.begin(), title.end()));
     }
 
+    void setSize(int width, int height) override {
+        if (m_window) m_window->setSize(sf::Vector2u(
+            width > 0 ? (unsigned)width : 0u,
+            height > 0 ? (unsigned)height : 0u));
+    }
+
     void* nativeHandle() override { return m_window; }
 
     RenderDevice* renderDevice() override { return m_renderDevice; }

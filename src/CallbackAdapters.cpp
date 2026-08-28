@@ -35,6 +35,9 @@ float CallbackWindow::getDpiScale() const {
 void CallbackWindow::setTitle(const std::string& title) {
     if (m_cbs->setWindowTitle) m_cbs->setWindowTitle(m_handle, title.c_str());
 }
+void CallbackWindow::setSize(int width, int height) {
+    if (m_cbs->setWindowSize) m_cbs->setWindowSize(m_handle, width, height);
+}
 void* CallbackWindow::nativeHandle() {
     return m_handle;
 }

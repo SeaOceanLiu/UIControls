@@ -29,6 +29,7 @@ public:
     float getDisplayHeight() const override;
     float getDpiScale() const override;
     void setTitle(const std::string& title) override;
+    void setSize(int width, int height) override;
     void* nativeHandle() override;
     RenderDevice* renderDevice() override;
     bool getMousePosition(float& x, float& y) override;

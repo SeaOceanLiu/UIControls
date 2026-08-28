@@ -38,6 +38,9 @@ struct Impl {
     // Action 注册表（实例私有，无全局 static）
     std::unordered_map<std::string, std::shared_ptr<UICornerstone::ActionCallback>> actions;
 
+    // 窗口 resize 回调（std::function + C thunk 的 userData/存活域）
+    std::shared_ptr<UICornerstone::WindowResizeCallback> windowResize;  // nullptr = 未设置
+
     // Control 生命周期追踪（weak 不保活）
     std::unordered_map<UIControlHandle, std::weak_ptr<ControlState>> liveControls;
 

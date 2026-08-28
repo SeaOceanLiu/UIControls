@@ -276,6 +276,10 @@ lbl.SetPtr(PropertyNames::kPropContextMenu, menu.GetThis());</code></pre>
 <tr><td><code>DebugIsControlFocused(instance, handle)</code></td><td>焦点查询（静态）</td></tr>
 <tr><td><code>SetBackendConfig(key, value) / SetBackendConfigBool(key, bool) / GetBackendConfigBool(key, bool&amp;)</code></td><td>后端差异配置（见 12）</td></tr>
 <tr><td><code>uint32_t GetBackendCapabilities() const</code></td><td>能力位（对应 C ABI <code>UICornerstone_GetBackendCapabilities</code>，见 8.1）</td></tr>
+<tr><td><code>bool GetWindowSize(float&amp; w, float&amp; h) const</code></td><td>运行期窗口尺寸（v1.1.1 增）</td></tr>
+<tr><td><code>bool SetWindowSize(float w, float h)</code></td><td>请求窗口 resize（v1.1.1 增）</td></tr>
+<tr><td><code>void* GetNativeWindowHandle() const</code></td><td>原生窗口句柄（v1.1.1 增）</td></tr>
+<tr><td><code>void SetWindowResizeCallback(std::function&lt;void(int,int)&gt;)</code></td><td>窗口尺寸变化回调（传空函数取消；v1.1.1 增）</td></tr>
 </table>
 
 <div class="chapter-nav">
