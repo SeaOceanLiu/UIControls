@@ -238,6 +238,7 @@ void EditBox::deleteSelectedText() {
 }
 
 void EditBox::update(void) {
+    if (!getEnable()) return;   // enable 守卫（同 Label/Panel；ComboBox/TextArea/NumericUpDown 继承受益）
     if (m_fontScaleDirty && m_visible) {
         m_fontScaleDirty = false;
         loadFontInternal();

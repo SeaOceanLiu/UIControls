@@ -192,6 +192,7 @@ void ColorPicker::recreateClosedState() {
 // ==================== Popup Control ====================
 
 bool ColorPicker::handleEvent(shared_ptr<Event> event) {
+    if (!m_enable || !m_visible) return false;   // enable/visible 守卫
     if (event->m_type == EventType::KeyDown &&
         (event->keyEvent.keycode == KeyCode::Return || event->keyEvent.keycode == KeyCode::Space) &&
         getFocused() && !m_dialog->getVisible()) {

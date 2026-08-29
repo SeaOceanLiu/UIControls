@@ -218,6 +218,7 @@ void Shape::drawPrimitiveAt(RenderDevice* dev, const ShapePrimitive& pr) {
 }
 
 void Shape::draw(void) {
+    if (!m_visible) return;   // 可见性守卫（beforeDraw 仅辅助，不能依赖）
     ControlImpl::beforeDraw();   // 背景色（非透明时绘制）
     RenderDevice* dev = getRenderDevice();
     if (!dev) return;

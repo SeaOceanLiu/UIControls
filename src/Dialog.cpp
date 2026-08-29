@@ -211,6 +211,7 @@ void Popup::setAbsolute(const SRect& rect) {
 // ==================== Popup Event Handlers ====================
 
 bool Popup::handleEvent(shared_ptr<Event> event) {
+    if (!m_enable || !m_visible) return false;   // enable/visible 守卫（隐藏弹窗不响应）
     if (event->m_type == EventType::MouseWheel) {
         if (isContainsPoint(event->mouseWheel.x, event->mouseWheel.y)) {
             for (auto it = m_children.rbegin(); it != m_children.rend(); ++it) {
@@ -337,6 +338,7 @@ void ConfirmPopup::onConfirmAction() {
 }
 
 bool ConfirmPopup::handleEvent(shared_ptr<Event> event) {
+    if (!m_enable || !m_visible) return false;   // enable/visible 守卫
     if (m_ignoreKeyEvent) {
         m_ignoreKeyEvent = false;
         return true;

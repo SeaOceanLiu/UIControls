@@ -323,6 +323,7 @@ void HandleControl::setResizeCursor(HandleType type)
 
 bool HandleControl::handleEvent(shared_ptr<Event> event)
 {
+    if (!m_enable || !m_visible) return false;   // enable/visible 守卫
     // 目标已过期（C++ 路径 weak 检测；C ABI 路径 weak 为空但 m_targetShared 非空，不误判）
     if (m_targetWeak.expired() && !m_targetShared) {
         m_target = nullptr;
@@ -402,6 +403,7 @@ bool HandleControl::handleEvent(shared_ptr<Event> event)
 
 void HandleControl::draw()
 {
+    if (!m_visible) return;   // 可见性守卫
     if (m_targetWeak.expired() && !m_targetShared) {
         m_target = nullptr;
         m_targetWeak.reset();

@@ -413,6 +413,7 @@ void TextArea::refreshLineHeightFromFont() {
 }
 
 void TextArea::update(void) {
+    if (!getEnable()) return;   // enable 守卫（disabled 时不重建）
     EditBox::update();
 
     if (m_text != m_lastTextForRebuild) {

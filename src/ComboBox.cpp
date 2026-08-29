@@ -113,6 +113,7 @@ void ComboBox::create()
 // ═══════════════════════════════════════════════════════════════
 void ComboBox::draw()
 {
+    if (!m_visible) return;   // 可见性守卫
     EditBox::draw();
 
     SRect dr = getDrawRect();
@@ -339,6 +340,7 @@ void ComboBox::setRect(SRect rect)
 // ═══════════════════════════════════════════════════════════════
 void ComboBox::update()
 {
+    if (!getEnable()) return;   // enable 守卫（disabled 时滚动条不更新）
     EditBox::update();
 
     if (m_scrollBar && m_scrollBar->getVisible()) {

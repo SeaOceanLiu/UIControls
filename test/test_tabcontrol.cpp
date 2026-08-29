@@ -11,6 +11,7 @@
 #include "EditBox.h"
 #include "Shape.h"
 #include "Label.h"
+#include "ListView.h"
 #include "MainWindow.h"
 #include "Bench.h"
 #include "AppCallbacks.h"
@@ -75,6 +76,7 @@ static void runAssertions() {
     CHECK(tc->getTabs()[2].page->getVisible(), "page2 visible after switch");
     CHECK(!tc->getTabs()[0].page->getVisible(), "page0 hidden after switch");
 
+
     // 键盘导航：Right 循环 → 0 之后回绕
     tc->setCurrentIndex(0);
     tc->handleEvent(makeKey(KeyCode::Right));
@@ -97,6 +99,22 @@ static void runAssertions() {
     CHECK(tc->getPosition() == TabPosition::Bottom, "setPosition Bottom");
     tc->setFontSize(16.f);
     CHECK(tc->getFontSize() == 16.f, "setFontSize");
+
+    // ListView 页可见性守卫（修复：draw 覆写漏 m_visible 检查 → 切页不隐藏）
+    {
+        auto lvPage = ListViewBuilder(nullptr, SRect(0, 0, 200, 100))
+            .addColumn("Name", 100)
+            .build();
+        int lvTab = tc->addTab(u8"ListView", lvPage);
+        tc->setCurrentIndex(lvTab);
+        CHECK(lvPage->getVisible(), "ListView 页切换后可见");
+        lvPage->draw();   // 可见时绘制不崩
+        tc->setCurrentIndex(0);
+        CHECK(!lvPage->getVisible(), "ListView 切页后隐藏（getVisible false）");
+        lvPage->draw();   // 隐藏后 draw 不绘制（守卫回归：无绘制泄漏/崩溃）
+        tc->setCurrentIndex(lvTab);
+        tc->setCurrentIndex(0);
+    }
 
     TestUtil::log("---- assertions done: pass=%d fail=%d ----", g_pass, g_fail);
 }

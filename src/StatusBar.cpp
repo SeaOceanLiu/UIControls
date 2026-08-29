@@ -146,6 +146,7 @@ int StatusBar::hitTestIndex(float screenX, float screenY) const {
 
 // ── 绘制 ──
 void StatusBar::draw(void) {
+    if (!m_visible) return;   // 可见性守卫（防止不可见时仍 ensureFont/relayout）
     const bool hadFont = m_font != nullptr;
     ensureFont();
     if (!hadFont && m_font && !m_items.empty()) relayout();   // 字体首次就绪→按实测宽度重排

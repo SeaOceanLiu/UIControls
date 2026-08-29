@@ -44,11 +44,13 @@ void NumericUpDown::create() {
 }
 
 void NumericUpDown::update() {
+    if (!getEnable()) return;   // enable 守卫（disabled 不响应按住加速）
     EditBox::update();
     handleRepeat();
 }
 
 void NumericUpDown::draw() {
+    if (!m_visible) return;   // 可见性守卫（EditBox::draw 内含检查，但其后的 +/- 按钮不受其保护）
     EditBox::draw();
     auto* dev = GET_RENDERDEVICE;
     if (!dev) return;

@@ -286,6 +286,7 @@ void TabControl::drawTabBar() {
 }
 
 void TabControl::draw(void) {
+    if (!m_visible) return;   // 可见性守卫（切页场景：页面 setVisible 为 false 时不被绘制）
     ControlImpl::beforeDraw();   // 整体背景 + 边框
     RenderDevice* dev = getRenderDevice();
     if (dev) {

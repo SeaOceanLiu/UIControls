@@ -1,5 +1,23 @@
 ﻿## Session History
 
+### 2026-08-30: 全库 visible/enable 守卫系统性补齐（draw/handleEvent/update 覆写）
+
+**背景**：TabControl 页面放 ListView 切换不隐藏 → 根因 `ListView::draw` 覆写缺 `m_visible` 守卫；
+用户指出「beforeDraw 内检查无效，不影响 draw 自身逻辑」→ 全库系统扫描全部
+draw/handleEvent/update/beforeDraw/afterDraw 覆写的入口守卫（脚本 Temp/scan_guards.py 分类）。
+
+**补齐清单**（入口守卫，不再依赖 beforeDraw）：
+- draw 补 visible：ListView、Shape、TabControl、NumericUpDown、ComboBox、HandleControl、StatusBar（固化）
+- handleEvent 补 enable+visible：Popup、ConfirmPopup、ColorPicker、HandleControl
+- update 补 enable：EditBox（ComboBox/TextArea/NumericUpDown 继承受益）、ComboBox、TextArea、NumericUpDown
+- 语义豁免：Actor/LuotiAni/Material 为非控件演员（父绘制链已守卫）；draw 不要求 enable
+  （disabled 仍需绘制灰显）；Dialog::handleEvent 经 ConfirmPopup 链式守卫成立
+- 回归：test_tabcontrol（+ListView 页切换用例 24/24）、listview/shape/dialog/numericupdown/combobox exit=0
+
+**相关文件**：src/{ListView, Shape, TabControl, NumericUpDown, ComboBox, TextArea, EditBox,
+StatusBar, ColorPicker, HandleControl, Dialog}.cpp、test/test_tabcontrol.cpp、Temp/scan_guards.py（保留）。
+
+
 ### 2026-08-29（晚三）: 设计文档与用户手册核对（字体键/继承 + schema 一致性修正）
 
 **设计文档**：

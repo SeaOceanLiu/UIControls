@@ -519,6 +519,8 @@ int ListView::hitTestColumn(float x) const {
 
 // ── 绘制 ──
 void ListView::draw(void) {
+    // 可见性守卫（同 TreeView/ControlImpl 语义）：TabControl 切页隐藏后不再绘制
+    if (!m_visible) return;
     RenderDevice* dev = getRenderDevice();
     TextRenderer* renderer = getTextRenderer();
     if (!dev || !renderer) return;
