@@ -96,7 +96,7 @@
         "arrowWidth": { "type": "number", "x-default": "20" },
         "cycleEnabled": { "type": "boolean", "x-default": "true" },
         "editable": { "type": "boolean", "x-default": "false" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "itemHeight": { "type": "number", "x-default": "24" },
         "items": {
           "type": "array",
@@ -190,7 +190,7 @@
       "properties": {
         "type": { "const": "edit-box" },
         "alignment": { "$ref": "#/$defs/align9", "x-default": "mid-left" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "passwordChar": { "type": "integer", "description": "掩码字符 ASCII 码" },
         "passwordMode": { "type": "boolean", "x-default": "false" },
         "placeholder": { "type": "string", "x-default": "" },
@@ -218,10 +218,17 @@
     },
     "font-spec": {
       "type": "object",
-      "description": "字体声明 {name, size}；未声明时沿父控件链继承最近显式字体（v1.1.1）",
+      "description": "字体声明 {name, size, style}；未声明时沿父控件链继承最近显式字体（v1.1.1）",
       "properties": {
         "name": { "$ref": "#/$defs/font-name" },
-        "size": { "type": "number", "x-default": "14" }
+        "size": { "type": "number", "x-default": "14" },
+        "style": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" },
+              "description": "组合位 OR：bold/italic/underline/strikethrough（parseFontStyle 语义）" }
+          ]
+        }
       },
       "additionalProperties": false
     },
@@ -466,7 +473,7 @@
         "animationSpeed": { "type": "number", "x-default": "0.1" },
         "backgroundColor": { "$ref": "#/$defs/color" },
         "customText": { "type": "string" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "progressColor": { "$ref": "#/$defs/color" },
         "range": {
           "type": "object",
@@ -571,7 +578,7 @@
         "borderColor": { "$ref": "#/$defs/color" },
         "color": { "$ref": "#/$defs/color" },
         "fillColor": { "$ref": "#/$defs/color" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "hoverColor": { "$ref": "#/$defs/color" },
         "interval": { "type": "number", "x-default": "0" },
         "labelFormat": { "type": "string" },
@@ -654,7 +661,7 @@
       "properties": {
         "type": { "const": "text-area" },
         "alignment": { "$ref": "#/$defs/align9", "x-default": "mid-left" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "lineHeight": { "type": "integer" },
         "placeholder": { "type": "string" },
         "scrollBarThickness": { "type": "number" },

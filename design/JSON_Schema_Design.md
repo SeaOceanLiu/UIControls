@@ -1,4 +1,4 @@
-# 声明式 UI JSON 语法限定表（Schema）设计
+﻿# 声明式 UI JSON 语法限定表（Schema）设计
 
 > 状态：**一期已实施（2026-08-22）**——Schema 21 控件全量、校验器 `tools/validate_layout`（独立子工程）、ctest 9 项（Schema 自检 + 样本 --strict + 7 负例）全部通过；AGENTS.md 第 13 条已解除暂缓并生效。
 > 关联：[LayoutSystem_Design.md](LayoutSystem_Design.md)（JSON 布局系统）、[CABI_Property_Design.md](CABI_Property_Design.md)（属性键体系）、[API_Mapping_Table.md](API_Mapping_Table.md)（五层映射交叉核对源）、`include/PropertyNames.h`（**键名唯一来源**）、各控件 `*_Design.md`/`*_Analysis.md`（JSON 语法散点）
@@ -169,7 +169,7 @@ cmake -S tools -B build/tools && cmake --build build/tools --config Debug
 
 分层约定：
 
-- **语义类型层（$defs 内一组并列 def）**：项目语义类型组合——`color`（正则 `^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$` 与 `{normal/hover/pressed/disabled}` 对象的 oneOf）、`rect`（x/y/w/h 整数对象）、`alignment`（9 值枚举，**照抄 PropertyNames.h**：`top-left`/`mid-left`/`bottom-left`/`top-right`/`mid-right`/`bottom-right`/`top-center`/`center`/`bottom-center`）、`font-name`（28 字体枚举）等
+- **语义类型层（$defs 内一组并列 def）**：项目语义类型组合——`color`（正则 `^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$` 与 `{normal/hover/pressed/disabled}` 对象的 oneOf）、`rect`（x/y/w/h 整数对象）、`alignment`（9 值枚举，**照抄 PropertyNames.h**：`top-left`/`mid-left`/`bottom-left`/`top-right`/`mid-right`/`bottom-right`/`top-center`/`center`/`bottom-center`）、`font-name`（28 字体枚举）、`font-spec`（{name, size, style}，v1.1.1：common 挂 font/fontSize 两键，未声明时父链继承）等
 - **`control-any` 包装 def**：`oneOf` 引用全部 25 个控件 def——供顶层 `controls` 数组元素与 panel `children`、tree-view `items` 的递归 `$ref` 复用
 - **`$defs/common`**：公共属性组（对应 `parseCommonProperties`），各控件经 `allOf: [{"$ref": "#/$defs/common"}]` 组合
 - **每控件一个 def**：`properties.type` 用 `"const": "<type>"` 锁定；`additionalProperties: false` 使未知键可报

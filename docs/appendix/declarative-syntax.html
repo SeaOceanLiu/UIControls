@@ -223,6 +223,7 @@
   "items":[ { "id":"branch","text":"main","icon":"provider:icons/git","menu":"#branchMenu" },
             { "id":"enc","text":"UTF-8","align":"right" } ] }</code></pre>
 <p>属性键：<code>fontSize</code> / <code>itemHeight</code>；<code>items[]</code>：<code>id</code> / <code>text</code> / <code>align</code>（left/right）/ <code>icon</code> / <code>menu</code> / <code>onClick</code>。</p>
+<p><strong>通用字体键（v1.1.1）</strong>：任意控件可声明 <code>font</code>（对象 <code>{name,size,style}</code>）或 <code>fontSize</code>；未声明时沿<b>父控件链</b>继承最近显式字体。全链路未声明时回落主题字体。</p>
 
 <h3>tab-control（四方向选项卡）</h3>
 <pre><code>{ "type":"tab-control", "id":"tabs", "rect":[120,80,560,240], "position":"top",

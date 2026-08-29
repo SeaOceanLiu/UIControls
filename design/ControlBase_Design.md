@@ -1,4 +1,4 @@
-# ControlBase 控件基类设计文档
+﻿# ControlBase 控件基类设计文档
 
 ## 1. 概述
 
@@ -401,6 +401,21 @@ void ControlImpl::removeControl(shared_ptr<Control> child){
     // 从子控件列表中移除
 }
 ```
+
+### 4.4.1 字体上下文（JSON 字体链，v1.1.1）
+
+`ControlImpl` 提供字体声明上下文，供 `LayoutParser` 的通用字体键解析与父链继承使用
+（`applyFontDecl` / `resolveFontInheritance`，见 LayoutSystem_Design 6.x）：
+
+| API | 说明 |
+|------|------|
+| `setFontContext(FontName name, float size, bool isExplicit)` | 记录字体上下文（explicit=JSON 显式声明） |
+| `getFontContextName()` / `getFontContextSize()` | 读取上下文（大小为 0 = 未声明） |
+| `hasExplicitFont()` | 是否显式声明 |
+
+应用规则：控件显式声明则自身样式生效；未声明时沿父控件链继承最近显式字体的名称/字号；
+全链路未声明时保持各控件主题默认。作用域为**布局解析期**（绑定层 JSON），
+编程式创建的控件不受影响。
 
 ### 4.5 焦点 API
 

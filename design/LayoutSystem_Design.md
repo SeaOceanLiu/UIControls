@@ -2234,6 +2234,15 @@ Margin LayoutParser::parseMargin(const json& j) {
 3. **控件专用颜色属性**（如 CheckBox 的 `colors.checkColor`、ProgressBar 的 `colors.progressColor`）
 4. **控件专用字体属性**（各控件的 `font` 对象中的 `name/size`）
 
+> **通用字体键与父链继承（v1.1.1）**：
+> 任意控件 JSON 支持 `font`（对象 `{name, size, style}`）或便捷键 `fontSize`；
+> `parseCommonProperties` 末尾统一 `applyFontDecl` 解析并写入控件字体上下文
+> （`ControlImpl::setFontContext`，见 ControlBase_Design 4.4.1），显式声明即应用
+> （Label/EditBox(含 ComboBox/TextArea)/ProgressBar/TreeView/TabControl/StatusBar/MenuBar 的
+> `setFontSize`/`setFont`）。未声明时 `resolveFontInheritance`（parseLayout 末尾 DFS）
+> **沿父控件链继承最近一次显式字体**（名称+字号）；全链路未声明则回落 Theme 默认。
+> 优先级总序：**控件显式 > 父链继承 > Theme 默认**。
+
 ### 6.5 Theme 类
 
 **位置**: `include/Theme.h`, `src/Theme.cpp`

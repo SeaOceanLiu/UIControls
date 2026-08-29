@@ -1,5 +1,22 @@
 ﻿## Session History
 
+### 2026-08-29（晚三）: 设计文档与用户手册核对（字体键/继承 + schema 一致性修正）
+
+**设计文档**：
+- `ControlBase_Design.md` 4.4.1「字体上下文（JSON 字体链）」：3 个 API + 继承规则
+- `LayoutSystem_Design.md` §6.4 追加「通用字体键与父链继承」说明与优先级（控件显式 > 父链 > Theme）
+- `JSON_Schema_Design.md` 语义类型述补 `font-spec`（{name,size,style}）与 common font/fontSize
+
+**用户手册**：
+- `docs/declarative-ui.html` 与 `docs/appendix/declarative-syntax.html`：「通用字体键（v1.1.1）」说明（font/fontSize + 父链继承）
+- `docs/appendix/properties.html` 7.1 通用属性表补 font/fontSize 两行
+- `docs/controls/treeview.html` JSON 示例加 font 键 + note（含继承）
+
+**schema 一致性修正（盘点时发现）**：combo-box/edit-box/progress-bar/slider/text-area 的 `font` 原引用枚举 `font-name`（与实际对象 JSON 不符）→ 全改 `font-spec`；`font-spec` 补 `style`（label 组合语义 oneOf array|string）。validate_layout strict 全 PASS。
+
+**相关文件**：design/ControlBase_Design.md、design/LayoutSystem_Design.md、design/JSON_Schema_Design.md、docs/{declarative-ui.html, appendix/declarative-syntax.html, appendix/properties.html, controls/treeview.html}、docs/schema/declarative-ui.schema.json（+release/tools、designer subModules 同步）。
+
+
 ### 2026-08-29（晚二）: JSON 字体键通用化 + 父链继承（v1.1.1 增）
 
 **背景**：CornerstoneDesigner 反馈 tree-view 字体设置被忽略（schema 未声明 font/font-size/fontSize 键，validate 报滞后；parseTreeView 也不读面板级字体）。
