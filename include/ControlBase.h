@@ -377,6 +377,17 @@ protected:
         }
     }
 public:
+    // ── 字体上下文（JSON 字体声明 + 父链继承；LayoutParser 使用）──
+    void setFontContext(FontName name, float size, bool isExplicit) {
+        m_fontContextName = name; m_fontContextSize = size; m_fontContextExplicit = isExplicit;
+    }
+    FontName getFontContextName() const { return m_fontContextName; }
+    float getFontContextSize() const { return m_fontContextSize; }
+    bool hasExplicitFont() const { return m_fontContextExplicit; }
+    FontName m_fontContextName = FontName::Asul_Regular;
+    float m_fontContextSize = 0.0f;         // 0 = 未声明
+    bool m_fontContextExplicit = false;
+
     ControlImpl(Control *parent, float xScale=1.0f, float yScale=1.0f);
     ControlImpl(const ControlImpl& other);
     ~ControlImpl();

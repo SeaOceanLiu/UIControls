@@ -212,6 +212,53 @@ void testBenchInitialize(shared_ptr<Bench>) {
         .build();
     BENCH->addControl(g_label19);
 
+    // ── JSON 字体声明 + 父链继承（v1.1.1）──
+    {
+        static const char* FONT_JSON = R"({
+  "version": "1.0",
+  "controls": [{
+    "type": "panel", "id": "fontParent", "rect": {"x": 0, "y": 700, "w": 600, "h": 120},
+    "font": {"size": 20, "name": "harmonyos-sans-sc-regular"},
+    "children": [
+      { "type": "label", "id": "fontInherit", "caption": "inherit",
+        "rect": {"x": 0, "y": 0, "w": 200, "h": 30} },
+      { "type": "label", "id": "fontOverride", "caption": "override",
+        "rect": {"x": 200, "y": 0, "w": 200, "h": 30},
+        "font": {"size": 24} },
+      { "type": "label", "id": "fontDirect", "caption": "direct",
+        "rect": {"x": 0, "y": 40, "w": 200, "h": 30}, "fontSize": 16 }
+    ]
+  }]
+})";
+#define FCHECK(cond, msg) do { if (cond) {} else { printf("FONT-CHK-FAIL: %s\n", msg); } } while (0)
+        LayoutParser parser;
+        auto froot = parser.parseLayout(FONT_JSON);
+        FCHECK(froot != nullptr, "字体 JSON 解析");
+        if (!froot) { printf("FONT-JSON FAILED\n"); }
+        else {
+            BENCH->addControl(froot);
+            auto inherit = parser.findControlById("fontInherit");
+            auto override_ = parser.findControlById("fontOverride");
+            auto direct = parser.findControlById("fontDirect");
+            if (inherit && override_ && direct) {
+                auto li = dynamic_pointer_cast<Label>(inherit);
+                auto lo = dynamic_pointer_cast<Label>(override_);
+                auto ld = dynamic_pointer_cast<Label>(direct);
+                if (li && lo && ld) {
+                    FCHECK(li->getFontSize() == 20, "JSON 继承: 子无 font → 父 20");
+                    FCHECK(lo->getFontSize() == 24, "JSON 覆盖: font.size=24 覆盖父");
+                    FCHECK(ld->getFontSize() == 16, "JSON 便捷键: fontSize=16");
+                    // getFontSize 语义已断言，字体名不做公开 getter 断言（Label 无 getFontName）
+                     printf("FONT-JSON OK\n");
+                } else {
+                    printf("FONT-JSON FAILED: cast\n");
+                }
+            } else {
+                printf("FONT-JSON FAILED: find\n");
+            }
+        }
+    }
+
     // ── 字体样式断言（锁住 SetFontStyle 修复：属性回环 + 渲染无崩溃）──
     {
         static int g_pass = 0, g_fail = 0;
@@ -263,7 +310,8 @@ void testBenchInitialize(shared_ptr<Bench>) {
                 "font":{"name":"HarmonyOS_Sans_SC_Regular","size":14,"style":["bold","italic"]}
               }]
             })";
-            LayoutParser parser;
+#define FCHECK(cond, msg) do { if (cond) {} else { printf("FONT-CHK-FAIL: %s\n", msg); } } while (0)
+        LayoutParser parser;
             auto root = parser.parseLayout(styleJson);
             auto* ci = root ? dynamic_cast<ControlImpl*>(root.get()) : nullptr;
             auto clabel = ci ? std::dynamic_pointer_cast<Label>(ci->getThis()) : nullptr;

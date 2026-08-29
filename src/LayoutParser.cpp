@@ -120,6 +120,8 @@ shared_ptr<Control> LayoutParser::parseLayout(const string& jsonContent) {
             }
         }
     }
+    // 字体继承后处理：未显式声明 font/fontSize 的控件沿父链继承最近显式值
+    resolveFontInheritance(root.get());
     return root;
 }
 
@@ -2558,6 +2560,74 @@ void LayoutParser::parseCommonProperties(shared_ptr<ControlImpl> ctrl, const jso
                 parseStateColor(colors[PropertyNames::kJsonTextShadow], StateColor::Type::TextShadow));
         }
         popJsonPath();
+    }
+
+    // 字体键（font{name,size} / font-size / fontSize）统一解析（显式声明）
+    applyFontDecl(ctrl, j);
+}
+
+// 应用字体到支持的控件（继承/显式共用；仅设置，不写 context）
+static void ApplyFontToControl(Control* ctl, FontName name, float size) {
+    if (!ctl) return;
+    if (size > 0.0f) {
+        if (auto* l = dynamic_cast<Label*>(ctl)) l->setFontSize((int)size);
+        else if (auto* e = dynamic_cast<EditBox*>(ctl)) e->setFontSize((int)size);
+        else if (auto* p = dynamic_cast<ProgressBar*>(ctl)) p->setFontSize((int)size);
+        else if (auto* tr = dynamic_cast<TreeView*>(ctl)) tr->setFontSize((int)size);
+        else if (auto* tc = dynamic_cast<TabControl*>(ctl)) tc->setFontSize(size);
+        else if (auto* sb = dynamic_cast<StatusBar*>(ctl)) sb->setFontSize(size);
+        else if (auto* mb = dynamic_cast<MenuBar*>(ctl)) mb->setFontSize(size);
+    }
+    // 字体名仅对显式 setFont 接口调用（FontName 无哨兵，未声明时沿用默认）
+    if (auto* l = dynamic_cast<Label*>(ctl)) l->setFont(name);
+    else if (auto* e = dynamic_cast<EditBox*>(ctl)) e->setFont(name);
+    else if (auto* p = dynamic_cast<ProgressBar*>(ctl)) p->setFont(name);
+    else if (auto* tr = dynamic_cast<TreeView*>(ctl)) tr->setFont(name);
+}
+
+void LayoutParser::applyFontDecl(shared_ptr<ControlImpl> ctl, const json& j) {
+    if (!ctl) return;
+    bool hasName = false, hasSize = false;
+    FontName name = ctl->getFontContextName();
+    float size = 0.0f;
+
+    if (j.contains(PropertyNames::kJsonFont) && j[PropertyNames::kJsonFont].is_object()) {
+        const json& font = j[PropertyNames::kJsonFont];
+        if (font.contains(PropertyNames::kJsonName) && font[PropertyNames::kJsonName].is_string()) {
+            name = FontNameFromString(font[PropertyNames::kJsonName].get<string>().c_str());
+            hasName = true;
+        }
+        if (font.contains(PropertyNames::kJsonSize) && font[PropertyNames::kJsonSize].is_number()) {
+            size = (float)font[PropertyNames::kJsonSize].get<int>();
+            hasSize = true;
+        }
+    }
+    if (j.contains(PropertyNames::kJsonFontSize) && j[PropertyNames::kJsonFontSize].is_number()) {
+        size = (float)j[PropertyNames::kJsonFontSize].get<float>();
+        hasSize = true;
+    }
+    if (!hasName && !hasSize) return;
+    ctl->setFontContext(name, size, true);
+    ApplyFontToControl(ctl.get(), hasName ? name : ctl->getFontContextName(),
+                       hasSize ? size : 0.0f);
+}
+
+void LayoutParser::resolveFontInheritance(Control* root) {
+    if (!root) return;
+    auto impl = dynamic_cast<ControlImpl*>(root);
+    if (!impl) return;
+    // 本控件 effective（显式 or 继承）；子无显式时沿用
+    vector<shared_ptr<Control>>& kids = impl->getChildren();
+    for (auto& child : kids) {
+        auto cimpl = dynamic_cast<ControlImpl*>(child.get());
+        if (!cimpl) continue;
+        if (!cimpl->hasExplicitFont()) {
+            // 从父继承最近显式字体（父若无显式、本身也是继承值）
+            ApplyFontToControl(child.get(),
+                impl->getFontContextName(), impl->getFontContextSize());
+            cimpl->setFontContext(impl->getFontContextName(), impl->getFontContextSize(), false);
+        }
+        resolveFontInheritance(child.get());
     }
 }
 

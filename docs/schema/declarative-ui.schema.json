@@ -133,6 +133,8 @@
         "rect": { "$ref": "#/$defs/rect" },
         "scale": { "$ref": "#/$defs/scale" },
         "textShadow": { "$ref": "#/$defs/color" },
+        "font": { "$ref": "#/$defs/font-spec" },
+        "fontSize": { "type": "number", "description": "字号（font.size 的便捷形式，v1.1.1）" },
         "visible": { "type": "boolean", "x-default": "true" }
       }
     },
@@ -213,6 +215,15 @@
     },
     "font-name": {
       "enum": ["asul-bold", "asul-regular", "harmonyos-sans-condensed-regular", "harmonyos-sans-condensed-thin", "harmonyos-sans-sc-black", "harmonyos-sans-sc-bold", "harmonyos-sans-sc-light", "harmonyos-sans-sc-medium", "harmonyos-sans-sc-regular", "harmonyos-sans-sc-thin", "maplemono-nf-cn-bold", "maplemono-nf-cn-bolditalic", "maplemono-nf-cn-extrabold", "maplemono-nf-cn-extrabolditalic", "maplemono-nf-cn-extralight", "maplemono-nf-cn-extralightitalic", "maplemono-nf-cn-italic", "maplemono-nf-cn-light", "maplemono-nf-cn-lightitalic", "maplemono-nf-cn-medium", "maplemono-nf-cn-mediumitalic", "maplemono-nf-cn-regular", "maplemono-nf-cn-semibold", "maplemono-nf-cn-semibolditalic", "maplemono-nf-cn-thin", "maplemono-nf-cn-thinitalic", "muyao-softbrush", "quando-regular"]
+    },
+    "font-spec": {
+      "type": "object",
+      "description": "字体声明 {name, size}；未声明时沿父控件链继承最近显式字体（v1.1.1）",
+      "properties": {
+        "name": { "$ref": "#/$defs/font-name" },
+        "size": { "type": "number", "x-default": "14" }
+      },
+      "additionalProperties": false
     },
     "image": {
       "type": "object",
@@ -343,7 +354,7 @@
       "properties": {
         "type": { "const": "menu-bar" },
         "barHeight": { "type": "number" },
-        "font": { "$ref": "#/$defs/font-name" },
+        "font": { "$ref": "#/$defs/font-spec" },
         "itemHeightRatio": { "type": "number", "x-default": "1.6" },
         "manualPosition": { "type": "boolean", "x-default": "false",
           "description": "手动定位。缺省 false = 全宽贴顶（Bench 顶层模式）；挂入 panel / v-flow 等布局引擎容器时运行时自动置 true，用户无需显式设置" },

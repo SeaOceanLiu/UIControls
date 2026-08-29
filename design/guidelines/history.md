@@ -1,5 +1,20 @@
 ﻿## Session History
 
+### 2026-08-29（晚二）: JSON 字体键通用化 + 父链继承（v1.1.1 增）
+
+**背景**：CornerstoneDesigner 反馈 tree-view 字体设置被忽略（schema 未声明 font/font-size/fontSize 键，validate 报滞后；parseTreeView 也不读面板级字体）。
+
+**1. 通用字体键**：`parseCommonProperties` 末尾统一 `applyFontDecl`：读取 `font{name,size}` / `fontSize` → 写入 ControlImpl 字体上下文（新 public API：setFontContext/getFontContext*/hasExplicitFont）+ 动态应用（Label/EditBox(含 ComboBox/TextArea)/ProgressBar/TreeView/TabControl/StatusBar/MenuBar 的 setFontSize 与 setFont）。
+
+**2. 父链继承**：parseLayout 末尾 `resolveFontInheritance` DFS：无显式声明的控件沿父链采用最近显式字体（应用 setter + context 记录）；根或全未声明时保持主题默认。
+
+**3. schema**：新增 `font-spec` 定义（{name,size}）；`common` 增加 font/fontSize 两键（全控件树生效）；menu-bar 的 font 改 $ref font-spec（原枚举与对象不符）；validate_layout strict 全 PASS（含 designer main_layout）。
+
+**4. 测试**：test_label 新增 JSON 字体用例（继承父 20 / 覆盖 24 / 便捷键 fontSize 16 → 全过）；test_treeview/test_layout/test_menu/test_splitter 回归全部 exit=0。
+
+**相关文件**：include/ControlBase.h（字体上下文 API）、include/LayoutParser.h、src/LayoutParser.cpp（applyFontDecl/ApplyFontToControl/resolveFontInheritance）、docs/schema/declarative-ui.schema.json、test/test_label.cpp、docs/declarative-ui.html（通用字体键说明）、docs/schema 同步 release/tools 与 CornerstoneDesigner subModules。
+
+
 ### 2026-08-29: Splitter 拖拽超动根因（双重累加）+ 三后端回归（Complete）
 
 **用户痛症**：手动拖动任意蓝绿分条"移动距离比鼠标大、不跟手"（测试断言却一直 1:1）。
