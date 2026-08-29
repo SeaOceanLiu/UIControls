@@ -595,7 +595,8 @@
         "firstPanel": { "type": "string", "description": "左侧控件 id" },
         "minFirst": { "type": "number", "x-default": "20" },
         "minSecond": { "type": "number", "x-default": "20" },
-        "orientation": { "type": "boolean", "description": "true=水平" },
+        "orientation": { "type": "string", "enum": ["horizontal", "vertical"],
+          "x-default": "vertical", "description": "horizontal/vertical（vertical=左右分栏；解析经 parseSplitter）" },
         "ratio": { "type": "number", "x-default": "0.5" },
         "secondPanel": { "type": "string", "description": "右侧控件 id" },
         "thickness": { "type": "number" }

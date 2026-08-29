@@ -1,4 +1,5 @@
-﻿@echo off
+@echo off
+set "PATH=%SystemRoot%\System32;%PATH%"
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -22,7 +23,6 @@ set "UICORNERSTONE_ROOT=%~dp0.."
 set "RELEASE_DIR=%~1"
 if "%RELEASE_DIR%"=="" set "RELEASE_DIR=%UICORNERSTONE_ROOT%\release"
 if /i "%~2"=="-y" set "NO_PAUSE=1"
-set "PATH=%SystemRoot%\System32;%PATH%"
 
 echo [%date% %time%] ============================================
 echo [%date% %time%] make_release start
@@ -105,6 +105,9 @@ for %%A in (animations fonts images) do (
     xcopy /y /e /i "%UICORNERSTONE_ROOT%\subModules\assets\%%A" "%RELEASE_DIR%\assets\%%A" >nul || goto :fail
 )
 
+rem 用户手册 docs 站点（跟随发布；含 docs/assets、css、controls/appendix 等全部页面）
+xcopy /y /e /i "%UICORNERSTONE_ROOT%\docs" "%RELEASE_DIR%\docs" >nul || goto :fail
+
 rem binding: 仅源码（排除 build 编译产物）
 copy /y "%UICORNERSTONE_ROOT%\binding\CMakeLists.txt" "%RELEASE_DIR%\binding\" >nul || goto :fail
 copy /y "%UICORNERSTONE_ROOT%\binding\LICENSE"        "%RELEASE_DIR%\binding\" >nul || goto :fail
@@ -130,6 +133,7 @@ for %%F in (UICornerstone.dll UIBackend_sdl3.dll UIBackend_sfml.dll UIBackend_ra
     if not exist "%RELEASE_DIR%\%%F" set "MISSING=!MISSING! %%F"
 )
 if not exist "%RELEASE_DIR%\assets"         set "MISSING=!MISSING! assets"
+if not exist "%RELEASE_DIR%\docs\index.html" set "MISSING=!MISSING! docs/ (用户手册)"
 if not exist "%RELEASE_DIR%\binding\include\UICornerstone.h"     set "MISSING=!MISSING! binding/include/UICornerstone.h"
 if not exist "%RELEASE_DIR%\binding\include\UICornerstoneAPI.h" set "MISSING=!MISSING! binding/include/UICornerstoneAPI.h"
 if not exist "%RELEASE_DIR%\binding\include\PropertyNames.h"     set "MISSING=!MISSING! binding/include/PropertyNames.h"
@@ -145,7 +149,7 @@ echo [%date% %time%] ============================================
 echo [%date% %time%] Release ready: %RELEASE_DIR%
 echo [%date% %time%]   core + backend DLLs + runtime DLLs + assets + binding + tools
 echo [%date% %time%]   tools: validate_layout.exe + PropertyNames.h + schema
-echo [%date% %time%]   usage(in release dir): tools\validate_layout.exe <layout.json> --strict   (缺省从 exe 同目录找 PropertyNames.h、下一级 schema/ 找 schema)
+echo [%date% %time%]   usage(in release dir): tools\validate_layout.exe layout.json --strict   (缺省从 exe 同目录找 PropertyNames.h、下一级 schema/ 找 schema)
 echo [%date% %time%] make_release done
 echo [%date% %time%] ============================================
 if not defined NO_PAUSE pause

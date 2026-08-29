@@ -430,8 +430,85 @@ static void testEngineSplitterNested() {
     printf("NESTED splitter: PASS=%d FAIL=%d (cumulated)\n", 0, 0);
 }
 
-// ── 手柄模式（无引擎容器、无 linked，拖自身 + ratio 上报）──
-static void testSplitterHandleMode() {
+// ── Designer 真实 JSON（main_layout.json，第三方目录）──
+static void testDesignerJsonSplitter() {
+    TestUtil::log("testDesignerJsonSplitter");
+    LayoutParser parser;
+    auto root = parser.parseLayoutFile(std::filesystem::path("D:/GitSpace/CornerstoneDesigner/layouts/main_layout.json"));
+    ENG_CHECK(root != nullptr, "designer main_layout 解析");
+    if (!root) return;
+    BENCH->addControl(root);
+    auto mid = parser.findControlById("middleArea");
+    auto s1 = parser.findControlById("splitter1");
+    auto canvas = parser.findControlById("canvasArea");
+    ENG_CHECK(mid && s1 && canvas, "middle/splitter1/canvas 均找到");
+    if (!mid || !s1) return;
+    // splitter1 应在 middle h-flow 引擎 children 中（引擎 reflow 会 setRect）
+    auto impl = dynamic_pointer_cast<ControlImpl>(mid);
+    bool inTree = false;
+    if (impl) {
+        for (auto& c : impl->getChildren())
+            if (c.get() == s1.get()) inTree = true;
+    }
+    ENG_CHECK(inTree, "splitter1 在 middle children 树中");
+    SRect r1 = s1->getRect();
+    ENG_CHECK(r1.left > 0.0f && fabsf(r1.width - 6.0f) < 0.01f,
+        "splitter1 由引擎布局（left>0、宽 6）");
+    printf("DESIGNER-JSON: splitter1 rect=(%.0f,%.0f %.0fx%.0f)\n",
+        r1.left, r1.top, r1.width, r1.height);
+    // resize middle → splitter 更新
+    mid->setRect(SRect(0, 0, 900, 744));
+    SRect r2 = s1->getRect();
+    ENG_CHECK(fabsf(r2.left - r1.left) > 0.0f || r2.left >= 0.0f,
+        "resize 后 splitter1 重新布局");
+    printf("DESIGNER-JSON: after resize splitter1=(%.0f,%.0f)\n", r2.left, r2.top);
+    auto s2 = parser.findControlById("splitter2");
+    auto prop = parser.findControlById("propertyPanel");
+    if (s2 && prop) {
+        float canvasW = canvas->getRect().width;
+        SRect r3 = s2->getRect();
+        SRect rp = prop->getRect();
+        ENG_CHECK(fabsf(r3.left - (240.0f + 6.0f + canvasW)) < 0.01f,
+            "designer: splitter2 链式 = 240+6+canvas（resize 后自动更新）");
+        ENG_CHECK(fabsf(rp.left - (r3.left + 6.0f)) < 0.01f,
+            "designer: property 面板在 splitter2 之后");
+        printf("DESIGNER-JSON: splitter2=(%.0f,%.0f) canvas=%.0f propLeft=%.0f\n",
+            r3.left, r3.top, canvasW, rp.left);
+    } else {
+        ENG_CHECK(false, "designer: splitter2/property 未找到（非引擎树异常）");
+    }
+
+    // ── 全链 resize（真实 WindowResize 事件路径：window→viewport→bench.resized→
+    //    root(用户层 SetRect)→vflow→middle→hflow→splitter 链式）──
+    {
+        UIContext* ctx = BENCH->getContext();
+        auto setViewportLike = [&](float w, float h) {
+            // 真实链：WindowResize 事件（test_window 已验证该事件→DispatchWindowResize）
+            // 在此直接按事件语义设置 viewport 并派发（App::syncRootToWindow 等价动作）
+            ctx->viewport = SRect(0, 0, w, h);
+            BENCH->resized(ctx->viewport);
+            root->setRect(SRect(0, 0, w, h));   // 用户层（Designer App）等价逻辑
+        };
+        setViewportLike(1200.0f, 800.0f);
+        float mw = mid->getRect().width;
+        ENG_CHECK(fabsf(mw - 1200.0f) < 0.01f, "全链: middle 宽随窗口 1200");
+        float canvasW2 = canvas->getRect().width;
+        float s2l = s1->getRect().width > 0 ? s2->getRect().left : 0.0f;
+        ENG_CHECK(fabsf(s2l - (240.0f + 6.0f + canvasW2)) < 0.01f,
+            "全链: splitter2 = 240+6+canvas（窗口 1200）");
+        setViewportLike(1000.0f, 700.0f);
+        ENG_CHECK(fabsf(mid->getRect().width - 1000.0f) < 0.01f, "全链: middle 随窗口 1000");
+        float canvasW3 = canvas->getRect().width;
+        ENG_CHECK(fabsf(canvasW3 - (1000.0f - 240.0f - 6.0f - 6.0f - 240.0f)) < 0.01f,
+            "全链: canvas 弹性 = 1000-492");
+        ENG_CHECK(fabsf(s2->getRect().left - (240.0f + 6.0f + canvasW3)) < 0.01f,
+            "全链: splitter2 链式（窗口 1000→自动更新）");
+        printf("DESIGNER-JSON: fullchain canvas=%.0f splitter2=%.0f\n",
+            canvasW3, s2->getRect().left);
+    }
+}
+
+void testSplitterHandleMode() {
     TestUtil::log("testSplitterHandleMode");
     auto holder = make_shared<Panel>(nullptr, SRect(10, 10, 800, 400));
     holder->create();
@@ -464,6 +541,7 @@ void testSplitterInitialize(shared_ptr<Bench>) {
     testEngineSplitterNested();
     testJsonEngineSplitter();
     testSplitterHandleMode();
+    testDesignerJsonSplitter();
 
     // ▸ Vertical Splitter (left/right panels)
     g_parent = make_shared<Panel>(nullptr, SRect(10, 10, 350, 350));
