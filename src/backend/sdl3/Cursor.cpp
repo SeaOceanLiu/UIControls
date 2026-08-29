@@ -49,8 +49,14 @@ Cursor* sdl3CreateSystemCursor(SystemCursorType type) {
 }
 
 Cursor* sdl3GetDefaultCursor() {
-    static SDLCursor defaultCursor(SDL_GetCursor(), false);
-    return &defaultCursor;
+    // 注意：不可用 SDL_GetCursor()（返回"当前已设定的"光标——先经过 EW/NS 光标的
+    // 分条后会把临时光标误缓存为默认，导致全局游标残留在 resize 箭头）；
+    // 必须取系统默认光标。静态分配（进程中仅 1 个，避免 SDL 退出顺序析构问题）
+    static Cursor* defaultCursorPtr = []() -> Cursor* {
+        SDL_Cursor* c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT);
+        return c ? new SDLCursor(c, true) : nullptr;
+    }();
+    return defaultCursorPtr;
 }
 
 void sdl3SetCurrentCursor(Cursor* cursor) {

@@ -30,7 +30,9 @@ private:
     float m_dragStartRatio;
     SPoint m_dragStartMousePos;
     float m_dragStartScreenPos;
-    float m_dragStartLocalPos;    // 鎷栨嫿璧峰鏃?Splitter 鐨勫眬閮ㄥ潗鏍囦綅缃?   // 鎷栨嫿璧峰鏃?Splitter 鐨勫睆骞曚綅缃紙x 鎴?y锛?
+    float m_dragStartLocalPos;
+    float m_dragStartSegW   = -1.0f;   // 引擎模式拖拽起始前段宽（-1=未初始化）
+    float m_dragStartRearW  = -1.0f;   // 引擎模式拖拽起始后段宽    // 鎷栨嫿璧峰鏃?Splitter 鐨勫眬閮ㄥ潗鏍囦綅缃?   // 鎷栨嫿璧峰鏃?Splitter 鐨勫睆骞曚綅缃紙x 鎴?y锛?
     uint64_t m_lastClickTime;
 
     SColor m_colorNormal;
@@ -100,6 +102,10 @@ private:
     void handleKeyEvent(shared_ptr<Event> event);
     void applySplitRatio(float ratio);
     void handleDoubleClick();
+    // 布局引擎容器内的 Splitter：拖拽改为"改前段弹性权重 + 引擎重排"（见 Splitter_Design §8.3/8.4）
+    bool isEngineManaged();
+    void updateEngineDrag(float delta);
+    bool m_applyingRatio = false;   // applySplitRatio 重入保护（引擎 reflow 写回时）
     void ensureCursors();
     void cleanupCursors();
     void updateCursor(bool inside);

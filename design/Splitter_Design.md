@@ -1097,3 +1097,103 @@ Splitter 应在两侧控件的 **中间**。父容器的 children 顺序应为�
 
 **文档版本**：v1.0
 **编写日期**：2026-07-20
+
+---
+
+## 8. 设计与布局引擎的彻底融合（Splitter × Flow 引擎）
+
+### 8.1 问题回顾（CornerstoneDesigner 场景，2026-08）
+
+1. **JSON splitter 卡死**：splitter 位于 flow 容器且 JSON 关联 first/second 时，引擎 reflow
+   写 splitter 宽 → `setRect → applySplitRatio → 面板 setRect → Panel::setRect → reflowChildren`
+   → 引擎再写 splitter（`m_lastRect` 被 `applySplitRatio` 清空 → 防重失效）→ 递归环直至栈溢出/假死。
+2. **多 splitter 共享面板冲突**：`applySplitRatio` 假定 first+second 独占父容器
+   （`total=父宽-thick`，second=剩余全宽）；三栏（left|sp1|middle|sp2|right）时 sp1/sp2
+   各自改写 middle → 后执行者胜且位置链错乱。
+
+### 8.2 设计原则
+
+- **引擎统一管理结构，Splitter 不做布局**：Splitter 位于有布局引擎的父容器时成为引擎
+  **一等元素**（分段模型）；拖拽只更新"前段权重"并请引擎重排，splitter/面板 rect 全部由引擎计算。
+- **引擎外保留现有 linked 自动模式**（二元独占容器，无引擎环境）。
+- **防重入防护**：linked 模式的 `applySplitRatio` 增 `m_applyingRatio` 守卫（修复卡死，双保险）。
+
+### 8.3 引擎分段模型（H/V flow 共用）
+
+`HFlowLayout::apply`/`VFlowLayout::apply` 扫描 children，检测到 Splitter 控件
+（`m_ctlType == ControlType::Splitter`）→ 走分段路径：
+
+1. children 序列展开为"段"串（如 `segA, sp1, segB, sp2, segC`）；不连续 splitter 的
+   连续 children 归入同段（单段退化为原算法）。
+2. **首轮扫描**：fixedWidth = Σ(非 splitter 固定 children 宽)+Σ(splitter thickness)；
+   totalFlex = Σ(段内 children flexWeight)；`flexUnit = max(0, 内宽-fixed-gap)/totalFlex`。
+3. **顺序填充**（cursor 累加）：段内 children 与原算法一致（弹性段宽=flexUnit×段tam）——
+   段宽即该段内流式累计（单 child 段 = 该 child 宽；多 child 段按段内规则）；
+   **splitter rect 由引擎写入**：位于该分界线上（左缘 = 前面累计 + gap（splitter 前后 gap 并入
+   thickness）、厚度 = m_thickness、另一轴 = 内高/内宽）。
+4. **链式累计自然成立**：sp2 位置 = segA+sp1+segB 累计 → 多 splitter/共享面板场景正确。
+5. `m_gap` 语义：splitter 与相邻段之间的 gap = 0（splitter 本身就是分隔），其余元素 gap 保持不变。
+
+### 8.4 拖拽（引擎模式）
+
+- `updateDrag`：坐标先经 `mapViewportToCanvas`（当前与起点各 map 一次，差值即画布/逻辑
+  delta，含根/视口缩放全链）→ 两式语义（见 8.3 尾部）：
+  - 前段固定 → `updateEngineDrag` 以**固定基准** `target = 拖拽起始前段宽 + 累计 delta`
+    （拖拽起始宽在 startDrag 时记录；**禁止**以"当前已含 delta 的宽"+累计 delta 计算，
+    否则每帧双重累加造成超动滚雪球——user 实测 5.7× 超动问题源头）；
+  - 前段弹性 & 后段固定 → `targetRear = 拖拽起始后段宽 - 累计 delta`（同理）；
+  - 双弹性 → 前段锁定（起始宽+delta）。
+  每次 update 后调用父 Panel::reflowChildren() → 链式重排（后续段自动补偿）。
+- Splitter 自身 `m_rect` 不再在拖拽中自行设置（由引擎写，reflow 后即前段右缘）。
+- `onSplitterMoved(splitter, ratio)`：ratio = 该 splitter 位置 /（前段端到 splitter）相对
+  内宽占比（前段宽累计 ÷ 容器内宽），与 linked 模式的 ratio 语义兼容（0..1）。
+
+### 8.5 linked 自动模式（引擎外）保留与防护
+
+- 父容器无布局引擎 → 维持现有"linked 面板自动布局"（first/second 占满父容器）。
+- `applySplitRatio` 首行 guard：`if (m_applyingRatio) return;` 设置时见 8.6 —— 只影响引擎模式。
+- JSON 中同时提供 `firstPanel/secondPanel` + splitter 在 flow 容器 → `first/second` 仅作
+  **只读参考**（供应用取面板 id/宽度），引擎模式不自动写（8.3 接管）。
+
+### 8.6 防重入 guard
+
+```cpp
+void Splitter::applySplitRatio(float ratio) {
+    if (m_applyingRatio) return;   // 重入保护（引擎 reflow 写回时）
+    m_applyingRatio = true;
+    ... // 既有实现
+    m_applyingRatio = false;
+}
+```
+
+### 8.7 兼容性边界
+
+| 项 | 行为 |
+|---|---|
+| JSON 字段 | 无新增；splitter 在 flow children 即自动引擎模式（flowWeight 语义沿用） |
+| API | `setLinkedControls` 引擎模式下不触发自动写（只保存引用）；`setSplitRatio` 引擎模式 = 设定前段权重后 reflow |
+| 既有 test_splitter | 引擎外路径不改，全部保留 |
+| 性能 | 拖拽每帧一次 reflow（原代码同样 setRect 面板），数量级相同 |
+
+### 8.8 测试与验收（test_splitter 扩展，三后端）
+
+- 引擎模式：h-flow `[A(fw0,200) | sp1 | B(fw1) | sp2 | C(fw0,240)]` → 断言 A/B/C/sp1/sp2 rect
+  链式正确；resize 容器后自动重排且链式保持。
+- 拖拽模拟：向 sp1 发起 MouseDown/Move/Up（watcher 路径）→ B 宽变化（sp1 前段 + A 固定 →
+  fw 转换）且 sp2 位置随链更新；onSplitterMoved ratio ∈[0,1] 且回调计数。
+- v-flow 纵向：`[top | spv | bottom(fw1)]` 高度链式。
+- JSON 解析用例（loadLayout 后 splitter 布局生效，不再卡死）。
+- linked 自动模式（引擎外）：防重入 guard 后原用例（setRect 往返）不再死循环。
+### 8.9 手柄模式（无 linked、无引擎容器）
+
+- Splitter 无 linked 面板时仍可作为"纯手柄"工作：无引擎容器 + 无 linked →
+  拖拽仅移动自身矩形（clamp 在父容器范围内）+ 上报 `onSplitterMoved` ratio；
+  布局由应用侧维护（CornerstoneDesigner 早期绕行方案的**正式支持**）。
+- 三类模式互斥优先级：**引擎模式**（父容器有布局引擎）> **linked 自动模式**（引擎外且有面板）
+  > **手柄模式**（其余）。所有模式拖拽均 1:1 跟手（坐标经 mapViewportToCanvas
+  换算，含根/视口缩放（zoom/fit/stretch/DPI）全链）。
+- **跟手换算修复**：`updateDrag` 由"鼠标 delta ÷ 父 scale"改为
+  `mapViewportToCanvas(当前)-mapViewportToCanvas(起点)` 差值（视口像素 → 画布逻辑），
+  消除缩放模式下的比例偏差（CornerstoneDesigner zoom 25%~200% 场景）。
+
+**文档版本**：v1.1（2026-08-28）

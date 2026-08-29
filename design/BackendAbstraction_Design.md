@@ -1168,7 +1168,7 @@ void* (*getDefaultCursor)();
 void  (*setCurrentCursor)(void* cursor);
 ```
 
-`BackendManager::initialize(callbacks)` 中调用 `Cursor::registerFactories(createSystemCursor, getDefaultCursor, setCurrentCursor)`，将回调查表的光标函数注册到 `Cursor` 抽象类的工厂函数指针，替代原来的静态注册模式。三后端（SDL3/SFML/Raylib）的 `BackendPlugin.cpp` 均在 `GetUIBackendCallbacks()` 中通过 lambda 桥接本后端的光标工厂函数。
+`BackendManager::initialize(callbacks)` 中调用 `Cursor::registerFactories(createSystemCursor, getDefaultCursor, setCurrentCursor)`，将回调查表的光标函数注册到 `Cursor` 抽象类的工厂函数指针，替代原来的静态注册模式。三后端（SDL3/SFML/Raylib）的 `BackendPlugin.cpp` 均在 `GetUIBackendCallbacks()` 中通过 lambda 桥接本后端的光标工厂函数。（2026-08-29 修复：SDL3 `sdl3GetDefaultCursor` 原以 `SDL_GetCursor()`（当前光标，可能已是 resize 光标）缓存"默认"，导致鼠标离开分条后全局残留双向箭头——改为 `SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT)` 独立创建；SFML/Raylib 无此问题（各自独立创建 Arrow/系统光标）。）
 
 ## 14. Phase 11——移除 ControlBase SDL_Renderer
 

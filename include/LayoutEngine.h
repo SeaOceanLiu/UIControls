@@ -34,6 +34,10 @@ public:
                            vector<shared_ptr<Control>>& children,
                            unordered_map<Control*, GridItemProps>& gridProps) {}
     virtual string getType() const = 0;
+    // 最近一次流式分配的单位弹性宽（Splitter 引擎模式拖拽权重换算用；未经过 apply 时为 0）
+    float getLastFlexUnit() const { return m_lastFlexUnit; }
+protected:
+    float m_lastFlexUnit = 0.0f;
 };
 
 class HFlowLayout : public LayoutEngine {

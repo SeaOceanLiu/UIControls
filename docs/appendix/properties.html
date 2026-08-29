@@ -278,6 +278,7 @@
 <tr><td><code>ratio</code>（别名 <code>value</code>）</td><td>Float</td><td>0.5</td></tr>
 <tr><td><code>thickness</code></td><td>Float</td><td>4 / 6</td></tr>
 </table>
+<p>引擎模式（v1.1.1）：splitter 放在 flow 容器 children 内自动分段布局——<code>first-linked/second-linked</code> 仅作只读参考（引擎不自动写两侧），拖拽由引擎按"固定前段/后段"两式重排；无 link 时退化为手柄模式（拖自身 + moved 回调 ratio）。见 <a href="../controls/splitter.html#4-21-7">4.21.7</a>。</p>
 
 <h3>StatusBar（类型 <code>status-bar</code>）</h3>
 <table>

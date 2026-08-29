@@ -1,6 +1,23 @@
 ﻿// 由AI(DeepSeek V4 Flash)生成，可能不完整或有错误，请自行检查和修改
 #include "LayoutEngine.h"
 #include "PropertyNames.h"
+#include "Splitter.h"
+
+namespace {
+// Splitter 控件在流中的逻辑宽（引擎模式下以 m_thickness 为准，
+// 而不是 JSON rect 宽——拖拽只改权重、引擎负责位置）
+float FlowElementWidth(Control* child, float fallbackWidth) {
+    if (child->getControlType() == ControlType::Splitter) {
+        auto* sp = dynamic_cast<Splitter*>(child);
+        return sp ? sp->getThickness() : fallbackWidth;
+    }
+    return fallbackWidth;
+}
+// 元素间距：splitter 与相邻元素之间不应用 m_gap（splitter 本身即分隔条）
+float FlowGapAfter(Control* child) {
+    return child->getControlType() == ControlType::Splitter ? 0.0f : -1.0f;  // -1 = 用 m_gap
+}
+}  // namespace
 
 HFlowLayout::HFlowLayout(float gap, Margin padding)
     : m_gap(gap), m_padding(padding) {}
@@ -26,16 +43,23 @@ void HFlowLayout::apply(const SRect& containerRect,
             totalFlex += fw;
             ++flexCount;
         } else {
-            fixedWidth += childRect.width + hMargin;
+            fixedWidth += FlowElementWidth(child.get(), childRect.width) + hMargin;
         }
     }
 
     float innerWidth = containerRect.width - m_padding.left - m_padding.right;
     float innerHeight = containerRect.height - m_padding.top - m_padding.bottom;
 
-    float totalGaps = (children.size() > 1) ? m_gap * (children.size() - 1) : 0.0f;
+    // gap 累计：splitter 前后间距记 0（splitter 即分隔），其余元素按 m_gap
+    float totalGaps = 0.0f;
+    for (size_t i = 1; i < children.size(); ++i) {
+        float g = FlowGapAfter(children[i - 1].get());
+        totalGaps += (g < 0.0f) ? m_gap : g;
+    }
+
     float remainingWidth = innerWidth - fixedWidth - totalGaps;
     float flexUnit = (totalFlex > 0.0f) ? max(0.0f, remainingWidth) / totalFlex : 0.0f;
+    m_lastFlexUnit = flexUnit;
 
     float cursorX = m_padding.left;
 
@@ -44,7 +68,7 @@ void HFlowLayout::apply(const SRect& containerRect,
         SRect childRect = child->getRect();
         Margin margin = child->getMargin();
 
-        float w = childRect.width;
+        float w = FlowElementWidth(child.get(), childRect.width);
         auto it = itemProps.find(child.get());
         float fw = (it != itemProps.end()) ? it->second.flexWeight : 0.0f;
 
@@ -58,7 +82,8 @@ void HFlowLayout::apply(const SRect& containerRect,
 
         child->setRect(SRect{childX, childY, w, childH});
 
-        cursorX += w + margin.left + margin.right + m_gap;
+        float gap = FlowGapAfter(child.get());
+        cursorX += w + margin.left + margin.right + ((gap < 0.0f) ? m_gap : gap);
     }
 }
 
@@ -88,16 +113,22 @@ void VFlowLayout::apply(const SRect& containerRect,
             totalFlex += fw;
             ++flexCount;
         } else {
-            fixedHeight += childRect.height + vMargin;
+            fixedHeight += FlowElementWidth(child.get(), childRect.height) + vMargin;
         }
     }
 
     float innerWidth = containerRect.width - m_padding.left - m_padding.right;
     float innerHeight = containerRect.height - m_padding.top - m_padding.bottom;
 
-    float totalGaps = (children.size() > 1) ? m_gap * (children.size() - 1) : 0.0f;
+    float totalGaps = 0.0f;
+    for (size_t i = 1; i < children.size(); ++i) {
+        float g = FlowGapAfter(children[i - 1].get());
+        totalGaps += (g < 0.0f) ? m_gap : g;
+    }
+
     float remainingHeight = innerHeight - fixedHeight - totalGaps;
     float flexUnit = (totalFlex > 0.0f) ? max(0.0f, remainingHeight) / totalFlex : 0.0f;
+    m_lastFlexUnit = flexUnit;
 
     float cursorY = m_padding.top;
 
@@ -106,7 +137,7 @@ void VFlowLayout::apply(const SRect& containerRect,
         SRect childRect = child->getRect();
         Margin margin = child->getMargin();
 
-        float h = childRect.height;
+        float h = FlowElementWidth(child.get(), childRect.height);
         auto it = itemProps.find(child.get());
         float fw = (it != itemProps.end()) ? it->second.flexWeight : 0.0f;
 
@@ -120,7 +151,8 @@ void VFlowLayout::apply(const SRect& containerRect,
 
         child->setRect(SRect{childX, childY, childW, h});
 
-        cursorY += h + margin.top + margin.bottom + m_gap;
+        float gap = FlowGapAfter(child.get());
+        cursorY += h + margin.top + margin.bottom + ((gap < 0.0f) ? m_gap : gap);
     }
 }
 

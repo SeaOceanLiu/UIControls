@@ -211,9 +211,12 @@
 <pre><code>{ "type":"splitter", "id":"spl",
   "rect":{"x":244,"y":60,"w":6,"h":200},
   "orientation":"vertical",                                // horizontal/vertical
-  "firstPanel":"panelFirst", "secondPanel":"panelSecond",  // 两侧面板 id
+  "firstPanel":"panelFirst", "secondPanel":"panelSecond",  // 两侧面板 id（引擎模式可省略）
   "thickness":6, "ratio":0.4, "minFirst":50, "minSecond":50,
   "colors":{"line":{"normal":"#808080FF"}} }</code></pre>
+<p>引擎模式（v1.1.1）：splitter 置于 flow 容器（v-flow/h-flow）children 内即自动分段布局——
+两侧面板为前后邻居、任意数量链式累计、拖拽两式（固定前段/后段改宽、引擎重排）、
+无面板即"手柄模式"（拖自身+上报 ratio）。详见 <a href="../controls/splitter.html#4-21-7">4.21.7</a>。</p>
 
 <h3>status-bar（VSCode 风格状态栏）</h3>
 <pre><code>{ "type":"status-bar", "id":"sb", "rect":[0,876,1400,24], "fontSize":13,

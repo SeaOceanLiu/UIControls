@@ -33,6 +33,11 @@ public:
     void setLayoutEngine(shared_ptr<LayoutEngine> engine) { m_layoutEngine = engine; }
     shared_ptr<LayoutEngine> getLayoutEngine() const { return m_layoutEngine; }
     void setChildFlowProps(Control* child, FlowItemProps props) { m_flowItemProps[child] = props; }
+    // 读取子项流权重（Splitter 引擎模式拖拽权重换算用；未设置 = 0 = 固定）
+    float getChildFlowWeight(const Control* child) const {
+        auto it = m_flowItemProps.find(const_cast<Control*>(child));
+        return (it != m_flowItemProps.end()) ? it->second.flexWeight : 0.0f;
+    }
     void setChildAnchorProps(Control* child, AnchorInfo props) { m_anchorItemProps[child] = props; }
     void setChildGridProps(Control* child, GridItemProps props) { m_gridItemProps[child] = props; }
     void reflowChildren();

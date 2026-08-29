@@ -1,5 +1,8 @@
 ﻿#define NOMINMAX
 #include "Splitter.h"
+#include "Window.h"
+#include "LayoutEngine.h"
+#include "Panel.h"
 #include "GraphTool.h"
 #include "PropertyNames.h"
 #include "PlatformUtils.h"
@@ -63,8 +66,12 @@ void Splitter::draw() {
 
 bool Splitter::handleEvent(shared_ptr<Event> event) {
     if (!m_enable || !m_visible) return false;
-    if (!m_first && !m_second) return false;
-    if (!ensureControls() && !m_dragging) return false;
+    // 三模式均可拖拽：
+    // - linked 自动模式（引擎外）：需 linked 面板存活（ensureControls）
+    // - 引擎模式（布局引擎容器内）/ 手柄模式（无 linked）：无面板也可拖
+    //   （手柄模式：拖动自身 + 上报 ratio，布局由应用侧维护——见 Splitter_Design §8.9）
+    bool hasLinked = (m_first || m_second);
+    if (!m_dragging && !isEngineManaged() && hasLinked && !ensureControls()) return false;
 
     if (m_dragging) {
         if (event->m_type == EventType::MouseMove) {
@@ -103,7 +110,9 @@ void Splitter::setRect(SRect rect) {
     if (rect == m_lastRect) return;
     m_lastRect = rect;
     ControlImpl::setRect(rect);
-    if (m_first && m_second) applySplitRatio(m_splitRatio);
+    // 引擎模式：rect 由引擎写入，仅拖拽权重触发重排（不自动联动）；
+    // 引擎外：linked 自动布局（first/second 独占父容器）
+    if (!isEngineManaged() && m_first && m_second) applySplitRatio(m_splitRatio);
 }
 
 void Splitter::setOrientation(bool horizontal) {
@@ -166,6 +175,110 @@ void Splitter::setOnSplitterMoved(OnSplitterMovedHandler h) { m_onSplitterMoved 
 
 // ── Private ──
 
+bool Splitter::isEngineManaged() {
+    // 父容器为布局引擎容器（Panel + layoutEngine）→ 引擎分段模式（设计 §8.3）
+    auto* pid = dynamic_cast<Panel*>(getParent());
+    return pid && pid->getLayoutEngine() != nullptr;
+}
+
+void Splitter::updateEngineDrag(float deltaLogic) {
+    auto* pctl = dynamic_cast<Panel*>(getParent());
+    if (!pctl || !pctl->getLayoutEngine()) return;
+
+    static bool tempDiag = false;
+    (void)tempDiag;
+
+    auto& kids = pctl->getChildren();
+    int idx = -1;
+    for (size_t i = 0; i < kids.size(); ++i)
+        if (kids[i].get() == this) { idx = (int)i; break; }
+    if (idx <= 0) return;
+
+    // 前段/后段边界：本 splitter 前后连续非 splitter 元素群（典型 = 各一面板）
+    int prevStart = idx - 1;
+    while (prevStart >= 0 && kids[prevStart]->getControlType() == ControlType::Splitter) --prevStart;
+    if (prevStart < 0) return;
+    auto& prevEl = kids[prevStart];
+    float prevFw = pctl->getChildFlowWeight(prevEl.get());
+    SRect pr = prevEl->getRect();
+    float segW = m_orientation ? pr.width : pr.height;
+
+    // 后段总宽（下一 splitter 之前所有非 splitter 元素宽；典型 = 一面板）
+    int rearEnd = idx + 1;
+    while (rearEnd < (int)kids.size() && kids[rearEnd]->getControlType() != ControlType::Splitter) ++rearEnd;
+    if (rearEnd <= idx + 1) return;
+    auto& rearEl = kids[idx + 1];
+    SRect rr = rearEl->getRect();
+    float rearW = m_orientation ? rr.width : rr.height;
+    float rearFw = pctl->getChildFlowWeight(rearEl.get());
+    float totalSpan = segW + rearW;
+
+    // 首帧：锁定拖拽起始的前段/后段宽（后续帧一律基于它累加）
+    if (m_dragStartSegW < 0.0f) {
+        m_dragStartSegW = segW;
+        m_dragStartRearW = rearW;
+    }
+
+    // 其余段固定项（前段/后段之外，fw<=0 且非 splitter 的宽）
+    float fixedOthers = 0.0f;
+    for (int j = 0; j < (int)kids.size(); ++j) {
+        if (j == prevStart || (j > idx && j < rearEnd)) continue;
+        auto& k = kids[j];
+        if (k->getControlType() == ControlType::Splitter) continue;
+        if (pctl->getChildFlowWeight(k.get()) > 0.0f) continue;
+        SRect r2 = k->getRect();
+        fixedOthers += m_orientation ? r2.width : r2.height;
+    }
+    float containerInner = m_orientation ? pctl->getRect().width : pctl->getRect().height;
+    float splitterThick = getThickness();
+    float maxByFixed = containerInner - fixedOthers - splitterThick;
+
+    // 两式拖拽语义（CornerstoneDesigner 布局：左右固定 + 中间弹性）：
+    // 1) 前段固定 → 修改前段固定宽（左边界拖动）
+    // 2) 前段弹性 & 后段固定 → 修改后段固定宽（右边界拖动），前段弹性自动补偿
+    // 3) 双弹性段 → 降级：前段锁定为固定宽（基础保护）
+    if (prevFw <= 0.0f) {
+        // 固定基准：起点宽 + 累计 delta（而非"当前宽+累计 delta"——避免双重累加）
+        float target = std::clamp(m_dragStartSegW + deltaLogic, m_minFirst,
+            std::min(totalSpan - m_minSecond, maxByFixed - m_minSecond));
+        if (m_orientation)
+            prevEl->setRect(SRect(pr.left, pr.top, target, pr.height));
+        else
+            prevEl->setRect(SRect(pr.left, pr.top, pr.width, target));
+    } else if (rearFw <= 0.0f) {
+        // 后段固定：拖动边界 → 后段宽 = span - (前段宽+delta)
+        float targetRear = std::clamp(m_dragStartRearW - deltaLogic, m_minSecond,
+            std::max(m_minSecond, totalSpan - m_minFirst));
+        if (m_orientation)
+            rearEl->setRect(SRect(rr.left, rr.top, targetRear, rr.height));
+        else
+            rearEl->setRect(SRect(rr.left, rr.top, rr.width, targetRear));
+    } else {
+        float target = std::clamp(m_dragStartSegW + deltaLogic, m_minFirst, totalSpan - m_minSecond);
+        pctl->setChildFlowProps(prevEl.get(), FlowItemProps{0.0f});
+        if (m_orientation)
+            prevEl->setRect(SRect(pr.left, pr.top, target, pr.height));
+        else
+            prevEl->setRect(SRect(pr.left, pr.top, pr.width, target));
+    }
+    pctl->reflowChildren();
+
+    // ratio 回调：splitter 中线 / 容器内宽（逻辑坐标）
+    Control* p = getParent();
+    float inner = p ? (m_orientation ? p->getRect().width : p->getRect().height) : 0.0f;
+    if (inner > 0.0f) {
+        SRect sr = getRect();
+        float center = m_orientation ? (sr.left + m_thickness * 0.5f) : (sr.top + m_thickness * 0.5f);
+        float r = std::clamp(center / inner, 0.0f, 1.0f);
+        if (r != m_splitRatio) {
+            m_splitRatio = r;
+            if (m_onSplitterMoved)
+                m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), r);
+            fireCCallback(PropertyNames::kEventMoved, CCallbackData::Float, &m_splitRatio);
+        }
+    }
+}
+
 bool Splitter::ensureControls() {
     auto f = m_firstWeak.lock();
     auto s = m_secondWeak.lock();
@@ -175,9 +288,14 @@ bool Splitter::ensureControls() {
 }
 
 void Splitter::applySplitRatio(float ratio) {
-    if (!m_first || !m_second) return;
+    // 重入保护：引擎 reflow 写回 first/second rect 时防止递归死循环
+    // （此前 m_lastRect 被清空导致引擎↔splitter 互相触发直至栈溢出，见 Splitter_Design §8.1）
+    if (m_applyingRatio) return;
+    m_applyingRatio = true;
+
+    if (!m_first || !m_second) { m_applyingRatio = false; return; }
     Control* p = getParent();
-    if (!p) return;
+    if (!p) { m_applyingRatio = false; return; }
 
     float sx = getScaleXX(), sy = getScaleYY();
     float thickPx = m_thickness * (m_orientation ? sx : sy);
@@ -209,6 +327,7 @@ void Splitter::applySplitRatio(float ratio) {
         m_rect.top = fr.top + firstPx / sy;
     }
     m_lastRect = SRect();
+    m_applyingRatio = false;
 }
 
 void Splitter::startDrag(const SPoint& mousePos) {
@@ -225,20 +344,62 @@ void Splitter::startDrag(const SPoint& mousePos) {
     m_dragStartMousePos = mousePos;
     m_dragStartRatio = m_splitRatio;
     m_dragStartLocalPos = m_orientation ? m_rect.left : m_rect.top;
+    // 引擎模式：记录"前段/后段"拖拽起始宽——目标 = 起点宽 + 累计 delta（固定基准，
+    // 防止每帧以"已含 delta 的当前宽"再叠加累计 delta 造成双重累加（超动 bug）
+    m_dragStartSegW = -1.0f;   // -1 = 未初始化（updateEngineDrag 首帧填充）
 }
 
 void Splitter::updateDrag(const SPoint& mousePos) {
-    if (!m_dragging || !m_first || !m_second) return;
+    if (!m_dragging) return;
 
-    float cur = m_orientation ? mousePos.x : mousePos.y;
-    float start = m_orientation ? m_dragStartMousePos.x : m_dragStartMousePos.y;
-    float delta = cur - start;
+    // 坐标换算：视口（绘制）坐标 → 画布/逻辑坐标（经 mapViewportToCanvas，
+    // 含控件/视口缩放全链）——保证任意缩放(zoom/DPI/fit)下 1:1 跟手。
+    // 两次 map 的基准偏移相同，差值即逻辑位移。
+    SPoint curLocal = mapViewportToCanvas(mousePos);
+    SPoint startLocal = mapViewportToCanvas(m_dragStartMousePos);
+    float delta = m_orientation ? (curLocal.x - startLocal.x)
+                                : (curLocal.y - startLocal.y);
+
+    // 引擎模式：拖拽只调整"前段弹性权重"并请引擎重排（引擎统一计算整链位置）
+    if (isEngineManaged()) {
+        updateEngineDrag(delta);
+        return;
+    }
+
+    // 手柄模式（无 linked）：仅移动自身并上报 ratio，布局由应用侧（onSplitterMoved）维护
+    if (!m_first || !m_second) {
+        Control* p = getParent();
+        if (!p) return;
+        SRect pr = p->getRect();
+        if (m_orientation) {
+            float inner = pr.width - m_thickness;
+            m_rect.left = std::clamp(m_rect.left + delta, 0.0f, std::max(0.0f, inner));
+        } else {
+            float inner = pr.height - m_thickness;
+            m_rect.top = std::clamp(m_rect.top + delta, 0.0f, std::max(0.0f, inner));
+        }
+        m_lastRect = SRect();
+        float inner = m_orientation ? pr.width : pr.height;
+        if (inner > 0.0f) {
+            float center = m_orientation ? (m_rect.left + m_thickness * 0.5f)
+                                         : (m_rect.top + m_thickness * 0.5f);
+            float r = std::clamp(center / inner, 0.0f, 1.0f);
+            if (r != m_splitRatio) {
+                m_splitRatio = r;
+                if (m_onSplitterMoved)
+                    m_onSplitterMoved(std::static_pointer_cast<Splitter>(shared_from_this()), r);
+                fireCCallback(PropertyNames::kEventMoved, CCallbackData::Float, &m_splitRatio);
+            }
+        }
+        return;
+    }
 
     Control* p = getParent();
     if (!p) return;
     float ps = m_orientation ? p->getScaleXX() : p->getScaleYY();
 
-    float rawNewPos = m_dragStartLocalPos + delta / ps;
+    // delta 已为画布/逻辑位移（updateDrag 顶部 mapViewportToCanvas 换算），不再 /ps
+    float rawNewPos = m_dragStartLocalPos + delta;
 
     if (m_orientation) {
         float firstLeft = m_first->getRect().left;
@@ -265,6 +426,8 @@ void Splitter::updateDrag(const SPoint& mousePos) {
 void Splitter::endDrag() {
     if (!m_dragging) return;
     m_dragging = false;
+    // 引擎模式：拖拽期间权重已实时生效（每帧 reflow），无收尾联动
+    if (isEngineManaged()) return;
     if (!m_first || !m_second) return;
 
     ::SRect fRect = m_first->getRect();

@@ -1,5 +1,41 @@
 ﻿## Session History
 
+### 2026-08-29: Splitter 拖拽超动根因（双重累加）+ 三后端回归（Complete）
+
+**用户痛症**：手动拖动任意蓝绿分条"移动距离比鼠标大、不跟手"（测试断言却一直 1:1）。
+**排查链**（逐层实证）：合成事件 1:1 vs 手动 log 缺失 → DIAG 上限耗尽 → SP-HIT/SP-DRAG/SP-VS
+全链路打印 → 真实命中 jSp1(310,500) → [SP-LAYOUT] 显示每帧 delta 与面板增量一致，
+但 SP-VS 显示 sp 逻辑位移 296 vs 鼠标 27 → 逐帧拆分（首帧 +1 / 第二帧 +2 … 第十二帧 +12）
+发现：**target = 当前宽(已含上帧 delta) + 累计 delta → 双重累加滚雪球**（13 帧累计 +74 =
+鼠标 +13 的 5.7 倍）。
+**修复**：startDrag 记录拖拽起始前段/后段宽（m_dragStartSegW/m_dragStartRearW），
+updateEngineDrag 三式全部改"固定基准 + 累计 delta"；坐标换算统一 mapViewportToCanvas
+两次差。**回归**：新增"分段拖拽 10×1px → A=210（无累加）"用例（三后端 0 失败 =
+sdl3/sfml/raylib 各 22+ 断言全过）。临时 DIAG 全部移除。
+**文档**：Splitter_Design §8.4 更新固定基准公式与禁止项。
+**相关文件**：src/Splitter.cpp / include/Splitter.h（m_dragStartSegW/RearW）、
+test/test_splitter.cpp（分段拖拽+恢复用例+取消 panel 颜色保留）、design/Splitter_Design.md§8.4。
+
+
+### 2026-08-28（晚）: Splitter × 布局引擎彻底融合（引擎模式/双式拖拽/手柄模式/跟手换算）
+
+**问题**（CornerstoneDesigner 推进反馈）：① JSON splitter 极简配置解析后卡死（引擎 reflow↔Splitter 联动递归环：applySplitRatio 清 m_lastRect + 引擎↔面板互写）；② 多 Splitter 共享弹性面板冲突（applySplitRatio 独占父容器假设）；③ 群拖拽不跟手/移动比例不对（缩放模式 delta÷scale 双因子）。
+
+**1. 引擎分段模型（Splitter_Design §8 新增）**：H/V flow 引擎中 Splitter 成为一等元素——FlowElementWidth（thickness 流）、FlowGapAfter（splitter 前后 gap=0）、任意数量 splitter 链式累计位置；LayoutEngine 基类补 getLastFlexUnit。
+
+**2. 两式拖拽语义**：前段固定→改前段固定宽（左界）；前段弹性&后段固定→改后段固定宽（右界，弹性自动补偿）；双弹性→降级前段锁定。多 splitter 天然链式（每次 reflow 全链重算）。
+
+**3. 手柄模式**：无 linked / 无引擎容器也可拖（自身移动 + ratio 上报），CornerstoneDesigner 早期绕行方案正式化；驱动 guard 三模式互斥（引擎 > linked 自动 > 手柄）。
+
+**4. 跟手换算修复**：updateDrag 坐标改用 mapViewportToCanvas 两次求差（视口像素→画布逻辑，含根/视口缩放全链），移除「delta÷父 scale 双因子」；linked 自动/引擎/手柄三模式统一，zoom 2x 下 40px=20 逻辑验证。
+
+**5. 防重入**：applySplitRatio 加 m_applyingRatio guard（修复卡死主因）；Splitter::setRect 引擎模式不再触发 apply。
+
+**6. 测试（test_splitter 扩展）**：引擎三栏（+37.5 非整 1:1、往返、链式）、四栏三分隔条（双弹性降级/式2）、嵌套（弹性面板内 v-flow 两条水平 splitter）、JSON 声明式（不卡死回归）、手柄模式、zoom 2x 跟手——三后端（sdl3/sfml/raylib）全过 0 失败。
+
+**相关文件**：include/LayoutEngine.h、src/LayoutEngine.cpp（分段+flexUnit）、include/Splitter.h、src/Splitter.cpp（isEngineManaged/updateEngineDrag/两式/手柄/guard/map 换算）、include/Panel.h（getChildFlowWeight）、test/test_splitter.cpp（+5 用例函数）、design/Splitter_Design.md（§8+§8.9）、design/guidelines/history.md（本条）。
+
+
 ### 2026-08-28（下午）: 运行期窗口 API（Size 查询/设置 + Resize 回调）+ CornerstoneDesigner v-flow 问题根治（Complete）
 
 **背景**：CornerstoneDesigner 的 App::SdlApi 动态解析 SDL3.dll 三函数（GetWindowSize/SetWindowSize/GetWindows）做窗口 resize 同步——绕过后端抽象（跨后端失效、headless 语义丢失）；设计评审定案：统一提供运行期窗口 API（§21 文档先行）。
