@@ -34,7 +34,7 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 <h2>4.8.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>button-height</code></td><td><code>kButtonHeight</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
 <tr><td><code>button-gap</code></td><td><code>kButtonGap</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
 <tr><td><code>padding</code></td><td><code>kPadding</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
@@ -53,10 +53,10 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 <h2>4.8.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>cancel</code></td><td><code>—</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
-<tr><td><code>close</code></td><td><code>—</code></td><td>close() 被调用时</td><td><code>(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
-<tr><td><code>confirm</code></td><td><code>—</code></td><td>点确定按钮或按 Enter（ConfirmPopup 及以上）</td><td><code>(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>cancel</code></td><td><code>kEventCancel</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
+<tr><td><code>close</code></td><td><code>kEventClose</code></td><td>close() 被调用时</td><td><code>(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
+<tr><td><code>confirm</code></td><td><code>kEventConfirm</code></td><td>点确定按钮或按 Enter（ConfirmPopup 及以上）</td><td><code>(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
 </table>
 
 
@@ -119,7 +119,7 @@ UICornerstone_SetCallback(g_inst, dlg, "cancel", onCancel, NULL);</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>close(DialogResult result = Cancelled)</code></td><td>关闭并触发 <code>onClose</code> 回调</td></tr>
 <tr><td><code>ConfirmPopup::setButtonHeight(float)</code> / <code>setButtonGap(float)</code> / <code>setPadding(float)</code></td><td>布局参数（默认 28 / 8 / 10）</td></tr>
 <tr><td><code>ConfirmPopup::setConfirmButtonVisible(bool)</code> / <code>setConfirmButtonText(string)</code> / <code>setConfirmButtonRect(SRect)</code> / <code>getConfirmButton()</code></td><td>确定按钮配置（默认文字「确定」）</td></tr>

@@ -37,7 +37,7 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200, 1.0
 <h2>4.16.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>参数</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>背景 / 边框四态颜色</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>背景 / 边框四态颜色</td></tr>
 <tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>通用属性</td></tr>
@@ -104,7 +104,7 @@ UICornerstone_SetBool(g_inst, panel, "transparent", 1);</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addControl(shared_ptr&lt;Control&gt;)</code></td><td>添加子控件</td></tr>
 <tr><td><code>handleEvent(Event)</code></td><td>逆向遍历子控件分发事件</td></tr>
 <tr><td><code>reflowChildren()</code></td><td>按布局引擎重新计算全部子控件位置 / 尺寸</td></tr>

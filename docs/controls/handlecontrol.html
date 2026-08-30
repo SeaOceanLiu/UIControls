@@ -34,7 +34,7 @@ UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 
 <h2>4.10.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td>handleSize</td><td>float</td><td>8.0</td><td>手柄方块尺寸（像素）</td></tr>
 <tr><td>minWidth / minHeight</td><td>float</td><td>20 / 20</td><td>目标最小尺寸钳位</td></tr>
 <tr><td>handleFill</td><td>SColor</td><td>白(255,255,255,255)</td><td>手柄填充色</td></tr>
@@ -86,7 +86,7 @@ UICornerstone_SetRect(g_inst, hc, 20, 20, 200, 100);</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>detach()</code></td><td>分离：清状态、取消置顶、从父容器移除</td></tr>
 <tr><td><code>draw()</code> / <code>handleEvent(Event)</code></td><td>每帧校正自身 rect 跟随目标、重建手柄缓存、命中检测与拖拽</td></tr>
 <tr><td><code>getTarget()</code></td><td>查询目标（原始指针）</td></tr>

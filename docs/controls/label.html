@@ -41,7 +41,7 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 <h2>4.11.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>align</code></td><td><code>kAlign</code></td><td>Enum</td><td><code>kAlignLowerMidLeft</code></td><td>9 值同 EditBox</td></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>空</td><td>文本内容</td></tr>
 <tr><td><code>clickable</code></td><td><code>kClickable</code></td><td>Bool</td><td>false</td><td>可点击命中</td></tr>
@@ -67,9 +67,9 @@ UIControlHandle label = UICornerstone_CreateLabel(g_inst, "Hello", 24.0f, 20, 20
 <h2>4.11.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>click</code>（<code>kEventClick</code>）</td><td><code>kEventClick</code></td><td>鼠标左键在文本热区按下 / 抬起（需 <code>setClickable(true)</code>）</td><td>无</td></tr>
-<tr><td><code>property-changed</code>（<code>kEventPropertyChanged</code>）</td><td><code>kEventPropertyChanged</code></td><td>recreate() 后（字体 / 文本 / 对齐 / 边距等变化）</td><td>无</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>click</code></td><td><code>kEventClick</code></td><td>鼠标左键在文本热区按下 / 抬起（需 <code>setClickable(true)</code>）</td><td>无</td></tr>
+<tr><td><code>property-changed</code></td><td><code>kEventPropertyChanged</code></td><td>recreate() 后（字体 / 文本 / 对齐 / 边距等变化）</td><td>无</td></tr>
 </table>
 
 
@@ -125,7 +125,7 @@ UICornerstone_SetString(g_inst, lbl, "font-resource", "maple-font");     // 内�
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>getHotRect()</code></td><td>文本热区（未缩放）</td></tr>
 <tr><td><code>loadFromFile(fs::path)</code> / <code>loadFromResource(string)</code></td><td>任意字体文件 / 内存资源加载</td></tr>
 <tr><td><code>setAlignmentMode(AlignmentMode)</code> / <code>getAlignmentMode()</code></td><td>对齐（默认 AM_MID_LEFT）</td></tr>

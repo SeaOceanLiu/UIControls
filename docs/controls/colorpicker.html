@@ -44,7 +44,7 @@ UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "
 <h2>4.5.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
 <tr><td><code>closed-font-size</code></td><td><code>kClosedFontSize</code></td><td>Int</td><td>12</td><td>闭合态 Hex 字号</td></tr>
@@ -61,8 +61,8 @@ UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "
 <h2>4.5.3 控件的回调</h2>
 
 <table>
-<tr><th>回调 / 事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>onColorChanged</code>（C ABI 事件 <code>color-changed</code>）</td><td><code></code></td><td>点击弹窗「确定」或按 Enter 提交时；取消 / ESC / 外部点击不触发</td><td><code>(shared_ptr&lt;ColorPicker&gt;, const SColor&amp;)</code> / <code>UIEventData.data.color{r,g,b,a}</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>color-changed</code></td>（回调名 onColorChanged）</td><td><code>kEventColorChanged</code></td><td>点击弹窗「确定」或按 Enter 提交时；取消 / ESC / 外部点击不触发</td><td><code>(shared_ptr&lt;ColorPicker&gt;, const SColor&amp;)</code> / <code>UIEventData.data.color{r,g,b,a}</code></td></tr>
 </table>
 
 
@@ -120,7 +120,7 @@ UICornerstone_SetCallback(g_inst, cp, "color-changed", onColorChanged, NULL);</c
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>getColor()</code> / <code>getColorHex()</code></td><td>获取当前颜色 / "#RRGGBB" 文本</td></tr>
 <tr><td><code>isPopupVisible()</code></td><td>弹窗是否打开</td></tr>
 <tr><td><code>setCallbackProperty(event, cb, userData)</code></td><td>回调属性注册</td></tr>

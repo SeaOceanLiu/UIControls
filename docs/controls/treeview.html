@@ -45,7 +45,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 <h2>4.25.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>arrow-gap</code></td><td><code>kArrowGap</code></td><td>Float</td><td>6</td><td>箭头与文本间距</td></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
@@ -73,7 +73,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 （先 <code>SetString("item-id", id)</code>，随后 set/get 作用于该节点）：</p>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>item-font</code></td><td><code>kTreeItemFont</code></td><td>Enum</td><td>继承 TreeView</td><td>逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
 <tr><td><code>item-font-size</code></td><td><code>kTreeItemFontSize</code></td><td>Int</td><td>0</td><td>逐 Item 字号（0 = 继承 TreeView 级）</td></tr>
 <tr><td><code>item-id</code></td><td><code>kTreeItemId</code></td><td>String</td><td>—</td><td>定位目标节点（后续 item 级属性的作用对象）</td></tr>
@@ -86,10 +86,10 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 <h2>4.25.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onCollapse</code>（C ABI 事件 <code>collapse</code>）</td><td><code></code></td><td>节点折叠</td><td>同上（nodeId）</td></tr>
-<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code>）</td><td><code></code></td><td>节点展开</td><td>同上（nodeId）</td></tr>
-<tr><td><code>onSelect</code>（C ABI 事件 <code>select</code>）</td><td><code></code></td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>collapse</code></td>（回调名 onCollapse）</td><td><code>kEventCollapse</code></td><td>节点折叠</td><td>同上（nodeId）</td></tr>
+<tr><td><code>expand</code></td>（回调名 onExpand）</td><td><code>kEventExpand</code></td><td>节点展开</td><td>同上（nodeId）</td></tr>
+<tr><td><code>select</code></td>（回调名 onSelect）</td><td><code>kEventSelect</code></td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
 </table>
 
 <p>行内前置控件的状态回调（如 CheckBox 的 <code>check-changed</code>）走该控件的通用回调通道：
@@ -188,7 +188,7 @@ void* cb = UICornerstone_FindControl(g_inst, "cb_n2");</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addChild(parentId, node) / removeNode(id) / clearItems()</code></td><td>节点增删</td></tr>
 <tr><td><code>expandNode(id) / collapseNode(id) / expandAll() / collapseAll()</code></td><td>展开 / 折叠</td></tr>
 <tr><td><code>getScrollBar() / getHScrollBar() / getFlatRowCount() / getSelectedRow()</code></td><td>滚动条 / 展开后行数 / 选中行号</td></tr>

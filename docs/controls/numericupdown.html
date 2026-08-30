@@ -41,7 +41,7 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 <h2>4.15.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>arrow</code></td><td><code>kArrow</code></td><td>Color</td><td>(180,180,180) / (255,255,255) / (220,220,220)</td><td>箭头三态颜色</td></tr>
 <tr><td><code>arrow-hover</code></td><td><code>kArrowHover</code></td><td>Color</td><td>(180,180,180) / (255,255,255) / (220,220,220)</td><td>箭头三态颜色</td></tr>
 <tr><td><code>arrow-pressed</code></td><td><code>kArrowPressed</code></td><td>Color</td><td>(180,180,180) / (255,255,255) / (220,220,220)</td><td>箭头三态颜色</td></tr>
@@ -63,8 +63,8 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 <h2>4.15.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onValueChanged</code>（C ABI 事件 <code>value-changed</code>）</td><td><code></code></td><td>值变化提交时：点击/长按步进、键盘步进、Enter/FocusLost 提交编辑文本后（<code>min==max</code> 时步进不触发）</td><td><code>(shared_ptr&lt;NumericUpDown&gt;, double newValue)</code> / <code>UIEventData.data.doubleVal</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>value-changed</code></td>（回调名 onValueChanged）</td><td><code>kEventValueChanged</code></td><td>值变化提交时：点击/长按步进、键盘步进、Enter/FocusLost 提交编辑文本后（<code>min==max</code> 时步进不触发）</td><td><code>(shared_ptr&lt;NumericUpDown&gt;, double newValue)</code> / <code>UIEventData.data.doubleVal</code></td></tr>
 </table>
 
 
@@ -124,7 +124,7 @@ UICornerstone_SetCallback(g_inst, nud, "value-changed", onValueChanged, NULL);</
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>setArrowColor(normal, hover, press)</code> / <code>getArrowColor()</code></td><td>箭头三态颜色</td></tr>
 <tr><td><code>setButtonWidth(float)</code> / <code>getButtonWidth()</code></td><td>箭头区宽度（默认 28）</td></tr>
 <tr><td><code>setDecimals(int)</code> / <code>getDecimals()</code></td><td>小数位（0~6，默认 0）</td></tr>

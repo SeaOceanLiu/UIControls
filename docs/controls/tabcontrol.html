@@ -35,7 +35,7 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
 <h2>4.23.2 控件的属性</h2>
 
 <table>
-<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>position</code></td><td><code>kJsonPosition</code></td><td>Enum</td><td>top</td><td>top / bottom / left / right</td></tr>
 <tr><td><code>fontSize</code></td><td>Float</td><td>13</td><td>页签文字字号</td></tr>
 <tr><td><code>currentIndex</code></td><td>Int</td><td>0</td><td>当前页（首页自动选中）</td></tr>
@@ -45,8 +45,8 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
 <h2>4.23.3 控件的回调 / 事件</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
-<tr><td><code>onTabChange</code></td><td>页签切换</td><td>新页索引</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>onTabChange</code></td><td><code>—</code></td><td>页签切换</td><td>新页索引</td></tr>
 </table>
 
 <h2>4.23.4 键盘导航</h2><p>页签条获焦：<code>←/→</code>（或竖排 <code>↑/↓</code>）循环切换、<code>Home/End</code> 首尾；<code>Tab</code> 层内循环（页内控件间 / 页签条+外部）；<code>Ctrl+Tab</code> 层切换（页内 ↔ 页签条）。</p>
@@ -91,7 +91,7 @@ UICornerstone_SetEnum(g_inst, tc, "position", "top");</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addTab(title, page)</code> / <code>insertTab(index, …)</code> / <code>removeTab(index)</code></td><td>页写（removeTab 钳制 currentIndex）</td></tr>
 <tr><td><code>getTabCount()</code> / <code>getTabs()</code></td><td>页只读访问</td></tr>
 <tr><td><code>setCurrentIndex(i)</code> / <code>getCurrentIndex()</code></td><td>切换（触发 onTabChange + 页面显隐）</td></tr>

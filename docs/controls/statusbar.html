@@ -36,7 +36,7 @@ UICornerstone_StatusBarAddItem(g_inst, bar, "branch", u8"main", 0);
 <h2>4.22.2 控件的属性</h2>
 
 <table>
-<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>fontSize</code></td><td>Float</td><td>13</td><td>段文字字号</td></tr>
 <tr><td><code>itemHeight</code></td><td>Float</td><td>rect 高</td><td>段高</td></tr>
 <tr><td><code>items[].align</code></td><td>Enum</td><td>left</td><td>left / right</td></tr>
@@ -47,8 +47,8 @@ UICornerstone_StatusBarAddItem(g_inst, bar, "branch", u8"main", 0);
 <h2>4.22.3 控件的回调 / 事件</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
-<tr><td>items[].onClick</td><td>点击无菜单段</td><td>回调/动作</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td>items[].onClick</td><td><code>—</code></td><td>点击无菜单段</td><td>回调/动作</td></tr>
 </table>
 
 <div class="note">图标槽几何居中（内容无关基准）；文字型图标受字体基线偏移影响，建议用 Shape 等几何内容。弹窗菜单点击项自动关闭；外部点击/Esc 关闭为后续增强。</div>
@@ -92,7 +92,7 @@ UICornerstone_SetFloat(g_inst, bar, "font-size", 13.0f);</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addStatusItem(id, text, rightAlign)</code></td><td>添加段</td></tr>
 <tr><td><code>updateStatusItemText(id, text)</code></td><td>更新段文本</td></tr>
 <tr><td><code>removeStatusItem(id)</code></td><td>移除段</td></tr>

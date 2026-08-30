@@ -43,7 +43,7 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 <h2>4.21.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>edge-margin</code></td><td><code>kEdgeMargin</code></td><td>Float</td><td>—</td><td>同时设置 minFirst 与 minSecond</td></tr>
 <tr><td><code>first-linked</code></td><td><code>kFirstLinked</code></td><td>Ptr</td><td>null</td><td>关联控件句柄（setPtrProperty）</td></tr>
 <tr><td><code>second-linked</code></td><td><code>kSecondLinked</code></td><td>Ptr</td><td>null</td><td>关联控件句柄（setPtrProperty）</td></tr>
@@ -62,7 +62,7 @@ UIControlHandle sp = UICornerstone_CreateSplitter(g_inst, 244, 60, 6, 200, 1 /*o
 <h2>4.21.3 控件的回调</h2>
 
 <table>
-<tr><th>回调 / 事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
 <tr><td><code>setOnSplitterMoved(handler)</code>（C ABI 事件 <code>moved</code>；JSON 键 <code>onSplitterMoved</code>）</td><td><code></code></td><td>拖拽结束（endDrag）及 setSplitRatio 后</td><td><code>void(shared_ptr&lt;Splitter&gt;, float ratio)</code></td></tr>
 </table>
 
@@ -140,7 +140,7 @@ UICornerstone_SetCallback(g_inst, sp, "moved", onMoved, NULL);</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>create()</code> / <code>draw()</code> / <code>handleEvent(Event)</code> / <code>setRect(SRect)</code></td><td>生命周期与绘制 / 事件 / 位置</td></tr>
 <tr><td><code>getFirstControl()</code> / <code>getSecondControl()</code> / <code>clearLinkedControls()</code></td><td>查询 / 解除关联</td></tr>
 <tr><td><code>setColor(normal, hover, drag)</code> / 三个 getter</td><td>三态颜色（默认 #808080 / #4A90D9 / #3A80C9）</td></tr>

@@ -38,7 +38,7 @@ UICornerstone_ListViewAddRow(g_inst, lv, "f1", 2, cells);
 <h2>4.12.2 控件的属性</h2>
 
 <table>
-<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>mode</code></td><td><code>kMode</code></td><td>Enum</td><td><code>kModeMulti</code></td><td><code>kModeMulti</code>（Report）/ <code>kModeSingle</code>（ListBox）</td></tr>
 <tr><td><code>multiSelect</code></td><td>Bool</td><td>true</td><td>Ctrl 多选</td></tr>
 <tr><td><code>selectedIndex</code></td><td>Int</td><td>-1</td><td>初始选中行</td></tr>
@@ -53,10 +53,10 @@ UICornerstone_ListViewAddRow(g_inst, lv, "f1", 2, cells);
 <h2>4.12.3 控件的回调 / 事件</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
-<tr><td><code>onSelectionChanged</code></td><td>选中集合变化</td><td>单选/多选/Ctrl 多选</td></tr>
-<tr><td><code>onItemClick</code></td><td>行点击</td><td>—</td></tr>
-<tr><td><code>onColumnSort</code></td><td>列头排序点击</td><td>列索引+方向</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>onSelectionChanged</code></td><td><code>—</code></td><td>选中集合变化</td><td>单选/多选/Ctrl 多选</td></tr>
+<tr><td><code>onItemClick</code></td><td><code>—</code></td><td>行点击</td><td>—</td></tr>
+<tr><td><code>onColumnSort</code></td><td><code>—</code></td><td>列头排序点击</td><td>列索引+方向</td></tr>
 </table>
 
 <h2>4.12.4 leadingControl</h2><p>列头图标（<code>setColumnLeadingControl</code>）、行首图标（<code>setRowLeadingControl</code>）、单元格控件（<code>setCellLeadingControl</code>）——任意控件，自动挂树定位。</p>
@@ -106,7 +106,7 @@ UICornerstone_SetInt(g_inst, lv, "selected-index", 0);</code></pre>
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addRow(id, cells)</code> / <code>insertRow(index, …)</code> / <code>removeRow(index)</code> / <code>removeRowById(id)</code></td><td>行写（自动补足列数）</td></tr>
 <tr><td><code>getRowCount()</code> / <code>getRow(index)</code> / <code>getRowById(id)</code> / <code>getRowCells(index)</code> / <code>setRowCells(index, cells)</code></td><td>行读写</td></tr>
 <tr><td><code>addColumn(title,width,sortable)</code> / <code>insertColumn</code> / <code>removeColumn</code> / <code>getColumnCount</code></td><td>列写/读（行列同步调整）</td></tr>

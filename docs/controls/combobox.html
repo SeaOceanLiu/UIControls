@@ -45,7 +45,7 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32, 1.
 <h2>4.6.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>arrow</code></td><td><code>kArrow</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
 <tr><td><code>arrow-hover</code></td><td><code>kArrowHover</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
 <tr><td><code>item-selected</code></td><td><code>kItemSelected</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
@@ -69,8 +69,8 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32, 1.
 <h2>4.6.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onSelectionChanged</code>（C ABI 事件 <code>selection-changed</code>）</td><td><code></code></td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>selection-changed</code></td>（回调名 onSelectionChanged）</td><td><code>kEventSelectionChanged</code></td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
 </table>
 
 
@@ -133,7 +133,7 @@ UICornerstone_SetCallback(g_inst, box, "selection-changed", onSelectionChanged, 
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addItem(label, value, disabled = false)</code> / <code>clearItems()</code> / <code>removeItem(int)</code></td><td>追加 / 清空 / 删除选项</td></tr>
 <tr><td><code>getItems()</code> / <code>getItemCount()</code></td><td>读取选项</td></tr>
 <tr><td><code>getListPanel() / getListScrollBar() / openPopupForTest()</code></td><td>测试辅助</td></tr>

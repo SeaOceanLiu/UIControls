@@ -46,7 +46,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h2>4.14.2 控件的属性（C ABI 属性系统）</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>参数</th></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
 <tr><td><code>checked</code></td><td><code>kChecked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
 <tr><td><code>click</code></td><td><code>kEventClick</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
@@ -63,7 +63,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h3>4.14.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
 <p>Menu 的逐项增强属性挂在 <strong>MenuPanel</strong> 上：先 <code>SetString("item-id", id)</code> 定位目标菜单项，随后 item 级属性作用于该菜单项。MenuItem 自身也支持 <code>SetString("item-id", id)</code> 设置其定位 id（编程式创建时便于后续定位）。</p>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th><th>参数</th></tr>
 <tr><td><code>item-id</code></td><td><code>kTreeItemId</code></td><td>String</td><td>—</td><td>定位目标菜单项（在 MenuPanel 上设置后，后续 item 级属性作用于该菜单项）</td></tr>
 <tr><td><code>item-font</code></td><td><code>kTreeItemFont</code></td><td>Enum</td><td>继承 MenuPanel</td><td>逐项字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
 <tr><td><code>item-font-size</code></td><td><code>kTreeItemFontSize</code></td><td>Int</td><td>0</td><td>逐项字号（0 = 继承面板字号；&gt;0 时该行行高 = 字号×item-height-ratio，独立于面板其余行）</td></tr>
@@ -75,8 +75,8 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h2>4.14.3 控件的回调</h2>
 
 <table>
-<tr><th>回调 / 事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>MenuItem::onClick</code>（C ABI 事件 <code>click</code>，JSON 键 <code>onClick</code>）</td><td><code></code></td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>click</code></td>（回调名 MenuItem::onClick；JSON 键 <code>onClick</code>）</td><td><code>kEventClick</code></td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
 </table>
 
 
@@ -200,7 +200,7 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 
 <h3>MenuItem</h3>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>closeMenuChain()</code></td><td>关闭整个菜单链</td></tr>
 <tr><td><code>getType()</code></td><td>项类型（Normal / Separator / SubMenu）</td></tr>
 <tr><td><code>setCaption(string)</code> / <code>getCaption()</code></td><td>菜单项文字</td></tr>
@@ -216,7 +216,7 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 
 <h3>MenuPanel</h3>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addItem(shared_ptr&lt;MenuItem&gt;)</code> / <code>addSeparator()</code> / <code>removeItem(...)</code></td><td>菜单项管理</td></tr>
 <tr><td><code>closeWithChildren()</code> / <code>recalculateSize()</code></td><td>关闭 / 重算尺寸</td></tr>
 <tr><td><code>getItemAt(x, y)</code> / <code>getItemById(id)</code></td><td>命中测试 / 按 item-id 定位项</td></tr>
@@ -227,7 +227,7 @@ UICornerstone_SetCallback(g_inst, open, "click", onOpen, NULL);</code></pre>
 
 <h3>MenuBar</h3>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>addMenu(caption, panel)</code> / <code>removeMenu(caption)</code></td><td>顶级菜单管理</td></tr>
 <tr><td><code>closeAllMenus()</code></td><td>关闭全部下拉</td></tr>
 <tr><td><code>isInMenuMode()</code> / <code>enterMenuMode(int index)</code> / <code>exitMenuMode()</code></td><td>菜单模式（点击展开后鼠标移动自动切换）</td></tr>

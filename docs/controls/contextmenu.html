@@ -36,7 +36,7 @@ UICornerstone_ContextMenuShow(g_inst, m, 140, 160);
 <h2>4.7.2 控件的属性</h2>
 
 <table>
-<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>items[].caption</code></td><td>String</td><td>—</td><td>菜单项文本</td></tr>
 <tr><td><code>items[].shortcut</code></td><td>String</td><td>—</td><td>快捷键列</td></tr>
 <tr><td><code>items[].type</code></td><td>Enum</td><td>—</td><td><code>separator</code> = 分隔线</td></tr>
@@ -46,8 +46,8 @@ UICornerstone_ContextMenuShow(g_inst, m, 140, 160);
 <h2>4.7.3 控件的回调 / 事件</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
-<tr><td>items[].onClick</td><td>点击菜单项</td><td>回调后自动关闭</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td>items[].onClick</td><td><code>—</code></td><td>点击菜单项</td><td>回调后自动关闭</td></tr>
 </table>
 
 <div class="note">菜单视觉由 MenuPanel 全权负责（圆角边框+阴影）；弹出位置自动视口钳制；点击子菜单区域不误判为外部点击。</div>
@@ -93,7 +93,7 @@ UICornerstone_SetPtr(g_inst, lbl, "context-menu", m);   // 右键绑定</code></
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>show(float x, float y)</code></td><td>在指定位置弹出（bench 坐标，自动视口钳制）</td></tr>
 <tr><td><code>close(DialogResult result = Cancelled)</code></td><td>关闭菜单（面板 hide + Popup::close）</td></tr>
 <tr><td><code>addItem(shared_ptr&lt;MenuItem&gt;)</code> / <code>addItem(caption, onClick)</code></td><td>添加菜单项（包装用户回调：回调后自动关闭）</td></tr>

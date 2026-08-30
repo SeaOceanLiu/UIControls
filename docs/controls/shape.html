@@ -36,7 +36,7 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
 <h2>4.19.2 控件的属性</h2>
 
 <table>
-<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>shape</code></td><td><code>kShape</code></td><td>Enum</td><td><code>kShapeRect</code></td><td><code>kShapeRect</code>/<code>kShapeFilledRect</code>/<code>kShapeRoundRect</code>/<code>kShapeCircle</code>/<code>kShapeEllipse</code>/<code>kShapePolyline</code>/<code>kShapePolygon</code></td></tr>
 <tr><td><code>fill</code></td><td><code>kFill</code></td><td>Color</td><td>透明</td><td>填充色（透明=空心）</td></tr>
 <tr><td><code>stroke</code></td><td><code>kStroke</code></td><td>Color</td><td>黑</td><td>描边色</td></tr>
@@ -51,8 +51,8 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
 <h2>4.19.3 控件的回调 / 事件</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
-<tr><td>—</td><td>纯绘制控件，无事件</td><td>—</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td>—</td><td><code>—</code></td><td>纯绘制控件，无事件</td><td>—</td></tr>
 </table>
 
 <div class="note">缩放：绘制/命中均随 xScale/yScale 等比（2.0x 对照已验收）；空心圆描边闭合；凹多边形耳切三角化。mapToDrawPoint 提供本地→绘制坐标映射。</div>
@@ -98,7 +98,7 @@ UICornerstone_ShapeSetPrimitiveFloat(g_inst, s, p, "radius", 10.0f);</code></pre
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>setShape(type)</code> / <code>getShape()</code></td><td>图元类型（7 种）</td></tr>
 <tr><td><code>setFillColor</code> / <code>setStrokeColor</code> / <code>setLineWidth</code></td><td>填充/描边（透明填充=空心）</td></tr>
 <tr><td><code>setRadius</code> / <code>setRingWidth</code></td><td>圆角 / 环带宽</td></tr>

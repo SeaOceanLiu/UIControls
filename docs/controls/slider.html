@@ -43,7 +43,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 <h2>4.20.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
 <tr><td><code>label-font</code></td><td><code>kLabelFont</code></td><td>Enum</td><td>继承</td><td>数值标签字体（同通用字体枚举）</td></tr>
@@ -74,8 +74,8 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 <h2>4.20.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td><code>kEventValueChanged</code></td><td>松手吸附（Snap-on-Release）、点击轨道、外部 setValue、方向键时触发；<strong>拖拽过程中不触发</strong></td><td>Float（floatVal）</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>value-changed</code></td><td><code>kEventValueChanged</code></td><td>松手吸附（Snap-on-Release）、点击轨道、外部 setValue、方向键时触发；<strong>拖拽过程中不触发</strong></td><td>Float（floatVal）</td></tr>
 </table>
 
 
@@ -139,7 +139,7 @@ UICornerstone_SetCallback(g_inst, sl, "value-changed", onSlide, NULL);</code></p
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>isFocused()</code></td><td>焦点状态</td></tr>
 <tr><td><code>setLabelFont(FontName)</code>、<code>setLabelFontSize(int)</code>、<code>setLabelColor(SColor)</code>、<code>setLabelFormat(string)</code>、<code>setLabelGap(float)</code>（默认 4）</td><td>标签字体 / 格式 / 间距</td></tr>
 <tr><td><code>setOnValueChanged(OnValueChangedHandler)</code></td><td>值变化回调（仅提交时触发）</td></tr>

@@ -36,7 +36,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <h2>4.13.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
 <tr><td><code>animation</code></td><td><code>kAnimation</code></td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
 <tr><td><code>frame</code></td><td><code>kFrame</code></td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
 <tr><td><code>loop</code></td><td><code>kLoop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
@@ -48,8 +48,8 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <h2>4.13.3 控件的回调</h2>
 
 <table>
-<tr><th>事件</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
-<tr><td><code>AnimationEnded</code>（Custom 事件）</td><td>非循环播放到最后一帧后</td><td>事件带 m_id（C ABI 回调链路暂未适配）</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>AnimationEnded</code>（Custom 事件）</td><td><code>—</code></td><td>非循环播放到最后一帧后</td><td>事件带 m_id（C ABI 回调链路暂未适配）</td></tr>
 </table>
 
 
@@ -75,7 +75,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 }</code></pre>
 
 <table>
-<tr><th>字段</th><th>说明</th></tr>
+<tr><th>字段</th><th>参数</th></tr>
 <tr><td><code>easing</code></td><td><code>linear</code>（默认）/ <code>ease-in</code> / <code>ease-out</code> / <code>ease-in-out</code> / <code>quad</code> / <code>sine</code> / <code>cubic</code> / <code>cubic-bezier(x1,y1,x2,y2)</code></td></tr>
 <tr><td><code>keyFrames[].frame</code></td><td>帧号，第 0 帧关键帧必须存在</td></tr>
 <tr><td><code>layer.blendMode</code></td><td><code>normal / additive / additivePremultiplied / modulate / blend / blendPremultiplied / multiply</code>，未知回退 normal</td></tr>
@@ -115,7 +115,7 @@ Control aniBtn = ui-&gt;CreateAnimatedButton("animations/breath/breath.jsonc", 4
 
 <div class="note">本节为核心引擎 C++ 类（include/ 头文件）的公开方法，仅源码级集成（直接使用核心类）可调用。只使用 <strong>C ABI / C++ Binding</strong> 的用户请按「控件的属性」键名（Set*/Get*）与「控件的回调」事件名（SetCallback）等价操作。</div>
 <table>
-<tr><th>方法</th><th>说明</th></tr>
+<tr><th>方法</th><th>参数</th></tr>
 <tr><td><code>draw(x, y, alpha)</code> / <code>draw(frameNo, x, y, alpha)</code></td><td>绘制当前帧 / 指定帧</td></tr>
 <tr><td><code>getFrameActor(uint32_t)</code></td><td>帧 Actor 调试 / 断言访问</td></tr>
 <tr><td><code>getFrameDuration()</code> / <code>getTotalFrames()</code> / <code>getCurrentFrame()</code></td><td>帧时长(ms) / 总帧数 / 当前帧</td></tr>
