@@ -66,6 +66,7 @@ public:
     // ── Property system overrides ──
     int setBoolProperty(const char* prop, int value) override;
     int setStringProperty(const char* prop, const char* value) override;
+    int setPtrProperty(const char* prop, void* value) override;
     int setFloatProperty(const char* prop, float value) override;
     int getBoolProperty(const char* prop, int& out) override { return ControlImpl::getBoolProperty(prop, out); }
     int getStringProperty(const char* prop, const char*& out) override { return ControlImpl::getStringProperty(prop, out); }

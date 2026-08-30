@@ -6,6 +6,7 @@
 #include "MainWindow.h"
 #include "Bench.h"
 #include "AppCallbacks.h"
+#include "LuotiAni.h"
 #include "TestUtils.h"
 #include "PlatformUtils.h"
 #include "TestInstance.h"
@@ -35,6 +36,22 @@ void testBenchInitialize(shared_ptr<Bench>) {
 
     StateColor redBorder(StateColor::Type::Border);
     redBorder.setNormal({255, 0, 0, 255});
+
+    // luotiAni 属性系统 SetPtr（kJsonLuotiAni → setLuotiAni）
+    {
+        auto btn = ButtonBuilder(nullptr, SRect(10, 300, 160, 40))
+            .setCaption("LuotiAni Src")
+            .build();
+        BENCH->addControl(btn);
+        auto la = std::make_shared<LuotiAni>(nullptr);
+        int rc = btn->setPtrProperty(PropertyNames::kJsonLuotiAni, la.get());
+        printf("[TEST] setPtrProperty(luotiAni)=%d\n", rc);
+        if (rc != 1) printf("[TEST-FAIL] luotiAni setPtr\n");
+        int rc2 = btn->setPtrProperty(PropertyNames::kJsonLuotiAni, nullptr);
+        if (rc2 != 1) printf("[TEST-FAIL] luotiAni setPtr(null)\n");
+        else printf("[TEST] setPtrProperty(luotiAni,null)=1\n");
+        BENCH->removeControl(btn);
+    }
 
     BENCH->addControl(LabelBuilder(nullptr, SRect(50, 50, 120, 50))
         .setCaption(u8"应被遮挡的 Label")

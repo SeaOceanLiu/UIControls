@@ -375,6 +375,19 @@ int Button::setFloatProperty(const char* prop, float value) {
     return ControlImpl::setFloatProperty(prop, value);
 }
 
+int Button::setPtrProperty(const char* prop, void* value) {
+    if (strcmp(prop, PropertyNames::kJsonLuotiAni) == 0) {
+        // luotiAni 借用语义（与 leadingControl 一致）：生命周期由调用方保证
+        if (value) {
+            setLuotiAni(shared_ptr<LuotiAni>(static_cast<LuotiAni*>(value), [](LuotiAni*){}));
+        } else {
+            setLuotiAni(nullptr);
+        }
+        return 1;
+    }
+    return ControlImpl::setPtrProperty(prop, value);
+}
+
 int Button::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kCaption) == 0) { setCaption(value); return 1; }
     if (strcmp(prop, PropertyNames::kAnimation) == 0) {
