@@ -31,7 +31,7 @@ BENCH->setOnInitial(callback);     // 资源加载完成回调</code></pre>
 <h2>4.2.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>viewport-scale-mode</code></td><td><code>kViewportScaleMode</code></td><td>Enum</td><td><code>off</code></td><td>视口缩放模式三态切换（<code>off</code> / <code>fit</code> / <code>stretch</code>）。核心引擎经 <code>setEnumProperty</code> 覆写（非法枚举拒绝、不改变当前模式）；C ABI / C++ Binding 走实例级 <code>SetViewportScaleMode</code>。详见 <a href="../advanced/canvas-scale.html">5.6 视口画布缩放</a></td></tr>
 </table>
 <p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
