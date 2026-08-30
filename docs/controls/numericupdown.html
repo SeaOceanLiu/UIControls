@@ -63,8 +63,8 @@ UIControlHandle nud = UICornerstone_CreateNumericUpDown(g_inst, 20, 78, 180, 32,
 <h2>4.15.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onValueChanged</code>（C ABI 事件 <code>value-changed</code>）</td><td>值变化提交时：点击/长按步进、键盘步进、Enter/FocusLost 提交编辑文本后（<code>min==max</code> 时步进不触发）</td><td><code>(shared_ptr&lt;NumericUpDown&gt;, double newValue)</code> / <code>UIEventData.data.doubleVal</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>onValueChanged</code>（C ABI 事件 <code>value-changed</code>）</td><td><code></code></td><td>值变化提交时：点击/长按步进、键盘步进、Enter/FocusLost 提交编辑文本后（<code>min==max</code> 时步进不触发）</td><td><code>(shared_ptr&lt;NumericUpDown&gt;, double newValue)</code> / <code>UIEventData.data.doubleVal</code></td></tr>
 </table>
 
 

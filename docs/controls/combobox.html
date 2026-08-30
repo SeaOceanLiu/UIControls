@@ -69,8 +69,8 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32, 1.
 <h2>4.6.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>onSelectionChanged</code>（C ABI 事件 <code>selection-changed</code>）</td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>onSelectionChanged</code>（C ABI 事件 <code>selection-changed</code>）</td><td><code></code></td><td>点击列表项、Enter 选中、闭合态 ↑/↓/滚轮切换时；ESC / 外部点击取消不触发</td><td><code>(shared_ptr&lt;ComboBox&gt;, int index, const string&amp; value)</code> / <code>UIEventData.data.selection{idx, val}</code></td></tr>
 </table>
 
 
@@ -98,9 +98,9 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32, 1.
 
 <pre><code>Control combo = ui->CreateComboBox(20, 56, 300, 32);
 // items 用 JSON 数组字符串设置
-combo.SetString("items", R"([{"label":"Beijing","value":"beijing"},
+combo.SetString(PropertyNames::kItems, R"([{"label":"Beijing","value":"beijing"},
                              {"label":"Shanghai","value":"shanghai"}])");
-combo.SetBool("editable", false);
+combo.SetBool(PropertyNames::kEditable, false);
 combo.SetCallback(PropertyNames::kEventSelectionChanged, [](const Event& e) {
     printf("selected index=%d value=%s\n", e.GetSelectedIndex(), e.GetSelectedValue().c_str());
 });

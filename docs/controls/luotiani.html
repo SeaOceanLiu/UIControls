@@ -48,7 +48,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <h2>4.13.3 控件的回调</h2>
 
 <table>
-<tr><th>事件</th><th>触发时机</th><th>说明</th></tr>
+<tr><th>事件</th><th>事件常量</th><th>触发时机</th><th>说明</th></tr>
 <tr><td><code>AnimationEnded</code>（Custom 事件）</td><td>非循环播放到最后一帧后</td><td>事件带 m_id（C ABI 回调链路暂未适配）</td></tr>
 </table>
 
@@ -99,7 +99,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 ani.SetBool(PropertyNames::kPlaying, true);
 ani.SetBool(PropertyNames::kLoop, true);
 
-// Button 载体（JSON）——luotiAni 键：挂树后自动延迟 prepare；"playing": true 则 prepare 后自动播放，缺省不播（SetBool("playing")=1 启动）
+// Button 载体（JSON）——luotiAni 键：挂树后自动延迟 prepare；"playing": true 则 prepare 后自动播放，缺省不播（SetBool(PropertyNames::kPlaying)=1 启动）
 { "type": "button", "id": "animatedBtn",
   "rect": { "x": 40, "y": 40, "w": 120, "h": 40 },
   "caption": "Rotate",

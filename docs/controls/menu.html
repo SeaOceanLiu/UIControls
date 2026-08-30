@@ -75,8 +75,8 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h2>4.14.3 控件的回调</h2>
 
 <table>
-<tr><th>回调 / 事件名</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>MenuItem::onClick</code>（C ABI 事件 <code>click</code>，JSON 键 <code>onClick</code>）</td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
+<tr><th>回调 / 事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
+<tr><td><code>MenuItem::onClick</code>（C ABI 事件 <code>click</code>，JSON 键 <code>onClick</code>）</td><td><code></code></td><td>点击普通菜单项（子菜单项展开子菜单）</td><td><code>(shared_ptr&lt;MenuItem&gt;)</code> / <code>UIEventCallback(ctl, event, userData)</code></td></tr>
 </table>
 
 
@@ -151,7 +151,7 @@ BENCH->addControl(g_menuBar);
 
 // Binding：MenuItem 的 caption/checked/shortcut/click 走统一属性系统
 Control item = ui->CreateMenuItem("Open", 0);
-item.SetString("caption", "Open");
+item.SetString(PropertyNames::kCaption, "Open");
 item.SetCallback("click", [](const Event&){ /* ... */ });</code></pre>
 
 

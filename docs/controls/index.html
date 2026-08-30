@@ -111,8 +111,8 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 
 c.SetString(PropertyNames::kCaption, "OK");
 c.SetBool(PropertyNames::kEnabled, false);
 c.SetCallback(PropertyNames::kEventClick, [](const Event&){ /* ... */ });
-c.SetStateColor("background", n, h, p, d);   // 四态背景
-std::string s = c.GetString("caption");</code></pre>
+c.SetStateColor(PropertyNames::kBackground, n, h, p, d);   // 四态背景
+std::string s = c.GetString(PropertyNames::kCaption);</code></pre>
 
 <h3>方法表与 C ABI / C++ Binding 的关系（重要）</h3>
 

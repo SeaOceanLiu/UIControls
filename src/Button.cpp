@@ -370,6 +370,11 @@ int Button::setBoolProperty(const char* prop, int value) {
     if (strcmp(prop, PropertyNames::kPlaying) == 0 && m_luotiAni) return m_luotiAni->setBoolProperty(prop, value);
     return ControlImpl::setBoolProperty(prop, value);
 }
+int Button::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kCaptionSize) == 0) { setCaptionSize(value); return 1; }
+    return ControlImpl::setFloatProperty(prop, value);
+}
+
 int Button::setStringProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kCaption) == 0) { setCaption(value); return 1; }
     if (strcmp(prop, PropertyNames::kAnimation) == 0) {

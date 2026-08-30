@@ -54,7 +54,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 <tr><td><code>reverse</code></td><td><code>kReverse</code></td><td>Bool</td><td>false</td><td>反向模式</td></tr>
 <tr><td><code>show-value-label</code></td><td><code>kShowValueLabel</code></td><td>Bool</td><td>false</td><td>显示数值标签</td></tr>
 <tr><td><code>step</code></td><td><code>kStep</code></td><td>Float</td><td>1.0</td><td>步长</td></tr>
-<tr><td><code>style</code></td><td><code>kCheckBoxStyle</code></td><td>Enum</td><td><code><code>kOrientHorizontal</code></code></td><td><code><code>kOrientHorizontal</code></code> / <code><code>kOrientVertical</code></code></td></tr>
+<tr><td><code>style</code></td><td><code>kCheckBoxStyle</code></td><td>Enum</td><td><code>kOrientHorizontal</code></td><td><code>kOrientHorizontal</code> / <code>kOrientVertical</code></td></tr>
 <tr><td><code>thumb-size</code></td><td><code>kThumbSize</code></td><td>Float</td><td>16</td><td>手柄尺寸</td></tr>
 <tr><td><code>tick-interval</code></td><td><code>kTickInterval</code></td><td>Float</td><td>0 / 8</td><td>刻度间隔 / 长度</td></tr>
 <tr><td><code>tick-length</code></td><td><code>kTickLength</code></td><td>Float</td><td>0 / 8</td><td>刻度间隔 / 长度</td></tr>
@@ -74,8 +74,8 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 <h2>4.20.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td>松手吸附（Snap-on-Release）、点击轨道、外部 setValue、方向键时触发；<strong>拖拽过程中不触发</strong></td><td>Float（floatVal）</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td><code></code></td><td>松手吸附（Snap-on-Release）、点击轨道、外部 setValue、方向键时触发；<strong>拖拽过程中不触发</strong></td><td>Float（floatVal）</td></tr>
 </table>
 
 
@@ -104,9 +104,9 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 
 <pre><code>Control slider = ui->CreateSlider(20, 20, 300, 30, 0, 100, 50);
 slider.SetFloat(PropertyNames::kValue, 50.0f);
-slider.SetBool("show-value-label", true);
-slider.SetString("label-format", "%.0f px");
-slider.SetEnum("style", "horizontal");
+slider.SetBool(PropertyNames::kShowValueLabel, true);
+slider.SetString(PropertyNames::kLabelFormat, "%.0f px");
+slider.SetEnum(PropertyNames::kCheckBoxStyle, "horizontal");
 slider.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
     printf("value = %.1f\n", e.GetValueChanged());
 });

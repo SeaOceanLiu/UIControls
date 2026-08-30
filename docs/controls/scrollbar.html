@@ -44,7 +44,7 @@ UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1,
 <tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>主题</td><td>通用状态色</td></tr>
-<tr><td><code>orientation</code></td><td><code>kOrientation</code></td><td>Enum</td><td><code><code>kOrientVertical</code></code></td><td><code><code>kOrientVertical</code></code> / <code><code>kOrientHorizontal</code></code>（非法值返回 0）</td></tr>
+<tr><td><code>orientation</code></td><td><code>kOrientation</code></td><td>Enum</td><td><code>kOrientVertical</code></td><td><code>kOrientVertical</code> / <code>kOrientHorizontal</code>（非法值返回 0）</td></tr>
 <tr><td><code>page-size</code></td><td><code>kPageSize</code></td><td>Float</td><td>—</td><td>页大小</td></tr>
 <tr><td><code>range-min</code></td><td><code>kRangeMin</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
 <tr><td><code>range-max</code></td><td><code>kRangeMax</code></td><td>Float</td><td>0 / 100</td><td>范围</td></tr>
@@ -62,8 +62,8 @@ UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1,
 <h2>4.18.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>position-changed</code>（<code>kEventPositionChanged</code>）</td><td>拖拽滑块、点击轨道翻页、setValue 导致位置变化时</td><td>（value, pageSize, maxValue 等 4 个 float）</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>position-changed</code>（<code>kEventPositionChanged</code>）</td><td><code></code></td><td>拖拽滑块、点击轨道翻页、setValue 导致位置变化时</td><td>（value, pageSize, maxValue 等 4 个 float）</td></tr>
 </table>
 
 
@@ -87,7 +87,7 @@ UIControlHandle sb = UICornerstone_CreateScrollBar(g_inst, 440, 472, 200, 16, 1,
 
 <pre><code>Control sb = ui->CreateScrollBar(440, 472, 200, 16, 1 /*horizontal*/);
 sb.SetFloat(PropertyNames::kValue, 30.0f);
-sb.SetFloat("page-size", 20.0f);
+sb.SetFloat(PropertyNames::kPageSize, 20.0f);
 sb.SetCallback(PropertyNames::kEventPositionChanged, [](const Event& e) {
     printf("pos: %f\n", e.GetPositionChanged());
 });

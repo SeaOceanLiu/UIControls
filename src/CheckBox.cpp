@@ -661,6 +661,7 @@ int CheckBox::setBoolProperty(const char* prop, int value) {
 }
 
 int CheckBox::setFloatProperty(const char* prop, float value) {
+    if (strcmp(prop, PropertyNames::kCaptionSize) == 0) { setCaptionSize(value); return 1; }
     if (strcmp(prop, PropertyNames::kSizeRatio) == 0) { setSizeRatio(value); return 1; }
     return ControlImpl::setFloatProperty(prop, value);
 }

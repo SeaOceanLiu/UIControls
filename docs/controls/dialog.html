@@ -53,10 +53,10 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 <h2>4.8.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>cancel</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
-<tr><td><code>close</code></td><td>close() 被调用时</td><td><code>(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
-<tr><td><code>confirm</code></td><td>点确定按钮或按 Enter（ConfirmPopup 及以上）</td><td><code>(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>cancel</code></td><td><code>—</code></td><td>按 ESC 或点击外部（Dialog）</td><td><code>(shared_ptr&lt;Dialog&gt;)</code></td></tr>
+<tr><td><code>close</code></td><td><code>—</code></td><td>close() 被调用时</td><td><code>(shared_ptr&lt;Popup&gt;, DialogResult)</code></td></tr>
+<tr><td><code>confirm</code></td><td><code>—</code></td><td>点确定按钮或按 Enter（ConfirmPopup 及以上）</td><td><code>(shared_ptr&lt;ConfirmPopup&gt;)</code></td></tr>
 </table>
 
 
@@ -94,7 +94,7 @@ dialog.SetCallback(PropertyNames::kEventConfirm, [](const Event& e) {
 dialog.SetCallback(PropertyNames::kEventCancel, [](const Event&) {
     printf("cancelled\n");
 });
-dialog.SetBool("visible", true);   // 打开弹窗</code></pre>
+dialog.SetBool(PropertyNames::kVisible, true);   // 打开弹窗</code></pre>
 
 <div class="note">数据取回：内容控件经 <code>getContent()</code> + <code>dynamic_pointer_cast</code> 读取。一次只弹一个弹窗，嵌套需自行管理。</div>
 

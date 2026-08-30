@@ -44,13 +44,13 @@ UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95,
 <tr><td><code>animation-speed</code></td><td><code>kAnimationSpeed</code></td><td>Float</td><td>0.1</td><td>动画速度</td></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>Color</td><td>RGB(200,200,200)</td><td>轨道背景色（重写基类语义，为单色）</td></tr>
 <tr><td><code>custom-text</code></td><td><code>kCustomText</code></td><td>String</td><td>空</td><td>自定义文本</td></tr>
-<tr><td><code>font</code></td><td><code>kFont</code></td><td>Enum</td><td>HarmonyOS / <code><code>kAlignLowerCenter</code></code></td><td>字体名 / 对齐</td></tr>
-<tr><td><code>align</code></td><td><code>kAlign</code></td><td>Enum</td><td>HarmonyOS / <code><code>kAlignLowerCenter</code></code></td><td>字体名 / 对齐</td></tr>
+<tr><td><code>font</code></td><td><code>kFont</code></td><td>Enum</td><td>HarmonyOS / <code>kAlignLowerCenter</code></td><td>字体名 / 对齐</td></tr>
+<tr><td><code>align</code></td><td><code>kAlign</code></td><td>Enum</td><td>HarmonyOS / <code>kAlignLowerCenter</code></td><td>字体名 / 对齐</td></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int</td><td>14</td><td>文本字号</td></tr>
 <tr><td><code>progress</code></td><td><code>kProgress</code></td><td>Color</td><td>RGB(76,175,80)</td><td>进度条颜色</td></tr>
 <tr><td><code>range-min</code></td><td><code>kRangeMin</code></td><td>Float</td><td>0.0 / 100.0</td><td>范围</td></tr>
 <tr><td><code>range-max</code></td><td><code>kRangeMax</code></td><td>Float</td><td>0.0 / 100.0</td><td>范围</td></tr>
-<tr><td><code>style</code></td><td><code>kCheckBoxStyle</code></td><td>Enum</td><td><code><code>kOrientHorizontal</code></code></td><td><code><code>kOrientHorizontal</code></code> / <code><code>kOrientVertical</code></code></td></tr>
+<tr><td><code>style</code></td><td><code>kCheckBoxStyle</code></td><td>Enum</td><td><code>kOrientHorizontal</code></td><td><code>kOrientHorizontal</code> / <code>kOrientVertical</code></td></tr>
 <tr><td><code>text</code></td><td><code>kJsonText</code></td><td>Color</td><td>RGB(255,255,255)</td><td>文本颜色</td></tr>
 <tr><td><code>text-mode</code></td><td><code>kTextMode</code></td><td>Enum</td><td><code>percent</code></td><td><code>none</code> / <code>percent</code> / <code>custom</code></td></tr>
 <tr><td><code>value</code></td><td><code>kJsonValue</code></td><td>Float</td><td>0.0</td><td>当前值</td></tr>
@@ -61,8 +61,8 @@ UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95,
 <h2>4.17.3 控件的回调</h2>
 
 <table>
-<tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td>setValue 时</td><td>Float（floatVal = 新值）</td></tr>
+<tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
+<tr><td><code>value-changed</code>（<code>kEventValueChanged</code>）</td><td><code></code></td><td>setValue 时</td><td>Float（floatVal = 新值）</td></tr>
 </table>
 
 
@@ -85,7 +85,7 @@ UIControlHandle bar = UICornerstone_CreateProgressBar(g_inst, 280, 193, 240, 95,
 bar.SetFloat(PropertyNames::kValue, 65.0f);
 bar.SetFloat(PropertyNames::kRangeMax, 100.0f);
 bar.SetEnum(PropertyNames::kTextMode, "percent");
-bar.SetColor("progress", UIColor{64, 128, 192, 255});   // UIColor = {r,g,b,a}
+bar.SetColor(PropertyNames::kProgress, UIColor{64, 128, 192, 255});   // UIColor = {r,g,b,a}
 bar.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
     printf("value: %f\n", e.GetValueChanged());
 });
