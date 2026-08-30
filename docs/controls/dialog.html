@@ -34,16 +34,20 @@ dialog.AddChild(vp->CreateLabel("Are you sure?", 14.0f, 20, 30, 240, 60));</code
 <h2>4.8.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>button-height</code> (<code>kButtonHeight</code>) / <code>button-gap</code> (<code>kButtonGap</code>) / <code>padding</code> (<code>kPadding</code>)</td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
-<tr><td><code>centered-mode</code> (<code>kCenteredMode</code>)</td><td>Enum</td><td>—</td><td><code>"centered"</code> → setCentered()</td></tr>
-<tr><td><code>close-on-click-outside</code> (<code>kCloseOnClickOutside</code>)</td><td>Bool</td><td>1</td><td>点击外部关闭</td></tr>
-<tr><td><code>close-on-esc</code> (<code>kCloseOnEsc</code>)</td><td>Bool</td><td>1</td><td>ESC 关闭</td></tr>
-<tr><td><code>confirm-text</code> (<code>kConfirmText</code>) / <code>cancel-text</code> (<code>kCancelText</code>)</td><td>String</td><td>"确定" / "取消"</td><td>按钮文字</td></tr>
-<tr><td><code>confirm-visible</code> (<code>kConfirmVisible</code>)</td><td>Bool</td><td>1</td><td>确定按钮可见性</td></tr>
-<tr><td><code>content</code> (<code>kContent</code>)</td><td>Ptr</td><td>null</td><td>内容控件句柄（SetPtr）</td></tr>
-<tr><td><code>visible</code> (<code>kVisible</code>)</td><td>Bool</td><td>0</td><td>置 1 = open()，置 0 = close()（Popup 专属语义）</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>button-height</code></td><td><code>kButtonHeight</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
+<tr><td><code>button-gap</code></td><td><code>kButtonGap</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
+<tr><td><code>padding</code></td><td><code>kPadding</code></td><td>Float</td><td>28 / 8 / 10</td><td>布局参数</td></tr>
+<tr><td><code>centered-mode</code></td><td><code>kCenteredMode</code></td><td>Enum</td><td>—</td><td><code>"centered"</code> → setCentered()</td></tr>
+<tr><td><code>close-on-click-outside</code></td><td><code>kCloseOnClickOutside</code></td><td>Bool</td><td>1</td><td>点击外部关闭</td></tr>
+<tr><td><code>close-on-esc</code></td><td><code>kCloseOnEsc</code></td><td>Bool</td><td>1</td><td>ESC 关闭</td></tr>
+<tr><td><code>confirm-text</code></td><td><code>kConfirmText</code></td><td>String</td><td>"确定" / "取消"</td><td>按钮文字</td></tr>
+<tr><td><code>cancel-text</code></td><td><code>kCancelText</code></td><td>String</td><td>"确定" / "取消"</td><td>按钮文字</td></tr>
+<tr><td><code>confirm-visible</code></td><td><code>kConfirmVisible</code></td><td>Bool</td><td>1</td><td>确定按钮可见性</td></tr>
+<tr><td><code>content</code></td><td><code>kContent</code></td><td>Ptr</td><td>null</td><td>内容控件句柄（SetPtr）</td></tr>
+<tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>0</td><td>置 1 = open()，置 0 = close()（Popup 专属语义）</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 
 <h2>4.8.3 控件的回调</h2>

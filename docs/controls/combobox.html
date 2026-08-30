@@ -45,18 +45,25 @@ UIControlHandle combo = UICornerstone_CreateComboBox(g_inst, 20, 56, 300, 32, 1.
 <h2>4.6.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>arrow</code> (<code>kArrow</code>) / <code>arrow-hover</code> (<code>kArrowHover</code>) / <code>item-selected</code> (<code>kItemSelected</code>) / <code>item-hover</code> (<code>kItemHover</code>) / <code>item-disabled</code> (<code>kItemDisabled</code>) / <code>list-bg</code> (<code>kListBg</code>) / <code>list-border</code> (<code>kListBorder</code>)</td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
-<tr><td><code>arrow-width</code> (<code>kArrowWidth</code>)</td><td>Float</td><td>20</td><td>箭头区宽度</td></tr>
-<tr><td><code>cycle-enabled</code> (<code>kCycleEnabled</code>)</td><td>Bool</td><td>true</td><td>闭合态循环选择</td></tr>
-<tr><td><code>editable</code> (<code>kEditable</code>)</td><td>Bool</td><td>false</td><td>双模式开关</td></tr>
-<tr><td><code>item-height</code> (<code>kItemHeight</code>)</td><td>Float</td><td>24</td><td>单项高度</td></tr>
-<tr><td><code>items</code> (<code>kItems</code>)</td><td>String(JSON)</td><td>—</td><td>以 JSON 数组设置 items</td></tr>
-<tr><td><code>max-visible-items</code> (<code>kMaxVisibleItems</code>)</td><td>Int</td><td>6</td><td>最多可见项</td></tr>
-<tr><td><code>selected-index</code> (<code>kSelectedIndex</code>)</td><td>Int</td><td>-1</td><td>选中索引（-1 = 无匹配）</td></tr>
-<tr><td><code>selected-value</code> (<code>kSelectedValue</code>)</td><td>String</td><td>—</td><td>选中项 value；未匹配返回输入内容</td></tr>
-<tr><td><code>text</code> (<code>kText</code>)</td><td>String</td><td>空</td><td>编辑框内容</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>arrow</code></td><td><code>kArrow</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>arrow-hover</code></td><td><code>kArrowHover</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>item-selected</code></td><td><code>kItemSelected</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>item-hover</code></td><td><code>kItemHover</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>item-disabled</code></td><td><code>kItemDisabled</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>list-bg</code></td><td><code>kListBg</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>list-border</code></td><td><code>kListBorder</code></td><td>Color</td><td>见右</td><td>箭头(180,180,180) / 悬停白 / 选中(0,120,215) / 悬停项(50,50,50) / 禁用(80,80,80) / 列表底(37,37,38) / 列表边(60,60,60)</td></tr>
+<tr><td><code>arrow-width</code></td><td><code>kArrowWidth</code></td><td>Float</td><td>20</td><td>箭头区宽度</td></tr>
+<tr><td><code>cycle-enabled</code></td><td><code>kCycleEnabled</code></td><td>Bool</td><td>true</td><td>闭合态循环选择</td></tr>
+<tr><td><code>editable</code></td><td><code>kEditable</code></td><td>Bool</td><td>false</td><td>双模式开关</td></tr>
+<tr><td><code>item-height</code></td><td><code>kItemHeight</code></td><td>Float</td><td>24</td><td>单项高度</td></tr>
+<tr><td><code>items</code></td><td><code>kItems</code></td><td>String(JSON)</td><td>—</td><td>以 JSON 数组设置 items</td></tr>
+<tr><td><code>max-visible-items</code></td><td><code>kMaxVisibleItems</code></td><td>Int</td><td>6</td><td>最多可见项</td></tr>
+<tr><td><code>selected-index</code></td><td><code>kSelectedIndex</code></td><td>Int</td><td>-1</td><td>选中索引（-1 = 无匹配）</td></tr>
+<tr><td><code>selected-value</code></td><td><code>kSelectedValue</code></td><td>String</td><td>—</td><td>选中项 value；未匹配返回输入内容</td></tr>
+<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>String</td><td>空</td><td>编辑框内容</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 
 <h2>4.6.3 控件的回调</h2>

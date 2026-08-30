@@ -36,12 +36,13 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <h2>4.13.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>animation</code> (<code>kAnimation</code>)</td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
-<tr><td><code>frame</code> (<code>kFrame</code>)</td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
-<tr><td><code>loop</code> (<code>kLoop</code>)</td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
-<tr><td><code>playing</code> (<code>kPlaying</code>)</td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 记录请求并返回 1，prepare 完成后自动播放</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>animation</code></td><td><code>kAnimation</code></td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
+<tr><td><code>frame</code></td><td><code>kFrame</code></td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
+<tr><td><code>loop</code></td><td><code>kLoop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>
+<tr><td><code>playing</code></td><td><code>kPlaying</code></td><td>Bool</td><td>0</td><td>命令式：置 1 = play()（帧复位重播），置 0 = pause()；未 prepare 置 1 记录请求并返回 1，prepare 完成后自动播放</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 
 <h2>4.13.3 控件的回调</h2>

@@ -44,15 +44,18 @@ UIControlHandle cp = UICornerstone_CreateColorPicker(g_inst, 240, 498, 96, 24, "
 <h2>4.5.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>background</code> (<code>kBackground</code>) / <code>border</code> (<code>kBorder</code>)</td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
-<tr><td><code>closed-font-size</code> (<code>kClosedFontSize</code>)</td><td>Int</td><td>12</td><td>闭合态 Hex 字号</td></tr>
-<tr><td><code>closed-swatch-size</code> (<code>kClosedSwatchSize</code>)</td><td>Float</td><td>16</td><td>闭合态色块大小</td></tr>
-<tr><td><code>closed-text</code> (<code>kClosedText</code>)</td><td>Color</td><td>#DBDBDB</td><td>闭合态文本色（C ABI <code>SetColor(ctl, "closed-text", ...)</code>）</td></tr>
-<tr><td><code>color</code> (<code>kColor</code>)</td><td>String</td><td>—</td><td>当前颜色 hex（读写，如 <code>"#FF6600"</code>，经 Get/SetString）</td></tr>
-<tr><td><code>popup-bg</code></td><td>Color</td><td>#3C3C41</td><td>弹窗背景色（C ABI <code>SetColor(ctl, "popup-bg", ...)</code>）</td></tr>
-<tr><td><code>preset-cols</code> (<code>kPresetCols</code>) / <code>preset-rows</code> (<code>kPresetRows</code>)</td><td>Int</td><td>5 / 4</td><td>预设网格列 / 行</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
+<tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>主题</td><td>通用状态色（继承 Panel）</td></tr>
+<tr><td><code>closed-font-size</code></td><td><code>kClosedFontSize</code></td><td>Int</td><td>12</td><td>闭合态 Hex 字号</td></tr>
+<tr><td><code>closed-swatch-size</code></td><td><code>kClosedSwatchSize</code></td><td>Float</td><td>16</td><td>闭合态色块大小</td></tr>
+<tr><td><code>closed-text</code></td><td><code>kClosedText</code></td><td>Color</td><td>#DBDBDB</td><td>闭合态文本色（C ABI <code>SetColor(ctl, "closed-text", ...)</code>）</td></tr>
+<tr><td><code>color</code></td><td><code>kColor</code></td><td>String</td><td>—</td><td>当前颜色 hex（读写，如 <code>"#FF6600"</code>，经 Get/SetString）</td></tr>
+<tr><td><code>popup-bg</code></td><td><code>kPopupBG</code></td><td>Color</td><td>#3C3C41</td><td>弹窗背景色（C ABI <code>SetColor(ctl, "popup-bg", ...)</code>）</td></tr>
+<tr><td><code>preset-cols</code></td><td><code>kPresetCols</code></td><td>Int</td><td>5 / 4</td><td>预设网格列 / 行</td></tr>
+<tr><td><code>preset-rows</code></td><td><code>kPresetRows</code></td><td>Int</td><td>5 / 4</td><td>预设网格列 / 行</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 
 <h2>4.5.3 控件的回调</h2>

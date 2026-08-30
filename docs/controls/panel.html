@@ -37,10 +37,15 @@ UIControlHandle panel = UICornerstone_CreatePanel(g_inst, 50, 112, 400, 200, 1.0
 <h2>4.16.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>background</code> (<code>kBackground</code>) / <code>border</code> (<code>kBorder</code>)</td><td>StateColor</td><td>背景 / 边框四态颜色</td></tr>
-<tr><td><code>visible</code> (<code>kVisible</code>) / <code>enabled</code> (<code>kEnabled</code>) / <code>transparent</code> (<code>kTransparent</code>) / <code>border-visible</code> (<code>kBorderVisible</code>)</td><td>Bool</td><td>通用属性</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>背景 / 边框四态颜色</td></tr>
+<tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>背景 / 边框四态颜色</td></tr>
+<tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>通用属性</td></tr>
+<tr><td><code>enabled</code></td><td><code>kEnabled</code></td><td>Bool</td><td>通用属性</td></tr>
+<tr><td><code>transparent</code></td><td><code>kTransparent</code></td><td>Bool</td><td>通用属性</td></tr>
+<tr><td><code>border-visible</code></td><td><code>kBorderVisible</code></td><td>Bool</td><td>通用属性</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 <p>JSON 键（<code>design/LayoutSystem_Design.md</code> §4.16）：<code>bgColor</code>（单色）、<code>borderColor</code>（单色）、<code>transparent</code>、<code>borderVisible</code>、<code>layout</code>（引擎配置）、<code>children</code>、<code>scale</code>、<code>margin</code>、<code>colors</code>。</p>
 

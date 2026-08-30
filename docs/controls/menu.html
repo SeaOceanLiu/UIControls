@@ -46,26 +46,29 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h2>4.14.2 控件的属性（C ABI 属性系统）</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>caption</code> (<code>kCaption</code>)</td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
-<tr><td><code>checked</code> (<code>kChecked</code>)</td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
-<tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
-<tr><td><code>font</code> (<code>kFont</code>)</td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
-<tr><td><code>font-size</code> (<code>kFontSize</code>) / <code>bar-height</code> (<code>kBarHeight</code>) / <code>item-height-ratio</code> (<code>kItemHeightRatio</code>)</td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
-<tr><td><code>manual-position</code> (<code>kManualPosition</code>)</td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比；<strong>挂入 v-flow 等布局引擎容器时自动置 true</strong>，无需显式设置）（Set/GetBool）</td></tr>
-<tr><td><code>hovered-index</code> (<code>kHoveredIndex</code>)</td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
-<tr><td><code>shortcut</code> (<code>kShortcut</code>)</td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
+<tr><td><code>checked</code></td><td><code>kChecked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
+<tr><td><code>click</code></td><td><code>kEventClick</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
+<tr><td><code>font</code></td><td><code>kFont</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
+<tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>bar-height</code></td><td><code>kBarHeight</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>item-height-ratio</code></td><td><code>kItemHeightRatio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>manual-position</code></td><td><code>kManualPosition</code></td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比；<strong>挂入 v-flow 等布局引擎容器时自动置 true</strong>，无需显式设置）（Set/GetBool）</td></tr>
+<tr><td><code>hovered-index</code></td><td><code>kHoveredIndex</code></td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
+<tr><td><code>shortcut</code></td><td><code>kShortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 <h3>4.14.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
 <p>Menu 的逐项增强属性挂在 <strong>MenuPanel</strong> 上：先 <code>SetString("item-id", id)</code> 定位目标菜单项，随后 item 级属性作用于该菜单项。MenuItem 自身也支持 <code>SetString("item-id", id)</code> 设置其定位 id（编程式创建时便于后续定位）。</p>
 <table>
-<tr><th>属性</th><th>类型</th><th>默认</th><th>说明</th></tr>
-<tr><td><code>item-id</code></td><td>String</td><td>—</td><td>定位目标菜单项（在 MenuPanel 上设置后，后续 item 级属性作用于该菜单项）</td></tr>
-<tr><td><code>item-font</code></td><td>Enum</td><td>继承 MenuPanel</td><td>逐项字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
-<tr><td><code>item-font-size</code></td><td>Int</td><td>0</td><td>逐项字号（0 = 继承面板字号；&gt;0 时该行行高 = 字号×item-height-ratio，独立于面板其余行）</td></tr>
-<tr><td><code>item-leading-gap</code></td><td>Float</td><td>8</td><td>行前置控件容器与文本之间的间隔（局部 px）</td></tr>
-<tr><td><code>item-leading-control</code></td><td>Ptr</td><td>—</td><td>行前置控件容器句柄（<strong>借用语义</strong>，生命周期由调用方保证；类型经 <code>UICornerstone_GetControlType</code> 查询（如 <code>"check-box"</code>），再经通用属性系统操作）。有容器时该行保留 icon 区（宽 = max(各行字体高度, 20)）、不绘制手绘勾选标记（勾选视觉由容器内控件承担）；传 <code>NULL</code> 解除容器</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th><th>说明</th></tr>
+<tr><td><code>item-id</code></td><td><code>kTreeItemId</code></td><td>String</td><td>—</td><td>定位目标菜单项（在 MenuPanel 上设置后，后续 item 级属性作用于该菜单项）</td></tr>
+<tr><td><code>item-font</code></td><td><code>kTreeItemFont</code></td><td>Enum</td><td>继承 MenuPanel</td><td>逐项字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
+<tr><td><code>item-font-size</code></td><td><code>kTreeItemFontSize</code></td><td>Int</td><td>0</td><td>逐项字号（0 = 继承面板字号；&gt;0 时该行行高 = 字号×item-height-ratio，独立于面板其余行）</td></tr>
+<tr><td><code>item-leading-gap</code></td><td><code>kTreeItemLeadingGap</code></td><td>Float</td><td>8</td><td>行前置控件容器与文本之间的间隔（局部 px）</td></tr>
+<tr><td><code>item-leading-control</code></td><td><code>kTreeItemLeadingControl</code></td><td>Ptr</td><td>—</td><td>行前置控件容器句柄（<strong>借用语义</strong>，生命周期由调用方保证；类型经 <code>UICornerstone_GetControlType</code> 查询（如 <code>"check-box"</code>），再经通用属性系统操作）。有容器时该行保留 icon 区（宽 = max(各行字体高度, 20)）、不绘制手绘勾选标记（勾选视觉由容器内控件承担）；传 <code>NULL</code> 解除容器</td></tr>
 </table>
 
 

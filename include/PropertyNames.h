@@ -453,6 +453,7 @@ PROP_CONSTEXPR const char* kJsonComponents      = "components";
 PROP_CONSTEXPR const char* kJsonLayouts         = "layouts";
 PROP_CONSTEXPR const char* kJsonControls        = "controls";
 PROP_CONSTEXPR const char* kJsonDialogs         = "dialogs";
+PROP_CONSTEXPR const char* kViewportScaleMode   = "viewport-scale-mode";
 PROP_CONSTEXPR const char* kJsonViewport        = "viewport";
 PROP_CONSTEXPR const char* kJsonViewportScaleMode = "scale-mode";
 PROP_CONSTEXPR const char* kJsonRect            = "rect";

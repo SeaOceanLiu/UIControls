@@ -1,5 +1,26 @@
 ﻿## Session History
 
+### 2026-08-30（晚）: 属性常量独立列 + 多属性拆行 + 枚举值速查（方案 C）
+
+**用户反馈修正**：不以括号内联常量；属性表新增「属性常量」列；多属性同行改为每属性一行。
+
+**实现（Temp/build_constmap.py 权威映射 + 转换管线）**：
+- 权威映射：`strcmp(prop, PropertyNames::kX)` / `==` 分发上下文（239 条）+ kEvent* 事件族补充
+  （269 键）；属性表（表头含 `<th>属性</th>`）内：去括号注 → 首 td 多 `<code>` 拆行为每属性一行
+  → 常量列（无分发映射 → `—`，仅 caption-size 两处（有意 JSON-only））
+- 键名纠错：tree-expand→expand(kTreeExpand)、tree-collapse→collapse(kTreeCollapse)、
+  current-index→currentIndex(kJsonCurrentIndex)、textarea alignment→align(kAlign)
+- 源码配套：PropertyNames 补 kViewportScaleMode；Bench.cpp 改用常量
+- 7.3 枚举值速查（66 组，生成式：值常量族扫描+在用标注旧名/未使用）；22 个控件页
+  属性表后加「枚举值见 7.3」引用；capi 8.1.1 后端能力位宏表（5 宏）
+- 二次核验：503 项常量列 0 误映射；仅 expand 双常量上下文例外（Label kExpand /
+  TreeView 命令式 kTreeExpand，均为正确使用）
+
+**相关文件**：docs/controls/*.html(23)、docs/appendix/{properties,capi}.html、
+include/PropertyNames.h(kViewportScaleMode)、src/Bench.cpp、
+Temp/{build_constmap.py, table2col 管线}、design/guidelines/history.md
+
+
 ### 2026-08-30（文档补注）: 用户手册属性表补 PropertyNames.h 常量名（482 处）+ 源码交叉核验
 
 **改造**：脚本（Temp/build_constmap.py + Temp/annotate_docs.py）解析 PropertyNames.h 生成

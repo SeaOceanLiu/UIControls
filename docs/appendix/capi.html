@@ -276,5 +276,15 @@ UICornerstone_CreateImage(inst, "provider:cross-up", 20, 70, 0, 0);</code></pre>
 </div>
 
 </div>
-</body>
+
+<h3>8.1.1 后端能力位宏</h3>
+<table>
+<tr><th>宏（<code>include/UICornerstoneAPI.h</code>）</th><th>位</th><th>语义</th></tr>
+<tr><td><code>UICORN_BACKEND_CAP_MULTI_WINDOW</code></td><td>1u &lt;&lt; 0</td><td>多实例独立窗口渲染（Raylib 单窗口架构不声明）</td></tr>
+<tr><td><code>UICORN_BACKEND_CAP_RENDER_TARGET</code></td><td>1u &lt;&lt; 1</td><td>渲染目标（RTT）</td></tr>
+<tr><td><code>UICORN_BACKEND_CAP_CLIP_RECT</code></td><td>1u &lt;&lt; 2</td><td>裁剪矩形</td></tr>
+<tr><td><code>UICORN_BACKEND_CAP_READBACK</code></td><td>1u &lt;&lt; 3</td><td>像素回读（readPixels）</td></tr>
+<tr><td><code>UICORN_BACKEND_CAP_WINDOW_SET_SIZE</code></td><td>1u &lt;&lt; 4</td><td>运行期 <code>SetWindowSize</code> 可用（v1.1.1 增；headless 实例返回 0）</td></tr>
+</table>
+</div>>
 </html>

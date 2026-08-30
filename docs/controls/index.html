@@ -46,6 +46,7 @@
 <tr><td>JSON 语法</td><td>真实布局 JSON 节点示例</td></tr>
 <tr><td>C++ Binding 样例</td><td>可运行的绑定用法代码</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 <h2>所有控件的共性</h2>
 
@@ -69,13 +70,15 @@ struct SColor { uint8_t r, g, b, a; };</code></pre>
 <h3>通用属性（每个控件都有）</h3>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>background</code> (<code>kBackground</code>) / <code>border</code> (<code>kBorder</code>)</td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
-<tr><td><code>border-visible</code> (<code>kBorderVisible</code>)</td><td>Bool</td><td>边框可见</td></tr>
-<tr><td><code>enabled</code> (<code>kEnabled</code>)</td><td>Bool</td><td>是否响应交互</td></tr>
-<tr><td><code>text</code> (<code>kText</code>) / <code>text-shadow</code> (<code>kTextShadow</code>)</td><td>StateColor</td><td>文本色 / 文本阴影色（含文本的控件）</td></tr>
-<tr><td><code>transparent</code> (<code>kTransparent</code>)</td><td>Bool</td><td>背景透明（不绘制背景）</td></tr>
-<tr><td><code>visible</code> (<code>kVisible</code>)</td><td>Bool</td><td>可见性</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
+<tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
+<tr><td><code>border-visible</code></td><td><code>kBorderVisible</code></td><td>Bool</td><td>边框可见</td></tr>
+<tr><td><code>enabled</code></td><td><code>kEnabled</code></td><td>Bool</td><td>是否响应交互</td></tr>
+<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>StateColor</td><td>文本色 / 文本阴影色（含文本的控件）</td></tr>
+<tr><td><code>text-shadow</code></td><td><code>kTextShadow</code></td><td>StateColor</td><td>文本色 / 文本阴影色（含文本的控件）</td></tr>
+<tr><td><code>transparent</code></td><td><code>kTransparent</code></td><td>Bool</td><td>背景透明（不绘制背景）</td></tr>
+<tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>可见性</td></tr>
 </table>
 
 <h3>三种创建方式</h3>

@@ -187,7 +187,7 @@ void Bench::setViewportScaleMode(ViewportScaleMode mode) {
 // 属性系统运行期切换（§ViewportScale_Design）：SetEnum("viewport-scale-mode",
 // "off"|"fit"|"stretch") → 重算根变换，子树字号/布局随复合缩放自动重建
 int Bench::setEnumProperty(const char* prop, const char* value) {
-    if (prop && strcmp(prop, "viewport-scale-mode") == 0) {
+    if (prop && strcmp(prop, PropertyNames::kViewportScaleMode) == 0) {
         if (!value) return 0;
         if (strcmp(value, "off") == 0) {
             setViewportScaleMode(ViewportScaleMode::Off);

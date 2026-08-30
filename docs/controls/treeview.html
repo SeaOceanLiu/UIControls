@@ -45,21 +45,27 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 <h2>4.25.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>arrow-gap</code> (<code>kArrowGap</code>)</td><td>Float</td><td>6</td><td>箭头与文本间距</td></tr>
-<tr><td><code>background</code> (<code>kBackground</code>) / <code>border</code> (<code>kBorder</code>) / <code>text</code> (<code>kText</code>)</td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
-<tr><td><code>cycle-navigation</code> (<code>kCycleNavigation</code>)</td><td>Bool</td><td>true</td><td>Tab 环是否包含树节点</td></tr>
-<tr><td><code>default-expand</code> (<code>kDefaultExpand</code>)</td><td>Bool</td><td>false</td><td>缺省展开全部节点</td></tr>
-<tr><td><code>expand-all</code> (<code>kExpandAll</code>) / <code>collapse-all</code> (<code>kCollapseAll</code>)</td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
-<tr><td><code>font-size</code> (<code>kFontSize</code>)</td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
-<tr><td><code>indent-width</code> (<code>kIndentWidth</code>)</td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
-<tr><td><code>line-spacing</code> (<code>kLineSpacing</code>)</td><td>Int</td><td>0</td><td>行距（0 = 继承字体行高）</td></tr>
-<tr><td><code>row-height</code> (<code>kRowHeight</code>)</td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
-<tr><td><code>selected</code> / <code>hover</code></td><td>Color</td><td>主题</td><td>选中行 / 悬停行高亮色</td></tr>
-<tr><td><code>selected-id</code> (<code>kSelectedId</code>)</td><td>String（只读）</td><td>—</td><td>当前选中节点 id</td></tr>
-<tr><td><code>selected-user-data</code> (<code>kSelectedUserData</code>)</td><td>Ptr</td><td>—</td><td>选中节点 userData 读写（借用语义，生命周期调用方保证）</td></tr>
-<tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>arrow-gap</code></td><td><code>kArrowGap</code></td><td>Float</td><td>6</td><td>箭头与文本间距</td></tr>
+<tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
+<tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
+<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
+<tr><td><code>cycle-navigation</code></td><td><code>kCycleNavigation</code></td><td>Bool</td><td>true</td><td>Tab 环是否包含树节点</td></tr>
+<tr><td><code>default-expand</code></td><td><code>kDefaultExpand</code></td><td>Bool</td><td>false</td><td>缺省展开全部节点</td></tr>
+<tr><td><code>expand-all</code></td><td><code>kExpandAll</code></td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
+<tr><td><code>collapse-all</code></td><td><code>kCollapseAll</code></td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
+<tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
+<tr><td><code>indent-width</code></td><td><code>kIndentWidth</code></td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
+<tr><td><code>line-spacing</code></td><td><code>kLineSpacing</code></td><td>Int</td><td>0</td><td>行距（0 = 继承字体行高）</td></tr>
+<tr><td><code>row-height</code></td><td><code>kRowHeight</code></td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
+<tr><td><code>selected</code></td><td><code>kTreeSelected</code></td><td>Color</td><td>主题</td><td>选中行 / 悬停行高亮色</td></tr>
+<tr><td><code>hover</code></td><td><code>kHoverHighlight</code></td><td>Color</td><td>主题</td><td>选中行 / 悬停行高亮色</td></tr>
+<tr><td><code>selected-id</code></td><td><code>kSelectedId</code></td><td>String（只读）</td><td>—</td><td>当前选中节点 id</td></tr>
+<tr><td><code>selected-user-data</code></td><td><code>kSelectedUserData</code></td><td>Ptr</td><td>—</td><td>选中节点 userData 读写（借用语义，生命周期调用方保证）</td></tr>
+<tr><td><code>expand</code></td><td><code>kTreeExpand</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
+<tr><td><code>collapse</code></td><td><code>kTreeCollapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 <h3>4.25.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
 
@@ -67,13 +73,13 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 （先 <code>SetString("item-id", id)</code>，随后 set/get 作用于该节点）：</p>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>item-font</code></td><td>Enum</td><td>继承 TreeView</td><td>逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
-<tr><td><code>item-font-size</code></td><td>Int</td><td>0</td><td>逐 Item 字号（0 = 继承 TreeView 级）</td></tr>
-<tr><td><code>item-id</code></td><td>String</td><td>—</td><td>定位目标节点（后续 item 级属性的作用对象）</td></tr>
-<tr><td><code>item-leading-control</code></td><td>Ptr</td><td>—</td><td>行前置控件容器句柄（<strong>借用语义</strong>，生命周期由调用方保证；类型经 <code>UICornerstone_GetControlType</code> / Binding <code>Control::GetType()</code> 查询，如 <code>"check-box"</code> / <code>"image"</code>，再经通用属性系统操作：<code>GetBool(ctl, "checked")</code> / <code>SetCallback(ctl, "check-changed", ...)</code>；C++ Binding 用 <code>ui-&gt;FromHandle(lc)</code> 包装代理）。<strong>运行时 SetPtr 立即挂树</strong>（结构变更之外无需等待重建），传 <code>NULL</code> 解除容器并摘树</td></tr>
-<tr><td><code>item-leading-gap</code></td><td>Float</td><td>6</td><td>行前置控件容器与文本之间的间隔（局部 px）</td></tr>
-<tr><td><code>item-leading-align</code></td><td>Enum</td><td><code>mid-left</code></td><td>槽位对齐（复用 Label 9 宫格：<code>top-left</code>/<code>mid-left</code>/<code>bottom-left</code> ...；水平分量忽略，槽位贴文本起点；垂直：顶/中/底）</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>item-font</code></td><td><code>kTreeItemFont</code></td><td>Enum</td><td>继承 TreeView</td><td>逐 Item 字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
+<tr><td><code>item-font-size</code></td><td><code>kTreeItemFontSize</code></td><td>Int</td><td>0</td><td>逐 Item 字号（0 = 继承 TreeView 级）</td></tr>
+<tr><td><code>item-id</code></td><td><code>kTreeItemId</code></td><td>String</td><td>—</td><td>定位目标节点（后续 item 级属性的作用对象）</td></tr>
+<tr><td><code>item-leading-control</code></td><td><code>kTreeItemLeadingControl</code></td><td>Ptr</td><td>—</td><td>行前置控件容器句柄（<strong>借用语义</strong>，生命周期由调用方保证；类型经 <code>UICornerstone_GetControlType</code> / Binding <code>Control::GetType()</code> 查询，如 <code>"check-box"</code> / <code>"image"</code>，再经通用属性系统操作：<code>GetBool(ctl, "checked")</code> / <code>SetCallback(ctl, "check-changed", ...)</code>；C++ Binding 用 <code>ui-&gt;FromHandle(lc)</code> 包装代理）。<strong>运行时 SetPtr 立即挂树</strong>（结构变更之外无需等待重建），传 <code>NULL</code> 解除容器并摘树</td></tr>
+<tr><td><code>item-leading-gap</code></td><td><code>kTreeItemLeadingGap</code></td><td>Float</td><td>6</td><td>行前置控件容器与文本之间的间隔（局部 px）</td></tr>
+<tr><td><code>item-leading-align</code></td><td><code>kTreeItemLeadingAlign</code></td><td>Enum</td><td><code>mid-left</code></td><td>槽位对齐（复用 Label 9 宫格：<code>top-left</code>/<code>mid-left</code>/<code>bottom-left</code> ...；水平分量忽略，槽位贴文本起点；垂直：顶/中/底）</td></tr>
 </table>
 
 
@@ -82,7 +88,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
 <tr><td><code>onCollapse</code>（C ABI 事件 <code>collapse</code>）</td><td>节点折叠</td><td>同上（nodeId）</td></tr>
-<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code> (<code>kExpand</code>)）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
+<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code>）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
 <tr><td><code>onSelect</code>（C ABI 事件 <code>select</code>）</td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
 </table>
 

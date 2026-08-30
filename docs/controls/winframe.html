@@ -42,18 +42,21 @@ auto wf = ui->CreateWinFrame("Resizable WinFrame", 100, 100, 400, 300);
 <h2>4.26.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>close-on-click-outside</code> (<code>kCloseOnClickOutside</code>) / <code>close-on-esc</code> (<code>kCloseOnEsc</code>) / <code>confirm-visible</code> (<code>kConfirmVisible</code>)</td><td>Bool</td><td>—</td><td>关闭行为（getter）</td></tr>
-<tr><td><code>closed-font-size</code> (<code>kClosedFontSize</code>)</td><td>Float</td><td>—</td><td>关闭字号（getter）</td></tr>
-<tr><td><code>closed-text</code> (<code>kClosedText</code>)</td><td>Color</td><td>—</td><td>关闭文字色（getter）</td></tr>
-<tr><td><code>edge-margin</code> (<code>kEdgeMargin</code>)</td><td>Float</td><td>4.0</td><td>边缘热区宽度</td></tr>
-<tr><td><code>resizable</code> (<code>kResizable</code>)</td><td>Bool</td><td>true</td><td>允许缩放</td></tr>
-<tr><td><code>title</code> (<code>kTitle</code>)</td><td>String</td><td>"WinFrame"</td><td>标题文字</td></tr>
-<tr><td><code>title-bar-bg</code></td><td>Color</td><td>浅蓝(173,216,230)</td><td>标题栏背景</td></tr>
-<tr><td><code>title-text</code> (<code>kTitleText</code>)</td><td>Color</td><td>—</td><td>标题文字色</td></tr>
-<tr><td><code>win-frame-bg</code></td><td>Color</td><td>—</td><td>整体背景色</td></tr>
-<tr><td><code>win-frame-border</code> (<code>kWinFrameBorder</code>)</td><td>Color</td><td>—</td><td>边框色</td></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+<tr><td><code>close-on-click-outside</code></td><td><code>kCloseOnClickOutside</code></td><td>Bool</td><td>—</td><td>关闭行为（getter）</td></tr>
+<tr><td><code>close-on-esc</code></td><td><code>kCloseOnEsc</code></td><td>Bool</td><td>—</td><td>关闭行为（getter）</td></tr>
+<tr><td><code>confirm-visible</code></td><td><code>kConfirmVisible</code></td><td>Bool</td><td>—</td><td>关闭行为（getter）</td></tr>
+<tr><td><code>closed-font-size</code></td><td><code>kClosedFontSize</code></td><td>Float</td><td>—</td><td>关闭字号（getter）</td></tr>
+<tr><td><code>closed-text</code></td><td><code>kClosedText</code></td><td>Color</td><td>—</td><td>关闭文字色（getter）</td></tr>
+<tr><td><code>edge-margin</code></td><td><code>kEdgeMargin</code></td><td>Float</td><td>4.0</td><td>边缘热区宽度</td></tr>
+<tr><td><code>resizable</code></td><td><code>kResizable</code></td><td>Bool</td><td>true</td><td>允许缩放</td></tr>
+<tr><td><code>title</code></td><td><code>kTitle</code></td><td>String</td><td>"WinFrame"</td><td>标题文字</td></tr>
+<tr><td><code>title-bar-bg</code></td><td><code>kTitleBarBG</code></td><td>Color</td><td>浅蓝(173,216,230)</td><td>标题栏背景</td></tr>
+<tr><td><code>title-text</code></td><td><code>kTitleText</code></td><td>Color</td><td>—</td><td>标题文字色</td></tr>
+<tr><td><code>win-frame-bg</code></td><td><code>kWinFrameBG</code></td><td>Color</td><td>—</td><td>整体背景色</td></tr>
+<tr><td><code>win-frame-border</code></td><td><code>kWinFrameBorder</code></td><td>Color</td><td>—</td><td>边框色</td></tr>
 </table>
+<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
 
 
 <h2>4.26.3 控件的回调</h2>
