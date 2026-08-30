@@ -35,6 +35,7 @@ Material::~Material(){
 }
 
 void Material::draw(void){
+    if (!m_visible) return;   // 可见性守卫（Actor/LuotiAni 无参入口链经此）
     draw(m_rect.left + m_anchorPoint.x, m_rect.top + m_anchorPoint.y);
 }
 

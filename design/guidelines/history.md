@@ -1,5 +1,17 @@
 ﻿## Session History
 
+### 2026-08-30（补）: Actor/LuotiAni/Material 守卫补齐（独立控件族）
+
+**修正豁免误判**：Actor/LuotiAni 为独立控件（Material : ControlImpl 基类），本轮补：
+- `Material::draw(void)` / `Actor::draw(void)`（无参控件入口）加 `m_visible` 守卫
+  （LuotiAni 无 draw(void) 覆写 → 经 Material 入口；其 `update()` 已有守卫）
+- 带参重载（draw(x,y,alpha)/draw(frameNo,x,y,alpha)）**保留为显式合成原语**：
+  供离线渲染/编辑器主动绘制（加守卫会破坏该用法）
+- handleEvent：三者无覆写 → 基类（含 enable+visible）；isContainsPoint 显式 false（纯显示不命中）
+- 回归：test_animation/test_aniviewer/test_image/test_luotiani exit=0
+- 相关文件：src/Material.cpp、src/Actor.cpp
+
+
 ### 2026-08-30: 全库 visible/enable 守卫系统性补齐（draw/handleEvent/update 覆写）
 
 **背景**：TabControl 页面放 ListView 切换不隐藏 → 根因 `ListView::draw` 覆写缺 `m_visible` 守卫；

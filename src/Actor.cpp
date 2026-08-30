@@ -251,6 +251,7 @@ shared_ptr<Actor> ActorBuilder::build(void){
 }
 
 void Actor::draw(void) {
+    if (!m_visible) return;   // 可见性守卫（Material::draw 覆盖）
     draw(m_rect.left + m_anchorPoint.x, m_rect.top + m_anchorPoint.y, m_alpha);
 }
 
