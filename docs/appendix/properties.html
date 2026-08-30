@@ -20,7 +20,7 @@
 <h2>7.1 通用属性（所有控件）</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
 <tr><td><code>border-visible</code></td><td><code>kBorderVisible</code></td><td>Bool</td><td>边框可见</td></tr>
@@ -51,7 +51,7 @@
 
 <h3>Actor（Image，类型 <code>image</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>alpha</code></td><td><code>kAlpha</code></td><td>Int</td><td>255</td></tr>
 <tr><td><code>anchor</code></td><td><code>kAnchor</code></td><td>Enum</td><td><code>kAlignLowerTopLeft</code> … <code>kAlignLowerCenter</code> …（9 值）</td></tr>
 <tr><td><code>anchor-x</code></td><td><code>kAnchorX</code></td><td>Float</td><td>自由坐标锚点分量</td></tr>
@@ -64,7 +64,7 @@
 
 <h3>Bench（控件树根，无 JSON type / C ABI 句柄）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
 <tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
@@ -75,7 +75,7 @@
 
 <h3>Button（类型 <code>button</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>animation</code></td><td><code>kAnimation</code></td><td>String</td><td>—（LuotiAni 路径，加载即播放）</td></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>caption-size</code></td><td><code>kCaptionSize</code></td><td>Float</td><td>16（JSON 键 <code>captionSize</code>；<strong>仅布局 JSON 生效</strong>）</td></tr>
@@ -88,7 +88,7 @@
 
 <h3>CheckBox（类型 <code>check-box</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>check</code></td><td><code>kCheck</code></td><td>Color</td><td>绿 / 红 / 灰 / 深灰</td></tr>
 <tr><td><code>cross</code></td><td><code>kCross</code></td><td>Color</td><td>绿 / 红 / 灰 / 深灰</td></tr>
 <tr><td><code>indeterminate</code></td><td><code>kIndeterminate</code></td><td>Color</td><td>绿 / 红 / 灰 / 深灰</td></tr>
@@ -104,7 +104,7 @@
 
 <h3>ColorPicker（类型 <code>color-picker</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>closed-font-size</code></td><td><code>kClosedFontSize</code></td><td>Int</td><td>12</td></tr>
 <tr><td><code>closed-swatch-size</code></td><td><code>kClosedSwatchSize</code></td><td>Float</td><td>16</td></tr>
 <tr><td><code>closed-text</code></td><td><code>kClosedText</code></td><td>Color</td><td>#DBDBDB / #3C3C41</td></tr>
@@ -116,7 +116,7 @@
 
 <h3>ComboBox（类型 <code>combo-box</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>arrow</code></td><td><code>kArrow</code></td><td>Color</td><td>见 4.6 属性表</td></tr>
 <tr><td><code>arrow-hover</code></td><td><code>kArrowHover</code></td><td>Color</td><td>见 4.6 属性表</td></tr>
 <tr><td><code>item-selected</code></td><td><code>kItemSelected</code></td><td>Color</td><td>见 4.6 属性表</td></tr>
@@ -140,14 +140,14 @@
 
 <h3>ContextMenu（右键菜单，绑定在任意控件的 <code>contextMenu</code> 键上）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>contextMenu</code>（JSON 控件级键）</td><td>Object</td><td>—</td></tr>
 <tr><td><code>context-menu</code></td><td><code>kPropContextMenu</code></td><td>Ptr</td><td>—</td></tr>
 </table>
 <p>ContextMenu 为行为型浮层无独立属性；菜单项内容/样式由 MenuPanel/MenuItem 体系承载（<code>items[].caption / shortcut / type / icon</code> 等）。</p>
 <h3>Dialog / Popup / ConfirmPopup（类型 <code>dialog</code> / <code>popup</code> / <code>confirm-popup</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>button-height</code></td><td><code>kButtonHeight</code></td><td>Float</td><td>28 / 8 / 10</td></tr>
 <tr><td><code>button-gap</code></td><td><code>kButtonGap</code></td><td>Float</td><td>28 / 8 / 10</td></tr>
 <tr><td><code>padding</code></td><td><code>kPadding</code></td><td>Float</td><td>28 / 8 / 10</td></tr>
@@ -167,7 +167,7 @@
 
 <h3>EditBox（类型 <code>edit-box</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>align</code></td><td><code>kAlign</code></td><td>Enum</td><td><code>kAlignLowerMidLeft</code>（9 值）</td></tr>
 <tr><td><code>editable</code></td><td><code>kEditable</code></td><td>Bool</td><td>true</td></tr>
 <tr><td><code>font</code></td><td><code>kFont</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular</td></tr>
@@ -186,7 +186,7 @@
 
 <h3>Label（类型 <code>label</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>clickable</code></td><td><code>kClickable</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>expand</code></td><td><code>kExpand</code></td><td>Bool</td><td>false</td></tr>
@@ -209,7 +209,7 @@
 
 <h3>ListView（类型 <code>list-view</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>mode</code></td><td><code>kMode</code></td><td>Enum</td><td><code>kModeMulti</code>（multi / <code>kModeSingle</code>）</td></tr>
 <tr><td><code>multi-select</code></td><td><code>kMultiSelect</code></td><td>Bool</td><td>true</td></tr>
 <tr><td><code>selected-index</code></td><td><code>kSelectedIndex</code></td><td>Int</td><td>-1</td></tr>
@@ -226,7 +226,7 @@
 <p>JSON 数据：<code>columns[]</code>（title / width / sortable / icon）、<code>rows[]</code>（id / cells / icon / cellControls[]）；C ABI 专用函数 <code>ListViewAddRow / ListViewAddColumn</code> 等见 8.3.1。</p>
 <h3>LuotiAni（类型 <code>animation</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>animation</code></td><td><code>kAnimation</code></td><td>String</td><td>JSONC 路径（只写）</td></tr>
 <tr><td><code>frame</code></td><td><code>kFrame</code></td><td>Int</td><td>跳帧</td></tr>
 <tr><td><code>total-frames</code></td><td><code>kTotalFrames</code></td><td>Int（只读）</td><td>总帧数 / 当前帧</td></tr>
@@ -237,7 +237,7 @@
 
 <h3>Menu（类型 <code>menu-bar</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>MenuItem 文字 / 快捷键</td></tr>
 <tr><td><code>shortcut</code></td><td><code>kShortcut</code></td><td>String</td><td>MenuItem 文字 / 快捷键</td></tr>
 <tr><td><code>checked</code></td><td><code>kChecked</code></td><td>Bool</td><td>MenuItem 勾选</td></tr>
@@ -252,7 +252,7 @@
 
 <h3>NumericUpDown（类型 <code>numeric-up-down</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>arrow</code></td><td><code>kArrow</code></td><td>Color</td><td>见 4.13 属性表</td></tr>
 <tr><td><code>arrow-hover</code></td><td><code>kArrowHover</code></td><td>Color</td><td>见 4.13 属性表</td></tr>
 <tr><td><code>arrow-pressed</code></td><td><code>kArrowPressed</code></td><td>Color</td><td>见 4.13 属性表</td></tr>
@@ -272,7 +272,7 @@
 
 <h3>ProgressBar（类型 <code>progress-bar</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>animation-speed</code></td><td><code>kAnimationSpeed</code></td><td>Float</td><td>0.1</td></tr>
 <tr><td><code>custom-text</code></td><td><code>kCustomText</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int</td><td>14</td></tr>
@@ -289,7 +289,7 @@
 
 <h3>ScrollBar（类型 <code>scroll-bar</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>orientation</code></td><td><code>kOrientation</code></td><td>Enum</td><td><code>kOrientVertical</code> / <code>kOrientHorizontal</code></td></tr>
 <tr><td><code>page-size</code></td><td><code>kPageSize</code></td><td>Float</td><td>—</td></tr>
 <tr><td><code>step-size</code></td><td><code>kStepSize</code></td><td>Float</td><td>—</td></tr>
@@ -305,7 +305,7 @@
 
 <h3>Shape（类型 <code>shape</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>shape</code></td><td><code>kShape</code></td><td>Enum</td><td><code>kShapeRect</code>（rect / <code>kShapeFilledRect</code> / <code>kShapeRoundRect</code> / <code>kShapeCircle</code> / <code>kShapeEllipse</code> / <code>kShapePolyline</code> / <code>kShapePolygon</code>）</td></tr>
 <tr><td><code>fill</code></td><td><code>kFill</code></td><td>Color</td><td>透明 / 黑</td></tr>
 <tr><td><code>stroke</code></td><td><code>kStroke</code></td><td>Color</td><td>透明 / 黑</td></tr>
@@ -317,7 +317,7 @@
 <p>多图元走 JSON <code>primitives[]</code> / C ABI <code>ShapeAddPrimitive</code> 等；顶点走 <code>ShapeSetPoints</code>（见 8.3.1）。</p>
 <h3>Slider（类型 <code>slider</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>label-font</code></td><td><code>kLabelFont</code></td><td>Enum</td><td>数值标签字体（同通用字体枚举）</td></tr>
 <tr><td><code>label-font-size</code></td><td><code>kLabelFontSize</code></td><td>Int</td><td>数值标签字号</td></tr>
 <tr><td><code>label-gap</code></td><td><code>kLabelGap</code></td><td>Float / String</td><td>4 / —</td></tr>
@@ -345,7 +345,7 @@
 
 <h3>Splitter（类型 <code>splitter</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>edge-margin</code></td><td><code>kEdgeMargin</code></td><td>Float</td><td>—（同时设两侧 min）</td></tr>
 <tr><td><code>first-linked</code></td><td><code>kFirstLinked</code></td><td>Ptr</td><td>null</td></tr>
 <tr><td><code>second-linked</code></td><td><code>kSecondLinked</code></td><td>Ptr</td><td>null</td></tr>
@@ -365,14 +365,14 @@
 
 <h3>StatusBar（类型 <code>status-bar</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Float</td><td>13 / rect 高</td></tr>
 <tr><td><code>item-height</code></td><td><code>kItemHeight</code></td><td>Float</td><td>13 / rect 高</td></tr>
 </table>
 <p>段数据经 JSON <code>items[]</code>（id / text / align / icon / menu / onClick）；C ABI 专用函数 <code>StatusBarAddItem</code> 等见 8.3.1。</p>
 <h3>TabControl（类型 <code>tab-control</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>position</code></td><td><code>kJsonPosition</code></td><td>Enum</td><td><code>kVAlignTop</code>（top / <code>kVAlignBottom</code> / left / right）</td></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Float</td><td>13</td></tr>
 <tr><td><code>currentIndex</code></td><td><code>kJsonCurrentIndex</code></td><td><code>—</code></td><td>Int</td><td>0（首页自动选中）</td></tr>
@@ -380,7 +380,7 @@
 <p>页数据经 JSON <code>tabs[]</code>（title / icon / page）；C ABI 专用函数 <code>TabAddPage / TabSetPage</code> 等见 8.3.1。</p>
 <h3>TextArea（类型 <code>text-area</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int / Enum / Enum</td><td>16 / HarmonyOS / <code>kAlignLowerMidLeft</code></td></tr>
 <tr><td><code>font</code></td><td><code>kFont</code></td><td>Int / Enum / Enum</td><td>16 / HarmonyOS / <code>kAlignLowerMidLeft</code></td></tr>
 <tr><td><code>align</code></td><td><code>kAlign</code></td><td>Int / Enum / Enum</td><td>16 / HarmonyOS / <code>kAlignLowerMidLeft</code></td></tr>
@@ -395,7 +395,7 @@
 
 <h3>TreeView（类型 <code>tree-view</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>arrow-gap</code></td><td><code>kArrowGap</code></td><td>Float</td><td>箭头与文本间距（默认 6）</td></tr>
 <tr><td><code>cycle-navigation</code></td><td><code>kCycleNavigation</code></td><td>Bool</td><td>Tab 环是否包含树节点</td></tr>
 <tr><td><code>default-expand</code></td><td><code>kDefaultExpand</code></td><td>Bool</td><td>缺省展开全部节点</td></tr>
@@ -421,7 +421,7 @@ item 增强：<code>leadingControl</code>（行前置控件容器，复用控件
 
 <h3>WinFrame（类型 <code>win-frame</code>）</h3>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>close-on-click-outside</code></td><td><code>kCloseOnClickOutside</code></td><td>Bool</td><td>—</td></tr>
 <tr><td><code>close-on-esc</code></td><td><code>kCloseOnEsc</code></td><td>Bool</td><td>—</td></tr>
 <tr><td><code>confirm-visible</code></td><td><code>kConfirmVisible</code></td><td>Bool</td><td>—</td></tr>
