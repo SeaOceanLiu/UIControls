@@ -44,10 +44,10 @@ void testBenchInitialize(shared_ptr<Bench>) {
             .build();
         BENCH->addControl(btn);
         auto la = std::make_shared<LuotiAni>(nullptr);
-        int rc = btn->setPtrProperty(PropertyNames::kJsonLuotiAni, la.get());
+        int rc = btn->setPtrProperty(PropertyNames::kLuotiAni, la.get());
         printf("[TEST] setPtrProperty(luotiAni)=%d\n", rc);
         if (rc != 1) printf("[TEST-FAIL] luotiAni setPtr\n");
-        int rc2 = btn->setPtrProperty(PropertyNames::kJsonLuotiAni, nullptr);
+        int rc2 = btn->setPtrProperty(PropertyNames::kLuotiAni, nullptr);
         if (rc2 != 1) printf("[TEST-FAIL] luotiAni setPtr(null)\n");
         else printf("[TEST] setPtrProperty(luotiAni,null)=1\n");
         BENCH->removeControl(btn);

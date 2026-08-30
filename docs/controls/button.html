@@ -42,7 +42,7 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 
 <tr><td><code>text-shadow</code></td><td><code>kTextShadow</code></td><td>StateColor</td><td>主题</td><td>通用状态色（JSON 中支持 .hover/.pressed/.disabled 子键）</td></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>空</td><td>标题文本</td></tr>
 <tr><td><code>caption-size</code></td><td><code>kCaptionSize</code></td><td>Float</td><td>16</td><td>标题字号（仅布局 JSON 生效）</td></tr>
-<tr><td><code>luotiAni</code></td><td><code>kJsonLuotiAni</code></td><td>String / {file}</td><td>—</td><td>JSON 布局键 / 属性系统 <code>SetPtr("luotiAni", ctl)</code>：内嵌动画：挂树后自动延迟 prepare，默认<strong>不自动播放</strong>——<code>SetBool("playing")=1</code> 启动；JSON 可声明 <code>"playing": true</code> 挂树后自动播放（prepare 前设置的播放请求不丢失，<code>animation</code> 属性则立即播放）</td></tr>
+<tr><td><code>luotiAni</code></td><td><code>kLuotiAni</code></td><td>String / {file}</td><td>—</td><td>JSON 布局键 / 属性系统 <code>SetPtr("luotiAni", ctl)</code>：内嵌动画：挂树后自动延迟 prepare，默认<strong>不自动播放</strong>——<code>SetBool("playing")=1</code> 启动；JSON 可声明 <code>"playing": true</code> 挂树后自动播放（prepare 前设置的播放请求不丢失，<code>animation</code> 属性则立即播放）</td></tr>
 <tr><td><code>text-shadow-enable</code></td><td><code>kTextShadowEnable</code></td><td>Bool</td><td>false</td><td>文字阴影开关</td></tr>
 <tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>—</td><td>通用属性</td></tr>
 <tr><td><code>enabled</code></td><td><code>kEnabled</code></td><td>Bool</td><td>—</td><td>通用属性</td></tr>
@@ -56,7 +56,7 @@ UIControlHandle btn = UICornerstone_CreateButton(g_inst, "OK", 20, 20, 120, 36, 
 
 <table>
 <tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>负载</th></tr>
-<tr><td><code>click</code>（<code>kEventClick</code>）</td><td><code></code></td><td>鼠标左键按下后抬起于控件内；或焦点态按 Enter/Space</td><td>无</td></tr>
+<tr><td><code>click</code>（<code>kEventClick</code>）</td><td><code>kEventClick</code></td><td>鼠标左键按下后抬起于控件内；或焦点态按 Enter/Space</td><td>无</td></tr>
 </table>
 
 

@@ -376,7 +376,7 @@ int Button::setFloatProperty(const char* prop, float value) {
 }
 
 int Button::setPtrProperty(const char* prop, void* value) {
-    if (strcmp(prop, PropertyNames::kJsonLuotiAni) == 0) {
+    if (strcmp(prop, PropertyNames::kLuotiAni) == 0) {
         // luotiAni 借用语义（与 leadingControl 一致）：生命周期由调用方保证
         if (value) {
             setLuotiAni(shared_ptr<LuotiAni>(static_cast<LuotiAni*>(value), [](LuotiAni*){}));

@@ -521,6 +521,7 @@ PROP_CONSTEXPR const char* kJsonRPMountPath         = "path";                 //
 PROP_CONSTEXPR const char* kJsonScaleType           = "scaleType";
 PROP_CONSTEXPR const char* kJsonAlpha               = "alpha";            // 图片透明度 0-255
 PROP_CONSTEXPR const char* kJsonLuotiAni            = "luotiAni";
+PROP_CONSTEXPR const char* kLuotiAni              = "luotiAni";   // Button 属性系统键（SetPtr）
 PROP_CONSTEXPR const char* kJsonPlaying             = "playing";           // 内嵌动画：置 true 挂树后自动播放
 PROP_CONSTEXPR const char* kJsonPlaceholder         = "placeholder";
 PROP_CONSTEXPR const char* kJsonPasswordMode        = "passwordMode";
