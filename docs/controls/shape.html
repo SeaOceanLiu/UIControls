@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -37,14 +37,14 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
 
 <table>
 <tr><th>属性/字段</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>shape</code></td><td>Enum</td><td>rect</td><td>rect/filled-rect/round-rect/circle/ellipse/polyline/polygon</td></tr>
-<tr><td><code>fill</code></td><td>Color</td><td>透明</td><td>填充色（透明=空心）</td></tr>
-<tr><td><code>stroke</code></td><td>Color</td><td>黑</td><td>描边色</td></tr>
+<tr><td><code>shape</code> (<code>kShape</code>)</td><td>Enum</td><td>rect</td><td>rect/filled-rect/round-rect/circle/ellipse/polyline/polygon</td></tr>
+<tr><td><code>fill</code> (<code>kFill</code>)</td><td>Color</td><td>透明</td><td>填充色（透明=空心）</td></tr>
+<tr><td><code>stroke</code> (<code>kStroke</code>)</td><td>Color</td><td>黑</td><td>描边色</td></tr>
 <tr><td><code>lineWidth</code></td><td>Float</td><td>1</td><td>描边宽（0=无）</td></tr>
-<tr><td><code>radius</code></td><td>Float</td><td>0</td><td>圆角半径（round-rect）</td></tr>
+<tr><td><code>radius</code> (<code>kRadius</code>)</td><td>Float</td><td>0</td><td>圆角半径（round-rect）</td></tr>
 <tr><td><code>ringWidth</code></td><td>Float</td><td>0</td><td>环带宽（circle/ellipse）</td></tr>
 <tr><td><code>points</code></td><td>[{x,y}]</td><td>—</td><td>折线/多边形顶点（本地坐标；JSON <code>points</code> / CABI <code>ShapeSetPoints</code> / C++ <code>setPoints</code>，非属性系统键）</td></tr>
-<tr><td><code>primitives</code></td><td>Array</td><td>—</td><td>多图元组合（非空替代单图元）</td></tr>
+<tr><td><code>primitives</code> (<code>kPrimitives</code>)</td><td>Array</td><td>—</td><td>多图元组合（非空替代单图元）</td></tr>
 <tr><td><code>colors.background</code></td><td>Color</td><td>透明</td><td>控件背景色（设后取消透明）</td></tr>
 </table>
 

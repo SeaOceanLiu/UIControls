@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -46,18 +46,18 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 
 <table>
 <tr><th>属性</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>arrow-gap</code></td><td>Float</td><td>6</td><td>箭头与文本间距</td></tr>
-<tr><td><code>background</code> / <code>border</code> / <code>text</code></td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
-<tr><td><code>cycle-navigation</code></td><td>Bool</td><td>true</td><td>Tab 环是否包含树节点</td></tr>
-<tr><td><code>default-expand</code></td><td>Bool</td><td>false</td><td>缺省展开全部节点</td></tr>
-<tr><td><code>expand-all</code> / <code>collapse-all</code></td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
-<tr><td><code>font-size</code></td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
-<tr><td><code>indent-width</code></td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
-<tr><td><code>line-spacing</code></td><td>Int</td><td>0</td><td>行距（0 = 继承字体行高）</td></tr>
-<tr><td><code>row-height</code></td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
+<tr><td><code>arrow-gap</code> (<code>kArrowGap</code>)</td><td>Float</td><td>6</td><td>箭头与文本间距</td></tr>
+<tr><td><code>background</code> (<code>kBackground</code>) / <code>border</code> (<code>kBorder</code>) / <code>text</code> (<code>kText</code>)</td><td>StateColor</td><td>主题</td><td>背景 / 边框 / 文本颜色</td></tr>
+<tr><td><code>cycle-navigation</code> (<code>kCycleNavigation</code>)</td><td>Bool</td><td>true</td><td>Tab 环是否包含树节点</td></tr>
+<tr><td><code>default-expand</code> (<code>kDefaultExpand</code>)</td><td>Bool</td><td>false</td><td>缺省展开全部节点</td></tr>
+<tr><td><code>expand-all</code> (<code>kExpandAll</code>) / <code>collapse-all</code> (<code>kCollapseAll</code>)</td><td>Bool（命令式）</td><td>—</td><td>展开 / 折叠全部</td></tr>
+<tr><td><code>font-size</code> (<code>kFontSize</code>)</td><td>Int</td><td>14</td><td>节点文本字号（随复合缩放重建）</td></tr>
+<tr><td><code>indent-width</code> (<code>kIndentWidth</code>)</td><td>Float</td><td>16</td><td>子节点缩进宽度</td></tr>
+<tr><td><code>line-spacing</code> (<code>kLineSpacing</code>)</td><td>Int</td><td>0</td><td>行距（0 = 继承字体行高）</td></tr>
+<tr><td><code>row-height</code> (<code>kRowHeight</code>)</td><td>Float</td><td>24</td><td>行高（不随字号缩放）</td></tr>
 <tr><td><code>selected</code> / <code>hover</code></td><td>Color</td><td>主题</td><td>选中行 / 悬停行高亮色</td></tr>
-<tr><td><code>selected-id</code></td><td>String（只读）</td><td>—</td><td>当前选中节点 id</td></tr>
-<tr><td><code>selected-user-data</code></td><td>Ptr</td><td>—</td><td>选中节点 userData 读写（借用语义，生命周期调用方保证）</td></tr>
+<tr><td><code>selected-id</code> (<code>kSelectedId</code>)</td><td>String（只读）</td><td>—</td><td>当前选中节点 id</td></tr>
+<tr><td><code>selected-user-data</code> (<code>kSelectedUserData</code>)</td><td>Ptr</td><td>—</td><td>选中节点 userData 读写（借用语义，生命周期调用方保证）</td></tr>
 <tr><td><code>tree-expand</code> / <code>tree-collapse</code></td><td>String（命令式）</td><td>—</td><td>按节点 id 展开 / 折叠</td></tr>
 </table>
 
@@ -82,7 +82,7 @@ UIControlHandle tree = UICornerstone_CreateTreeView(g_inst, 20, 20, 240, 300, 1.
 <table>
 <tr><th>事件名</th><th>触发时机</th><th>负载</th></tr>
 <tr><td><code>onCollapse</code>（C ABI 事件 <code>collapse</code>）</td><td>节点折叠</td><td>同上（nodeId）</td></tr>
-<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code>）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
+<tr><td><code>onExpand</code>（C ABI 事件 <code>expand</code> (<code>kExpand</code>)）</td><td>节点展开</td><td>同上（nodeId）</td></tr>
 <tr><td><code>onSelect</code>（C ABI 事件 <code>select</code>）</td><td>节点选中（点击/键盘）</td><td><code>(shared_ptr&lt;TreeView&gt;, const string&amp; nodeId)</code> / <code>UIEventData</code></td></tr>
 </table>
 

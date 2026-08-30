@@ -47,14 +47,14 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 
 <table>
 <tr><th>属性</th><th>类型</th><th>说明</th></tr>
-<tr><td><code>caption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
-<tr><td><code>checked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
+<tr><td><code>caption</code> (<code>kCaption</code>)</td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
+<tr><td><code>checked</code> (<code>kChecked</code>)</td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
 <tr><td><code>click</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
-<tr><td><code>font</code></td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
-<tr><td><code>font-size</code> / <code>bar-height</code> / <code>item-height-ratio</code></td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
-<tr><td><code>manual-position</code></td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比；<strong>挂入 v-flow 等布局引擎容器时自动置 true</strong>，无需显式设置）（Set/GetBool）</td></tr>
-<tr><td><code>hovered-index</code></td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
-<tr><td><code>shortcut</code></td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
+<tr><td><code>font</code> (<code>kFont</code>)</td><td>Enum</td><td>菜单字体名（默认 MapleMono_NF_CN_Regular）</td></tr>
+<tr><td><code>font-size</code> (<code>kFontSize</code>) / <code>bar-height</code> (<code>kBarHeight</code>) / <code>item-height-ratio</code> (<code>kItemHeightRatio</code>)</td><td>Float</td><td>MenuBar 尺寸属性（setFloatProperty）</td></tr>
+<tr><td><code>manual-position</code> (<code>kManualPosition</code>)</td><td>Bool</td><td>MenuBar 手动定位：跳过全宽布局，setRect 自由生效（同屏多 MenuBar / 缩放对比；<strong>挂入 v-flow 等布局引擎容器时自动置 true</strong>，无需显式设置）（Set/GetBool）</td></tr>
+<tr><td><code>hovered-index</code> (<code>kHoveredIndex</code>)</td><td>Int</td><td>MenuPanel 悬停项索引（Set/GetInt，读写）</td></tr>
+<tr><td><code>shortcut</code> (<code>kShortcut</code>)</td><td>String</td><td>MenuItem 快捷键（SetString）</td></tr>
 </table>
 
 <h3>4.14.2.1 item 级属性（C ABI，item-id 定位模式）</h3>

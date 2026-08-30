@@ -1,5 +1,23 @@
 ﻿## Session History
 
+### 2026-08-30（文档补注）: 用户手册属性表补 PropertyNames.h 常量名（482 处）+ 源码交叉核验
+
+**改造**：脚本（Temp/build_constmap.py + Temp/annotate_docs.py）解析 PropertyNames.h 生成
+key→常量映射（直名优先：key 的 PascalCase 即 kXxx 才标注，子键/歧义不猜测——202 条直名），
+按"属性表首个 <td> 内全部 <code>键</code>"逐表补注格式 `<code>key</code> (<code>kXxx</code>)`：
+- docs/appendix/properties.html（+256）与全部 23 个控件页（+226）
+- 后端能力（GetBackendCapabilities 宏）：不在 PropertyNames 域，另行说明待补
+
+**源码交叉核验（两轮）**：
+- L1：常量字符串出现于控件源/基类/通用集 —— 0 问题
+- L2：`PropertyNames::kXxx` 出现在属性分发上下文 —— 0 问题
+- 全库级：仅 kCaptionSize 无任何源码引用——经核为**有意的 JSON-only 键**
+  （Button 页已注明"仅布局 JSON 生效"；properties 表同步补注保持口径）
+
+**相关文件**：docs/appendix/properties.html、docs/controls/*.html（23 页）、
+Temp/{build_constmap.py, annotate_docs.py, verify_doc_keys.py, constmap.json}（保留供再生成）。
+
+
 ### 2026-08-30（补）: Actor/LuotiAni/Material 守卫补齐（独立控件族）
 
 **修正豁免误判**：Actor/LuotiAni 为独立控件（Material : ControlImpl 基类），本轮补：
