@@ -354,7 +354,7 @@ void TabControl::setRect(SRect rect) {
 }
 
 int TabControl::setEnumProperty(const char* prop, const char* value) {
-    if (strcmp(prop, PropertyNames::kJsonPosition) == 0) {
+    if (strcmp(prop, PropertyNames::kTabPosition) == 0) {
         if (strcmp(value, "top") == 0) setPosition(TabPosition::Top);
         else if (strcmp(value, "bottom") == 0) setPosition(TabPosition::Bottom);
         else if (strcmp(value, "left") == 0) setPosition(TabPosition::Left);
@@ -365,7 +365,7 @@ int TabControl::setEnumProperty(const char* prop, const char* value) {
     return ControlImpl::setEnumProperty(prop, value);
 }
 int TabControl::getEnumProperty(const char* prop, const char*& out) {
-    if (strcmp(prop, PropertyNames::kJsonPosition) == 0) {
+    if (strcmp(prop, PropertyNames::kTabPosition) == 0) {
         switch (m_position) {
             case TabPosition::Top:    out = "top"; break;
             case TabPosition::Bottom: out = "bottom"; break;
@@ -377,11 +377,11 @@ int TabControl::getEnumProperty(const char* prop, const char*& out) {
     return ControlImpl::getEnumProperty(prop, out);
 }
 int TabControl::setIntProperty(const char* prop, int value) {
-    if (strcmp(prop, PropertyNames::kJsonCurrentIndex) == 0) { setCurrentIndex(value); return 1; }
+    if (strcmp(prop, PropertyNames::kTabCurrentIndex) == 0) { setCurrentIndex(value); return 1; }
     return ControlImpl::setIntProperty(prop, value);
 }
 int TabControl::getIntProperty(const char* prop, int& out) {
-    if (strcmp(prop, PropertyNames::kJsonCurrentIndex) == 0) { out = m_currentIndex; return 1; }
+    if (strcmp(prop, PropertyNames::kTabCurrentIndex) == 0) { out = m_currentIndex; return 1; }
     return ControlImpl::getIntProperty(prop, out);
 }
 int TabControl::setFloatProperty(const char* prop, float value) {

@@ -25,11 +25,11 @@
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>StateColor</td><td>背景 / 边框状态色</td></tr>
 <tr><td><code>border-visible</code></td><td><code>kBorderVisible</code></td><td>Bool</td><td>边框可见</td></tr>
 <tr><td><code>enabled</code></td><td><code>kEnabled</code></td><td>Bool</td><td>响应交互</td></tr>
-<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
+<tr><td><code>text</code></td><td><code>kText</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
 <tr><td><code>text-shadow</code></td><td><code>kTextShadow</code></td><td>StateColor</td><td>文本 / 文本阴影状态色</td></tr>
 <tr><td><code>font</code></td><td><code>kFont</code></td><td>Obj / Float</td><td>字体声明 <code>{name, size, style}</code> 或便捷 <code>fontSize</code>；未声明时<b>沿父控件链继承</b>最近显式字体（v1.1.1）</td></tr>
 <tr><td><code>transparent</code></td><td><code>kTransparent</code></td><td>Bool</td><td>背景透明</td></tr>
-<tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>可见性</td></tr>
+<tr><td><code>visible</code></td><td><code>kVisible</code></td><td>Bool</td><td>可见性</td></tr>
 <tr><td><code>focusable</code></td><td><code>kFocusable</code></td><td>Bool</td><td>可聚焦</td></tr>
 <tr><td><code>show-focus-ring</code></td><td><code>kShowFocusRing</code></td><td>Bool</td><td>显示焦点环</td></tr>
 <tr><td><code>focus-ring-always-visible</code></td><td><code>kFocusRingAlwaysVisible</code></td><td>Bool</td><td>焦点环常显</td></tr>
@@ -67,7 +67,7 @@
 <tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
 <tr><td><code>border</code></td><td><code>kBorder</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
-<tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
+<tr><td><code>visible</code></td><td><code>kVisible</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
 <tr><td><code>enabled</code></td><td><code>kEnabled</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
 <tr><td><code>transparent</code></td><td><code>kTransparent</code></td><td>通用</td><td>继承 Panel/ControlImpl</td></tr>
 <tr><td><code>viewport-scale-mode</code></td><td><code>kViewportScaleMode</code></td><td>Enum</td><td><code>off</code> / <code>fit</code> / <code>kScaleTypeStretch</code>（视口缩放三态，核心引擎 <code>setEnumProperty</code>；C ABI / Binding 用实例级 <code>SetViewportScaleMode</code>，见 5.6）</td></tr>
@@ -135,7 +135,7 @@
 <tr><td><code>selected-label</code></td><td><code>kSelectedLabel</code></td><td>String（只读）</td><td>当前选中项的 label</td></tr>
 <tr><td><code>list-panel</code></td><td><code>kListPanel</code></td><td>Ptr（只读）</td><td>下拉列表面板 / 滚动条句柄</td></tr>
 <tr><td><code>list-scroll-bar</code></td><td><code>kListScrollBar</code></td><td>Ptr（只读）</td><td>下拉列表面板 / 滚动条句柄</td></tr>
-<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>text</code></td><td><code>kTextContent</code></td><td>String</td><td>空</td></tr>
 </table>
 
 <h3>ContextMenu（右键菜单，绑定在任意控件的 <code>contextMenu</code> 键上）</h3>
@@ -162,7 +162,7 @@
 <tr><td><code>result</code></td><td><code>kResult</code></td><td>Int（只读）</td><td>关闭结果（0=None / 1=Confirmed / 2=Cancelled）</td></tr>
 <tr><td><code>confirm-button</code></td><td><code>kConfirmButton</code></td><td>Ptr（只读）</td><td>确定/取消按钮句柄</td></tr>
 <tr><td><code>cancel-button</code></td><td><code>kCancelButton</code></td><td>Ptr（只读）</td><td>确定/取消按钮句柄</td></tr>
-<tr><td><code>visible</code></td><td><code>kJsonVisible</code></td><td>Bool</td><td>0（置 1=open，置 0=close）</td></tr>
+<tr><td><code>visible</code></td><td><code>kVisible</code></td><td>Bool</td><td>0（置 1=open，置 0=close）</td></tr>
 </table>
 
 <h3>EditBox（类型 <code>edit-box</code>）</h3>
@@ -174,8 +174,8 @@
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int</td><td>16</td></tr>
 <tr><td><code>password-mode</code></td><td><code>kPasswordMode</code></td><td>Bool / String</td><td>false / "●"</td></tr>
 <tr><td><code>password-char</code></td><td><code>kPasswordChar</code></td><td>Bool / String</td><td>false / "●"</td></tr>
-<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>placeholder</code></td><td><code>kJsonPlaceholder</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>text</code></td><td><code>kTextContent</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>placeholder</code></td><td><code>kPlaceholder</code></td><td>String</td><td>空</td></tr>
 </table>
 
 <h3>HandleControl（无 JSON 类型）</h3>
@@ -263,7 +263,7 @@
 <tr><td><code>read-only</code></td><td><code>kReadOnly</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>step</code></td><td><code>kStep</code></td><td>Float</td><td>1.0 / 10.0</td></tr>
 <tr><td><code>page-step</code></td><td><code>kPageStep</code></td><td>Float</td><td>1.0 / 10.0</td></tr>
-<tr><td><code>value</code></td><td><code>kJsonValue</code></td><td>Float</td><td>0</td></tr>
+<tr><td><code>value</code></td><td><code>kValue</code></td><td>Float</td><td>0</td></tr>
 </table>
 
 <h3>Panel（类型 <code>panel</code>）</h3>
@@ -278,12 +278,12 @@
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int</td><td>14</td></tr>
 <tr><td><code>progress</code></td><td><code>kProgress</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
 <tr><td><code>background</code></td><td><code>kBackground</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
-<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
+<tr><td><code>text</code></td><td><code>kText</code></td><td>Color</td><td>绿 / 灰 / 白</td></tr>
 <tr><td><code>range-min</code></td><td><code>kRangeMin</code></td><td>Float</td><td>0.0 / 100.0</td></tr>
 <tr><td><code>range-max</code></td><td><code>kRangeMax</code></td><td>Float</td><td>0.0 / 100.0</td></tr>
 <tr><td><code>style</code></td><td><code>kCheckBoxStyle</code></td><td>Enum</td><td><code>kOrientHorizontal</code> / <code>kOrientVertical</code></td></tr>
 <tr><td><code>text-mode</code></td><td><code>kTextMode</code></td><td>Enum</td><td><code>kScaleTypeNone</code> / <code>percent</code> / <code>custom</code></td></tr>
-<tr><td><code>value</code></td><td><code>kJsonValue</code></td><td>Float</td><td>0.0</td></tr>
+<tr><td><code>value</code></td><td><code>kValue</code></td><td>Float</td><td>0.0</td></tr>
 <tr><td><code>percent</code></td><td><code>kPercent</code></td><td>Float（只读）</td><td>进度百分比 0–100</td></tr>
 </table>
 
@@ -300,7 +300,7 @@
 <tr><td><code>thumb</code></td><td><code>kThumb</code></td><td>Color</td><td>见 4.16 属性表</td></tr>
 <tr><td><code>thumb-hover</code></td><td><code>kThumbHover</code></td><td>Color</td><td>见 4.16 属性表</td></tr>
 <tr><td><code>thumb-pressed</code></td><td><code>kThumbPressed</code></td><td>Color</td><td>见 4.16 属性表</td></tr>
-<tr><td><code>value</code></td><td><code>kJsonValue</code></td><td>Float</td><td>0</td></tr>
+<tr><td><code>value</code></td><td><code>kValue</code></td><td>Float</td><td>0</td></tr>
 </table>
 
 <h3>Shape（类型 <code>shape</code>）</h3>
@@ -339,7 +339,7 @@
 <tr><td><code>label</code></td><td><code>kLabelColor</code></td><td>Color</td><td>见 4.17 属性表</td></tr>
 <tr><td><code>track-thickness</code></td><td><code>kTrackThickness</code></td><td>Float</td><td>4 / 16</td></tr>
 <tr><td><code>thumb-size</code></td><td><code>kThumbSize</code></td><td>Float</td><td>4 / 16</td></tr>
-<tr><td><code>value</code></td><td><code>kJsonValue</code></td><td>Float</td><td>0 / 1.0</td></tr>
+<tr><td><code>value</code></td><td><code>kValue</code></td><td>Float</td><td>0 / 1.0</td></tr>
 <tr><td><code>step</code></td><td><code>kStep</code></td><td>Float</td><td>0 / 1.0</td></tr>
 </table>
 
@@ -358,7 +358,7 @@
 <tr><td><code>line-hover</code></td><td><code>kLineHover</code></td><td>Color</td><td>灰 / 蓝 / 深蓝</td></tr>
 <tr><td><code>line-drag</code></td><td><code>kLineDrag</code></td><td>Color</td><td>灰 / 蓝 / 深蓝</td></tr>
 <tr><td><code>ratio</code></td><td><code>kRatio</code></td><td>Float</td><td>0.5</td></tr>
-<tr><td><code>value</code></td><td><code>kJsonValue</code></td><td>Float</td><td>0.5</td></tr>
+<tr><td><code>value</code></td><td><code>kValue</code></td><td>Float</td><td>0.5</td></tr>
 <tr><td><code>thickness</code></td><td><code>kThickness</code></td><td>Float</td><td>4 / 6</td></tr>
 </table>
 <p>引擎模式（v1.1.1）：splitter 放在 flow 容器 children 内自动分段布局——<code>first-linked/second-linked</code> 仅作只读参考（引擎不自动写两侧），拖拽由引擎按"固定前段/后段"两式重排；无 link 时退化为手柄模式（拖自身 + moved 回调 ratio）。见 <a href="../controls/splitter.html#4-21-7">4.21.7</a>。</p>
@@ -373,9 +373,9 @@
 <h3>TabControl（类型 <code>tab-control</code>）</h3>
 <table>
 <tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th></tr>
-<tr><td><code>position</code></td><td><code>kJsonPosition</code></td><td>Enum</td><td><code>kVAlignTop</code>（top / <code>kVAlignBottom</code> / left / right）</td></tr>
+<tr><td><code>position</code></td><td><code>kTabPosition</code></td><td>Enum</td><td><code>kVAlignTop</code>（top / <code>kVAlignBottom</code> / left / right）</td></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Float</td><td>13</td></tr>
-<tr><td><code>currentIndex</code></td><td><code>kJsonCurrentIndex</code></td><td><code>—</code></td><td>Int</td><td>0（首页自动选中）</td></tr>
+<tr><td><code>currentIndex</code></td><td><code>kTabCurrentIndex</code></td><td><code>—</code></td><td>Int</td><td>0（首页自动选中）</td></tr>
 </table>
 <p>页数据经 JSON <code>tabs[]</code>（title / icon / page）；C ABI 专用函数 <code>TabAddPage / TabSetPage</code> 等见 8.3.1。</p>
 <h3>TextArea（类型 <code>text-area</code>）</h3>
@@ -388,8 +388,8 @@
 <tr><td><code>scroll-x</code></td><td><code>kScrollX</code></td><td>Int</td><td>0</td></tr>
 <tr><td><code>scroll-y</code></td><td><code>kScrollY</code></td><td>Int</td><td>0</td></tr>
 <tr><td><code>scrollbar-thickness</code></td><td><code>kScrollbarThickness</code></td><td>Float</td><td>16</td></tr>
-<tr><td><code>text</code></td><td><code>kJsonText</code></td><td>String</td><td>空</td></tr>
-<tr><td><code>placeholder</code></td><td><code>kJsonPlaceholder</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>text</code></td><td><code>kTextContent</code></td><td>String</td><td>空</td></tr>
+<tr><td><code>placeholder</code></td><td><code>kPlaceholder</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>word-wrap</code></td><td><code>kWordWrap</code></td><td>Bool</td><td>—</td></tr>
 </table>
 

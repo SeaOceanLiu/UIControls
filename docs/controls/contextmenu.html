@@ -37,17 +37,17 @@ UICornerstone_ContextMenuShow(g_inst, m, 140, 160);
 
 <table>
 <tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>items[].caption</code></td><td><code>—</code></td><td>String</td><td>—</td><td>菜单项文本</td></tr>
-<tr><td><code>items[].shortcut</code></td><td><code>—</code></td><td>String</td><td>—</td><td>快捷键列</td></tr>
-<tr><td><code>items[].type</code></td><td><code>—</code></td><td>Enum</td><td>—</td><td><code>separator</code> = 分隔线</td></tr>
-<tr><td><code>items[].icon</code></td><td><code>—</code></td><td>资源引用</td><td>—</td><td>项图标</td></tr>
+<tr><td><code>items[].caption</code></td><td><code>kCaption</code></td><td>String</td><td>—</td><td>菜单项文本</td></tr>
+<tr><td><code>items[].shortcut</code></td><td><code>kShortcut</code></td><td>String</td><td>—</td><td>快捷键列</td></tr>
+<tr><td><code>items[].type</code></td><td><code>—</code></td><td>Enum</td><td>—</td><td>枚举值见 7.3（<code>separator</code> ↔ <code>kMenuTypeSeparator</code>）</td></tr>
+<tr><td><code>items[].icon</code></td><td><code>kItemIcon</code></td><td>资源引用</td><td>—</td><td>项图标（JSON 键层；常量同 <code>kItemIcon</code>）</td></tr>
 </table>
 
 <h2>4.7.3 控件的回调 / 事件</h2>
 
 <table>
 <tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>onClick</code></td><td><code>kEventKeyClick</code></td><td>点击菜单项</td><td>回调后自动关闭</td></tr>
+<tr><td><code>onClick</code></td><td><code>kEventKeyClick</code></td><td>点击菜单项（回调后自动关闭）</td><td>无</td></tr>
 </table>
 
 <div class="note">菜单视觉由 MenuPanel 全权负责（圆角边框+阴影）；弹出位置自动视口钳制；点击子菜单区域不误判为外部点击。</div>
