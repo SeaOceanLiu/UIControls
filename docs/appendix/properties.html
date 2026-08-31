@@ -446,72 +446,74 @@ item 增强：<code>leadingControl</code>（行前置控件容器，复用控件
 <p>JSON/API 中的枚举字面量与 <code>PropertyNames.h</code> 值常量对应；C++ 侧建议使用常量，避免字符串字面量分散。</p>
 <table>
 <tr><th>枚举值</th><th>属性常量</th></tr>
-<tr><td><code>auto</code></td><td><code>kGridSizeAuto</code></td></tr>
-<tr><td><code>bold</code></td><td><code>kFontStyleBold</code></td></tr>
-<tr><td><code>bottom</code></td><td><code>kVAlignBottom</code></td></tr>
-<tr><td><code>bottom-center</code></td><td><code>kAlignLowerBottomCenter</code> / <code>kAlignBottomCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>bottom-left</code></td><td><code>kAlignLowerBottomLeft</code> / <code>kAlignBottomLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>bottom-right</code></td><td><code>kAlignLowerBottomRight</code> / <code>kAlignBottomRight</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>button</code></td><td><code>kControlTypeButton</code></td></tr>
-<tr><td><code>center</code></td><td><code>kAlignLowerCenter</code> / <code>kVAlignCenter</code> / <code>kAlignCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>center-crop</code></td><td><code>kScaleTypeCenterCrop</code></td></tr>
-<tr><td><code>check-box</code></td><td><code>kControlTypeCheckBox</code></td></tr>
-<tr><td><code>circle</code></td><td><code>kShapeCircle</code> / <code>kStyleCircle</code></td></tr>
-<tr><td><code>classic</code></td><td><code>kStyleClassic</code></td></tr>
-<tr><td><code>color-picker</code></td><td><code>kControlTypeColorPicker</code></td></tr>
-<tr><td><code>combo-box</code></td><td><code>kControlTypeComboBox</code></td></tr>
-<tr><td><code>confirm-popup</code></td><td><code>kControlTypeConfirmPopup</code></td></tr>
-<tr><td><code>dialog</code></td><td><code>kControlTypeDialog</code></td></tr>
-<tr><td><code>edit-box</code></td><td><code>kControlTypeEditBox</code></td></tr>
-<tr><td><code>ellipse</code></td><td><code>kShapeEllipse</code></td></tr>
-<tr><td><code>filled-rect</code></td><td><code>kShapeFilledRect</code></td></tr>
-<tr><td><code>fit-center</code></td><td><code>kScaleTypeFitCenter</code></td></tr>
-<tr><td><code>fr</code></td><td><code>kGridSizeFrSuffix</code></td></tr>
-<tr><td><code>grid</code></td><td><code>kLayoutTypeGrid</code></td></tr>
-<tr><td><code>h-flow</code></td><td><code>kLayoutTypeHFlow</code></td></tr>
-<tr><td><code>handle-control</code></td><td><code>kControlTypeHandleControl</code></td></tr>
-<tr><td><code>icon</code></td><td><code>kItemIcon</code></td></tr>
-<tr><td><code>image-button</code></td><td><code>kControlTypeImageButton</code></td></tr>
-<tr><td><code>italic</code></td><td><code>kFontStyleItalic</code></td></tr>
-<tr><td><code>list-view</code></td><td><code>kControlTypeListView</code></td></tr>
-<tr><td><code>menu-bar</code></td><td><code>kControlTypeMenuBar</code></td></tr>
-<tr><td><code>menu-item</code></td><td><code>kControlTypeMenuItem</code></td></tr>
-<tr><td><code>menu-panel</code></td><td><code>kControlTypeMenuPanel</code></td></tr>
-<tr><td><code>mid-left</code></td><td><code>kAlignLowerMidLeft</code> / <code>kAlignMidLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>mid-right</code></td><td><code>kAlignLowerMidRight</code> / <code>kAlignMidRight</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>multi</code></td><td><code>kModeMulti</code></td></tr>
-<tr><td><code>none</code></td><td><code>kScaleTypeNone</code></td></tr>
-<tr><td><code>normal</code></td><td><code>kFontStyleNormal</code></td></tr>
-<tr><td><code>numeric-up-down</code></td><td><code>kControlTypeNumericUpDown</code></td></tr>
-<tr><td><code>panel</code></td><td><code>kControlTypePanel</code></td></tr>
-<tr><td><code>polygon</code></td><td><code>kShapePolygon</code></td></tr>
-<tr><td><code>polyline</code></td><td><code>kShapePolyline</code></td></tr>
-<tr><td><code>popup</code></td><td><code>kControlTypePopup</code></td></tr>
-<tr><td><code>progress-bar</code></td><td><code>kControlTypeProgressBar</code></td></tr>
-<tr><td><code>px</code></td><td><code>kGridSizePxSuffix</code></td></tr>
-<tr><td><code>rect</code></td><td><code>kShapeRect</code></td></tr>
-<tr><td><code>round-rect</code></td><td><code>kShapeRoundRect</code></td></tr>
-<tr><td><code>separator</code></td><td><code>kMenuTypeSeparator</code></td></tr>
-<tr><td><code>single</code></td><td><code>kModeSingle</code></td></tr>
-<tr><td><code>slider</code></td><td><code>kControlTypeSlider</code></td></tr>
-<tr><td><code>splitter</code></td><td><code>kControlTypeSplitter</code></td></tr>
-<tr><td><code>status-bar</code></td><td><code>kControlTypeStatusBar</code></td></tr>
-<tr><td><code>stretch</code></td><td><code>kScaleTypeStretch</code></td></tr>
-<tr><td><code>strikethrough</code></td><td><code>kFontStyleStrikethrough</code></td></tr>
-<tr><td><code>tab-control</code></td><td><code>kControlTypeTabControl</code></td></tr>
-<tr><td><code>text-area</code></td><td><code>kControlTypeTextArea</code></td></tr>
-<tr><td><code>text-left</code></td><td><code>kLayoutTextLeft</code></td></tr>
-<tr><td><code>text-right</code></td><td><code>kLayoutTextRight</code></td></tr>
-<tr><td><code>top</code></td><td><code>kVAlignTop</code></td></tr>
-<tr><td><code>top-center</code></td><td><code>kAlignLowerTopCenter</code> / <code>kAlignTopCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>top-left</code></td><td><code>kAlignLowerTopLeft</code> / <code>kAlignTopLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>top-right</code></td><td><code>kAlignLowerTopRight</code> / <code>kAlignTopRight</code><sup title="旧名/未使用">旧</sup></td></tr>
-<tr><td><code>tree-view</code></td><td><code>kControlTypeTreeView</code></td></tr>
-<tr><td><code>unchecked</code></td><td><code>kCheckUnchecked</code></td></tr>
-<tr><td><code>underline</code></td><td><code>kFontStyleUnderline</code></td></tr>
-<tr><td><code>v-flow</code></td><td><code>kLayoutTypeVFlow</code></td></tr>
-<tr><td><code>vertical</code></td><td><code>kOrientVertical</code></td></tr>
-<tr><td><code>win-frame</code></td><td><code>kControlTypeWinFrame</code></td></tr>
+<tr><td><code>auto</code></td><td><code>kGridSizeAuto</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>bold</code></td><td><code>kFontStyleBold</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>bottom</code></td><td><code>kVAlignBottom</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>bottom-center</code></td><td><code>kAlignBottomCenter</code><sup title="旧名/未使用">旧</sup> / <code>kAlignLowerBottomCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>bottom-left</code></td><td><code>kAlignBottomLeft</code><sup title="旧名/未使用">旧</sup> / <code>kAlignLowerBottomLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>bottom-right</code></td><td><code>kAlignBottomRight</code><sup title="旧名/未使用">旧</sup> / <code>kAlignLowerBottomRight</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>button</code></td><td><code>kControlTypeButton</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>center</code></td><td><code>kAlignCenter</code><sup title="旧名/未使用">旧</sup> / <code>kAlignLowerCenter</code><sup title="旧名/未使用">旧</sup> / <code>kVAlignCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>center-crop</code></td><td><code>kScaleTypeCenterCrop</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>check-box</code></td><td><code>kControlTypeCheckBox</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>circle</code></td><td><code>kShapeCircle</code><sup title="旧名/未使用">旧</sup> / <code>kStyleCircle</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>classic</code></td><td><code>kStyleClassic</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>color-picker</code></td><td><code>kControlTypeColorPicker</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>combo-box</code></td><td><code>kControlTypeComboBox</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>confirm-popup</code></td><td><code>kControlTypeConfirmPopup</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>dialog</code></td><td><code>kControlTypeDialog</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>edit-box</code></td><td><code>kControlTypeEditBox</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>ellipse</code></td><td><code>kShapeEllipse</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>filled-rect</code></td><td><code>kShapeFilledRect</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>fit</code></td><td><code>kViewportScaleFit</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>fit-center</code></td><td><code>kScaleTypeFitCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>fr</code></td><td><code>kGridSizeFrSuffix</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>grid</code></td><td><code>kLayoutTypeGrid</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>h-flow</code></td><td><code>kLayoutTypeHFlow</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>handle-control</code></td><td><code>kControlTypeHandleControl</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>icon</code></td><td><code>kItemIcon</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>image-button</code></td><td><code>kControlTypeImageButton</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>italic</code></td><td><code>kFontStyleItalic</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>list-view</code></td><td><code>kControlTypeListView</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>menu-bar</code></td><td><code>kControlTypeMenuBar</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>menu-item</code></td><td><code>kControlTypeMenuItem</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>menu-panel</code></td><td><code>kControlTypeMenuPanel</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>mid-left</code></td><td><code>kAlignLowerMidLeft</code><sup title="旧名/未使用">旧</sup> / <code>kAlignMidLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>mid-right</code></td><td><code>kAlignLowerMidRight</code><sup title="旧名/未使用">旧</sup> / <code>kAlignMidRight</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>multi</code></td><td><code>kModeMulti</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>none</code></td><td><code>kScaleTypeNone</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>normal</code></td><td><code>kFontStyleNormal</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>numeric-up-down</code></td><td><code>kControlTypeNumericUpDown</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>off</code></td><td><code>kViewportScaleOff</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>panel</code></td><td><code>kControlTypePanel</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>polygon</code></td><td><code>kShapePolygon</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>polyline</code></td><td><code>kShapePolyline</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>popup</code></td><td><code>kControlTypePopup</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>progress-bar</code></td><td><code>kControlTypeProgressBar</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>px</code></td><td><code>kGridSizePxSuffix</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>rect</code></td><td><code>kShapeRect</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>round-rect</code></td><td><code>kShapeRoundRect</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>separator</code></td><td><code>kMenuTypeSeparator</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>single</code></td><td><code>kModeSingle</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>slider</code></td><td><code>kControlTypeSlider</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>splitter</code></td><td><code>kControlTypeSplitter</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>status-bar</code></td><td><code>kControlTypeStatusBar</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>stretch</code></td><td><code>kScaleTypeStretch</code><sup title="旧名/未使用">旧</sup> / <code>kViewportScaleStretch</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>strikethrough</code></td><td><code>kFontStyleStrikethrough</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>tab-control</code></td><td><code>kControlTypeTabControl</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>text-area</code></td><td><code>kControlTypeTextArea</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>text-left</code></td><td><code>kLayoutTextLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>text-right</code></td><td><code>kLayoutTextRight</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>top</code></td><td><code>kVAlignTop</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>top-center</code></td><td><code>kAlignLowerTopCenter</code><sup title="旧名/未使用">旧</sup> / <code>kAlignTopCenter</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>top-left</code></td><td><code>kAlignLowerTopLeft</code><sup title="旧名/未使用">旧</sup> / <code>kAlignTopLeft</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>top-right</code></td><td><code>kAlignLowerTopRight</code><sup title="旧名/未使用">旧</sup> / <code>kAlignTopRight</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>tree-view</code></td><td><code>kControlTypeTreeView</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>unchecked</code></td><td><code>kCheckUnchecked</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>underline</code></td><td><code>kFontStyleUnderline</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>v-flow</code></td><td><code>kLayoutTypeVFlow</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>vertical</code></td><td><code>kOrientVertical</code><sup title="旧名/未使用">旧</sup></td></tr>
+<tr><td><code>win-frame</code></td><td><code>kControlTypeWinFrame</code><sup title="旧名/未使用">旧</sup></td></tr>
 </table>
 
 <div class="chapter-nav">

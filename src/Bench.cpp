@@ -189,11 +189,11 @@ void Bench::setViewportScaleMode(ViewportScaleMode mode) {
 int Bench::setEnumProperty(const char* prop, const char* value) {
     if (prop && strcmp(prop, PropertyNames::kViewportScaleMode) == 0) {
         if (!value) return 0;
-        if (strcmp(value, "off") == 0) {
+        if (strcmp(value, PropertyNames::kViewportScaleOff) == 0) {
             setViewportScaleMode(ViewportScaleMode::Off);
-        } else if (strcmp(value, "fit") == 0) {
+        } else if (strcmp(value, PropertyNames::kViewportScaleFit) == 0) {
             setViewportScaleMode(ViewportScaleMode::Fit);
-        } else if (strcmp(value, "stretch") == 0) {
+        } else if (strcmp(value, PropertyNames::kViewportScaleStretch) == 0) {
             setViewportScaleMode(ViewportScaleMode::Stretch);
         } else {
             return 0;
