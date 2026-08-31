@@ -106,7 +106,7 @@ UIControlHandle slider = UICornerstone_CreateSlider(g_inst, 29, 224, 257, 20, 0,
 slider.SetFloat(PropertyNames::kValue, 50.0f);
 slider.SetBool(PropertyNames::kShowValueLabel, true);
 slider.SetString(PropertyNames::kLabelFormat, "%.0f px");
-slider.SetEnum(PropertyNames::kCheckBoxStyle, "horizontal");
+slider.SetEnum(PropertyNames::kSliderStyle, PropertyNames::kOrientHorizontal);
 slider.SetCallback(PropertyNames::kEventValueChanged, [](const Event& e) {
     printf("value = %.1f\n", e.GetValueChanged());
 });
