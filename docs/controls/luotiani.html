@@ -36,7 +36,7 @@ Control ani = ui->CreateAnimation("animations/breath/breath.jsonc", 20, 20, 0, 0
 <h2>4.13.2 控件的属性</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>参数</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>animation</code></td><td><code>kAnimation</code></td><td>String</td><td>—</td><td>JSONC 路径（<strong>只写不读</strong>）；加载+prepare，播放中则从第 0 帧重播；失败返回 0</td></tr>
 <tr><td><code>frame</code></td><td><code>kFrame</code></td><td>Int</td><td>0</td><td>跳帧（setFrame）；未 prepare 拒绝</td></tr>
 <tr><td><code>loop</code></td><td><code>kLoop</code></td><td>Bool</td><td>JSON 中值</td><td>setLoop / getLoop</td></tr>

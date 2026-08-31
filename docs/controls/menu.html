@@ -46,7 +46,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h2>4.14.2 控件的属性（C ABI 属性系统）</h2>
 
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>参数</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>说明</th></tr>
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>MenuItem 文字（SetString）</td></tr>
 <tr><td><code>checked</code></td><td><code>kChecked</code></td><td>Bool</td><td>MenuItem 勾选（SetBool）</td></tr>
 <tr><td><code>click</code></td><td><code>kEventClick</code></td><td>callback</td><td>MenuItem 点击回调（SetCallback）</td></tr>
@@ -63,7 +63,7 @@ UICornerstone_MenuBarAddMenu(g_inst, bar, "File", panel);</code></pre>
 <h3>4.14.2.1 item 级属性（C ABI，item-id 定位模式）</h3>
 <p>Menu 的逐项增强属性挂在 <strong>MenuPanel</strong> 上：先 <code>SetString("item-id", id)</code> 定位目标菜单项，随后 item 级属性作用于该菜单项。MenuItem 自身也支持 <code>SetString("item-id", id)</code> 设置其定位 id（编程式创建时便于后续定位）。</p>
 <table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th><th>参数</th></tr>
+<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认</th><th>说明</th></tr>
 <tr><td><code>item-id</code></td><td><code>kTreeItemId</code></td><td>String</td><td>—</td><td>定位目标菜单项（在 MenuPanel 上设置后，后续 item 级属性作用于该菜单项）</td></tr>
 <tr><td><code>item-font</code></td><td><code>kTreeItemFont</code></td><td>Enum</td><td>继承 MenuPanel</td><td>逐项字体枚举（如 <code>harmonyos-sans-sc-bold</code> 粗体）</td></tr>
 <tr><td><code>item-font-size</code></td><td><code>kTreeItemFontSize</code></td><td>Int</td><td>0</td><td>逐项字号（0 = 继承面板字号；&gt;0 时该行行高 = 字号×item-height-ratio，独立于面板其余行）</td></tr>
