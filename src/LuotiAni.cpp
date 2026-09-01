@@ -476,6 +476,7 @@ void LuotiAni::update(void) {
                     m_isPlaying = false;
 
                     { auto evt = make_shared<Event>(EventType::Custom); evt->customInt = static_cast<int>(EventName::AnimationEnded); evt->customPtr = reinterpret_cast<void*>(static_cast<intptr_t>(m_id)); triggerEvent(evt); }
+                    fireCCallback(PropertyNames::kEventAnimationEnded, CCallbackData::Int, &m_id);
                     return;
                 }
             }

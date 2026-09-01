@@ -236,6 +236,10 @@ lbl.SetPtr(PropertyNames::kPropContextMenu, menu.GetThis());</code></pre>
 <table>
 <tr><th>事件</th><th>判定 / 访问器</th></tr>
 <tr><td>check-changed</td><td><code>IsCheckChanged()</code> → <code>GetCheckState()</code>（int）</td></tr>
+<tr><td>list-selection-changed</td><td><code>IsListSelectionChanged()</code> → <code>GetGridRow()</code> / <code>GetGridCol()</code></td></tr>
+<tr><td>item-click</td><td><code>IsItemClick()</code> → <code>GetGridRow()</code> / <code>GetGridCol()</code></td></tr>
+<tr><td>column-sort</td><td><code>IsColumnSort()</code> → <code>GetGridRow()</code> / <code>GetGridCol()</code> / <code>GetGridAsc()</code></td></tr>
+<tr><td>animation-ended</td><td><code>IsAnimationEnded()</code> → <code>GetAnimationEndedId()</code>（int）</td></tr>
 <tr><td>click</td><td><code>IsClick()</code>（无负载）</td></tr>
 <tr><td>close</td><td><code>IsClose()</code> → <code>GetCloseResult()</code>（int = DialogResult）</td></tr>
 <tr><td>confirm / cancel / enter</td><td><code>IsConfirm()</code> / <code>IsCancel()</code> / <code>IsEnter()</code>（无负载）</td></tr>

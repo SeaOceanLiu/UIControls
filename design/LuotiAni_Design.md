@@ -1,4 +1,4 @@
-# LuotiAni 动画控件设计文档
+﻿# LuotiAni 动画控件设计文档
 
 > 状态：**待审核**（未审核通过前不做源码变更）
 
@@ -137,7 +137,7 @@ flowchart LR
 | 拆分 | header-only 保持 vs 拆分 .cpp/.h | **拆分**：项目惯例（所有控件均 .h+.cpp）；编译隔离；隐藏实现细节 |
 | 路径形状 | 仅 easing vs bezier+parabola vs 全支持 | **全支持**（用户确认）：bezier(2/3 次) + parabola + catmull-rom + easing |
 | 创建即播放 | 自动播放 vs 显式控制 | **显式控制**（用户确认）：工厂只 load+prepare，播放经 `playing` 属性 |
-| AnimationEnded 回调 | 本期实现 vs 不做 | **不做**（C ABI 回调链路缺失，超范围，列可选后续） |
+| AnimationEnded 回调 | 本期实现 vs 不做 | **做**：C ABI 事件常量 `kEventAnimationEnded`（"animation-ended"），LoadPath 结束触发 `fireCCallback`（intVal=m_id），Binding `Event::IsAnimationEnded()/GetAnimationEndedId()` |
 
 ## 4. 步骤 1：代码拆分（纯重构）
 
@@ -384,7 +384,7 @@ void draw(uint32_t frameNo, float x, float y, uint8_t alpha) {
 
 ### 6.7 不做的事（范围界定）
 
-- **`animation-ended` 回调**：事件已触发（:564 `EventName::AnimationEnded`，LuotiInstance 版 :886 `LuotiInstanceEnded`），但 C ABI 回调链路缺失（全 src 无 Custom 事件适配），超本期范围——列可选后续；
+- **`animation-ended` 回调**：事件实现于 LuotiAni::update（:478 触发点经 `fireCCallback(kEventAnimationEnded, Int, &m_id)`），C ABI 经 `UICornerstone_SetCallback(inst, ctl, "animation-ended", …)` 注册；Binding 经 `Control::SetCallback` + `Event::IsAnimationEnded()`；
 - **`speed` 属性**：LuotiAni 无速度系数支持（帧推进硬编码 `deltaTick / m_frameMSDuration`，:557），需引擎改动——列可选后续；
 - **LuotiInstance 暴露**：共享帧数据多实例播放器已存在（:853），"同一动画多处播放"场景可后续独立暴露；**注：LuotiInstance::loadFromFile 为空实现（:869）**，未来暴露前需先实现其加载链路；
 - **SHAPE/TEXT 图层实现**（:663-668 解析有、prepare 无）；

@@ -54,12 +54,10 @@ UICornerstone_ListViewAddRow(g_inst, lv, "f1", 2, cells);
 
 <table>
 <tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>onSelectionChanged</code></td><td><code>—</code></td><td>选中集合变化</td><td>单选/多选/Ctrl 多选</td></tr>
-<tr><td><code>onItemClick</code></td><td><code>—</code></td><td>行点击</td><td>—</td></tr>
-<tr><td><code>onColumnSort</code></td><td><code>—</code></td><td>列头排序点击</td><td>列索引+方向</td></tr>
+<tr><td><code>onSelectionChanged</code></td><td><code>kEventListSelectionChanged</code>（<code>"list-selection-changed"</code>）</td><td>选中集合变化（setSelectedRow / 点击 / Ctrl 多选）</td><td>grid{row=当前行（无选中 -1）, col=选中数}</td></tr>
+<tr><td><code>onItemClick</code></td><td><code>kEventItemClick</code>（<code>"item-click"</code>）</td><td>数据区行点击</td><td>grid{row, col}</td></tr>
+<tr><td><code>onColumnSort</code></td><td><code>kEventColumnSort</code>（<code>"column-sort"</code>）</td><td>列头排序点击（可排序列）</td><td>grid{row=列索引, col=升序 1 / 降序 0}</td></tr>
 </table>
-<p class="note">当前版本 ListView 尚未挂接上述事件的触发链路（无对应 fireCCallback），回调为预留 API；事件常量将在实现后发布（现为 —）。</p>
-
 <h2>4.12.4 leadingControl</h2><p>列头图标（<code>setColumnLeadingControl</code>）、行首图标（<code>setRowLeadingControl</code>）、单元格控件（<code>setCellLeadingControl</code>）——任意控件，自动挂树定位。</p>
 
 

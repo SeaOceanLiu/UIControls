@@ -693,6 +693,7 @@ typedef struct {
         struct { int idx; const char* val; } selection;
         struct { const char* id; void* userData; } treeNode;
         struct { uint8_t r,g,b,a; } color;
+        struct { int row; int col; int asc; } grid;
     } data;
 } UIEventData;
 

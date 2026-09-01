@@ -1,4 +1,4 @@
-# ListView（含单列模式，ListBox 替代）设计文档
+﻿# ListView（含单列模式，ListBox 替代）设计文档
 
 > 状态：**设计定稿 · 免审直施（2026-08-22 用户指示：批量实施期间不再逐份审核，完成后统一质量检查）**
 > 前身：[ListView_Analysis.md](ListView_Analysis.md)（需求分析 v10，决策点 0-10 全部拍板；本文档为其设计化定稿）
@@ -321,7 +321,7 @@ struct ListRow {
 - **列宽拖拽（拍板一期）**：列头分隔线 ±4px 命中区（MouseMove 光标切 SizeWE，`m_cursorSizeWE` 先例 `WinFrame.h:56`）→ MouseDown 拖拽 → MouseMove 实时更新列宽（**最小宽度钳制，`setMinColumnWidth`/JSON `"minColumnWidth"`，默认 20px**）→ relayout + 重绘；列头文字超宽截断
 - **键盘导航一期**（决策点 5，Tab 先例 §3.6 同款）：方向键上下移动选中（**循环可配，`setCycleNavigation`/JSON `"cycleNavigation"`，默认 true——TreeView 同款**）、Home/End 首尾、焦点环（drawFocusRing）；焦点在行内控件/单元格控件（leadingControl 为可聚焦控件）时不截获；**Shift 范围多选（键盘）后续**（鼠标 Ctrl 多选已一期，`setMultiSelect`/JSON `"multiSelect"` 可关）
 - **初始选中**：`setSelectedRow(index)`/JSON `"selectedIndex"`（默认 -1 无选中，键名同 TreeView 先例 `PropertyNames.h:127`）
-- 事件：`onSelectionChanged` / `onItemClick` / `onColumnSort`（可空）
+- 事件：`onSelectionChanged` / `onItemClick` / `onColumnSort`（可空）——C ABI 事件常量 `kEventListSelectionChanged`（"list-selection-changed"）/ `kEventItemClick`（"item-click"）/ `kEventColumnSort`（"column-sort"），负载 `grid{row,col,asc}`（见 EventSystem_Design.md §C ABI 负载扩展；Binding `Event::IsListSelectionChanged` 等访问器）
 
 ### 5.4.1 自定义排序回调（拍板：缺省字符串比较 + 用户回调）
 

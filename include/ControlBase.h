@@ -537,7 +537,8 @@ public:
     struct SelectionPayload { int idx; const char* val; };
     struct TreeNodePayload { const char* id; void* userData; };
     struct ColorPayload { uint8_t r,g,b,a; };
-    enum class CCallbackData { None, Int, Float, String, Selection, Ptr, TreeNode, Color };
+    struct GridPayload { int row; int col; int asc; };
+    enum class CCallbackData { None, Int, Float, String, Selection, Ptr, TreeNode, Color, Grid };
 
     // 从子控件事件处理器中触发 C ABI 回调
     // eventName: PropertyNames 中的事件常量

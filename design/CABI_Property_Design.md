@@ -1,4 +1,4 @@
-# C ABI 属性系统设计
+﻿# C ABI 属性系统设计
 
 > 对应 Phase 16i | 编制 2026-07-26 | 状态: **已实现（Phases 1-6 完成；Phase 7 — Ptr 属性类型 + 控件特有 Ptr/Float/String/Enum/Bool 扩展已完成）**
 
@@ -373,6 +373,7 @@ typedef struct {
         int             intVal;
         const char*     strVal;
         struct { int idx; const char* val; } selection;
+        struct { int row; int col; int asc; } grid;
     } data;
 } UIEventData;
 

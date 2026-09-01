@@ -300,6 +300,7 @@ endforeach()
 # ============================================================
 # Collect backend source files for the current backend
 set(FROMSOURCE_BACKEND_SOURCES
+    "${CMAKE_SOURCE_DIR}/src/RenderDevice.cpp"
     "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/Window.cpp"
     "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/RenderDevice.cpp"
     "${CMAKE_SOURCE_DIR}/src/backend/${_BACKEND_LOWER}/TextRenderer.cpp"

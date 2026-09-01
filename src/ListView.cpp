@@ -481,6 +481,8 @@ void ListView::fireSelectionChanged() {
                 std::dynamic_pointer_cast<Control>(getThis())))
             m_onSelectionChanged(self);
     }
+    GridPayload sel{getSelectedRow(), static_cast<int>(m_selectedRows.size()), 0};
+    fireCCallback(PropertyNames::kEventListSelectionChanged, CCallbackData::Grid, &sel);
 }
 void ListView::clampSelectionToCount() {
     for (auto it = m_selectedRows.begin(); it != m_selectedRows.end();) {
@@ -735,6 +737,8 @@ bool ListView::handleEvent(shared_ptr<Event> event) {
                             std::dynamic_pointer_cast<Control>(getThis())))
                         m_onColumnSort(self, col, asc);
                 }
+                GridPayload sort{col, asc ? 1 : 0, 0};
+                fireCCallback(PropertyNames::kEventColumnSort, CCallbackData::Grid, &sort);
                 return true;
             }
             return true;   // 列头其余区域消费（不透传）
@@ -761,6 +765,8 @@ bool ListView::handleEvent(shared_ptr<Event> event) {
                         std::dynamic_pointer_cast<Control>(getThis())))
                     m_onItemClick(self, row, max(0, col));
             }
+            GridPayload click{row, max(0, col), 0};
+            fireCCallback(PropertyNames::kEventItemClick, CCallbackData::Grid, &click);
             return true;
         }
     }

@@ -10,7 +10,11 @@
 #include "AppCallbacks.h"
 #include "TestUtils.h"
 #include "PlatformUtils.h"
+#include "PropertyNames.h"
+#include "UICornerstoneAPI.h"
 #include "TestInstance.h"
+
+static void testL21AnimationEndedEvent(void);
 
 using namespace std;
 
@@ -465,10 +469,21 @@ void testL10Resources(void) {
         CHECK(finiteOk, string("L10 ") + resourceId + " opdata finite");
         // 冒烟播放不崩溃
         try {
+            static int l10Ended = 0;
+            using CbFn = void(*)(void*, const void*, void*);
+            ani->setCallbackProperty(PropertyNames::kEventAnimationEnded, CbFn(
+                [](void*, const void* raw, void*) {
+                    const UIEventData* ev = static_cast<const UIEventData*>(raw);
+                    if (ev->eventName && strcmp(ev->eventName, PropertyNames::kEventAnimationEnded) == 0)
+                        ++l10Ended;
+                }), nullptr);
             ani->play();
             for (int i = 0; i < 60; i++) {
                 sleepMs(20);
                 ani->update();
+            }
+            if (expectFrames <= 12) {
+                CHECK(l10Ended >= 1, string("L10 ") + resourceId + " animation-ended fired");
             }
             ani->draw(0.0f, 0.0f);
         } catch (const char* e) {
@@ -698,6 +713,7 @@ void testLuotianiInitialize(shared_ptr<Bench>) {
     testL9Tolerance();
     testL10Resources();
     testL11ScaleCalibration();
+    testL21AnimationEndedEvent();
     testLuotianiPixel();
     showDemoAnimations();
 
@@ -732,6 +748,50 @@ public:
         logOutput(u8"程序结束");
     }
 };
+
+// ── 用例：L21  AnimationEnded C ABI 回调（文件注入，同 L1-L9 加载路径）──
+static void testL21AnimationEndedEvent(void) {
+    g_caseIndex++;
+    try {
+        json kf0 = {{"frame", 0}, {"operation", json::array({makeTranslateOp(0.f, 0.f)})}};
+        json kfN = {{"frame", 2}, {"operation", json::array({makeTranslateOp(10.f, 0.f)})}};
+        json doc = makeDoc(3, makeLayerJson(json::array({kf0, kfN})));
+        writeCaseJson("tl_L21.jsonc", doc);
+
+        shared_ptr<LuotiAni> ani = make_shared<LuotiAni>(BENCH);
+        CHECK(ani != nullptr, "L21 create LuotiAni");
+        using CbFn = void(*)(void*, const void*, void*);
+        static int ended = 0;
+        int before = ended;
+        ani->setCallbackProperty(PropertyNames::kEventAnimationEnded, CbFn(
+            [](void*, const void* raw, void*) {
+                const UIEventData* ev = static_cast<const UIEventData*>(raw);
+                if (ev->eventName && strcmp(ev->eventName, PropertyNames::kEventAnimationEnded) == 0)
+                    ++ended;
+            }), nullptr);
+        ani->loadAniDesc(fs::path("tl_L21.jsonc"));
+        CHECK(ani->getTotalFrames() == 3, "L21 load");
+        ani->prepare();
+        ani->setVisible(true);
+        ani->setLoop(false);
+        ani->play();
+        for (int i = 0; i < 120 && ended == before; i++) {
+            sleepMs(25);
+            ani->update();
+        }
+        CHECK(ended > before, "L21 animation-ended fired");
+        ani->draw(0.0f, 0.0f);
+    } catch (const char* e) {
+        g_failCount++;
+        logOutput(string("FAIL [") + to_string(g_caseIndex) + "] L21 threw: " + e);
+    } catch (const std::exception& e) {
+        g_failCount++;
+        logOutput(string("FAIL [") + to_string(g_caseIndex) + "] L21 std::exception: " + e.what());
+    } catch (...) {
+        g_failCount++;
+        logOutput(string("FAIL [") + to_string(g_caseIndex) + "] L21 unknown exception");
+    }
+}
 
 int main(int argc, char* argv[]) {
     return TestRunMain<LuotianiApp>(argc, argv);

@@ -1,4 +1,4 @@
-# UICornerstone API 全面映射表
+﻿# UICornerstone API 全面映射表
 
 版本:2026-08-20 · 覆盖:核心引擎内部 API ↔ JSON ↔ 属性系统 ↔ C ABI ↔ C++Binding
 
@@ -187,6 +187,7 @@
 | setLoop | loop | loop | SetBool | SetBool | ✅ |  |
 | setFrameFilter | — | — | AnimationSetFrameFilter(flag) | AnimationSetFrameFilter(flag) | 🔧专用CABI | CABI/Binding |
 | getTotalFrames/… | — | total-frames/current-frame | GetInt("total-frames"…) | GetInt("total-frames"…) | ✅ | 属性 |
+| AnimationEnded 回调 | — | — | SetCallback（kEventAnimationEnded，intVal=m_id） | SetCallback + Event::IsAnimationEnded/GetAnimationEndedId | ✅ |  |
 
 ## 12. MenuBar / MenuPanel / MenuItem
 
@@ -362,7 +363,7 @@
 | addColumn/insertColumn/removeColumn/setColumnWidth | columns | — | ListViewAddColumn/InsertColumn/RemoveColumn/SetColumnWidth | 同 | 🔧专用 |  |
 | setRowLeadingControl/setColumnLeadingControl/setCellLeadingControl | icon/columns.icon/cellControls | — | ListViewSetRowLeadingControl/SetColumnIcon/SetCellLeadingControl | 同 | 🔧专用 |  |
 | setColumnSorter/sortByColumn | —（运行时注入） | — | ListViewSetColumnSorter | 同 | 🔧专用 |  |
-| setOnSelectionChanged/setOnItemClick/setOnColumnSort | events.on* | — | SetCallback | SetCallback | ✅ |  |
+| setOnSelectionChanged/setOnItemClick/setOnColumnSort | events.on* | — | SetCallback（kEventListSelectionChanged/kEventItemClick/kEventColumnSort，负载 grid） | SetCallback + Event::IsListSelectionChanged/IsItemClick/IsColumnSort/GetGridRow/GetGridCol/GetGridAsc | ✅ |  |
 
 ## 24. Shape(形状)
 

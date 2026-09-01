@@ -120,6 +120,50 @@ static void runAssertions() {
     g_probe->setBoolProperty("cycle-navigation", 0);
     CHECK(g_probe->getBoolProperty("cycle-navigation", cn) == 1 && cn == 0, "cycle-navigation roundtrip false");
 
+    // ── 事件：selection-changed / item-click / column-sort（C ABI 回调链路）──
+    static int gEvRow = -9, gEvCol = -9, gEvAsc = -9, gEvSeen = 0;
+    static char gEvName[64] = "";
+    auto onEvent = [](void*, const void* raw, void*) {
+        const UIEventData* ev = static_cast<const UIEventData*>(raw);
+        strncpy(gEvName, ev->eventName ? ev->eventName : "", sizeof(gEvName) - 1);
+        gEvRow = ev->data.grid.row;
+        gEvCol = ev->data.grid.col;
+        gEvAsc = ev->data.grid.asc;
+        ++gEvSeen;
+    };
+    using CbFn = void(*)(void*, const void*, void*);
+    g_probe->setCallbackProperty(PropertyNames::kEventListSelectionChanged, CbFn(onEvent), nullptr);
+    g_probe->setCallbackProperty(PropertyNames::kEventItemClick, CbFn(onEvent), nullptr);
+    g_probe->setCallbackProperty(PropertyNames::kEventColumnSort, CbFn(onEvent), nullptr);
+    g_probe->setCallbackProperty(PropertyNames::kEventAnimationEnded, CbFn(onEvent), nullptr);
+
+    // selection-changed：setSelectedRow 触发，grid{row=选中行, col=选中数}
+    gEvSeen = 0; gEvRow = gEvCol = -9;
+    const int rowCount = g_probe->getRowCount();
+    g_probe->setSelectedRow(rowCount - 1);
+    CHECK(gEvSeen == 1 && strcmp(gEvName, PropertyNames::kEventListSelectionChanged) == 0,
+          "selection-changed fired");
+    CHECK(gEvRow == rowCount - 1 && gEvCol == 1, "selection payload row/count");
+
+    // column-sort：列头（Multi 模式 headerHeight 内）点击可排序列 0 -> grid{row=col, col=asc}
+    g_probe->setVisible(true);
+    gEvSeen = 0;
+    auto hdDown = make_shared<Event>(EventType::MouseDown);
+    hdDown->mouseButton = { 20.f, 14.f, MouseButton::Left };
+    g_probe->handleEvent(hdDown);
+    CHECK(gEvSeen >= 1 && strcmp(gEvName, PropertyNames::kEventColumnSort) == 0,
+          "column-sort fired on header click");
+    CHECK(gEvRow == 0 && gEvCol == 1, "column-sort payload col/asc");
+
+    // item-click：数据区第 0 行点击 -> grid{row, col}
+    gEvSeen = 0;
+    auto rowDown = make_shared<Event>(EventType::MouseDown);
+    rowDown->mouseButton = { 20.f, 40.f, MouseButton::Left };
+    g_probe->handleEvent(rowDown);
+    CHECK(gEvSeen >= 1 && strcmp(gEvName, PropertyNames::kEventItemClick) == 0,
+          "item-click fired on row click");
+    CHECK(gEvRow == 0 && gEvCol == 0, "item-click payload row/col");
+
     TestUtil::log("---- assertions done: pass=%d fail=%d ----", g_pass, g_fail);
 }
 

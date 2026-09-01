@@ -35,6 +35,14 @@ public:
     bool IsCancel() const;                      // "cancel"：无负载
     bool IsClose() const;                       // "close"：intVal = DialogResult
     int GetCloseResult() const;
+    bool IsListSelectionChanged() const;        // "list-selection-changed"：grid{row,col}
+    bool IsItemClick() const;                   // "item-click"：grid{row,col}
+    bool IsColumnSort() const;                  // "column-sort"：grid{row=col,col=asc}
+    bool IsAnimationEnded() const;              // "animation-ended"：intVal=m_id
+    int  GetAnimationEndedId() const;
+    int  GetGridRow() const;                    // grid 通用访问
+    int  GetGridCol() const;
+    int  GetGridAsc() const;
     bool IsEnter() const;                       // "enter"：无负载
     bool IsSelect() const;                      // "select"：treeNode
     bool IsExpand() const;                      // "expand"：treeNode

@@ -321,6 +321,10 @@ button.SetCallback(PropertyNames::kEventClick, [&](const Event& e) {
 | `kEventEnter` | `"enter"` | EditBox（回车） | — |
 | `kEventSelect` | `"select"` | TreeView | `GetNodeId()` / `GetNodeUserData()` |
 | `kEventExpand` / `kEventCollapse` | `"expand"` / `"collapse"` | TreeView | 同上 |
+| `kEventListSelectionChanged` | `"list-selection-changed"` | ListView | `GetGridRow()` / `GetGridCol()` |
+| `kEventItemClick` | `"item-click"` | ListView | `GetGridRow()` / `GetGridCol()` |
+| `kEventColumnSort` | `"column-sort"` | ListView | `GetGridRow()`（列）/ `GetGridCol()`（升序）/ `GetGridAsc()` |
+| `kEventAnimationEnded` | `"animation-ended"` | LuotiAni | `GetAnimationEndedId()` (int) |
 
 ### 6.2 判断与读取
 

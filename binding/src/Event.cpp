@@ -51,6 +51,15 @@ bool Event::IsCollapse() const { return GetName() == PropertyNames::kEventCollap
 std::string Event::GetNodeId() const { return m_raw->data.treeNode.id ? m_raw->data.treeNode.id : ""; }
 void* Event::GetNodeUserData() const { return m_raw->data.treeNode.userData; }
 
+bool Event::IsListSelectionChanged() const { return GetName() == PropertyNames::kEventListSelectionChanged; }
+bool Event::IsItemClick() const { return GetName() == PropertyNames::kEventItemClick; }
+bool Event::IsColumnSort() const { return GetName() == PropertyNames::kEventColumnSort; }
+bool Event::IsAnimationEnded() const { return GetName() == PropertyNames::kEventAnimationEnded; }
+int Event::GetAnimationEndedId() const { return m_raw->data.intVal; }
+int Event::GetGridRow() const { return m_raw->data.grid.row; }
+int Event::GetGridCol() const { return m_raw->data.grid.col; }
+int Event::GetGridAsc() const { return m_raw->data.grid.asc; }
+
 // ── 通用原始访问 ──
 int Event::GetIntVal() const { return m_raw->data.intVal; }
 float Event::GetFloatVal() const { return m_raw->data.floatVal; }

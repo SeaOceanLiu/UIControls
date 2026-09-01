@@ -1010,6 +1010,7 @@ void ControlImpl::fireCCallback(const char* eventName, CCallbackData data, const
     case CCallbackData::Selection: if (ptr) { auto* s = static_cast<const SelectionPayload*>(ptr); evt.data.selection = {s->idx, s->val}; } break;
     case CCallbackData::TreeNode:  if (ptr) { auto* t = static_cast<const TreeNodePayload*>(ptr); evt.data.treeNode = {t->id, t->userData}; } break;
     case CCallbackData::Color:     if (ptr) { auto* c = static_cast<const ColorPayload*>(ptr); evt.data.color = {c->r, c->g, c->b, c->a}; } break;
+    case CCallbackData::Grid:      if (ptr) { auto* g = static_cast<const GridPayload*>(ptr); evt.data.grid = {g->row, g->col, g->asc}; } break;
     default: break;
     }
     it->second.cb(reinterpret_cast<UIControlHandle>(this), &evt, it->second.userData);
