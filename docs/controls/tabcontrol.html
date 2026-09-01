@@ -39,9 +39,7 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
 <tr><td><code>position</code></td><td><code>kTabPosition</code></td><td>Enum</td><td>top</td><td>top / bottom / left / right</td></tr>
 <tr><td><code>fontSize</code></td><td><code>kFontSize</code></td><td>Float</td><td>13</td><td>页签文字字号</td></tr>
 <tr><td><code>currentIndex</code></td><td><code>kTabCurrentIndex</code></td><td>Int</td><td>0</td><td>当前页（首页自动选中）</td></tr>
-<tr><td><code>tabs[].icon</code></td><td><code>—</code></td><td>资源引用</td><td>—</td><td>页签图标</td></tr>
 </table>
-<p class="note">子字段（<code>tabs[].icon</code>）为 JSON / C ABI 专用数据（<code>TabAddPage</code> 等），不设独立属性常量；其余基础字段经属性系统读写。</p>
 
 <h2>4.23.3 控件的回调 / 事件</h2>
 
@@ -69,12 +67,17 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
   "events": { "onTabChange": "onTab" }
 }</code></pre>
 
+<table>
+<tr><th>JSON 键</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>tabs[].icon</code></td><td>资源引用</td><td>页签图标</td></tr>
+</table>
+
 <h2>4.23.6 C++ Binding 样例</h2>
 
 <pre><code>auto tc = ui->CreateTabControl(120, 80, 560, 240);
-tc.SetEnum(PropertyNames::kPosition, "top");
-tc.SetInt(PropertyNames::kCurrentIndex, 0);
-tc.SetCallback(PropertyNames::kEventTabChange, onTab);</code></pre>
+tc.SetEnum(PropertyNames::kTabPosition, PropertyNames::kTabPositionTop);
+tc.SetInt(PropertyNames::kTabCurrentIndex, 0);
+tc.SetCallback(PropertyNames::kEventTabChanged, onTab);</code></pre>
 
 <h2>4.23.7 C ABI 调用样例</h2>
 

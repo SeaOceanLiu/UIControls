@@ -43,8 +43,6 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
 <tr><td><code>lineWidth</code></td><td><code>kLineWidthProp</code></td><td>Float</td><td>1</td><td>描边宽（0=无）</td></tr>
 <tr><td><code>radius</code></td><td><code>kRadius</code></td><td>Float</td><td>0</td><td>圆角半径（round-rect）</td></tr>
 <tr><td><code>ringWidth</code></td><td><code>kRingWidth</code></td><td>Float</td><td>0</td><td>环带宽（circle/ellipse）</td></tr>
-<tr><td><code>points</code></td><td><code>—</code></td><td>[{x,y}]</td><td>—</td><td>折线/多边形顶点（本地坐标；JSON <code>points</code> / CABI <code>ShapeSetPoints</code> / C++ <code>setPoints</code>，非属性系统键）</td></tr>
-<tr><td><code>primitives</code></td><td><code>—</code></td><td>Array</td><td>—</td><td>多图元组合（非空替代单图元）</td></tr>
 <tr><td><code>colors.background</code></td><td><code>kBackground</code></td><td>Color</td><td>透明</td><td>通用背景属性（设后取消透明）</td></tr>
 </table>
 
@@ -74,6 +72,12 @@ UICornerstone_ShapeAddPrimitive(g_inst, s, "circle", 10, 10, 40, 40);
     { "shape": "circle", "rect": [28, 68, 30, 30], "fill": "#3B82F6" }
   ]
 }</code></pre>
+
+<table>
+<tr><th>JSON 键</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>points</code></td><td>[{x,y}]</td><td>折线/多边形顶点（本地坐标）；经 <code>ShapeSetPoints</code> / <code>setPoints</code> 读写（非属性系统键）</td></tr>
+<tr><td><code>primitives</code></td><td>Array</td><td>多图元组合（非空替代单图元）</td></tr>
+</table>
 
 <h2>4.19.5 C++ Binding 样例</h2>
 

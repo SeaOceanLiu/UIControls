@@ -39,11 +39,7 @@ UICornerstone_StatusBarAddItem(g_inst, bar, "branch", u8"main", 0);
 <tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>fontSize</code></td><td><code>kFontSize</code></td><td>Float</td><td>13</td><td>段文字字号</td></tr>
 <tr><td><code>itemHeight</code></td><td><code>kItemHeight</code></td><td>Float</td><td>rect 高</td><td>段高</td></tr>
-<tr><td><code>items[].align</code></td><td><code>—</code></td><td>Enum</td><td>left</td><td>left / right</td></tr>
-<tr><td><code>items[].icon</code></td><td><code>—</code></td><td>资源引用</td><td>—</td><td>段图标（任意控件/Actor）</td></tr>
-<tr><td><code>items[].menu</code></td><td><code>—</code></td><td>MenuPanel id</td><td>—</td><td>点击弹出菜单</td></tr>
 </table>
-<p class="note">子字段（<code>items[].align</code> / <code>.icon</code> / <code>.menu</code>）为 JSON / C ABI 专用数据（<code>StatusBarAddItem</code> 等），不设独立属性常量；其余基础字段经属性系统读写。</p>
 
 <h2>4.22.3 控件的回调 / 事件</h2>
 
@@ -70,6 +66,14 @@ UICornerstone_StatusBarAddItem(g_inst, bar, "branch", u8"main", 0);
     { "id": "enc", "text": "UTF-8", "align": "right" }
   ]
 }</code></pre>
+
+<table>
+<tr><th>JSON 键</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>items[].align</code></td><td>Enum</td><td>left（默认）/ right 段对齐</td></tr>
+<tr><td><code>items[].icon</code></td><td>资源引用</td><td>段图标（任意控件/Actor）</td></tr>
+<tr><td><code>items[].menu</code></td><td>MenuPanel id</td><td>点击弹出菜单</td></tr>
+<tr><td><code>items[].onClick</code></td><td>动作名</td><td>点击事件（C ABI 经 <code>status-item-click</code>，见 4.22.3）</td></tr>
+</table>
 
 <h2>4.22.5 C++ Binding 样例</h2>
 
