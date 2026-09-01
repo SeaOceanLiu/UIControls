@@ -33,19 +33,7 @@ UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 
 
 <h2>4.10.2 控件的属性</h2>
 
-<table>
-<tr><th>属性</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td>handleSize</td><td><code>—</code></td><td>float</td><td>8.0</td><td>手柄方块尺寸（像素）</td></tr>
-<tr><td>minWidth / minHeight</td><td><code>—</code></td><td>float</td><td>20 / 20</td><td>目标最小尺寸钳位</td></tr>
-<tr><td>handleFill</td><td><code>—</code></td><td>SColor</td><td>白(255,255,255,255)</td><td>手柄填充色</td></tr>
-<tr><td>handleBorder</td><td><code>—</code></td><td>SColor</td><td>蓝(0,120,255,255)</td><td>手柄边框色</td></tr>
-<tr><td>activeFill</td><td><code>—</code></td><td>SColor</td><td>蓝(0,120,255,255)</td><td>拖拽中高亮色</td></tr>
-<tr><td>selectionColor</td><td><code>—</code></td><td>SColor</td><td>蓝(0,120,255,255)</td><td>虚线选择框颜色</td></tr>
-<tr><td>corner / edge / move / selectionBox 可见性</td><td><code>—</code></td><td>bool</td><td>均 true</td><td>四个显隐开关</td></tr>
-</table>
-<p class="note">枚举值与常量对应（如 <code>classic</code> ↔ <code>kStyleClassic</code>）见 <a href="../appendix/properties.html#7-3">7.3 枚举值速查</a>。</p>
-
-<div class="note">HandleControl 未实现属性系统 override，以上为成员属性（C++ 直接 API 访问），无字符串属性名。</div>
+<p>HandleControl 为行为型辅助控件，<b>无独立属性系统键</b>；手柄尺寸/颜色/显隐均为 C++ 成员 API 直接访问（<code>setHandleSize</code> / <code>setMinSize</code> / <code>setHandleColor</code> / <code>setHandleVisible</code> 等），成员字段见 4.10.5 样例。</p>
 
 
 <h2>4.10.3 控件的回调</h2>
@@ -59,6 +47,17 @@ UIControlHandle h = UICornerstone_CreateHandleControl(g_inst, targetHandle, 80, 
 
 
 <h2>4.10.5 C++ Binding / 核心库样例</h2>
+
+<table>
+<tr><th>成员字段</th><th>类型</th><th>默认值</th><th>说明（C++ 成员 API）</th></tr>
+<tr><td><code>handleSize</code></td><td>float</td><td>8.0</td><td><code>setHandleSize</code>：手柄方块尺寸（像素）</td></tr>
+<tr><td><code>minWidth / minHeight</code></td><td>float</td><td>20 / 20</td><td><code>setMinSize</code>：目标最小尺寸钳位</td></tr>
+<tr><td><code>handleFill</code></td><td>SColor</td><td>白</td><td>手柄填充色</td></tr>
+<tr><td><code>handleBorder</code></td><td>SColor</td><td>蓝</td><td>手柄边框色</td></tr>
+<tr><td><code>activeFill</code></td><td>SColor</td><td>蓝</td><td>拖拽中高亮色</td></tr>
+<tr><td><code>selectionColor</code></td><td>SColor</td><td>蓝</td><td>虚线选择框颜色</td></tr>
+<tr><td><code>corner / edge / move / selectionBox 可见性</code></td><td>bool</td><td>均 true</td><td>四个显隐开关</td></tr>
+</table>
 
 <pre><code>// C++ 核心库：附着 + 拖拽调整目标
 auto target = make_shared&lt;Button&gt;(BENCH.get(), SRect(80, 60, 200, 80));

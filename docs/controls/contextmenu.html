@@ -35,13 +35,7 @@ UICornerstone_ContextMenuShow(g_inst, m, 140, 160);
 
 <h2>4.7.2 控件的属性</h2>
 
-<table>
-<tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>items[].caption</code></td><td><code>kCaption</code></td><td>String</td><td>—</td><td>菜单项文本</td></tr>
-<tr><td><code>items[].shortcut</code></td><td><code>kShortcut</code></td><td>String</td><td>—</td><td>快捷键列</td></tr>
-<tr><td><code>items[].type</code></td><td><code>—</code></td><td>Enum</td><td>—</td><td>枚举值见 7.3（<code>separator</code> ↔ <code>kMenuTypeSeparator</code>）</td></tr>
-<tr><td><code>items[].icon</code></td><td><code>kItemIcon</code></td><td>资源引用</td><td>—</td><td>项图标（JSON 键层；常量同 <code>kItemIcon</code>）</td></tr>
-</table>
+<p>ContextMenu 为行为型浮层，<b>无独立属性系统键</b>；菜单项内容/样式由 MenuPanel/MenuItem 体系承载，经 JSON <code>contextMenu.items[]</code> 声明（<code>caption / shortcut / type / icon</code>，见 4.7.4）。</p>
 
 <h2>4.7.3 控件的回调 / 事件</h2>
 
@@ -69,6 +63,14 @@ UICornerstone_ContextMenuShow(g_inst, m, 140, 160);
     ]
   }
 }</code></pre>
+
+<table>
+<tr><th>JSON 键</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>items[].caption</code></td><td>String</td><td>菜单项文本</td></tr>
+<tr><td><code>items[].shortcut</code></td><td>String</td><td>快捷键列</td></tr>
+<tr><td><code>items[].type</code></td><td>Enum</td><td>菜单项类型（<code>separator</code> ↔ <code>kMenuTypeSeparator</code> 等，见 7.3）</td></tr>
+<tr><td><code>items[].icon</code></td><td>资源引用</td><td>项图标（常量同 <code>kItemIcon</code>）</td></tr>
+</table>
 
 <h2>4.7.5 C++ Binding 样例</h2>
 
