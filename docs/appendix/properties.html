@@ -189,8 +189,8 @@
 <tr><td><code>caption</code></td><td><code>kCaption</code></td><td>String</td><td>空</td></tr>
 <tr><td><code>clickable</code></td><td><code>kClickable</code></td><td>Bool</td><td>false</td></tr>
 <tr><td><code>expand</code></td><td><code>kExpand</code></td><td>Bool</td><td>false</td></tr>
-<tr><td><code>font</code></td><td><code>kFont</code></td><td>Enum</td><td>HarmonyOS / <code>kAlignLowerMidLeft</code></td></tr>
-<tr><td><code>align</code></td><td><code>kAlign</code></td><td>Enum</td><td>HarmonyOS / <code>kAlignLowerMidLeft</code></td></tr>
+<tr><td><code>font</code></td><td><code>kFont</code></td><td>Enum</td><td>HarmonyOS_Sans_SC_Regular（内置 28 种字体）</td></tr>
+<tr><td><code>align</code></td><td><code>kAlign</code></td><td>Enum</td><td><code>kAlignLowerMidLeft</code>（9 值）</td></tr>
 <tr><td><code>font-file</code></td><td><code>kFontFile</code></td><td>String（只写）</td><td>任意字体文件路径（相对 resourceRoot，可 <code>provider:</code> 前缀引用内存）；覆盖 <code>font</code> 枚举</td></tr>
 <tr><td><code>font-resource</code></td><td><code>kFontResource</code></td><td>String（只写）</td><td>内存字体资源 ID（MemoryResourceProvider 注册名）；优先级低于 font-file</td></tr>
 <tr><td><code>font-size</code></td><td><code>kFontSize</code></td><td>Int</td><td>16</td></tr>
@@ -200,10 +200,10 @@
 <tr><td><code>shadow-offset-x</code></td><td><code>kShadowOffsetX</code></td><td>Float</td><td>阴影偏移分量</td></tr>
 <tr><td><code>shadow-offset-y</code></td><td><code>kShadowOffsetY</code></td><td>Float</td><td>阴影偏移分量</td></tr>
 <tr><td><code>font-style</code></td><td><code>kFontStyle</code></td><td>Enum</td><td><code>kFontStyleNormal</code> / <code>kFontStyleBold</code> / <code>kFontStyleItalic</code> / <code>kFontStyleUnderline</code> / <code>kFontStyleStrikethrough</code>（单值）</td></tr>
-<tr><td><code>font-bold</code></td><td><code>kFontBold</code></td><td>Bool</td><td>false</td><td>字体样式分位开关（可组合；JSON <code>font.style</code> 数组等价）</td></tr>
-<tr><td><code>font-italic</code></td><td><code>kFontItalic</code></td><td>Bool</td><td>false</td><td>字体样式分位开关（可组合；JSON <code>font.style</code> 数组等价）</td></tr>
-<tr><td><code>font-underline</code></td><td><code>kFontUnderline</code></td><td>Bool</td><td>false</td><td>字体样式分位开关（可组合；JSON <code>font.style</code> 数组等价）</td></tr>
-<tr><td><code>font-strikethrough</code></td><td><code>kFontStrikethrough</code></td><td>Bool</td><td>false</td><td>字体样式分位开关（可组合；JSON <code>font.style</code> 数组等价）</td></tr>
+<tr><td><code>font-bold</code></td><td><code>kFontBold</code></td><td>Bool</td><td>false（字体样式分位开关，可组合）</td></tr>
+<tr><td><code>font-italic</code></td><td><code>kFontItalic</code></td><td>Bool</td><td>false（字体样式分位开关，可组合）</td></tr>
+<tr><td><code>font-underline</code></td><td><code>kFontUnderline</code></td><td>Bool</td><td>false（字体样式分位开关，可组合）</td></tr>
+<tr><td><code>font-strikethrough</code></td><td><code>kFontStrikethrough</code></td><td>Bool</td><td>false（字体样式分位开关，可组合）</td></tr>
 </table>
 
 <h3>ListView（类型 <code>list-view</code>）</h3>
