@@ -325,6 +325,8 @@ button.SetCallback(PropertyNames::kEventClick, [&](const Event& e) {
 | `kEventItemClick` | `"item-click"` | ListView | `GetGridRow()` / `GetGridCol()` |
 | `kEventColumnSort` | `"column-sort"` | ListView | `GetGridRow()`（列）/ `GetGridCol()`（升序）/ `GetGridAsc()` |
 | `kEventAnimationEnded` | `"animation-ended"` | LuotiAni | `GetAnimationEndedId()` (int) |
+| `kEventStatusItemClick` | `"status-item-click"` | StatusBar | `GetStatusItemIndex()` (int) |
+| `kEventTabChanged` | `"tab-changed"` | TabControl | `GetTabChangedIndex()` (int) |
 
 ### 6.2 判断与读取
 

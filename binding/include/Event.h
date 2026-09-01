@@ -40,6 +40,10 @@ public:
     bool IsColumnSort() const;                  // "column-sort"：grid{row=col,col=asc}
     bool IsAnimationEnded() const;              // "animation-ended"：intVal=m_id
     int  GetAnimationEndedId() const;
+    bool IsStatusItemClick() const;             // "status-item-click"：intVal=段索引
+    int  GetStatusItemIndex() const;
+    bool IsTabChanged() const;                  // "tab-changed"：intVal=新页索引
+    int  GetTabChangedIndex() const;
     int  GetGridRow() const;                    // grid 通用访问
     int  GetGridCol() const;
     int  GetGridAsc() const;

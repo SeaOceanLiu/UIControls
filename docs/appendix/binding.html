@@ -5,7 +5,7 @@
 <link rel="icon" type="image/svg+xml" href="../assets/UICornerstone_Logo.svg">
 <link rel="icon" type="image/png" sizes="256x256" href="../assets/UICornerstone_Logo_256.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>11 C++ Binding 速查表 - UICornerstone v1.1.0 用户手册</title>
+<title>11 C++ Binding 速查表 - UICornerstone v1.1.1 用户手册</title>
 <link rel="stylesheet" href="../css/style.css">
 <script id="nav-data" src="../assets/nav.js" data-prefix="../" data-current="appendix/binding.html"></script>
 </head>
@@ -240,6 +240,8 @@ lbl.SetPtr(PropertyNames::kPropContextMenu, menu.GetThis());</code></pre>
 <tr><td>item-click</td><td><code>IsItemClick()</code> → <code>GetGridRow()</code> / <code>GetGridCol()</code></td></tr>
 <tr><td>column-sort</td><td><code>IsColumnSort()</code> → <code>GetGridRow()</code> / <code>GetGridCol()</code> / <code>GetGridAsc()</code></td></tr>
 <tr><td>animation-ended</td><td><code>IsAnimationEnded()</code> → <code>GetAnimationEndedId()</code>（int）</td></tr>
+<tr><td>status-item-click</td><td><code>IsStatusItemClick()</code> → <code>GetStatusItemIndex()</code>（int）</td></tr>
+<tr><td>tab-changed</td><td><code>IsTabChanged()</code> → <code>GetTabChangedIndex()</code>（int）</td></tr>
 <tr><td>click</td><td><code>IsClick()</code>（无负载）</td></tr>
 <tr><td>close</td><td><code>IsClose()</code> → <code>GetCloseResult()</code>（int = DialogResult）</td></tr>
 <tr><td>confirm / cancel / enter</td><td><code>IsConfirm()</code> / <code>IsCancel()</code> / <code>IsEnter()</code>（无负载）</td></tr>

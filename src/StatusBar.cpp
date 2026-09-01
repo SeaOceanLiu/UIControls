@@ -247,9 +247,12 @@ bool StatusBar::handleEvent(shared_ptr<Event> event) {
             auto& item = m_items[idx];
             if (item.menuPanel) {
                 openPopup(idx);
-            } else if (item.onClick) {
-                auto self = shared_from_this();
-                item.onClick(shared_ptr<StatusItem>(&item, [](StatusItem*){}));
+            } else {
+                if (item.onClick) {
+                    auto self = shared_from_this();
+                    item.onClick(shared_ptr<StatusItem>(&item, [](StatusItem*){}));
+                }
+                fireCCallback(PropertyNames::kEventStatusItemClick, CCallbackData::Int, &idx);
             }
             return true;
         } else {

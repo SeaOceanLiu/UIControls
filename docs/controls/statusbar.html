@@ -37,18 +37,19 @@ UICornerstone_StatusBarAddItem(g_inst, bar, "branch", u8"main", 0);
 
 <table>
 <tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
-<tr><td><code>fontSize</code></td><td><code>—</code></td><td>Float</td><td>13</td><td>段文字字号</td></tr>
-<tr><td><code>itemHeight</code></td><td><code>—</code></td><td>Float</td><td>rect 高</td><td>段高</td></tr>
+<tr><td><code>fontSize</code></td><td><code>kFontSize</code></td><td>Float</td><td>13</td><td>段文字字号</td></tr>
+<tr><td><code>itemHeight</code></td><td><code>kItemHeight</code></td><td>Float</td><td>rect 高</td><td>段高</td></tr>
 <tr><td><code>items[].align</code></td><td><code>—</code></td><td>Enum</td><td>left</td><td>left / right</td></tr>
 <tr><td><code>items[].icon</code></td><td><code>—</code></td><td>资源引用</td><td>—</td><td>段图标（任意控件/Actor）</td></tr>
 <tr><td><code>items[].menu</code></td><td><code>—</code></td><td>MenuPanel id</td><td>—</td><td>点击弹出菜单</td></tr>
 </table>
+<p class="note">子字段（<code>items[].align</code> / <code>.icon</code> / <code>.menu</code>）为 JSON / C ABI 专用数据（<code>StatusBarAddItem</code> 等），不设独立属性常量；其余基础字段经属性系统读写。</p>
 
 <h2>4.22.3 控件的回调 / 事件</h2>
 
 <table>
 <tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>onClick</code></td><td><code>kEventKeyClick</code></td><td>点击无菜单段</td><td>回调/动作</td></tr>
+<tr><td><code>onClick</code></td><td><code>kEventStatusItemClick</code>（<code>"status-item-click"</code>）</td><td>点击无菜单段</td><td>intVal = 段索引（从左起）</td></tr>
 </table>
 
 <div class="note">图标槽几何居中（内容无关基准）；文字型图标受字体基线偏移影响，建议用 Shape 等几何内容。弹窗菜单点击项自动关闭；外部点击/Esc 关闭为后续增强。</div>

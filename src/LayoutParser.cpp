@@ -721,9 +721,9 @@ shared_ptr<Control> LayoutParser::parseTabControl(const json& j, Control* parent
 
     if (j.contains(PropertyNames::kJsonPosition) && j[PropertyNames::kJsonPosition].is_string()) {
         const string p = j[PropertyNames::kJsonPosition].get<string>();
-        if (p == "bottom") tc->setPosition(TabPosition::Bottom);
-        else if (p == "left") tc->setPosition(TabPosition::Left);
-        else if (p == "right") tc->setPosition(TabPosition::Right);
+        if (p == PropertyNames::kTabPositionBottom) tc->setPosition(TabPosition::Bottom);
+        else if (p == PropertyNames::kTabPositionLeft) tc->setPosition(TabPosition::Left);
+        else if (p == PropertyNames::kTabPositionRight) tc->setPosition(TabPosition::Right);
         else tc->setPosition(TabPosition::Top);
     }
     if (j.contains(PropertyNames::kJsonFontSize) && j[PropertyNames::kJsonFontSize].is_number())

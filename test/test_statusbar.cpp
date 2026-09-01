@@ -17,6 +17,7 @@
 #include "TestInstance.h"
 #include "UICornerstoneAPI.h"
 #include "EventTypes.h"
+#include "PropertyNames.h"
 
 using namespace std;
 
@@ -108,6 +109,28 @@ static void runCabiChecks() {
 static void testStatusBarVisualize(Bench* bench) {
     g_probe = make_shared<StatusBar>(nullptr, SRect(0, 0, 100, 24));   // 断言探针不挂树
     runAssertions();
+
+    // ── status-item-click C ABI 事件：点击无菜单段 → intVal=段索引 ──
+    g_probe->setVisible(true);
+    static int gEvIdx = -9, gEvCnt = 0;
+    gEvIdx = -9; gEvCnt = 0;
+    using CbFn = void(*)(void*, const void*, void*);
+    g_probe->setCallbackProperty(PropertyNames::kEventStatusItemClick, CbFn(
+        [](void*, const void* raw, void*) {
+            const UIEventData* ev = static_cast<const UIEventData*>(raw);
+            if (ev->eventName && strcmp(ev->eventName, PropertyNames::kEventStatusItemClick) == 0) {
+                gEvIdx = ev->data.intVal; ++gEvCnt;
+            }
+        }), nullptr);
+    auto* it0 = g_probe->getStatusItem("branch");
+    SRect r0 = it0 ? it0->hitRect : SRect(0, 0, 0, 0);
+    g_probe->handleEvent(makeMouse(EventType::MouseDown, r0.left + 2, r0.top + 2));   // 命中首个左段
+    CHECK(gEvCnt == 1 && gEvIdx == 0, "status-item-click fired idx=0");
+    auto* it1 = g_probe->getStatusItem("problems");
+    SRect r1 = it1 ? it1->hitRect : SRect(0, 0, 0, 0);
+    g_probe->handleEvent(makeMouse(EventType::MouseDown, r1.left + 2, r1.top + 2));   // 命中第 2 左段
+    CHECK(gEvCnt == 2 && gEvIdx == 1, "status-item-click fired idx=1");
+    TestUtil::log("---- status-item-click events: pass=%d fail=%d ----", g_pass, g_fail);
 
     auto bar = make_shared<StatusBar>(nullptr, SRect(0, 876, 1400, 24));
     bar->addStatusItem("branch", u8"main", false);

@@ -76,6 +76,21 @@ static void runAssertions() {
     CHECK(tc->getTabs()[2].page->getVisible(), "page2 visible after switch");
     CHECK(!tc->getTabs()[0].page->getVisible(), "page0 hidden after switch");
 
+    // tab-changed C ABI 事件：intVal=新页索引
+    static int gTabIdx = -9, gTabCnt = 0;
+    using CbFn = void(*)(void*, const void*, void*);
+    tc->setCallbackProperty(PropertyNames::kEventTabChanged, CbFn(
+        [](void*, const void* raw, void*) {
+            const UIEventData* ev = static_cast<const UIEventData*>(raw);
+            if (ev->eventName && strcmp(ev->eventName, PropertyNames::kEventTabChanged) == 0) {
+                gTabIdx = ev->data.intVal; ++gTabCnt;
+            }
+        }), nullptr);
+    tc->setCurrentIndex(1);
+    CHECK(gTabCnt == 1 && gTabIdx == 1, "tab-changed fired idx=1");
+    tc->setCurrentIndex(0);
+    CHECK(gTabCnt == 2 && gTabIdx == 0, "tab-changed fired idx=0");
+
 
     // 键盘导航：Right 循环 → 0 之后回绕
     tc->setCurrentIndex(0);

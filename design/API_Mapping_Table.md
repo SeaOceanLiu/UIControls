@@ -385,7 +385,7 @@
 | addStatusItem/updateStatusItemText/removeStatusItem | items[] | — | StatusBarAddItem/SetItemText/RemoveItem | StatusBarBuilder.addStatusItem | 🔧专用 |  |
 | setStatusItemMenu | items[].menu | — | StatusBarSetItemMenu | StatusBarBuilder.setStatusItemMenu | 🔧专用 |  |
 | setStatusItemLeadingControl | items[].icon | — | StatusBarSetItemIcon | StatusBarBuilder.setStatusItemLeadingControl | 🔧专用 |  |
-| setStatusItemOnClick | items[].onClick | — | — | StatusBarBuilder.setStatusItemOnClick | ⚠️CABI | 回调注册可经 SetCallback |
+| setStatusItemOnClick | items[].onClick | — | SetCallback（kEventStatusItemClick，"status-item-click", intVal=段索引） | StatusBarBuilder.setStatusItemOnClick + Event::IsStatusItemClick/GetStatusItemIndex | ✅ |  |
 | openPopup/closePopup | — | — | — | — | ⛔内部(点击驱动) |  |
 
 ## 26. TabControl(选项卡)
@@ -398,7 +398,7 @@
 | addTab/insertTab/removeTab | tabs[] | — | TabAddPage | TabControlBuilder.addTab | 🔧专用 |  |
 | setTabText/setTabPage | tabs[].title/page | — | TabSetTitle/TabSetPage | 同 | 🔧专用 |  |
 | setTabLeadingControl | tabs[].icon | — | TabSetTabLeadingControl | — | ⚠️Binding | Builder 扩展后续 |
-| setOnTabChange | events.onTabChange | — | SetCallback | SetCallback | ✅ |  |
+| setOnTabChange | events.onTabChange | — | SetCallback（kEventTabChanged，"tab-changed", intVal=新页索引） | SetCallback + Event::IsTabChanged/GetTabChangedIndex | ✅ |  |
 
 ## 27. 实例/视口/布局/引擎级
 

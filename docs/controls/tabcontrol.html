@@ -37,16 +37,17 @@ UICornerstone_TabAddPage(g_inst, tc, u8"主页");
 <table>
 <tr><th>属性/字段</th><th>属性常量</th><th>类型</th><th>默认值</th><th>说明</th></tr>
 <tr><td><code>position</code></td><td><code>kTabPosition</code></td><td>Enum</td><td>top</td><td>top / bottom / left / right</td></tr>
-<tr><td><code>fontSize</code></td><td><code>—</code></td><td>Float</td><td>13</td><td>页签文字字号</td></tr>
-<tr><td><code>currentIndex</code></td><td><code>—</code></td><td>Int</td><td>0</td><td>当前页（首页自动选中）</td></tr>
+<tr><td><code>fontSize</code></td><td><code>kFontSize</code></td><td>Float</td><td>13</td><td>页签文字字号</td></tr>
+<tr><td><code>currentIndex</code></td><td><code>kTabCurrentIndex</code></td><td>Int</td><td>0</td><td>当前页（首页自动选中）</td></tr>
 <tr><td><code>tabs[].icon</code></td><td><code>—</code></td><td>资源引用</td><td>—</td><td>页签图标</td></tr>
 </table>
+<p class="note">子字段（<code>tabs[].icon</code>）为 JSON / C ABI 专用数据（<code>TabAddPage</code> 等），不设独立属性常量；其余基础字段经属性系统读写。</p>
 
 <h2>4.23.3 控件的回调 / 事件</h2>
 
 <table>
 <tr><th>事件名</th><th>事件常量</th><th>触发时机</th><th>参数</th></tr>
-<tr><td><code>onTabChange</code></td><td><code>—</code></td><td>页签切换</td><td>新页索引</td></tr>
+<tr><td><code>onTabChange</code></td><td><code>kEventTabChanged</code>（<code>"tab-changed"</code>）</td><td>页签切换（setCurrentIndex / 点击 / 键盘）</td><td>intVal = 新页索引</td></tr>
 </table>
 
 <h2>4.23.4 键盘导航</h2><p>页签条获焦：<code>←/→</code>（或竖排 <code>↑/↓</code>）循环切换、<code>Home/End</code> 首尾；<code>Tab</code> 层内循环（页内控件间 / 页签条+外部）；<code>Ctrl+Tab</code> 层切换（页内 ↔ 页签条）。</p>

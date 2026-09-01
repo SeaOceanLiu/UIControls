@@ -102,6 +102,7 @@ void TabControl::setCurrentIndex(int index) {
     m_currentIndex = index;
     applyCurrentPage();
     if (m_onTabChange) m_onTabChange(std::static_pointer_cast<TabControl>(shared_from_this()), m_currentIndex);
+    fireCCallback(PropertyNames::kEventTabChanged, CCallbackData::Int, &m_currentIndex);
 }
 
 void TabControl::applyCurrentPage() {
@@ -355,10 +356,10 @@ void TabControl::setRect(SRect rect) {
 
 int TabControl::setEnumProperty(const char* prop, const char* value) {
     if (strcmp(prop, PropertyNames::kTabPosition) == 0) {
-        if (strcmp(value, "top") == 0) setPosition(TabPosition::Top);
-        else if (strcmp(value, "bottom") == 0) setPosition(TabPosition::Bottom);
-        else if (strcmp(value, "left") == 0) setPosition(TabPosition::Left);
-        else if (strcmp(value, "right") == 0) setPosition(TabPosition::Right);
+        if (strcmp(value, PropertyNames::kTabPositionTop) == 0) setPosition(TabPosition::Top);
+        else if (strcmp(value, PropertyNames::kTabPositionBottom) == 0) setPosition(TabPosition::Bottom);
+        else if (strcmp(value, PropertyNames::kTabPositionLeft) == 0) setPosition(TabPosition::Left);
+        else if (strcmp(value, PropertyNames::kTabPositionRight) == 0) setPosition(TabPosition::Right);
         else return 0;
         return 1;
     }
@@ -367,10 +368,10 @@ int TabControl::setEnumProperty(const char* prop, const char* value) {
 int TabControl::getEnumProperty(const char* prop, const char*& out) {
     if (strcmp(prop, PropertyNames::kTabPosition) == 0) {
         switch (m_position) {
-            case TabPosition::Top:    out = "top"; break;
-            case TabPosition::Bottom: out = "bottom"; break;
-            case TabPosition::Left:   out = "left"; break;
-            case TabPosition::Right:  out = "right"; break;
+            case TabPosition::Top:    out = PropertyNames::kTabPositionTop; break;
+            case TabPosition::Bottom: out = PropertyNames::kTabPositionBottom; break;
+            case TabPosition::Left:   out = PropertyNames::kTabPositionLeft; break;
+            case TabPosition::Right:  out = PropertyNames::kTabPositionRight; break;
         }
         return 1;
     }

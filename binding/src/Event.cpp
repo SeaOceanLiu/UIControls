@@ -56,6 +56,10 @@ bool Event::IsItemClick() const { return GetName() == PropertyNames::kEventItemC
 bool Event::IsColumnSort() const { return GetName() == PropertyNames::kEventColumnSort; }
 bool Event::IsAnimationEnded() const { return GetName() == PropertyNames::kEventAnimationEnded; }
 int Event::GetAnimationEndedId() const { return m_raw->data.intVal; }
+bool Event::IsStatusItemClick() const { return GetName() == PropertyNames::kEventStatusItemClick; }
+int Event::GetStatusItemIndex() const { return m_raw->data.intVal; }
+bool Event::IsTabChanged() const { return GetName() == PropertyNames::kEventTabChanged; }
+int Event::GetTabChangedIndex() const { return m_raw->data.intVal; }
 int Event::GetGridRow() const { return m_raw->data.grid.row; }
 int Event::GetGridCol() const { return m_raw->data.grid.col; }
 int Event::GetGridAsc() const { return m_raw->data.grid.asc; }
